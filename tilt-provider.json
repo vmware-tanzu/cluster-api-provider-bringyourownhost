@@ -1,0 +1,14 @@
+{
+  "name": "byoh",
+  "config": {
+    "image": "gcr.io/cluster-api-provider-byoh/release/manager",
+    "live_reload_deps": [
+      "main.go",
+      "go.mod",
+      "go.sum",
+      "api",
+      "controllers",
+      "pkg"
+    ]
+  }
+}
