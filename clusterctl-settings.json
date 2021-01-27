@@ -1,0 +1,7 @@
+{
+  "name": "infrastructure-byoh",
+  "config": {
+    "componentsFile": "infrastructure-components.yaml",
+    "nextVersion": "v0.0.0-alpha.1"
+  }
+}
