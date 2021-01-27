@@ -20,10 +20,8 @@ import (
 	"testing"
 )
 
-//nolint
 func TestBYOMachineTemplate_ValidateCreate(t *testing.T) {
 }
 
-//nolint
 func TestBYOMachineTemplate_ValidateUpdate(t *testing.T) {
 }
