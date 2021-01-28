@@ -65,5 +65,6 @@ func (r *MachineReconciler) SetupWithManager(mgr ctrl.Manager, options controlle
 // Reconcile ensures the back-end state reflects the Kubernetes resource state intent.
 func (r MachineReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
 	r.Log.Info("Processing", "req", req)
+
 	return reconcile.Result{}, nil
 }

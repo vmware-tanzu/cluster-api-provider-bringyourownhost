@@ -22,9 +22,9 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/webhook"
 )
 
-func (r *BYOMachine) SetupWebhookWithManager(mgr ctrl.Manager) error {
+func (m *BYOMachine) SetupWebhookWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewWebhookManagedBy(mgr).
-		For(r).
+		For(m).
 		Complete()
 }
 
@@ -33,16 +33,16 @@ func (r *BYOMachine) SetupWebhookWithManager(mgr ctrl.Manager) error {
 var _ webhook.Validator = &BYOMachine{}
 
 // ValidateCreate implements webhook.Validator so a webhook will be registered for the type
-func (r *BYOMachine) ValidateCreate() error {
+func (m *BYOMachine) ValidateCreate() error {
 	return nil
 }
 
 // ValidateUpdate implements webhook.Validator so a webhook will be registered for the type
-func (r *BYOMachine) ValidateUpdate(old runtime.Object) error {
+func (m *BYOMachine) ValidateUpdate(old runtime.Object) error {
 	return nil
 }
 
 // ValidateDelete implements webhook.Validator so a webhook will be registered for the type
-func (r *BYOMachine) ValidateDelete() error {
+func (m *BYOMachine) ValidateDelete() error {
 	return nil
 }

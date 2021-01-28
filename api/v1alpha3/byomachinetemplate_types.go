@@ -21,14 +21,14 @@ import (
 )
 
 // BYOMachineTemplateSpec defines the desired state of BYOMachineTemplate
-type BYOMachineTemplateSpec struct {
-}
+type BYOMachineTemplateSpec struct{}
 
 // +kubebuilder:object:root=true
 // +kubebuilder:resource:path=byomachinetemplates,scope=Namespaced,categories=cluster-api
 // +kubebuilder:storageversion
 
 // BYOMachineTemplate is the Schema for the BYOMachineTemplate API
+//nolint:maligned
 type BYOMachineTemplate struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
