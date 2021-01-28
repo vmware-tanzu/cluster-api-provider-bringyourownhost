@@ -189,6 +189,11 @@ func setupWebhooks(mgr ctrl.Manager) {
 		return
 	}
 
+	if err := (&infrav1.BYOHost{}).SetupWebhookWithManager(mgr); err != nil {
+		setupLog.Error(err, "unable to create webhook", "webhook", "BYOHost")
+		os.Exit(1)
+	}
+
 	if err := (&infrav1.BYOMachine{}).SetupWebhookWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create webhook", "webhook", "BYOMachine")
 		os.Exit(1)
