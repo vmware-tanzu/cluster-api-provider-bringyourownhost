@@ -22,27 +22,27 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/webhook"
 )
 
-func (m *BYOMachine) SetupWebhookWithManager(mgr ctrl.Manager) error {
+func (r *BYOHost) SetupWebhookWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewWebhookManagedBy(mgr).
-		For(m).
+		For(r).
 		Complete()
 }
 
-// +kubebuilder:webhook:verbs=create;update,path=/validate-infrastructure-cluster-x-k8s-io-v1alpha3-byomachine,mutating=false,failurePolicy=fail,matchPolicy=Equivalent,groups=infrastructure.cluster.x-k8s.io,resources=byomachines,versions=v1alpha3,name=validation.byomachine.infrastructure.x-k8s.io,sideEffects=None,admissionReviewVersions=v1beta1
+// +kubebuilder:webhook:verbs=create;update,path=/validate-infrastructure-cluster-x-k8s-io-v1alpha3-byohost,mutating=false,failurePolicy=fail,matchPolicy=Equivalent,groups=infrastructure.cluster.x-k8s.io,resources=byohosts,versions=v1alpha3,name=validation.byohost.infrastructure.x-k8s.io,sideEffects=None,admissionReviewVersions=v1beta1
 
-var _ webhook.Validator = &BYOMachine{}
+var _ webhook.Validator = &BYOHost{}
 
 // ValidateCreate implements webhook.Validator so a webhook will be registered for the type
-func (m *BYOMachine) ValidateCreate() error {
+func (r *BYOHost) ValidateCreate() error {
 	return nil
 }
 
 // ValidateUpdate implements webhook.Validator so a webhook will be registered for the type
-func (m *BYOMachine) ValidateUpdate(old runtime.Object) error {
+func (r *BYOHost) ValidateUpdate(old runtime.Object) error {
 	return nil
 }
 
 // ValidateDelete implements webhook.Validator so a webhook will be registered for the type
-func (m *BYOMachine) ValidateDelete() error {
+func (r *BYOHost) ValidateDelete() error {
 	return nil
 }

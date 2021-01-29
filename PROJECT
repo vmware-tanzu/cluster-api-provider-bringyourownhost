@@ -8,3 +8,6 @@ resources:
 - group: infrastructure
   version: v1alpha3
   kind: BYOMachineTemplate
+- group: infrastructure
+  version: v1alpha3
+  kind: BYOHost
