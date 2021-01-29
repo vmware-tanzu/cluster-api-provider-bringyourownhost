@@ -17,11 +17,13 @@ limitations under the License.
 package v1alpha3
 
 import (
-	ctrl "sigs.k8s.io/controller-runtime"
+	"testing"
 )
 
-func (r *BYOMachineList) SetupWebhookWithManager(mgr ctrl.Manager) error {
-	return ctrl.NewWebhookManagedBy(mgr).
-		For(r).
-		Complete()
+//nolint
+func BYOHost_ValidateCreate(t *testing.T) {
+}
+
+//nolint
+func BYOHost_ValidateUpdate(t *testing.T) {
 }

@@ -6,23 +6,26 @@ metadata:
   annotations:
     controller-gen.kubebuilder.io/version: v0.4.1
   creationTimestamp: null
-  name: byomachines.infrastructure.cluster.x-k8s.io
+  name: byohosts.infrastructure.cluster.x-k8s.io
 spec:
   group: infrastructure.cluster.x-k8s.io
   names:
     categories:
     - cluster-api
-    kind: BYOMachine
-    listKind: BYOMachineList
-    plural: byomachines
-    singular: byomachine
-  scope: Namespaced
+    kind: BYOHost
+    listKind: BYOHostList
+    plural: byohosts
+    singular: byohost
+  scope: Cluster
   versions:
   - name: v1alpha3
     schema:
       openAPIV3Schema:
-        description: BYOMachine is the Schema for the BYOMachines API, allowing to
-          manage in a declarative way a ClusterAPI Machine backed by a BYOHost.
+        description: BYOHost is the Schema for the BYOHosts API. A BYO Host is an
+          host provisioned outside of Cluster API, with the entire stack up to the
+          OS already configured; the Kubernetes host components like containerd, kubelet,
+          kubeadm etc. might be pre-provisioned  or managed by this infrastructure
+          provider.
         properties:
           apiVersion:
             description: 'APIVersion defines the versioned schema of this representation
@@ -37,16 +40,10 @@ spec:
           metadata:
             type: object
           spec:
-            description: BYOMachineSpec defines the desired state of BYOMachine
-            properties:
-              providerID:
-                description: 'ProviderID is the virtual machine''s BIOS UUID formatted
-                  as byoh://12345678-1234-1234-1234-123456789abc TODO: the exact format
-                  should be validated later in the implementation'
-                type: string
+            description: BYOHostSpec defines the desired state of BYOHost.
             type: object
           status:
-            description: BYOMachineStatus defines the observed state of BYOMachine
+            description: BYOHostStatus defines the observed state of BYOHost
             properties:
               conditions:
                 description: Conditions defines current service state of the BYOMachine.
@@ -92,39 +89,43 @@ spec:
                   - type
                   type: object
                 type: array
-              failureMessage:
-                description: "FailureMessage will be set in the event that there is
-                  a terminal problem reconciling the Machine and will contain a more
-                  verbose string suitable for logging and human consumption. \n This
-                  field should not be set for transitive errors that a controller
-                  faces that are expected to be fixed automatically over time (like
-                  service outages), but instead indicate that something is fundamentally
-                  wrong with the Machine's spec or the configuration of the controller,
-                  and that manual intervention is required. Examples of terminal errors
-                  would be invalid combinations of settings in the spec, values that
-                  are unsupported by the controller, or the responsible controller
-                  itself being critically misconfigured. \n Any transient errors that
-                  occur during the reconciliation of Machines can be added as events
-                  to the Machine object and/or logged in the controller's output."
-                type: string
-              failureReason:
-                description: "FailureReason will be set in the event that there is
-                  a terminal problem reconciling the Machine and will contain a succinct
-                  value suitable for machine interpretation. \n This field should
-                  not be set for transitive errors that a controller faces that are
-                  expected to be fixed automatically over time (like service outages),
-                  but instead indicate that something is fundamentally wrong with
-                  the Machine's spec or the configuration of the controller, and that
-                  manual intervention is required. Examples of terminal errors would
-                  be invalid combinations of settings in the spec, values that are
-                  unsupported by the controller, or the responsible controller itself
-                  being critically misconfigured. \n Any transient errors that occur
-                  during the reconciliation of Machines can be added as events to
-                  the Machine object and/or logged in the controller's output."
-                type: string
-              ready:
-                description: Ready is true when the provider resource is ready.
-                type: boolean
+              machineRef:
+                description: MachineRef is an optional reference to a Cluster API
+                  Machine using this host.
+                properties:
+                  apiVersion:
+                    description: API version of the referent.
+                    type: string
+                  fieldPath:
+                    description: 'If referring to a piece of an object instead of
+                      an entire object, this string should contain a valid JSON/Go
+                      field access statement, such as desiredState.manifest.containers[2].
+                      For example, if the object reference is to a container within
+                      a pod, this would take on a value like: "spec.containers{name}"
+                      (where "name" refers to the name of the container that triggered
+                      the event) or if no container name is specified "spec.containers[2]"
+                      (container with index 2 in this pod). This syntax is chosen
+                      only to have some well-defined way of referencing a part of
+                      an object. TODO: this design is not final and this field is
+                      subject to change in the future.'
+                    type: string
+                  kind:
+                    description: 'Kind of the referent. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds'
+                    type: string
+                  name:
+                    description: 'Name of the referent. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names'
+                    type: string
+                  namespace:
+                    description: 'Namespace of the referent. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/namespaces/'
+                    type: string
+                  resourceVersion:
+                    description: 'Specific resourceVersion to which this reference
+                      is made, if any. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#concurrency-control-and-consistency'
+                    type: string
+                  uid:
+                    description: 'UID of the referent. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#uids'
+                    type: string
+                type: object
             type: object
         type: object
     served: true
