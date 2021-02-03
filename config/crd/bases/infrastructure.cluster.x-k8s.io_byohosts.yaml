@@ -18,7 +18,16 @@ spec:
     singular: byohost
   scope: Cluster
   versions:
-  - name: v1alpha3
+  - additionalPrinterColumns:
+    - description: Namespace of the machine deployed on the host
+      jsonPath: .status.machineRef.namespace
+      name: Machine Namespace
+      type: string
+    - description: Name of the machine deployed on the host
+      jsonPath: .status.machineRef.name
+      name: Machine Name
+      type: string
+    name: v1alpha3
     schema:
       openAPIV3Schema:
         description: BYOHost is the Schema for the BYOHosts API. A BYO Host is an

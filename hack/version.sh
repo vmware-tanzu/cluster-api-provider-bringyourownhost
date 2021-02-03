@@ -86,7 +86,7 @@ version::ldflags() {
         local key=${1}
         local val=${2}
         ldflags+=(
-            "-X 'sigs.k8s.io/cluster-api-provider-vsphere/pkg/version.${key}=${val}'"
+            "-X 'vmware-tanzu/cluster-api-provider-byoh/version.${key}=${val}'"
         )
     }
 
