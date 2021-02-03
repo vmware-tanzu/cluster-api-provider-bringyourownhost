@@ -41,6 +41,8 @@ type BYOHostStatus struct {
 // +kubebuilder:resource:path=byohosts,scope=Cluster,categories=cluster-api
 // +kubebuilder:storageversion
 // +kubebuilder:subresource:status
+// +kubebuilder:printcolumn:name="Machine Namespace",type="string",JSONPath=".status.machineRef.namespace",description="Namespace of the machine deployed on the host"
+// +kubebuilder:printcolumn:name="Machine Name",type="string",JSONPath=".status.machineRef.name",description="Name of the machine deployed on the host"
 
 // BYOHost is the Schema for the BYOHosts API.
 // A BYO Host is an host provisioned outside of Cluster API, with the entire stack
@@ -61,4 +63,16 @@ type BYOHostList struct {
 	metav1.TypeMeta `json:",inline"`
 	metav1.ListMeta `json:"metadata,omitempty"`
 	Items           []BYOHost `json:"items"`
+}
+
+func init() {
+	SchemeBuilder.Register(&BYOHost{}, &BYOHostList{})
+}
+
+func (h *BYOHost) GetConditions() clusterv1.Conditions {
+	return h.Status.Conditions
+}
+
+func (h *BYOHost) SetConditions(conditions clusterv1.Conditions) {
+	h.Status.Conditions = conditions
 }

@@ -21,6 +21,8 @@ linters:
     - gofumpt
     - exhaustivestruct
     - nolintlint
+    - nlreturn
+    - wrapcheck
 issues:
   max-same-issues: 0
   max-issues-per-linter: 0
