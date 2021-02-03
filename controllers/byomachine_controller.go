@@ -290,26 +290,31 @@ func (r MachineReconciler) reconcileNormal(ctx context.Context, logger logr.Logg
 
 func (r MachineReconciler) reconcileDelete(ctx context.Context, logger logr.Logger, scope *byoMachineScope) (ctrl.Result, error) {
 
-	// if the Kubernetes node on the host is not yet deleted,
-	// wait for the node agent to report node deleted.
-	if !scope.IsK8sNodeDeleted() {
-		logger.Info("Kubernetes Node on the host is not removed yet")
-		// TODO: might be we should use somothing different that Deleting...
-		conditions.MarkFalse(scope.BYOMachine, infrav1.HostReadyCondition, clusterv1.DeletingReason, clusterv1.ConditionSeverityInfo, "Removing the Kubernetes node...")
-		return ctrl.Result{}, nil
-	}
-
-	// If the Kubernetes components on the node are not yet delete,
-	// wait for the node agent to report installation completed.
-	if scope.HostShouldManageK8sComponents() && !scope.IsK8sComponentsDeleted() {
-		logger.Info("Kubernetes components on the host are not removed yet")
-		// TODO: might be we should use somothing different that Deleting...
-		conditions.MarkFalse(scope.BYOMachine, infrav1.HostReadyCondition, clusterv1.DeletingReason, clusterv1.ConditionSeverityInfo, "Removing the Kubernetes components...")
-		return ctrl.Result{}, nil
-	}
-
 	// If the is still an host reserved by this machine, remove the host reservation.
 	if scope.HasHost() {
+		// Add an annotation to the host to trigger cleanup without waiting for the sync loop.
+		if err := r.markHostForCleanup(ctx, logger, scope); err != nil {
+			return ctrl.Result{}, err
+		}
+
+		// if the Kubernetes node on the host is not yet deleted,
+		// wait for the node agent to report node deleted.
+		if !scope.IsK8sNodeDeleted() {
+			logger.Info("Kubernetes Node on the host is not removed yet")
+			// TODO: might be we should use somothing different that Deleting...
+			conditions.MarkFalse(scope.BYOMachine, infrav1.HostReadyCondition, clusterv1.DeletingReason, clusterv1.ConditionSeverityInfo, "Removing the Kubernetes node...")
+			return ctrl.Result{}, nil
+		}
+
+		// If the Kubernetes components on the node are not yet delete,
+		// wait for the node agent to report installation completed.
+		if scope.HostShouldManageK8sComponents() && !scope.IsK8sComponentsDeleted() {
+			logger.Info("Kubernetes components on the host are not removed yet")
+			// TODO: might be we should use somothing different that Deleting...
+			conditions.MarkFalse(scope.BYOMachine, infrav1.HostReadyCondition, clusterv1.DeletingReason, clusterv1.ConditionSeverityInfo, "Removing the Kubernetes components...")
+			return ctrl.Result{}, nil
+		}
+
 		logger.Info("Removing host reservation")
 		if err := r.removeHostReservation(ctx, logger, scope); err != nil {
 			return ctrl.Result{}, err
@@ -415,12 +420,34 @@ func (r MachineReconciler) reconcileBareMetalProviderID(ctx context.Context, log
 	return ctrl.Result{}, nil
 }
 
+const hostCleanupAnnotation = "byoh.infrastructure.cluster.x-k8s.io/unregistering"
+
+func (r MachineReconciler) markHostForCleanup(ctx context.Context, _ logr.Logger, scope *byoMachineScope) error {
+	// Create the host patch before setting the machine ref.
+	hostPatch := client.MergeFromWithOptions(scope.BYOHost.DeepCopyObject())
+
+	// Remove the host reservation.
+	if scope.BYOHost.Annotations == nil {
+		scope.BYOHost.Annotations = map[string]string{}
+	}
+	scope.BYOHost.Annotations[hostCleanupAnnotation] = ""
+
+	// Issue the patch.
+	if err := r.Client.Status().Patch(ctx, scope.BYOHost, hostPatch); err != nil {
+		return err
+	}
+	return nil
+}
+
 func (r MachineReconciler) removeHostReservation(ctx context.Context, logger logr.Logger, scope *byoMachineScope) error {
 	// Create the host patch before setting the machine ref.
 	hostPatch := client.MergeFromWithOptions(scope.BYOHost.DeepCopyObject())
 
 	// Remove the host reservation.
 	scope.BYOHost.Status.MachineRef = nil
+
+	// Remove the cleanup annotation
+	delete(scope.BYOHost.Annotations, hostCleanupAnnotation)
 
 	// Issue the patch.
 	if err := r.Client.Status().Patch(ctx, scope.BYOHost, hostPatch); err != nil {
