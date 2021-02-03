@@ -21,7 +21,15 @@ import (
 )
 
 // BYOMachineTemplateSpec defines the desired state of BYOMachineTemplate
-type BYOMachineTemplateSpec struct{}
+type BYOMachineTemplateSpec struct {
+	Template BYOMachineTemplateResource `json:"template"`
+}
+
+// BYOMachineTemplateResource describes the data needed to create a BYOMachine from a template
+type BYOMachineTemplateResource struct {
+	// Spec is the specification of the desired behavior of the machine.
+	Spec BYOMachineSpec `json:"spec"`
+}
 
 // +kubebuilder:object:root=true
 // +kubebuilder:resource:path=byomachinetemplates,scope=Namespaced,categories=cluster-api
