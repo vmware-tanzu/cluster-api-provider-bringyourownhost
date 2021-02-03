@@ -19,7 +19,6 @@ package v1alpha3
 import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	clusterv1 "sigs.k8s.io/cluster-api/api/v1alpha3"
-	"sigs.k8s.io/cluster-api/errors"
 )
 
 const (
@@ -31,10 +30,12 @@ const (
 
 // BYOMachineSpec defines the desired state of BYOMachine
 type BYOMachineSpec struct {
+	// TODO: add HostSelector for allowing to restrict the list of candidate hosts.
 
-	// ProviderID is the virtual machine's BIOS UUID formatted as
-	// byoh://12345678-1234-1234-1234-123456789abc
-	// TODO: the exact format should be validated later in the implementation
+	// ProviderID is the identification ID of the machine provided by the provider.
+	// This field must match the provider ID as seen on the node object corresponding to this machine.
+	// This field is required by higher level consumers of cluster-api. Example use case is cluster autoscaler
+	// For Bare metal providers, this is a generated string.
 	// +optional
 	ProviderID *string `json:"providerID,omitempty"`
 }
@@ -45,44 +46,6 @@ type BYOMachineStatus struct {
 	// +optional
 	Ready bool `json:"ready"`
 
-	// FailureReason will be set in the event that there is a terminal problem
-	// reconciling the Machine and will contain a succinct value suitable
-	// for machine interpretation.
-	//
-	// This field should not be set for transitive errors that a controller
-	// faces that are expected to be fixed automatically over
-	// time (like service outages), but instead indicate that something is
-	// fundamentally wrong with the Machine's spec or the configuration of
-	// the controller, and that manual intervention is required. Examples
-	// of terminal errors would be invalid combinations of settings in the
-	// spec, values that are unsupported by the controller, or the
-	// responsible controller itself being critically misconfigured.
-	//
-	// Any transient errors that occur during the reconciliation of Machines
-	// can be added as events to the Machine object and/or logged in the
-	// controller's output.
-	// +optional
-	FailureReason *errors.MachineStatusError `json:"failureReason,omitempty"`
-
-	// FailureMessage will be set in the event that there is a terminal problem
-	// reconciling the Machine and will contain a more verbose string suitable
-	// for logging and human consumption.
-	//
-	// This field should not be set for transitive errors that a controller
-	// faces that are expected to be fixed automatically over
-	// time (like service outages), but instead indicate that something is
-	// fundamentally wrong with the Machine's spec or the configuration of
-	// the controller, and that manual intervention is required. Examples
-	// of terminal errors would be invalid combinations of settings in the
-	// spec, values that are unsupported by the controller, or the
-	// responsible controller itself being critically misconfigured.
-	//
-	// Any transient errors that occur during the reconciliation of Machines
-	// can be added as events to the Machine object and/or logged in the
-	// controller's output.
-	// +optional
-	FailureMessage *string `json:"failureMessage,omitempty"`
-
 	// Conditions defines current service state of the BYOMachine.
 	// +optional
 	Conditions clusterv1.Conditions `json:"conditions,omitempty"`
@@ -92,6 +55,7 @@ type BYOMachineStatus struct {
 // +kubebuilder:resource:path=byomachines,scope=Namespaced,categories=cluster-api
 // +kubebuilder:storageversion
 // +kubebuilder:subresource:status
+// +kubebuilder:printcolumn:name="Ready",type="string",JSONPath=".status.ready",description="True when the host used by the machine is ready"
 
 // BYOMachine is the Schema for the BYOMachines API, allowing
 // to manage in a declarative way a ClusterAPI Machine backed by a BYOHost.
@@ -101,14 +65,6 @@ type BYOMachine struct {
 
 	Spec   BYOMachineSpec   `json:"spec,omitempty"`
 	Status BYOMachineStatus `json:"status,omitempty"`
-}
-
-func (m *BYOMachine) GetConditions() clusterv1.Conditions {
-	return m.Status.Conditions
-}
-
-func (m *BYOMachine) SetConditions(conditions clusterv1.Conditions) {
-	m.Status.Conditions = conditions
 }
 
 // +kubebuilder:object:root=true
@@ -122,4 +78,12 @@ type BYOMachineList struct {
 
 func init() {
 	SchemeBuilder.Register(&BYOMachine{}, &BYOMachineList{})
+}
+
+func (m *BYOMachine) GetConditions() clusterv1.Conditions {
+	return m.Status.Conditions
+}
+
+func (m *BYOMachine) SetConditions(conditions clusterv1.Conditions) {
+	m.Status.Conditions = conditions
 }

@@ -18,7 +18,12 @@ spec:
     singular: byomachine
   scope: Namespaced
   versions:
-  - name: v1alpha3
+  - additionalPrinterColumns:
+    - description: True when the host used by the machine is ready
+      jsonPath: .status.ready
+      name: Ready
+      type: string
+    name: v1alpha3
     schema:
       openAPIV3Schema:
         description: BYOMachine is the Schema for the BYOMachines API, allowing to
@@ -40,9 +45,11 @@ spec:
             description: BYOMachineSpec defines the desired state of BYOMachine
             properties:
               providerID:
-                description: 'ProviderID is the virtual machine''s BIOS UUID formatted
-                  as byoh://12345678-1234-1234-1234-123456789abc TODO: the exact format
-                  should be validated later in the implementation'
+                description: ProviderID is the identification ID of the machine provided
+                  by the provider. This field must match the provider ID as seen on
+                  the node object corresponding to this machine. This field is required
+                  by higher level consumers of cluster-api. Example use case is cluster
+                  autoscaler For Bare metal providers, this is a generated string.
                 type: string
             type: object
           status:
@@ -92,36 +99,6 @@ spec:
                   - type
                   type: object
                 type: array
-              failureMessage:
-                description: "FailureMessage will be set in the event that there is
-                  a terminal problem reconciling the Machine and will contain a more
-                  verbose string suitable for logging and human consumption. \n This
-                  field should not be set for transitive errors that a controller
-                  faces that are expected to be fixed automatically over time (like
-                  service outages), but instead indicate that something is fundamentally
-                  wrong with the Machine's spec or the configuration of the controller,
-                  and that manual intervention is required. Examples of terminal errors
-                  would be invalid combinations of settings in the spec, values that
-                  are unsupported by the controller, or the responsible controller
-                  itself being critically misconfigured. \n Any transient errors that
-                  occur during the reconciliation of Machines can be added as events
-                  to the Machine object and/or logged in the controller's output."
-                type: string
-              failureReason:
-                description: "FailureReason will be set in the event that there is
-                  a terminal problem reconciling the Machine and will contain a succinct
-                  value suitable for machine interpretation. \n This field should
-                  not be set for transitive errors that a controller faces that are
-                  expected to be fixed automatically over time (like service outages),
-                  but instead indicate that something is fundamentally wrong with
-                  the Machine's spec or the configuration of the controller, and that
-                  manual intervention is required. Examples of terminal errors would
-                  be invalid combinations of settings in the spec, values that are
-                  unsupported by the controller, or the responsible controller itself
-                  being critically misconfigured. \n Any transient errors that occur
-                  during the reconciliation of Machines can be added as events to
-                  the Machine object and/or logged in the controller's output."
-                type: string
               ready:
                 description: Ready is true when the provider resource is ready.
                 type: boolean

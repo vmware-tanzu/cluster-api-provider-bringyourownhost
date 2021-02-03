@@ -26,6 +26,7 @@ import (
 
 	infrav1 "vmware-tanzu/cluster-api-provider-byoh/api/v1alpha3"
 	"vmware-tanzu/cluster-api-provider-byoh/controllers"
+	"vmware-tanzu/cluster-api-provider-byoh/version"
 
 	"github.com/spf13/pflag"
 	corev1 "k8s.io/api/core/v1"
@@ -34,7 +35,7 @@ import (
 	"k8s.io/klog"
 	"k8s.io/klog/klogr"
 	clusterv1 "sigs.k8s.io/cluster-api/api/v1alpha3"
-	"sigs.k8s.io/cluster-api/cmd/version"
+	"sigs.k8s.io/cluster-api/controllers/remote"
 	"sigs.k8s.io/cluster-api/util"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
@@ -53,6 +54,7 @@ var (
 	leaderElectionRetryPeriod   time.Duration
 	watchNamespace              string
 	profilerAddress             string
+	clusterConcurrency          int
 	machineConcurrency          int
 	syncPeriod                  time.Duration
 	webhookPort                 int
@@ -90,6 +92,9 @@ func InitFlags(fs *pflag.FlagSet) {
 
 	fs.StringVar(&profilerAddress, "profiler-address", "",
 		"Bind address to expose the pprof profiler (e.g. localhost:6060)")
+
+	fs.IntVar(&machineConcurrency, "cluster-concurrency", 10,
+		"Number of cluster to process simultaneously")
 
 	fs.IntVar(&machineConcurrency, "machine-concurrency", 10,
 		"Number of machines to process simultaneously")
@@ -175,9 +180,29 @@ func setupReconcilers(mgr ctrl.Manager) {
 		return
 	}
 
+	// Set up a ClusterCacheTracker and ClusterCacheReconciler to provide to controllers
+	// requiring a connection to a remote cluster
+	tracker, err := remote.NewClusterCacheTracker(
+		ctrl.Log.WithName("remote").WithName("ClusterCacheTracker"),
+		mgr,
+	)
+	if err != nil {
+		setupLog.Error(err, "unable to create cluster cache tracker")
+		os.Exit(1)
+	}
+	if err := (&remote.ClusterCacheReconciler{
+		Client:  mgr.GetClient(),
+		Log:     ctrl.Log.WithName("remote").WithName("ClusterCacheReconciler"),
+		Tracker: tracker,
+	}).SetupWithManager(mgr, concurrency(clusterConcurrency)); err != nil {
+		setupLog.Error(err, "unable to create controller", "controller", "ClusterCacheReconciler")
+		os.Exit(1)
+	}
+
 	if err := (&controllers.MachineReconciler{
-		Client: mgr.GetClient(),
-		Log:    ctrl.Log.WithName("controllers").WithName("BYOMachine"),
+		Client:  mgr.GetClient(),
+		Log:     ctrl.Log.WithName("controllers").WithName("BYOMachine"),
+		Tracker: tracker,
 	}).SetupWithManager(mgr, concurrency(machineConcurrency)); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "BYOMachine")
 		os.Exit(1)
