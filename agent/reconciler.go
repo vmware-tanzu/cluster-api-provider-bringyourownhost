@@ -23,10 +23,11 @@ import (
 	"os/exec"
 	"path/filepath"
 
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/runtime"
 	"vmware-tanzu/cluster-api-provider-byoh/agent/cloudinit"
 	infrav1 "vmware-tanzu/cluster-api-provider-byoh/api/v1alpha3"
+
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime"
 
 	"github.com/go-logr/logr"
 	"github.com/pkg/errors"
@@ -63,7 +64,7 @@ func (r *HostReconciler) isThisHost() predicate.Funcs {
 	var f = func(obj runtime.Object, meta metav1.Object) bool {
 		h, ok := obj.(*infrav1.BYOHost)
 		if !ok {
-			return true
+			return false
 		}
 		return h.Name == r.Host.Name
 	}
