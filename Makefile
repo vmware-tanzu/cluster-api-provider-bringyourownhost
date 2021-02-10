@@ -60,6 +60,13 @@ DEV_CONTROLLER_IMG ?= $(DEV_REGISTRY)/vsphere-$(IMAGE_NAME)
 DEV_TAG ?= dev
 DEV_MANIFEST_IMG := $(DEV_CONTROLLER_IMG)-$(ARCH)
 
+# Hosts running SELinux need :z added to volume mounts
+SELINUX_ENABLED := $(shell cat /sys/fs/selinux/enforce 2> /dev/null || echo 0)
+
+ifeq ($(SELINUX_ENABLED),1)
+  DOCKER_VOL_OPTS?=:z
+endif
+
 # Set build time variables including git version details
 LDFLAGS := $(shell hack/version.sh)
 
@@ -182,6 +189,9 @@ test: ## Run tests
 manager: generate-go ## Build manager binary
 	go build -o $(BIN_DIR)/manager -ldflags "$(LDFLAGS) -extldflags '-static' -w -s"
 
+agent: generate-go ## Build agent binary
+	go build -o $(BIN_DIR)/agent -ldflags "$(LDFLAGS) -extldflags '-static' -w -s" vmware-tanzu/cluster-api-provider-byoh/agent
+
 ## --------------------------------------
 ## Docker
 ## --------------------------------------
@@ -189,6 +199,22 @@ manager: generate-go ## Build manager binary
 ## --------------------------------------
 ## Release
 ## --------------------------------------
+
+release-binaries: ## Builds the binaries to publish with a release
+	RELEASE_BINARY=./agent GOOS=linux GOARCH=amd64 $(MAKE) release-binary
+	# RELEASE_BINARY=./agent GOOS=darwin GOARCH=amd64 $(MAKE) release-binary
+
+release-binary: $(RELEASE_DIR)
+	docker run \
+		--rm \
+		-e CGO_ENABLED=0 \
+		-e GOOS=$(GOOS) \
+		-e GOARCH=$(GOARCH) \
+		-v "$$(pwd):/workspace$(DOCKER_VOL_OPTS)" \
+		-w /workspace \
+		golang:1.15.3 \
+		go build -a -ldflags "$(LDFLAGS) -extldflags '-static'" \
+		-o ./bin/$(notdir $(RELEASE_BINARY))-$(GOOS)-$(GOARCH) $(RELEASE_BINARY)
 
 ## --------------------------------------
 ## Cleanup 
