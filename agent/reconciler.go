@@ -236,10 +236,8 @@ func (r *HostReconciler) bootstrapNode(ctx context.Context, logger logr.Logger, 
 	logger.Info("Creating the bootstrap sentinel file...")
 
 	dir := filepath.Dir(bootstrapSentinelFile)
-	if _, err := os.Stat(dir); os.IsNotExist(err) {
-		if err := os.Mkdir(dir, 0644); err != nil {
-			return errors.Wrapf(err, "failed to create sentinel file %s", bootstrapSentinelFile)
-		}
+	if err := os.MkdirAll(dir, 0644); err != nil {
+		return errors.Wrapf(err, "failed to create sentinel file %s", bootstrapSentinelFile)
 	}
 
 	if _, err := os.Stat(bootstrapSentinelFile); os.IsNotExist(err) {
@@ -300,5 +298,73 @@ func (r *HostReconciler) removeNode(_ context.Context, logger logr.Logger) error
 	}
 
 	logger.Info("Kubernetes Node removed")
+	return nil
+}
+
+func (r *HostReconciler) InstallKubernetes(ctx context.Context, logger logr.Logger, scope *byoHostScope) error {
+
+	// TODO: version management
+
+	// TODO: Download binaries into source folder
+
+	// copy kubeadm to /usr/bin/kubeadm
+
+	// copy kubectl to /usr/bin/kubectl
+
+	// copy kubelet to /usr/bin/kubelet
+
+	// copy kubelet.service to /files/etc/systemd/system/kubelet.service
+
+	// copy kubelet drop in file to /etc/systemd/system/kubelet.service.d/10-kubeadm.conf
+
+	// copy containerd to /usr/local/bin/containerd
+
+	// copy containerd-shim to /usr/local/bin/containerd-shim
+
+	// copy containerd-shim-runc-v2 to /usr/local/bin/containerd-shim-runc-v2
+
+	// copy ctr to /usr/local/bin/ctr
+
+	// copy cni folder to /opt/cni/bin
+
+	// copy crictl to /usr/bin/crictl
+
+	// enabling containerd
+
+	// enabling kubelet
+
+	// TODO: TBD if to delete binaries from source folder or let there
+
+	return nil
+}
+
+func (r *HostReconciler) removeKubernetes(ctx context.Context, logger logr.Logger, scope *byoHostScope) error {
+
+	// disabling kubelet
+
+	// disabling containerd
+
+	// rm /usr/bin/crictl
+
+	// rm -r /opt/cni/bin
+
+	// rm /usr/local/bin/ctr
+
+	// rm /usr/local/bin/containerd-shim-runc-v2
+
+	// rm /usr/local/bin/containerd-shim
+
+	// rm /usr/local/bin/containerd
+
+	// rm /etc/systemd/system/kubelet.service.d/10-kubeadm.conf
+
+	// rm /files/etc/systemd/system/kubelet.service
+
+	// rm /usr/bin/kubelet
+
+	// rm /usr/bin/kubectl
+
+	// rm /usr/bin/kubeadm
+
 	return nil
 }
