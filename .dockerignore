@@ -1,8 +1,0 @@
-.git/
-.github/
-.vscode
-.dockerignore
-.gitignore
-bin/
-hack/tools/bin/
-out/
