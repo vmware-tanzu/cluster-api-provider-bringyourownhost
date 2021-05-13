@@ -55,6 +55,8 @@ We are going using [tilt](https://tilt.dev/) in order to do so, so you can have 
 In order to do so you need to clone both https://github.com/kubernetes-sigs/cluster-api/ and https://github.com/vmware-tanzu/cluster-api-provider-byoh locally;
 then, from the folder where Cluster-API source code is cloned:
 
+**Note:** This POC is compatible with [release-0.3](https://github.com/kubernetes-sigs/cluster-api/tree/release-0.3) of Cluster-API.
+
 ```shell
 cat > tilt-settings.json <<EOF
 {
@@ -76,8 +78,6 @@ cluster with:
 - BYOH based worker nodes
 
 ### Control plane nodes
-
-(from the folder where Cluster-API source code is cloned)
 
 ```shell
 # from Cluster-API-provider-BYOH folder
@@ -141,11 +141,11 @@ Check if the host registered itself into the management cluster.
 kubectl get byohosts 
 ```
 
-You can now repeat the same steps for additional hosts by changing the HOST_NAME env variable.
+You can now repeat the same steps for additional hosts by changing the `HOST_NAME` env variable.
 
 ### Worker nodes
 
-(from the folder where Cluster-API source code is cloned)
+(from the folder where Cluster-API-Provider-BYOH source code is cloned)
 
 Create a machine deployment with BYOHost
 
@@ -160,7 +160,7 @@ Check if the worker node is running.
 kubectl get machines 
 ```
 
-Dig into ho whe machine gets privisioned.
+Dig into host when machine gets provisioned.
 
 ```shell
 kubectl get kubeadmconfig
