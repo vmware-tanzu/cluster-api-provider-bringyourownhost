@@ -1,3 +1,10 @@
 version: "2"
 domain: cluster.x-k8s.io
 repo: github.com/vmware-tanzu/cluster-api-provider-byoh
+resources:
+- group: infrastructure
+  version: v1alpha3
+  kind: ByohCluster
+- group: infrastructure
+  version: v1alpha3
+  kind: ByohMachine
