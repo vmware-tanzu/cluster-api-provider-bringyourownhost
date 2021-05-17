@@ -6,6 +6,7 @@ import (
 	. "github.com/onsi/gomega"
 	infrastructurev1alpha3 "github.com/vmware-tanzu/cluster-api-provider-byoh/api/v1alpha3"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/types"
 	"time"
 )
 
@@ -33,10 +34,24 @@ var _ = Describe("Controllers/ByohmachineController", func() {
 					Namespace: ByoMachineNamespace,
 				},
 				Spec: infrastructurev1alpha3.ByohMachineSpec{
-					Foo: "",
+					Foo: "bar",
 				},
 			}
 			Expect(k8sClient.Create(ctx, byohMachine)).Should(Succeed())
+
+			By("fetching the byohmachine")
+			byohMachineLookupKey := types.NamespacedName{Name: ByoMachineName, Namespace: ByoMachineNamespace}
+			createdByohMachine := &infrastructurev1alpha3.ByohMachine{}
+
+			Eventually(func() bool {
+				err := k8sClient.Get(ctx, byohMachineLookupKey, createdByohMachine)
+				if err != nil {
+					return false
+				}
+				return true
+			}, timeout, interval).Should(BeTrue())
+
+			Expect(createdByohMachine.Spec.Foo).Should(Equal("bar"))
 		})
 	})
 })
