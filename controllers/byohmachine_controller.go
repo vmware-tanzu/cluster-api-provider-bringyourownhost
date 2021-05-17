@@ -17,6 +17,7 @@ package controllers
 
 import (
 	"context"
+	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	"github.com/go-logr/logr"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -36,7 +37,7 @@ type ByohMachineReconciler struct {
 // +kubebuilder:rbac:groups=infrastructure.cluster.x-k8s.io,resources=byohmachines,verbs=get;list;watch;create;update;patch;delete
 // +kubebuilder:rbac:groups=infrastructure.cluster.x-k8s.io,resources=byohmachines/status,verbs=get;update;patch
 
-func (r *ByohMachineReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
+func (r *ByohMachineReconciler) Reconcile(ctx context.Context, req reconcile.Request) (ctrl.Result, error) {
 	_ = context.Background()
 	_ = r.Log.WithValues("byohmachine", req.NamespacedName)
 
