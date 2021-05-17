@@ -10,13 +10,12 @@ import (
 	"time"
 )
 
-var _ = Describe("Controllers/ByohmachineController", func() {
+var _ = Describe("Controllers/ByomachineController", func() {
 	const (
 		ByoMachineName      = "test-machine"
 		ByoMachineNamespace = "default"
 
 		timeout  = time.Second * 10
-		duration = time.Second * 10
 		interval = time.Millisecond * 250
 	)
 
@@ -24,34 +23,34 @@ var _ = Describe("Controllers/ByohmachineController", func() {
 		It("should create a new BYO machine", func() {
 			By("creating a new BYO machine")
 			ctx := context.Background()
-			byohMachine := &infrastructurev1alpha3.ByohMachine{
+			ByoMachine := &infrastructurev1alpha3.ByoMachine{
 				TypeMeta: metav1.TypeMeta{
-					Kind:       "ByohMachine",
+					Kind:       "ByoMachine",
 					APIVersion: "infrastructure.cluster.x-k8s.io/v1alpha3",
 				},
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      ByoMachineName,
 					Namespace: ByoMachineNamespace,
 				},
-				Spec: infrastructurev1alpha3.ByohMachineSpec{
+				Spec: infrastructurev1alpha3.ByoMachineSpec{
 					Foo: "bar",
 				},
 			}
-			Expect(k8sClient.Create(ctx, byohMachine)).Should(Succeed())
+			Expect(k8sClient.Create(ctx, ByoMachine)).Should(Succeed())
 
-			By("fetching the byohmachine")
-			byohMachineLookupKey := types.NamespacedName{Name: ByoMachineName, Namespace: ByoMachineNamespace}
-			createdByohMachine := &infrastructurev1alpha3.ByohMachine{}
+			By("fetching the Byomachine")
+			ByoMachineLookupKey := types.NamespacedName{Name: ByoMachineName, Namespace: ByoMachineNamespace}
+			createdByoMachine := &infrastructurev1alpha3.ByoMachine{}
 
 			Eventually(func() bool {
-				err := k8sClient.Get(ctx, byohMachineLookupKey, createdByohMachine)
+				err := k8sClient.Get(ctx, ByoMachineLookupKey, createdByoMachine)
 				if err != nil {
 					return false
 				}
 				return true
 			}, timeout, interval).Should(BeTrue())
 
-			Expect(createdByohMachine.Spec.Foo).Should(Equal("bar"))
+			Expect(createdByoMachine.Spec.Foo).Should(Equal("bar"))
 		})
 	})
 })

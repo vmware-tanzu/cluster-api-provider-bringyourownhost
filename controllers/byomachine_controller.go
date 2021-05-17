@@ -27,27 +27,27 @@ import (
 	infrastructurev1alpha3 "github.com/vmware-tanzu/cluster-api-provider-byoh/api/v1alpha3"
 )
 
-// ByohMachineReconciler reconciles a ByohMachine object
-type ByohMachineReconciler struct {
+// ByoMachineReconciler reconciles a ByoMachine object
+type ByoMachineReconciler struct {
 	client.Client
 	Log    logr.Logger
 	Scheme *runtime.Scheme
 }
 
-// +kubebuilder:rbac:groups=infrastructure.cluster.x-k8s.io,resources=byohmachines,verbs=get;list;watch;create;update;patch;delete
-// +kubebuilder:rbac:groups=infrastructure.cluster.x-k8s.io,resources=byohmachines/status,verbs=get;update;patch
+// +kubebuilder:rbac:groups=infrastructure.cluster.x-k8s.io,resources=Byomachines,verbs=get;list;watch;create;update;patch;delete
+// +kubebuilder:rbac:groups=infrastructure.cluster.x-k8s.io,resources=Byomachines/status,verbs=get;update;patch
 
-func (r *ByohMachineReconciler) Reconcile(ctx context.Context, req reconcile.Request) (ctrl.Result, error) {
+func (r *ByoMachineReconciler) Reconcile(ctx context.Context, req reconcile.Request) (ctrl.Result, error) {
 	_ = context.Background()
-	_ = r.Log.WithValues("byohmachine", req.NamespacedName)
+	_ = r.Log.WithValues("Byomachine", req.NamespacedName)
 
 	// your logic here
 
 	return ctrl.Result{}, nil
 }
 
-func (r *ByohMachineReconciler) SetupWithManager(mgr ctrl.Manager) error {
+func (r *ByoMachineReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
-		For(&infrastructurev1alpha3.ByohMachine{}).
+		For(&infrastructurev1alpha3.ByoMachine{}).
 		Complete(r)
 }
