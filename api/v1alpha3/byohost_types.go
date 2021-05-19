@@ -16,6 +16,7 @@ limitations under the License.
 package v1alpha3
 
 import (
+	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -33,8 +34,11 @@ type ByoHostSpec struct {
 
 // ByoHostStatus defines the observed state of ByoHost
 type ByoHostStatus struct {
-	// INSERT ADDITIONAL STATUS FIELD - define observed state of cluster
-	// Important: Run "make" to regenerate code after modifying this file
+	// MachineRef is an optional reference to a Cluster API Machine
+	// using this host.
+	// +optional
+	MachineRef *corev1.ObjectReference `json:"machineRef,omitempty"`
+
 }
 
 //+kubebuilder:object:root=true
