@@ -13,9 +13,9 @@ import (
 
 var _ = Describe("Controllers/ByomachineController", func() {
 	const (
-		ByoMachineName = "test-machine"
-		ByoHostName               = "test-host"
-		ByoMachineNamespace       = "default"
+		ByoMachineName      = "test-machine"
+		ByoHostName         = "test-host"
+		ByoMachineNamespace = "default"
 
 		timeout  = time.Second * 10
 		interval = time.Millisecond * 250
@@ -70,7 +70,6 @@ var _ = Describe("Controllers/ByomachineController", func() {
 			}, timeout, interval).Should(BeTrue())
 
 			Expect(createdByoMachine.Spec.Foo).Should(Equal("bar"))
-
 
 			ByoHostLookupKey := types.NamespacedName{Name: ByoHostName, Namespace: ByoMachineNamespace}
 

@@ -45,7 +45,7 @@ func (r *ByoMachineReconciler) Reconcile(req reconcile.Request) (ctrl.Result, er
 
 	// your logic here
 	byoMachine := &infrastructurev1alpha3.ByoMachine{}
-	 r.Client.Get(ctx, req.NamespacedName, byoMachine)
+	r.Client.Get(ctx, req.NamespacedName, byoMachine)
 	//if err != nil {
 	//	if apierrors.IsNotFound(err) {
 	//		return ctrl.Result{}, nil

@@ -38,7 +38,6 @@ type ByoHostStatus struct {
 	// using this host.
 	// +optional
 	MachineRef *corev1.ObjectReference `json:"machineRef,omitempty"`
-
 }
 
 //+kubebuilder:object:root=true
