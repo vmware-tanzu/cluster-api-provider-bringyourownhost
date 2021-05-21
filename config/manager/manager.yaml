@@ -27,7 +27,7 @@ spec:
         - /manager
         args:
         - --enable-leader-election
-        image: controller:latest
+        image: gcr.io/k8s-staging-cluster-api/capb-manager:latest
         name: manager
         resources:
           limits:
