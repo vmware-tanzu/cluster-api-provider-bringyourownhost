@@ -13,51 +13,54 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package v1alpha3
+package v1alpha4
 
 import (
+	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 // EDIT THIS FILE!  THIS IS SCAFFOLDING FOR YOU TO OWN!
 // NOTE: json tags are required.  Any new fields you add must have json tags for the fields to be serialized.
 
-// ByoMachineTemplateSpec defines the desired state of ByoMachineTemplate
-type ByoMachineTemplateSpec struct {
+// ByoHostSpec defines the desired state of ByoHost
+type ByoHostSpec struct {
 	// INSERT ADDITIONAL SPEC FIELDS - desired state of cluster
 	// Important: Run "make" to regenerate code after modifying this file
 
-	// Foo is an example field of ByoMachineTemplate. Edit byomachinetemplate_types.go to remove/update
+	// Foo is an example field of ByoHost. Edit byohost_types.go to remove/update
 	Foo string `json:"foo,omitempty"`
 }
 
-// ByoMachineTemplateStatus defines the observed state of ByoMachineTemplate
-type ByoMachineTemplateStatus struct {
-	// INSERT ADDITIONAL STATUS FIELD - define observed state of cluster
-	// Important: Run "make" to regenerate code after modifying this file
+// ByoHostStatus defines the observed state of ByoHost
+type ByoHostStatus struct {
+	// MachineRef is an optional reference to a Cluster API Machine
+	// using this host.
+	// +optional
+	MachineRef *corev1.ObjectReference `json:"machineRef,omitempty"`
 }
 
 //+kubebuilder:object:root=true
 //+kubebuilder:subresource:status
 
-// ByoMachineTemplate is the Schema for the byomachinetemplates API
-type ByoMachineTemplate struct {
+// ByoHost is the Schema for the byohosts API
+type ByoHost struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
 
-	Spec   ByoMachineTemplateSpec   `json:"spec,omitempty"`
-	Status ByoMachineTemplateStatus `json:"status,omitempty"`
+	Spec   ByoHostSpec   `json:"spec,omitempty"`
+	Status ByoHostStatus `json:"status,omitempty"`
 }
 
 //+kubebuilder:object:root=true
 
-// ByoMachineTemplateList contains a list of ByoMachineTemplate
-type ByoMachineTemplateList struct {
+// ByoHostList contains a list of ByoHost
+type ByoHostList struct {
 	metav1.TypeMeta `json:",inline"`
 	metav1.ListMeta `json:"metadata,omitempty"`
-	Items           []ByoMachineTemplate `json:"items"`
+	Items           []ByoHost `json:"items"`
 }
 
 func init() {
-	SchemeBuilder.Register(&ByoMachineTemplate{}, &ByoMachineTemplateList{})
+	SchemeBuilder.Register(&ByoHost{}, &ByoHostList{})
 }

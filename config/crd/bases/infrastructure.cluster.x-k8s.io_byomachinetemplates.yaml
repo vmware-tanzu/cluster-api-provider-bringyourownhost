@@ -16,7 +16,7 @@ spec:
     singular: byomachinetemplate
   scope: Namespaced
   versions:
-  - name: v1alpha3
+  - name: v1alpha4
     schema:
       openAPIV3Schema:
         description: ByoMachineTemplate is the Schema for the byomachinetemplates
@@ -41,6 +41,22 @@ spec:
                 description: Foo is an example field of ByoMachineTemplate. Edit byomachinetemplate_types.go
                   to remove/update
                 type: string
+              template:
+                properties:
+                  spec:
+                    description: Spec is the specification of the desired behavior
+                      of the machine.
+                    properties:
+                      foo:
+                        description: Foo is an example field of ByoMachine. Edit ByoMachine_types.go
+                          to remove/update
+                        type: string
+                    type: object
+                required:
+                - spec
+                type: object
+            required:
+            - template
             type: object
           status:
             description: ByoMachineTemplateStatus defines the observed state of ByoMachineTemplate

@@ -23,7 +23,7 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	infrastructurev1alpha3 "github.com/vmware-tanzu/cluster-api-provider-byoh/api/v1alpha3"
+	infrastructurev1alpha4 "github.com/vmware-tanzu/cluster-api-provider-byoh/api/v1alpha4"
 )
 
 // ByoMachineTemplateReconciler reconciles a ByoMachineTemplate object
@@ -57,6 +57,6 @@ func (r *ByoMachineTemplateReconciler) Reconcile(req ctrl.Request) (ctrl.Result,
 // SetupWithManager sets up the controller with the Manager.
 func (r *ByoMachineTemplateReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
-		For(&infrastructurev1alpha3.ByoMachineTemplate{}).
+		For(&infrastructurev1alpha4.ByoMachineTemplate{}).
 		Complete(r)
 }
