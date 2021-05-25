@@ -63,7 +63,6 @@ func (r *ByoMachineReconciler) Reconcile(ctx context.Context, req reconcile.Requ
 
 	helper, _ := patch.NewHelper(&host, r.Client)
 
-
 	//hostBeforePatch := client.MergeFromWithOptions(host.DeepCopyObject(), client.MergeFromWithOptimisticLock{})
 
 	host.Status.MachineRef = &corev1.ObjectReference{
