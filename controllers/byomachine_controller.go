@@ -17,16 +17,14 @@ package controllers
 
 import (
 	"context"
+	"github.com/go-logr/logr"
+	infrastructurev1alpha4 "github.com/vmware-tanzu/cluster-api-provider-byoh/api/v1alpha4"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
-	"sigs.k8s.io/controller-runtime/pkg/reconcile"
-
-	"github.com/go-logr/logr"
 	"k8s.io/apimachinery/pkg/runtime"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-
-	infrastructurev1alpha3 "github.com/vmware-tanzu/cluster-api-provider-byoh/api/v1alpha3"
+	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 )
 
 // ByoMachineReconciler reconciles a ByoMachine object
@@ -44,7 +42,7 @@ func (r *ByoMachineReconciler) Reconcile(req reconcile.Request) (ctrl.Result, er
 	_ = r.Log.WithValues("Byomachine", req.NamespacedName)
 
 	// your logic here
-	byoMachine := &infrastructurev1alpha3.ByoMachine{}
+	byoMachine := &infrastructurev1alpha4.ByoMachine{}
 	r.Client.Get(ctx, req.NamespacedName, byoMachine)
 	//if err != nil {
 	//	if apierrors.IsNotFound(err) {
@@ -53,7 +51,7 @@ func (r *ByoMachineReconciler) Reconcile(req reconcile.Request) (ctrl.Result, er
 	//	return ctrl.Result{}, err
 	//}
 
-	hostsList := &infrastructurev1alpha3.ByoHostList{}
+	hostsList := &infrastructurev1alpha4.ByoHostList{}
 	if err := r.Client.List(
 		ctx,
 		hostsList,
@@ -86,6 +84,6 @@ func (r *ByoMachineReconciler) Reconcile(req reconcile.Request) (ctrl.Result, er
 
 func (r *ByoMachineReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
-		For(&infrastructurev1alpha3.ByoMachine{}).
+		For(&infrastructurev1alpha4.ByoMachine{}).
 		Complete(r)
 }

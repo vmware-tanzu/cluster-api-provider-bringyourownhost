@@ -16,7 +16,7 @@ spec:
     singular: byomachine
   scope: Namespaced
   versions:
-  - name: v1alpha3
+  - name: v1alpha4
     schema:
       openAPIV3Schema:
         description: ByoMachine is the Schema for the Byomachines API

@@ -3,14 +3,14 @@ repo: github.com/vmware-tanzu/cluster-api-provider-byoh
 resources:
 - group: infrastructure
   kind: ByohCluster
-  version: v1alpha3
+  version: v1alpha4
 - group: infrastructure
   kind: ByohMachine
-  version: v1alpha3
+  version: v1alpha4
 - group: infrastructure
   kind: ByoHost
-  version: v1alpha3
+  version: v1alpha4
 - group: infrastructure
   kind: ByoMachineTemplate
-  version: v1alpha3
+  version: v1alpha4
 version: "2"
