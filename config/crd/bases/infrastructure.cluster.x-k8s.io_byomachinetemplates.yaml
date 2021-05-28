@@ -51,6 +51,8 @@ spec:
                         description: Foo is an example field of ByoMachine. Edit ByoMachine_types.go
                           to remove/update
                         type: string
+                      providerID:
+                        type: string
                     type: object
                 required:
                 - spec
