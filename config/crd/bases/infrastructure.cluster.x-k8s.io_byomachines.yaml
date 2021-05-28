@@ -40,9 +40,19 @@ spec:
                 description: Foo is an example field of ByoMachine. Edit ByoMachine_types.go
                   to remove/update
                 type: string
+              providerID:
+                type: string
             type: object
           status:
             description: ByoMachineStatus defines the observed state of ByoMachine
+            properties:
+              ready:
+                description: 'INSERT ADDITIONAL STATUS FIELD - define observed state
+                  of cluster Important: Run "make" to regenerate code after modifying
+                  this file'
+                type: boolean
+            required:
+            - ready
             type: object
         type: object
     served: true

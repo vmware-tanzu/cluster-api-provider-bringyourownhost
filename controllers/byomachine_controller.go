@@ -18,10 +18,12 @@ package controllers
 import (
 	"context"
 	"fmt"
+
 	"github.com/go-logr/logr"
 	infrastructurev1alpha4 "github.com/vmware-tanzu/cluster-api-provider-byoh/api/v1alpha4"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/runtime"
+	"sigs.k8s.io/cluster-api/util"
 	"sigs.k8s.io/cluster-api/util/patch"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -35,8 +37,8 @@ type ByoMachineReconciler struct {
 	Scheme *runtime.Scheme
 }
 
-// +kubebuilder:rbac:groups=infrastructure.cluster.x-k8s.io,resources=Byomachines,verbs=get;list;watch;create;update;patch;delete
-// +kubebuilder:rbac:groups=infrastructure.cluster.x-k8s.io,resources=Byomachines/status,verbs=get;update;patch
+// +kubebuilder:rbac:groups=infrastructure.cluster.x-k8s.io,resources=byomachines,verbs=get;list;watch;create;update;patch;delete
+// +kubebuilder:rbac:groups=infrastructure.cluster.x-k8s.io,resources=byomachines/status,verbs=get;update;patch
 
 func (r *ByoMachineReconciler) Reconcile(ctx context.Context, req reconcile.Request) (ctrl.Result, error) {
 	//ctx := context.Background()
@@ -63,6 +65,7 @@ func (r *ByoMachineReconciler) Reconcile(ctx context.Context, req reconcile.Requ
 
 	helper, _ := patch.NewHelper(&host, r.Client)
 
+	machinehelper, _ := patch.NewHelper(byoMachine, r.Client)
 	//hostBeforePatch := client.MergeFromWithOptions(host.DeepCopyObject(), client.MergeFromWithOptimisticLock{})
 
 	host.Status.MachineRef = &corev1.ObjectReference{
@@ -88,6 +91,15 @@ func (r *ByoMachineReconciler) Reconcile(ctx context.Context, req reconcile.Requ
 	//	return ctrl.Result{}, err
 	//}
 
+	byoMachine.Spec.ProviderID = fmt.Sprintf("byoh://%s/%s", host.Name, util.RandomString(6))
+
+	byoMachine.Status.Ready = true
+	//conditions.MarkTrue(byoMachine, infrav1.HostReadyCondition)
+	err = machinehelper.Patch(ctx, byoMachine)
+	if err != nil {
+		fmt.Println("I see you")
+		return ctrl.Result{}, err
+	}
 	return ctrl.Result{}, nil
 }
 
