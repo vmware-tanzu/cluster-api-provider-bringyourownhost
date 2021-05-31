@@ -17,13 +17,13 @@ images:
     loadBehavior: tryLoad
   - name: gcr.io/k8s-staging-cluster-api/capd-manager-amd64:dev
     loadBehavior: tryLoad
+  - name: gcr.io/k8s-staging-cluster-api/capb-manager:e2e
+    loadBehavior: tryLoad
   - name: quay.io/jetstack/cert-manager-cainjector:v1.1.0
     loadBehavior: tryLoad
   - name: quay.io/jetstack/cert-manager-webhook:v1.1.0
     loadBehavior: tryLoad
   - name: quay.io/jetstack/cert-manager-controller:v1.1.0
-    loadBehavior: tryLoad
-  - name: gcr.io/k8s-staging-cluster-api/capb-manager:e2e
     loadBehavior: tryLoad
 
 providers:
@@ -43,7 +43,7 @@ providers:
           - old: --metrics-bind-addr=127.0.0.1:8080
             new: --metrics-bind-addr=:8080
         files:
-          - sourcePath: "../data/shared/v1alpha4/metadata.yaml"
+          - sourcePath: "../data/infrastructure-provider-byoh/v1alpha4/metadata.yaml"
 
   - name: kubeadm
     type: BootstrapProvider
@@ -60,7 +60,7 @@ providers:
           - old: --metrics-bind-addr=127.0.0.1:8080
             new: --metrics-bind-addr=:8080
         files:
-          - sourcePath: "../data/shared/v1alpha4/metadata.yaml"
+          - sourcePath: "../data/infrastructure-provider-byoh/v1alpha4/metadata.yaml"
 
   - name: kubeadm
     type: ControlPlaneProvider
@@ -77,7 +77,7 @@ providers:
           - old: --metrics-bind-addr=127.0.0.1:8080
             new: --metrics-bind-addr=:8080
         files:
-          - sourcePath: "../data/shared/v1alpha4/metadata.yaml"
+          - sourcePath: "../data/infrastructure-provider-byoh/v1alpha4/metadata.yaml"
 
   - name: docker
     type: InfrastructureProvider
@@ -90,52 +90,34 @@ providers:
             new: --metrics-addr=:8080
         files:
           # Add cluster templates
-          - sourcePath: "../data/infrastructure-docker/v1alpha3/cluster-template.yaml"
+          - sourcePath: "../../../../cluster-api/test/e2e/data/infrastructure-docker/v1alpha3/cluster-template.yaml"
       - name: v0.4.99 # next; use manifest from source files
-        value: ../../../test/infrastructure/docker/config/default
+        value: ../../../../cluster-api/test/infrastructure/docker/config/default
         replacements:
           - old: --metrics-bind-addr=127.0.0.1:8080
             new: --metrics-bind-addr=:8080
         files:
           # Add cluster templates
-          - sourcePath: "../data/infrastructure-docker/v1alpha4/cluster-template.yaml"
-          - sourcePath: "../data/infrastructure-docker/v1alpha4/cluster-template-md-remediation.yaml"
-          - sourcePath: "../data/infrastructure-docker/v1alpha4/cluster-template-kcp-remediation.yaml"
-          - sourcePath: "../data/infrastructure-docker/v1alpha4/cluster-template-kcp-adoption.yaml"
-          - sourcePath: "../data/infrastructure-docker/v1alpha4/cluster-template-machine-pool.yaml"
-          - sourcePath: "../data/infrastructure-docker/v1alpha4/cluster-template-node-drain.yaml"
-          - sourcePath: "../data/infrastructure-docker/v1alpha4/cluster-template-upgrades.yaml"
-          - sourcePath: "../data/infrastructure-docker/v1alpha4/cluster-template-kcp-scale-in.yaml"
-          - sourcePath: "../data/infrastructure-docker/v1alpha4/cluster-template-ipv6.yaml"
-          - sourcePath: "../data/shared/v1alpha4/metadata.yaml"
+          - sourcePath: "../../../../cluster-api/test/e2e/data/infrastructure-docker/v1alpha4/cluster-template.yaml"
+          - sourcePath: "../../../../cluster-api-provider-byoh/test/e2e/data/infrastructure-provider-byoh/v1alpha4/metadata.yaml"
 
   - name: byoh
-      type: InfrastructureProvider
-      versions:
-        - name: v1alpha3 # latest published release
-          value: "https://github.com/kubernetes-sigs/cluster-api/releases/download/v0.3.16/infrastructure-components-development.yaml"
-          type: "url"
-          files:
-            # Add cluster templates
-            - sourcePath: "../data/infrastructure-docker/v1alpha3/cluster-template.yaml"
-        - name: v0.4.99 # next; use manifest from source files
-          value: ../../../test/infrastructure/docker/config/default
-          replacements:
-            - old: --metrics-bind-addr=127.0.0.1:8080
-              new: --metrics-bind-addr=:8080
-          files:
-            # Add cluster templates
-            - sourcePath: "../data/infrastructure-docker/v1alpha4/cluster-template.yaml"
-            - sourcePath: "../data/infrastructure-docker/v1alpha4/cluster-template-md-remediation.yaml"
-            - sourcePath: "../data/infrastructure-docker/v1alpha4/cluster-template-kcp-remediation.yaml"
-            - sourcePath: "../data/infrastructure-docker/v1alpha4/cluster-template-kcp-adoption.yaml"
-            - sourcePath: "../data/infrastructure-docker/v1alpha4/cluster-template-machine-pool.yaml"
-            - sourcePath: "../data/infrastructure-docker/v1alpha4/cluster-template-node-drain.yaml"
-            - sourcePath: "../data/infrastructure-docker/v1alpha4/cluster-template-upgrades.yaml"
-            - sourcePath: "../data/infrastructure-docker/v1alpha4/cluster-template-kcp-scale-in.yaml"
-            - sourcePath: "../data/infrastructure-docker/v1alpha4/cluster-template-ipv6.yaml"
-            - sourcePath: "../data/shared/v1alpha4/metadata.yaml"
+    type: InfrastructureProvider
+    versions:
+      - name: v0.4.0
+        # Use manifest from source files
+        value: ../../config/default
+        type: kustomize
+        replacements:
+          - old: gcr.io/k8s-staging-cluster-api/capb-manager:latest
+            new: gcr.io/k8s-staging-cluster-api/capb-manager:e2e
+          - old: "imagePullPolicy: Always"
+            new: "imagePullPolicy: IfNotPresent"
 
+        files:
+          # Add a cluster template
+          - sourcePath: "../data/infrastructure-provider-byoh/v1alpha4/cluster-template.yaml"
+          - sourcePath: "../data/infrastructure-provider-byoh/v1alpha4/metadata.yaml"
 variables:
   # default variables for the e2e test; those values could be overridden via env variables, thus
   # allowing the same e2e config file to be re-used in different prow jobs e.g. each one with a K8s version permutation
