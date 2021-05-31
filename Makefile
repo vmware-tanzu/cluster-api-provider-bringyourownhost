@@ -3,6 +3,25 @@
 IMG ?= gcr.io/k8s-staging-cluster-api/capb-manager:e2e
 # Produce CRDs that work back to Kubernetes 1.11 (no version conversion)
 CRD_OPTIONS ?= "crd:trivialVersions=true,crdVersions=v1"
+REPO_ROOT := $(shell git rev-parse --show-toplevel)
+
+GINKGO_FOCUS  ?=
+GINKGO_SKIP ?=
+GINKGO_NODES  ?= 1
+E2E_CONF_FILE  ?= ${REPO_ROOT}/test/e2e/config/provider.yaml
+ARTIFACTS ?= ${REPO_ROOT}/_artifacts
+SKIP_RESOURCE_CLEANUP ?= false
+USE_EXISTING_CLUSTER ?= false
+GINKGO_NOCOLOR ?= false
+
+TOOLS_DIR := $(REPO_ROOT)/hack/tools
+BIN_DIR := bin
+TOOLS_BIN_DIR := $(TOOLS_DIR)/$(BIN_DIR)
+GINKGO := $(TOOLS_BIN_DIR)/ginkgo
+KUSTOMIZE := $(TOOLS_BIN_DIR)/kustomize
+
+BYOH_TEMPLATES := $(REPO_ROOT)/test/e2e/data/infrastructure-provider-byoh
+
 
 # Get the currently used golang install path (in GOPATH/bin, unless GOBIN is set)
 ifeq (,$(shell go env GOBIN))
@@ -57,6 +76,24 @@ docker-build: test
 # Push the docker image
 docker-push:
 	docker push ${IMG}
+
+
+test-e2e: $(GINKGO) cluster-templates ## Run the end-to-end tests
+	$(GINKGO) -v -trace -tags=e2e -focus="$(GINKGO_FOCUS)" $(_SKIP_ARGS) -nodes=$(GINKGO_NODES) --noColor=$(GINKGO_NOCOLOR) $(GINKGO_ARGS) test/e2e -- \
+	    -e2e.artifacts-folder="$(ARTIFACTS)" \
+	    -e2e.config="$(E2E_CONF_FILE)" \
+	    -e2e.skip-resource-cleanup=$(SKIP_RESOURCE_CLEANUP) -e2e.use-existing-cluster=$(USE_EXISTING_CLUSTER)
+
+cluster-templates: $(KUSTOMIZE) cluster-templates-v1alpha4
+
+cluster-templates-v1alpha4: $(KUSTOMIZE) ## Generate cluster templates for v1alpha4
+	$(KUSTOMIZE) build $(BYOH_TEMPLATES)/v1alpha4 --load_restrictor none > $(BYOH_TEMPLATES)/v1alpha4/cluster-template.yaml
+
+$(GINKGO): # Build ginkgo from tools folder.
+	cd $(TOOLS_DIR) && go build -tags=tools -o $(BIN_DIR)/ginkgo github.com/onsi/ginkgo/ginkgo
+
+$(KUSTOMIZE): # Build kustomize from tools folder.
+	$(REPO_ROOT)/hack/ensure-kustomize.sh
 
 # find or download controller-gen
 # download controller-gen if necessary
