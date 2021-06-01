@@ -19,16 +19,18 @@ package e2e
 import (
 	"context"
 	"flag"
-	. "github.com/onsi/ginkgo"
-	. "github.com/onsi/gomega"
-	"k8s.io/apimachinery/pkg/runtime"
 	"os"
 	"path/filepath"
+	"strings"
+	"testing"
+
+	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/gomega"
+	infraproviderv1 "github.com/vmware-tanzu/cluster-api-provider-byoh/api/v1alpha4"
+	"k8s.io/apimachinery/pkg/runtime"
 	"sigs.k8s.io/cluster-api/test/framework"
 	"sigs.k8s.io/cluster-api/test/framework/bootstrap"
 	"sigs.k8s.io/cluster-api/test/framework/clusterctl"
-	"strings"
-	"testing"
 )
 
 // Test suite flags
@@ -145,6 +147,7 @@ var _ = SynchronizedAfterSuite(func() {
 func initScheme() *runtime.Scheme {
 	sc := runtime.NewScheme()
 	framework.TryAddDefaultSchemes(sc)
+	infraproviderv1.AddToScheme(sc)
 	return sc
 }
 

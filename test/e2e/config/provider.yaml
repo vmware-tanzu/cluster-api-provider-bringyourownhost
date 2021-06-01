@@ -31,6 +31,12 @@ providers:
   - name: cluster-api
     type: CoreProvider
     versions:
+      - name: v0.3.16 # latest published release
+        value: "https://github.com/kubernetes-sigs/cluster-api/releases/download/v0.3.16/core-components.yaml"
+        type: "url"
+        replacements:
+          - old: --metrics-addr=127.0.0.1:8080
+            new: --metrics-addr=:8080
       - name: v0.4.99 # next; use manifest from source files
         value: ../../../../cluster-api/config/default
         replacements:
@@ -42,6 +48,12 @@ providers:
   - name: kubeadm
     type: BootstrapProvider
     versions:
+      - name: v0.3.16 # latest published release
+        value: "https://github.com/kubernetes-sigs/cluster-api/releases/download/v0.3.16/bootstrap-components.yaml"
+        type: "url"
+        replacements:
+          - old: --metrics-addr=127.0.0.1:8080
+            new: --metrics-addr=:8080
       - name: v0.4.99 # next; use manifest from source files
         value: ../../../../cluster-api/bootstrap/kubeadm/config/default
         replacements:
@@ -53,6 +65,12 @@ providers:
   - name: kubeadm
     type: ControlPlaneProvider
     versions:
+      - name: v0.3.16 # latest published release
+        value: "https://github.com/kubernetes-sigs/cluster-api/releases/download/v0.3.16/control-plane-components.yaml"
+        type: "url"
+        replacements:
+          - old: --metrics-addr=127.0.0.1:8080
+            new: --metrics-addr=:8080
       - name: v0.4.99 # next; use manifest from source files
         value: ../../../../cluster-api/controlplane/kubeadm/config/default
         replacements:
@@ -64,6 +82,15 @@ providers:
   - name: docker
     type: InfrastructureProvider
     versions:
+      - name: v0.3.16 # latest published release
+        value: "https://github.com/kubernetes-sigs/cluster-api/releases/download/v0.3.16/infrastructure-components-development.yaml"
+        type: "url"
+        replacements:
+          - old: --metrics-addr=127.0.0.1:8080
+            new: --metrics-addr=:8080
+        files:
+          # Add cluster templates
+          - sourcePath: "../../../../cluster-api/test/e2e/data/infrastructure-docker/v1alpha3/cluster-template.yaml"
       - name: v0.4.99 # next; use manifest from source files
         value: ../../../../cluster-api/test/infrastructure/docker/config/default
         replacements:
@@ -94,10 +121,10 @@ providers:
 variables:
   # default variables for the e2e test; those values could be overridden via env variables, thus
   # allowing the same e2e config file to be re-used in different prow jobs e.g. each one with a K8s version permutation
-  KUBERNETES_VERSION: "v1.19.1"
+  KUBERNETES_VERSION: "v1.19.11"
   ETCD_VERSION_UPGRADE_TO: "3.4.9-0"
   COREDNS_VERSION_UPGRADE_TO: "1.7.0"
-  KUBERNETES_VERSION_UPGRADE_TO: "v1.19.1"
+  KUBERNETES_VERSION_UPGRADE_TO: "v1.19.11"
   KUBERNETES_VERSION_UPGRADE_FROM: "v1.18.2"
   DOCKER_SERVICE_DOMAIN: "cluster.local"
   IP_FAMILY: "IPv4"

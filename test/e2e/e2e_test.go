@@ -19,6 +19,9 @@ package e2e
 import (
 	"context"
 	"fmt"
+	"os"
+	"path/filepath"
+
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	infrastructurev1alpha4 "github.com/vmware-tanzu/cluster-api-provider-byoh/api/v1alpha4"
@@ -26,8 +29,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/utils/pointer"
-	"os"
-	"path/filepath"
 	clusterv1 "sigs.k8s.io/cluster-api/api/v1alpha4"
 	"sigs.k8s.io/cluster-api/test/framework"
 	"sigs.k8s.io/cluster-api/test/framework/clusterctl"
@@ -105,7 +106,7 @@ var _ = Describe("When following the Cluster API quick-start [PR-Blocking]", fun
 				APIVersion: "infrastructure.cluster.x-k8s.io/v1alpha4",
 			},
 			ObjectMeta: metav1.ObjectMeta{
-				Name:      "jaime.com",
+				Name:      "jamie.com",
 				Namespace: namespace.Name,
 			},
 			Spec: infrastructurev1alpha4.ByoHostSpec{
