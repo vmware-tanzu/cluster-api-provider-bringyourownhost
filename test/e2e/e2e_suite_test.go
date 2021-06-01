@@ -1,5 +1,3 @@
-// +build e2e
-
 /*
 Copyright 2020 The Kubernetes Authors.
 
@@ -21,18 +19,16 @@ package e2e
 import (
 	"context"
 	"flag"
-	"os"
-	"path/filepath"
-	"strings"
-	"testing"
-
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-
 	"k8s.io/apimachinery/pkg/runtime"
+	"os"
+	"path/filepath"
 	"sigs.k8s.io/cluster-api/test/framework"
 	"sigs.k8s.io/cluster-api/test/framework/bootstrap"
 	"sigs.k8s.io/cluster-api/test/framework/clusterctl"
+	"strings"
+	"testing"
 )
 
 // Test suite flags

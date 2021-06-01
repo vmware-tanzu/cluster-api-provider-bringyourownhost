@@ -19,18 +19,16 @@ package e2e
 import (
 	"context"
 	"fmt"
+	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/gomega"
 	infrastructurev1alpha4 "github.com/vmware-tanzu/cluster-api-provider-byoh/api/v1alpha4"
+	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/utils/pointer"
 	"os"
 	"path/filepath"
 	clusterv1 "sigs.k8s.io/cluster-api/api/v1alpha4"
-
-	. "github.com/onsi/ginkgo"
-	. "github.com/onsi/gomega"
-
-	corev1 "k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/types"
-	"k8s.io/utils/pointer"
 	"sigs.k8s.io/cluster-api/test/framework"
 	"sigs.k8s.io/cluster-api/test/framework/clusterctl"
 	"sigs.k8s.io/cluster-api/util"
@@ -56,6 +54,8 @@ const (
 // creating a workload cluster.
 // This test is meant to provide a first, fast signal to detect regression; it is recommended to use it as a PR blocker test.
 var _ = Describe("When following the Cluster API quick-start [PR-Blocking]", func() {
+
+	var ctx context.Context
 	var (
 		specName         = "quick-start"
 		input            QuickStartSpecInput
@@ -64,11 +64,11 @@ var _ = Describe("When following the Cluster API quick-start [PR-Blocking]", fun
 		clusterResources *clusterctl.ApplyClusterTemplateAndWaitResult
 	)
 
-	var ctx context.Context
-
 	BeforeEach(func() {
+
 		ctx = context.TODO()
 		Expect(ctx).NotTo(BeNil(), "ctx is required for %s spec", specName)
+
 		input = QuickStartSpecInput{
 			E2EConfig:             e2eConfig,
 			ClusterctlConfigPath:  clusterctlConfigPath,

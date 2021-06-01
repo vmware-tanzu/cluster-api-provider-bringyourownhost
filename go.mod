@@ -2,6 +2,8 @@ module github.com/vmware-tanzu/cluster-api-provider-byoh
 
 go 1.16
 
+replace sigs.k8s.io/cluster-api => ../cluster-api
+
 require (
 	github.com/go-logr/logr v0.4.0
 	github.com/onsi/ginkgo v1.16.2
