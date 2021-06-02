@@ -35,11 +35,6 @@ spec:
             type: object
           spec:
             description: ByoHostSpec defines the desired state of ByoHost
-            properties:
-              foo:
-                description: Foo is an example field of ByoHost. Edit byohost_types.go
-                  to remove/update
-                type: string
             type: object
           status:
             description: ByoHostStatus defines the observed state of ByoHost

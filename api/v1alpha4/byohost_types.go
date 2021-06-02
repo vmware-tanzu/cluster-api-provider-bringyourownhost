@@ -28,8 +28,6 @@ type ByoHostSpec struct {
 	// INSERT ADDITIONAL SPEC FIELDS - desired state of cluster
 	// Important: Run "make" to regenerate code after modifying this file
 
-	// Foo is an example field of ByoHost. Edit byohost_types.go to remove/update
-	Foo string `json:"foo,omitempty"`
 }
 
 // ByoHostStatus defines the observed state of ByoHost

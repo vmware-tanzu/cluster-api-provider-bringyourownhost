@@ -37,20 +37,12 @@ spec:
           spec:
             description: ByoMachineTemplateSpec defines the desired state of ByoMachineTemplate
             properties:
-              foo:
-                description: Foo is an example field of ByoMachineTemplate. Edit byomachinetemplate_types.go
-                  to remove/update
-                type: string
               template:
                 properties:
                   spec:
                     description: Spec is the specification of the desired behavior
                       of the machine.
                     properties:
-                      foo:
-                        description: Foo is an example field of ByoMachine. Edit ByoMachine_types.go
-                          to remove/update
-                        type: string
                       providerID:
                         type: string
                     type: object

@@ -2,13 +2,14 @@ package controllers
 
 import (
 	"context"
+	"time"
+
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	infrastructurev1alpha4 "github.com/vmware-tanzu/cluster-api-provider-byoh/api/v1alpha4"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
-	"time"
 )
 
 var _ = Describe("Controllers/ByomachineController", func() {
@@ -36,9 +37,7 @@ var _ = Describe("Controllers/ByomachineController", func() {
 					Name:      ByoHostName,
 					Namespace: ByoMachineNamespace,
 				},
-				Spec: infrastructurev1alpha4.ByoHostSpec{
-					Foo: "Baz",
-				},
+				Spec: infrastructurev1alpha4.ByoHostSpec{},
 			}
 			Expect(k8sClient.Create(ctx, ByoHost)).Should(Succeed())
 
@@ -51,25 +50,9 @@ var _ = Describe("Controllers/ByomachineController", func() {
 					Name:      ByoMachineName,
 					Namespace: ByoMachineNamespace,
 				},
-				Spec: infrastructurev1alpha4.ByoMachineSpec{
-					Foo: "bar",
-				},
+				Spec: infrastructurev1alpha4.ByoMachineSpec{},
 			}
 			Expect(k8sClient.Create(ctx, ByoMachine)).Should(Succeed())
-
-			By("fetching the Byomachine")
-			ByoMachineLookupKey := types.NamespacedName{Name: ByoMachineName, Namespace: ByoMachineNamespace}
-			createdByoMachine := &infrastructurev1alpha4.ByoMachine{}
-
-			Eventually(func() bool {
-				err := k8sClient.Get(ctx, ByoMachineLookupKey, createdByoMachine)
-				if err != nil {
-					return false
-				}
-				return true
-			}, timeout, interval).Should(BeTrue())
-
-			Expect(createdByoMachine.Spec.Foo).Should(Equal("bar"))
 
 			ByoHostLookupKey := types.NamespacedName{Name: ByoHostName, Namespace: ByoMachineNamespace}
 

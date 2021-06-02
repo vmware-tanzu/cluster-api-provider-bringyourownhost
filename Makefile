@@ -1,3 +1,6 @@
+# Ensure Make is run with bash shell as some syntax below is bash-specific
+SHELL:=/usr/bin/env bash
+
 
 # Image URL to use all building/pushing image targets
 IMG ?= gcr.io/k8s-staging-cluster-api/capb-manager:e2e
@@ -34,7 +37,7 @@ all: manager
 
 # Run tests
 test: generate fmt vet manifests
-	go test ./... -coverprofile cover.out
+	source ./scripts/fetch_ext_bins.sh; fetch_tools; setup_envs; go test ./controllers/... -coverprofile cover.out
 
 # Build manager binary
 manager: generate fmt vet
