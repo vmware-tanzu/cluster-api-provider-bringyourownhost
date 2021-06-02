@@ -17,8 +17,9 @@ package main
 
 import (
 	"flag"
-	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	"os"
+
+	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 
 	"k8s.io/apimachinery/pkg/runtime"
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
@@ -60,7 +61,7 @@ func main() {
 		Scheme:             scheme,
 		MetricsBindAddress: metricsAddr,
 		LeaderElection:     enableLeaderElection,
-		LeaderElectionID:   "controller-leader-election-capb",
+		LeaderElectionID:   "controller-leader-election-caph",
 		Port:               9443,
 	})
 	if err != nil {

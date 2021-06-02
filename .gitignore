@@ -25,3 +25,7 @@ bin
 
 # test results
 _artifacts
+
+
+# cluster-template is a generated file
+./test/e2e/data/infrastructure-provider-byoh/v1alpha4/cluster-template.yaml
