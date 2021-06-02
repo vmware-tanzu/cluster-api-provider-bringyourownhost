@@ -25,6 +25,7 @@ import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	infrastructurev1alpha4 "github.com/vmware-tanzu/cluster-api-provider-byoh/api/v1alpha4"
+	"github.com/vmware-tanzu/cluster-api-provider-byoh/test/e2e/helpers/clusterctl_byoh"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
@@ -98,6 +99,7 @@ var _ = Describe("When following the Cluster API quick-start [PR-Blocking]", fun
 		}
 
 		clusterName := fmt.Sprintf("%s-%s", specName, util.RandomString(6))
+		hostName := "test.com"
 
 		By("create a ByoHost")
 		ByoHost := &infrastructurev1alpha4.ByoHost{
@@ -106,7 +108,7 @@ var _ = Describe("When following the Cluster API quick-start [PR-Blocking]", fun
 				APIVersion: "infrastructure.cluster.x-k8s.io/v1alpha4",
 			},
 			ObjectMeta: metav1.ObjectMeta{
-				Name:      "jamie.com",
+				Name:      hostName,
 				Namespace: namespace.Name,
 			},
 			Spec: infrastructurev1alpha4.ByoHostSpec{
@@ -116,7 +118,7 @@ var _ = Describe("When following the Cluster API quick-start [PR-Blocking]", fun
 		client := input.BootstrapClusterProxy.GetClient()
 		Expect(client.Create(ctx, ByoHost)).Should(Succeed())
 
-		clusterctl.ApplyClusterTemplateAndWait(ctx, clusterctl.ApplyClusterTemplateAndWaitInput{
+		clusterctl_byoh.ApplyClusterTemplateAndWait(ctx, clusterctl.ApplyClusterTemplateAndWaitInput{
 			ClusterProxy: input.BootstrapClusterProxy,
 			ConfigCluster: clusterctl.ConfigClusterInput{
 				LogFolder:                filepath.Join(input.ArtifactFolder, "clusters", input.BootstrapClusterProxy.GetName()),
@@ -135,7 +137,7 @@ var _ = Describe("When following the Cluster API quick-start [PR-Blocking]", fun
 			WaitForMachineDeployments:    input.E2EConfig.GetIntervals(specName, "wait-worker-nodes"),
 		}, clusterResources)
 
-		ByoHostLookupKey := types.NamespacedName{Name: "jaime.com", Namespace: namespace.Name}
+		ByoHostLookupKey := types.NamespacedName{Name: hostName, Namespace: namespace.Name}
 
 		Eventually(func() *corev1.ObjectReference {
 			createdByoHost := &infrastructurev1alpha4.ByoHost{}
