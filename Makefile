@@ -1,9 +1,15 @@
 # Ensure Make is run with bash shell as some syntax below is bash-specific
 SHELL:=/usr/bin/env bash
 
+# Define registries
+STAGING_REGISTRY ?= gcr.io/k8s-staging-cluster-api
+
+IMAGE_NAME ?= caph-manager
+TAG ?= dev
 
 # Image URL to use all building/pushing image targets
-IMG ?= gcr.io/k8s-staging-cluster-api/capb-manager:e2e
+IMG ?= ${STAGING_REGISTRY}/${IMAGE_NAME}:${TAG}
+
 # Produce CRDs that work back to Kubernetes 1.11 (no version conversion)
 CRD_OPTIONS ?= "crd:trivialVersions=true,crdVersions=v1"
 REPO_ROOT := $(shell git rev-parse --show-toplevel)
