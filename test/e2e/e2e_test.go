@@ -111,9 +111,7 @@ var _ = Describe("When following the Cluster API quick-start [PR-Blocking]", fun
 				Name:      hostName,
 				Namespace: namespace.Name,
 			},
-			Spec: infrastructurev1alpha4.ByoHostSpec{
-				Foo: "Baz",
-			},
+			Spec: infrastructurev1alpha4.ByoHostSpec{},
 		}
 		client := input.BootstrapClusterProxy.GetClient()
 		Expect(client.Create(ctx, ByoHost)).Should(Succeed())
