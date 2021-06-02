@@ -17,13 +17,11 @@ package controllers
 
 import (
 	"context"
-	"fmt"
 
 	"github.com/go-logr/logr"
 	infrastructurev1alpha4 "github.com/vmware-tanzu/cluster-api-provider-byoh/api/v1alpha4"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/runtime"
-	"sigs.k8s.io/cluster-api/util"
 	"sigs.k8s.io/cluster-api/util/patch"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -41,12 +39,11 @@ type ByoMachineReconciler struct {
 // +kubebuilder:rbac:groups=infrastructure.cluster.x-k8s.io,resources=byomachines/status,verbs=get;update;patch
 
 func (r *ByoMachineReconciler) Reconcile(ctx context.Context, req reconcile.Request) (ctrl.Result, error) {
-	//ctx := context.Background()
 	_ = r.Log.WithValues("Byomachine", req.NamespacedName)
 
-	// your logic here
 	byoMachine := &infrastructurev1alpha4.ByoMachine{}
 	r.Client.Get(ctx, req.NamespacedName, byoMachine)
+	//TODO - TDD this error check
 	//if err != nil {
 	//	if apierrors.IsNotFound(err) {
 	//		return ctrl.Result{}, nil
@@ -55,18 +52,17 @@ func (r *ByoMachineReconciler) Reconcile(ctx context.Context, req reconcile.Requ
 	//}
 
 	hostsList := &infrastructurev1alpha4.ByoHostList{}
-	if err := r.Client.List(
-		ctx,
-		hostsList,
-	); err != nil {
-		return ctrl.Result{}, err
-	}
+	r.Client.List(ctx, hostsList)
+
+	// TODO - TDD this check
+	// if err := ; err != nil {
+	// 	return ctrl.Result{}, err
+	// }
+
+	// TODO- Needs smarter logic
 	host := hostsList.Items[0]
 
 	helper, _ := patch.NewHelper(&host, r.Client)
-
-	machinehelper, _ := patch.NewHelper(byoMachine, r.Client)
-	//hostBeforePatch := client.MergeFromWithOptions(host.DeepCopyObject(), client.MergeFromWithOptimisticLock{})
 
 	host.Status.MachineRef = &corev1.ObjectReference{
 		APIVersion: byoMachine.APIVersion,
@@ -76,30 +72,11 @@ func (r *ByoMachineReconciler) Reconcile(ctx context.Context, req reconcile.Requ
 		UID:        byoMachine.UID,
 	}
 
-	err := helper.Patch(ctx, &host)
-	if err != nil {
-		fmt.Println("Happy birthday anusha -------------")
-		fmt.Print(err)
-		return ctrl.Result{}, err
-	}
-	//if err := r.Client.Status().Patch(ctx, &host, hostBeforePatch); err != nil {
-	//
-	//	if apierrors.IsConflict(err) {
-	//		//logger.Info("Conflict with attempting host reservation, requeue for retry")
-	//		return ctrl.Result{Requeue: true}, nil
-	//	}
-	//	return ctrl.Result{}, err
-	//}
-
-	byoMachine.Spec.ProviderID = fmt.Sprintf("byoh://%s/%s", host.Name, util.RandomString(6))
-
-	byoMachine.Status.Ready = true
-	//conditions.MarkTrue(byoMachine, infrav1.HostReadyCondition)
-	err = machinehelper.Patch(ctx, byoMachine)
-	if err != nil {
-		fmt.Println("I see you")
-		return ctrl.Result{}, err
-	}
+	helper.Patch(ctx, &host)
+	// TODO - TDD this check
+	// if err != nil {
+	// 	return ctrl.Result{}, err
+	// }
 	return ctrl.Result{}, nil
 }
 

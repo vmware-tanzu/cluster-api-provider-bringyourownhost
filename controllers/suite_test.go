@@ -97,8 +97,6 @@ var _ = BeforeSuite(func() {
 		err = k8sManager.Start(ctrl.SetupSignalHandler())
 		Expect(err).ToNot(HaveOccurred())
 	}()
-
-	//close(done)
 })
 
 var _ = AfterSuite(func() {

@@ -2,7 +2,6 @@ package controllers
 
 import (
 	"context"
-	"time"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -12,53 +11,54 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 )
 
+const (
+	byoMachineName      = "test-machine"
+	byoHostName         = "test-host"
+	byoMachineNamespace = "default"
+)
+
+var (
+	ctx     context.Context
+	byoHost *infrastructurev1alpha4.ByoHost
+)
+
 var _ = Describe("Controllers/ByomachineController", func() {
-	const (
-		ByoMachineName      = "test-machine"
-		ByoHostName         = "test-host"
-		ByoMachineNamespace = "default"
-
-		timeout  = time.Second * 10
-		interval = time.Millisecond * 250
-	)
-
-	Context("create all base CRDs", func() {
-		It("create all CRDs", func() {
-
-			ctx := context.Background()
-
-			By("create a ByoHost")
-			ByoHost := &infrastructurev1alpha4.ByoHost{
+	Context("When a BYO Host is available", func() {
+		BeforeEach(func() {
+			ctx = context.Background()
+			byoHost = &infrastructurev1alpha4.ByoHost{
 				TypeMeta: metav1.TypeMeta{
 					Kind:       "ByoHost",
 					APIVersion: "infrastructure.cluster.x-k8s.io/v1alpha4",
 				},
 				ObjectMeta: metav1.ObjectMeta{
-					Name:      ByoHostName,
-					Namespace: ByoMachineNamespace,
+					Name:      byoHostName,
+					Namespace: byoMachineNamespace,
 				},
 				Spec: infrastructurev1alpha4.ByoHostSpec{},
 			}
-			Expect(k8sClient.Create(ctx, ByoHost)).Should(Succeed())
+			Expect(k8sClient.Create(ctx, byoHost)).Should(Succeed())
+		})
 
-			ByoMachine := &infrastructurev1alpha4.ByoMachine{
+		It("claims the first available host", func() {
+			byoMachine := &infrastructurev1alpha4.ByoMachine{
 				TypeMeta: metav1.TypeMeta{
 					Kind:       "ByoMachine",
 					APIVersion: "infrastructure.cluster.x-k8s.io/v1alpha4",
 				},
 				ObjectMeta: metav1.ObjectMeta{
-					Name:      ByoMachineName,
-					Namespace: ByoMachineNamespace,
+					Name:      byoMachineName,
+					Namespace: byoMachineNamespace,
 				},
 				Spec: infrastructurev1alpha4.ByoMachineSpec{},
 			}
-			Expect(k8sClient.Create(ctx, ByoMachine)).Should(Succeed())
+			Expect(k8sClient.Create(ctx, byoMachine)).Should(Succeed())
 
-			ByoHostLookupKey := types.NamespacedName{Name: ByoHostName, Namespace: ByoMachineNamespace}
+			byoHostLookupKey := types.NamespacedName{Name: byoHost.Name, Namespace: byoHost.Namespace}
 
 			Eventually(func() *corev1.ObjectReference {
 				createdByoHost := &infrastructurev1alpha4.ByoHost{}
-				err := k8sClient.Get(ctx, ByoHostLookupKey, createdByoHost)
+				err := k8sClient.Get(ctx, byoHostLookupKey, createdByoHost)
 				if err != nil {
 					return nil
 				}

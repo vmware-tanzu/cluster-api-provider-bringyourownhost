@@ -35,10 +35,12 @@ endif
 
 all: manager
 
-# Run tests
-test: generate fmt vet manifests
-	source ./scripts/fetch_ext_bins.sh; fetch_tools; setup_envs; go test `go list ./... | grep -v test/e2e` -coverprofile cover.out
+test: generate fmt vet manifests run-test
 
+# Run tests
+run-test: 
+	source ./scripts/fetch_ext_bins.sh; fetch_tools; setup_envs; go test `go list ./... | grep -v test/e2e` -coverprofile cover.out
+	
 # Build manager binary
 manager: generate fmt vet
 	go build -o bin/manager main.go

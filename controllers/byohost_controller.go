@@ -46,7 +46,6 @@ type ByoHostReconciler struct {
 // For more details, check Reconcile and its Result here:
 // - https://pkg.go.dev/sigs.k8s.io/controller-runtime@v0.6.4/pkg/reconcile
 func (r *ByoHostReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
-	//_ = context.Background()
 	_ = r.Log.WithValues("byohost", req.NamespacedName)
 
 	// your logic here
