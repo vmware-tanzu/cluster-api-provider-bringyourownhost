@@ -46,7 +46,6 @@ type ByoMachineTemplateReconciler struct {
 // For more details, check Reconcile and its Result here:
 // - https://pkg.go.dev/sigs.k8s.io/controller-runtime@v0.6.4/pkg/reconcile
 func (r *ByoMachineTemplateReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
-	//_ = context.Background()
 	_ = r.Log.WithValues("byomachinetemplate", req.NamespacedName)
 
 	// your logic here
