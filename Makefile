@@ -37,7 +37,7 @@ all: manager
 
 # Run tests
 test: generate fmt vet manifests
-	source ./scripts/fetch_ext_bins.sh; fetch_tools; setup_envs; go test ./controllers/... -coverprofile cover.out
+	source ./scripts/fetch_ext_bins.sh; fetch_tools; setup_envs; go test `go list ./... | grep -v test/e2e` -coverprofile cover.out
 
 # Build manager binary
 manager: generate fmt vet
@@ -73,7 +73,7 @@ generate: controller-gen
 	$(CONTROLLER_GEN) object:headerFile=./hack/boilerplate.go.txt paths="./..."
 
 # Build the docker image
-docker-build:
+docker-build: test
 	docker build . -t ${IMG}
 
 # Push the docker image
