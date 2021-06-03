@@ -30,20 +30,9 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/utils/pointer"
-	clusterv1 "sigs.k8s.io/cluster-api/api/v1alpha4"
-	"sigs.k8s.io/cluster-api/test/framework"
 	"sigs.k8s.io/cluster-api/test/framework/clusterctl"
 	"sigs.k8s.io/cluster-api/util"
 )
-
-// QuickStartSpecInput is the input for QuickStartSpec.
-type QuickStartSpecInput struct {
-	E2EConfig             *clusterctl.E2EConfig
-	ClusterctlConfigPath  string
-	BootstrapClusterProxy framework.ClusterProxy
-	ArtifactFolder        string
-	SkipCleanup           bool
-}
 
 const (
 	KubernetesVersion = "KUBERNETES_VERSION"
@@ -52,15 +41,13 @@ const (
 	IPFamily          = "IP_FAMILY"
 )
 
-// QuickStartSpec implements a spec that mimics the operation described in the Cluster API quick start, that is
-// creating a workload cluster.
+// creating a workload cluster
 // This test is meant to provide a first, fast signal to detect regression; it is recommended to use it as a PR blocker test.
-var _ = Describe("When following the Cluster API quick-start [PR-Blocking]", func() {
+var _ = Describe("When BYOH joins existing cluster", func() {
 
 	var ctx context.Context
 	var (
 		specName         = "quick-start"
-		input            QuickStartSpecInput
 		namespace        *corev1.Namespace
 		cancelWatches    context.CancelFunc
 		clusterResources *clusterctl.ApplyClusterTemplateAndWaitResult
@@ -71,37 +58,23 @@ var _ = Describe("When following the Cluster API quick-start [PR-Blocking]", fun
 		ctx = context.TODO()
 		Expect(ctx).NotTo(BeNil(), "ctx is required for %s spec", specName)
 
-		input = QuickStartSpecInput{
-			E2EConfig:             e2eConfig,
-			ClusterctlConfigPath:  clusterctlConfigPath,
-			BootstrapClusterProxy: bootstrapClusterProxy,
-			ArtifactFolder:        artifactFolder,
-			SkipCleanup:           skipCleanup,
-		}
-		Expect(input.E2EConfig).ToNot(BeNil(), "Invalid argument. input.E2EConfig can't be nil when calling %s spec", specName)
-		Expect(input.ClusterctlConfigPath).To(BeAnExistingFile(), "Invalid argument. input.ClusterctlConfigPath must be an existing file when calling %s spec", specName)
-		Expect(input.BootstrapClusterProxy).ToNot(BeNil(), "Invalid argument. input.BootstrapClusterProxy can't be nil when calling %s spec", specName)
-		Expect(os.MkdirAll(input.ArtifactFolder, 0755)).To(Succeed(), "Invalid argument. input.ArtifactFolder can't be created for %s spec", specName)
+		Expect(e2eConfig).ToNot(BeNil(), "Invalid argument. e2eConfig can't be nil when calling %s spec", specName)
+		Expect(clusterctlConfigPath).To(BeAnExistingFile(), "Invalid argument. clusterctlConfigPath must be an existing file when calling %s spec", specName)
+		Expect(bootstrapClusterProxy).ToNot(BeNil(), "Invalid argument. bootstrapClusterProxy can't be nil when calling %s spec", specName)
+		Expect(os.MkdirAll(artifactFolder, 0755)).To(Succeed(), "Invalid argument. artifactFolder can't be created for %s spec", specName)
 
-		Expect(input.E2EConfig.Variables).To(HaveKey(KubernetesVersion))
+		Expect(e2eConfig.Variables).To(HaveKey(KubernetesVersion))
 
 		// Setup a Namespace where to host objects for this spec and create a watcher for the namespace events.
-		namespace, cancelWatches = setupSpecNamespace(ctx, specName, input.BootstrapClusterProxy, input.ArtifactFolder)
+		namespace, cancelWatches = setupSpecNamespace(ctx, specName, bootstrapClusterProxy, artifactFolder)
 		clusterResources = new(clusterctl.ApplyClusterTemplateAndWaitResult)
 	})
 
-	It("Should create a workload cluster", func() {
-		By("Creating a workload cluster")
-
-		flavor := clusterctl.DefaultFlavor
-		if input.E2EConfig.GetVariable(IPFamily) == "IPv6" {
-			flavor = "ipv6"
-		}
+	It("Should create a workload cluster with single BYOH host", func() {
 
 		clusterName := fmt.Sprintf("%s-%s", specName, util.RandomString(6))
 		hostName := "test.com"
 
-		By("create a ByoHost")
 		ByoHost := &infrastructurev1alpha4.ByoHost{
 			TypeMeta: metav1.TypeMeta{
 				Kind:       "ByoHost",
@@ -113,29 +86,31 @@ var _ = Describe("When following the Cluster API quick-start [PR-Blocking]", fun
 			},
 			Spec: infrastructurev1alpha4.ByoHostSpec{},
 		}
-		client := input.BootstrapClusterProxy.GetClient()
+		client := bootstrapClusterProxy.GetClient()
 		Expect(client.Create(ctx, ByoHost)).Should(Succeed())
 
 		clusterctl_byoh.ApplyClusterTemplateAndWait(ctx, clusterctl.ApplyClusterTemplateAndWaitInput{
-			ClusterProxy: input.BootstrapClusterProxy,
+			ClusterProxy: bootstrapClusterProxy,
 			ConfigCluster: clusterctl.ConfigClusterInput{
-				LogFolder:                filepath.Join(input.ArtifactFolder, "clusters", input.BootstrapClusterProxy.GetName()),
-				ClusterctlConfigPath:     input.ClusterctlConfigPath,
-				KubeconfigPath:           input.BootstrapClusterProxy.GetKubeconfigPath(),
+				LogFolder:                filepath.Join(artifactFolder, "clusters", bootstrapClusterProxy.GetName()),
+				ClusterctlConfigPath:     clusterctlConfigPath,
+				KubeconfigPath:           bootstrapClusterProxy.GetKubeconfigPath(),
 				InfrastructureProvider:   "byoh:v0.4.0",
-				Flavor:                   flavor,
+				Flavor:                   clusterctl.DefaultFlavor,
 				Namespace:                namespace.Name,
 				ClusterName:              clusterName,
-				KubernetesVersion:        input.E2EConfig.GetVariable(KubernetesVersion),
+				KubernetesVersion:        e2eConfig.GetVariable(KubernetesVersion),
 				ControlPlaneMachineCount: pointer.Int64Ptr(1),
 				WorkerMachineCount:       pointer.Int64Ptr(1),
 			},
-			WaitForClusterIntervals:      input.E2EConfig.GetIntervals(specName, "wait-cluster"),
-			WaitForControlPlaneIntervals: input.E2EConfig.GetIntervals(specName, "wait-control-plane"),
-			WaitForMachineDeployments:    input.E2EConfig.GetIntervals(specName, "wait-worker-nodes"),
+			WaitForClusterIntervals:      e2eConfig.GetIntervals(specName, "wait-cluster"),
+			WaitForControlPlaneIntervals: e2eConfig.GetIntervals(specName, "wait-control-plane"),
+			WaitForMachineDeployments:    e2eConfig.GetIntervals(specName, "wait-worker-nodes"),
 		}, clusterResources)
 
 		ByoHostLookupKey := types.NamespacedName{Name: hostName, Namespace: namespace.Name}
+
+		// TODO: Remove the below interim assertion after implementing Host Agent
 
 		Eventually(func() *corev1.ObjectReference {
 			createdByoHost := &infrastructurev1alpha4.ByoHost{}
@@ -146,61 +121,10 @@ var _ = Describe("When following the Cluster API quick-start [PR-Blocking]", fun
 			return createdByoHost.Status.MachineRef
 		}).ShouldNot(BeNil())
 
-		By("PASSED!")
 	})
 
 	AfterEach(func() {
 		// Dumps all the resources in the spec namespace, then cleanups the cluster object and the spec namespace itself.
-		dumpSpecResourcesAndCleanup(ctx, specName, input.BootstrapClusterProxy, input.ArtifactFolder, namespace, cancelWatches, clusterResources.Cluster, input.E2EConfig.GetIntervals, input.SkipCleanup)
+		dumpSpecResourcesAndCleanup(ctx, specName, bootstrapClusterProxy, artifactFolder, namespace, cancelWatches, clusterResources.Cluster, e2eConfig.GetIntervals, skipCleanup)
 	})
 })
-
-func setupSpecNamespace(ctx context.Context, specName string, clusterProxy framework.ClusterProxy, artifactFolder string) (*corev1.Namespace, context.CancelFunc) {
-	Byf("Creating a namespace for hosting the %q test spec", specName)
-	namespace, cancelWatches := framework.CreateNamespaceAndWatchEvents(ctx, framework.CreateNamespaceAndWatchEventsInput{
-		Creator:   clusterProxy.GetClient(),
-		ClientSet: clusterProxy.GetClientSet(),
-		Name:      fmt.Sprintf("%s-%s", specName, util.RandomString(6)),
-		LogFolder: filepath.Join(artifactFolder, "clusters", clusterProxy.GetName()),
-	})
-
-	return namespace, cancelWatches
-}
-
-func dumpSpecResourcesAndCleanup(ctx context.Context, specName string, clusterProxy framework.ClusterProxy, artifactFolder string, namespace *corev1.Namespace, cancelWatches context.CancelFunc, cluster *clusterv1.Cluster, intervalsGetter func(spec, key string) []interface{}, skipCleanup bool) {
-	Byf("Dumping logs from the %q workload cluster", cluster.Name)
-
-	// Dump all the logs from the workload cluster before deleting them.
-	clusterProxy.CollectWorkloadClusterLogs(ctx, cluster.Namespace, cluster.Name, filepath.Join(artifactFolder, "clusters", cluster.Name, "machines"))
-
-	Byf("Dumping all the Cluster API resources in the %q namespace", namespace.Name)
-
-	// Dump all Cluster API related resources to artifacts before deleting them.
-	framework.DumpAllResources(ctx, framework.DumpAllResourcesInput{
-		Lister:    clusterProxy.GetClient(),
-		Namespace: namespace.Name,
-		LogPath:   filepath.Join(artifactFolder, "clusters", clusterProxy.GetName(), "resources"),
-	})
-
-	if !skipCleanup {
-		Byf("Deleting cluster %s/%s", cluster.Namespace, cluster.Name)
-		// While https://github.com/kubernetes-sigs/cluster-api/issues/2955 is addressed in future iterations, there is a chance
-		// that cluster variable is not set even if the cluster exists, so we are calling DeleteAllClustersAndWait
-		// instead of DeleteClusterAndWait
-		framework.DeleteAllClustersAndWait(ctx, framework.DeleteAllClustersAndWaitInput{
-			Client:    clusterProxy.GetClient(),
-			Namespace: namespace.Name,
-		}, intervalsGetter(specName, "wait-delete-cluster")...)
-
-		Byf("Deleting namespace used for hosting the %q test spec", specName)
-		framework.DeleteNamespace(ctx, framework.DeleteNamespaceInput{
-			Deleter: clusterProxy.GetClient(),
-			Name:    namespace.Name,
-		})
-	}
-	cancelWatches()
-}
-
-func Byf(format string, a ...interface{}) {
-	By(fmt.Sprintf(format, a...))
-}
