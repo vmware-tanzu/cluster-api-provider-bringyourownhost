@@ -3,13 +3,11 @@ package main
 import (
 	"context"
 	"flag"
-	"fmt"
 
 	infrastructurev1alpha4 "github.com/vmware-tanzu/cluster-api-provider-byoh/api/v1alpha4"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/klog"
-	"k8s.io/klog/klogr"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
@@ -21,21 +19,22 @@ var (
 )
 
 func init() {
-	klog.InitFlags(nil)
 	scheme = runtime.NewScheme()
 	infrastructurev1alpha4.AddToScheme(scheme)
+
 }
 
 func main() {
-
 	flag.Parse()
-	ctrl.SetLogger(klogr.New())
 
-	config := ctrl.GetConfigOrDie()
+	config, err := ctrl.GetConfig()
+	if err != nil {
+		klog.Fatal(err)
+	}
 
 	k8sClient, err := client.New(config, client.Options{Scheme: scheme})
 	if err != nil {
-		fmt.Println(err.Error())
+		klog.Fatal(err)
 	}
 
 	ByoHost := &infrastructurev1alpha4.ByoHost{
@@ -53,7 +52,7 @@ func main() {
 	err = k8sClient.Create(context.Background(), ByoHost)
 
 	if err != nil {
-		fmt.Println(err.Error())
+		klog.Fatal(err)
 	}
 
 }
