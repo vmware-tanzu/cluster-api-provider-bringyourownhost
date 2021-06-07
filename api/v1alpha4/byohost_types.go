@@ -18,6 +18,7 @@ package v1alpha4
 import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	clusterv1 "sigs.k8s.io/cluster-api/api/v1alpha4"
 )
 
 // EDIT THIS FILE!  THIS IS SCAFFOLDING FOR YOU TO OWN!
@@ -36,6 +37,10 @@ type ByoHostStatus struct {
 	// using this host.
 	// +optional
 	MachineRef *corev1.ObjectReference `json:"machineRef,omitempty"`
+
+	// Conditions defines current service state of the BYOMachine.
+	// +optional
+	Conditions clusterv1.Conditions `json:"conditions,omitempty"`
 }
 
 //+kubebuilder:object:root=true
@@ -61,4 +66,12 @@ type ByoHostList struct {
 
 func init() {
 	SchemeBuilder.Register(&ByoHost{}, &ByoHostList{})
+}
+
+func (h *ByoHost) GetConditions() clusterv1.Conditions {
+	return h.Status.Conditions
+}
+
+func (h *ByoHost) SetConditions(conditions clusterv1.Conditions) {
+	h.Status.Conditions = conditions
 }

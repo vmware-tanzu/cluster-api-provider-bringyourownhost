@@ -6,18 +6,21 @@ import (
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+	"github.com/onsi/gomega/gbytes"
 	"github.com/onsi/gomega/gexec"
 	infrastructurev1alpha4 "github.com/vmware-tanzu/cluster-api-provider-byoh/api/v1alpha4"
+	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
+	clusterv1 "sigs.k8s.io/cluster-api/api/v1alpha4"
+	"sigs.k8s.io/cluster-api/util/patch"
 )
 
 var _ = Describe("HostAgent", func() {
 	It("should register the BYOHost with the management cluster", func() {
 		command := exec.Command(pathToHostAgentBinary, "--kubeconfig", kubeconfigFile.Name())
-		session, err := gexec.Start(command, GinkgoWriter, GinkgoWriter)
+		_, err := gexec.Start(command, GinkgoWriter, GinkgoWriter)
 		Expect(err).ToNot(HaveOccurred())
-		Eventually(session, "60s").Should(gexec.Exit(0))
 
 		byoHostLookupKey := types.NamespacedName{Name: "jaime.com", Namespace: "default"}
 		Eventually(func() *infrastructurev1alpha4.ByoHost {
@@ -56,5 +59,190 @@ var _ = Describe("HostAgent", func() {
 		session, err := gexec.Start(command, GinkgoWriter, GinkgoWriter)
 		Expect(err).ToNot(HaveOccurred())
 		Eventually(session).Should(gexec.Exit(255))
+	})
+
+	bootstrapSecretName := "bootstrap-secret-1"
+	// Can delete by adding assertion to the below/next test.
+	XIt("should read the secret and bootstrap the kubernetes node", func() {
+		secret := &corev1.Secret{
+			TypeMeta: metav1.TypeMeta{
+				Kind:       "Secret",
+				APIVersion: "v1",
+			},
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      bootstrapSecretName,
+				Namespace: "default",
+			},
+			StringData: map[string]string{
+				"value": "ZWNobyAiak1lIGlzIH5hd2Vzb21lIg==",
+			},
+			Type: "cluster.x-k8s.io/secret",
+		}
+
+		err = k8sClient.Create(context.Background(), secret)
+		Expect(err).ToNot(HaveOccurred())
+
+		secret2 := &corev1.Secret{
+			TypeMeta: metav1.TypeMeta{
+				Kind:       "Secret",
+				APIVersion: "v1",
+			},
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "dummy-name",
+				Namespace: "default",
+			},
+			StringData: map[string]string{
+				"value": "NoOp",
+			},
+			Type: "cluster.x-k8s.io/secret",
+		}
+
+		err = k8sClient.Create(context.Background(), secret2)
+		Expect(err).ToNot(HaveOccurred())
+
+		machine := &clusterv1.Machine{
+			TypeMeta: metav1.TypeMeta{
+				Kind:       "Machine",
+				APIVersion: "v1",
+			},
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "test-machine",
+				Namespace: "default",
+			},
+			Spec: clusterv1.MachineSpec{
+				Bootstrap: clusterv1.Bootstrap{
+					DataSecretName: &bootstrapSecretName,
+				},
+				ClusterName: "test-cluster",
+			},
+		}
+
+		err = k8sClient.Create(context.Background(), machine)
+		Expect(err).ToNot(HaveOccurred())
+
+		command := exec.Command(pathToHostAgentBinary, "--kubeconfig", kubeconfigFile.Name())
+		session, err := gexec.Start(command, GinkgoWriter, GinkgoWriter)
+		Expect(err).ToNot(HaveOccurred())
+
+		Eventually(session.Out).Should(gbytes.Say("jMe is ~awesome"))
+
+		byoHostLookupKey := types.NamespacedName{Name: "jaime.com", Namespace: "default"}
+		Eventually(func() corev1.ConditionStatus {
+			createdByoHost := &infrastructurev1alpha4.ByoHost{}
+			err := k8sClient.Get(context.Background(), byoHostLookupKey, createdByoHost)
+			if err != nil {
+				return corev1.ConditionFalse
+			}
+
+			for _, condition := range createdByoHost.Status.Conditions {
+				if condition.Type == infrastructurev1alpha4.K8sComponentsInstalledCondition {
+					return condition.Status
+				}
+			}
+			return corev1.ConditionFalse
+		}).Should(Equal(corev1.ConditionTrue))
+
+	})
+
+	FIt("should bootstrap the node when MachineRef is set", func() {
+		command := exec.Command(pathToHostAgentBinary, "--kubeconfig", kubeconfigFile.Name())
+		_, err := gexec.Start(command, GinkgoWriter, GinkgoWriter)
+		Expect(err).ToNot(HaveOccurred())
+		byoHost := &infrastructurev1alpha4.ByoHost{}
+		byoHostLookupKey := types.NamespacedName{Name: "jaime.com", Namespace: "default"}
+		Eventually(func() bool {
+			err := k8sClient.Get(context.Background(), byoHostLookupKey, byoHost)
+			return err == nil
+		}).ShouldNot(BeFalse())
+
+		secret := &corev1.Secret{
+			TypeMeta: metav1.TypeMeta{
+				Kind:       "Secret",
+				APIVersion: "v1",
+			},
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      bootstrapSecretName,
+				Namespace: "default",
+			},
+			StringData: map[string]string{
+				"value": "ZWNobyAiak1lIGlzIH5hd2Vzb21lIg==",
+			},
+			Type: "cluster.x-k8s.io/secret",
+		}
+
+		err = k8sClient.Create(context.Background(), secret)
+		Expect(err).ToNot(HaveOccurred())
+
+		machine := &clusterv1.Machine{
+			TypeMeta: metav1.TypeMeta{
+				Kind:       "Machine",
+				APIVersion: "v1",
+			},
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "test-machine",
+				Namespace: "default",
+			},
+			Spec: clusterv1.MachineSpec{
+				Bootstrap: clusterv1.Bootstrap{
+					DataSecretName: &bootstrapSecretName,
+				},
+				ClusterName: "test-cluster",
+			},
+		}
+
+		err = k8sClient.Create(context.Background(), machine)
+		Expect(err).ToNot(HaveOccurred())
+
+		byoMachine := &infrastructurev1alpha4.ByoMachine{
+			TypeMeta: metav1.TypeMeta{
+				Kind:       "ByoMachine",
+				APIVersion: "infrastructure.cluster.x-k8s.io/v1alpha4",
+			},
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "test-byomachine",
+				Namespace: "default",
+
+				OwnerReferences: []metav1.OwnerReference{
+					{
+						Kind:       "Machine",
+						Name:       "test-machine",
+						APIVersion: "v1",
+						UID:        machine.UID,
+					},
+				},
+			},
+			Spec: infrastructurev1alpha4.ByoMachineSpec{},
+		}
+
+		err = k8sClient.Create(context.Background(), byoMachine)
+		Expect(err).ToNot(HaveOccurred())
+
+		helper, err := patch.NewHelper(byoHost, k8sClient)
+		Expect(err).ToNot(HaveOccurred())
+
+		byoHost.Status.MachineRef = &corev1.ObjectReference{
+			Kind:       "ByoMachine",
+			Namespace:  "default",
+			Name:       byoMachine.Name,
+			UID:        byoMachine.UID,
+			APIVersion: byoHost.APIVersion,
+		}
+		err = helper.Patch(context.Background(), byoHost)
+		Expect(err).ToNot(HaveOccurred())
+
+		Eventually(func() corev1.ConditionStatus {
+			createdByoHost := &infrastructurev1alpha4.ByoHost{}
+			err := k8sClient.Get(context.Background(), byoHostLookupKey, createdByoHost)
+			if err != nil {
+				return corev1.ConditionFalse
+			}
+
+			for _, condition := range createdByoHost.Status.Conditions {
+				if condition.Type == infrastructurev1alpha4.K8sComponentsInstalledCondition {
+					return condition.Status
+				}
+			}
+			return corev1.ConditionFalse
+		}, "10s").Should(Equal(corev1.ConditionTrue))
 	})
 })

@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"go/build"
 	"io/ioutil"
 	"os"
 	"path/filepath"
@@ -11,10 +12,12 @@ import (
 	. "github.com/onsi/gomega"
 	"github.com/onsi/gomega/gexec"
 	infrastructurev1alpha4 "github.com/vmware-tanzu/cluster-api-provider-byoh/api/v1alpha4"
+	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
 	kcapi "k8s.io/client-go/tools/clientcmd/api"
+	clusterv1 "sigs.k8s.io/cluster-api/api/v1alpha4"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/envtest"
 )
@@ -38,6 +41,7 @@ var _ = BeforeSuite(func() {
 	testEnv := &envtest.Environment{
 		CRDDirectoryPaths: []string{
 			filepath.Join("..", "config", "crd", "bases"),
+			filepath.Join(build.Default.GOPATH, "pkg", "mod", "sigs.k8s.io", "cluster-api@v0.3.11-0.20210524195020-fca52981fe0a", "config", "crd", "bases"),
 		},
 		ErrorIfCRDPathMissing: true,
 	}
@@ -49,6 +53,12 @@ var _ = BeforeSuite(func() {
 	scheme := runtime.NewScheme()
 
 	err = infrastructurev1alpha4.AddToScheme(scheme)
+	Expect(err).NotTo(HaveOccurred())
+
+	err = corev1.AddToScheme(scheme)
+	Expect(err).NotTo(HaveOccurred())
+
+	err = clusterv1.AddToScheme(scheme)
 	Expect(err).NotTo(HaveOccurred())
 
 	k8sClient, err = client.New(cfg, client.Options{Scheme: scheme})
