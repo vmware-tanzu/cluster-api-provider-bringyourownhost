@@ -17,7 +17,7 @@ import (
 	"sigs.k8s.io/cluster-api/util/patch"
 )
 
-var _ = Describe("HostAgent", func() {
+var _ = Describe("Agent", func() {
 	var (
 		ns      = &corev1.Namespace{}
 		session *gexec.Session

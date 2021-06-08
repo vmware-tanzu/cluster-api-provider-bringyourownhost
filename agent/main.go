@@ -8,9 +8,9 @@ import (
 	"os/exec"
 	"strings"
 
+	"github.com/vmware-tanzu/cluster-api-provider-byoh/agent/registration"
 	infrastructurev1alpha4 "github.com/vmware-tanzu/cluster-api-provider-byoh/api/v1alpha4"
 	corev1 "k8s.io/api/core/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/klog"
@@ -87,6 +87,8 @@ func (r HostReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.R
 	return ctrl.Result{}, nil
 }
 
+// TODO - fix logging
+
 func main() {
 	flag.Parse()
 
@@ -100,23 +102,7 @@ func main() {
 		klog.Fatal(err)
 	}
 
-	byoHost := &infrastructurev1alpha4.ByoHost{
-		TypeMeta: metav1.TypeMeta{
-			Kind:       "ByoHost",
-			APIVersion: "infrastructure.cluster.x-k8s.io/v1alpha4",
-		},
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      hostName,
-			Namespace: namespace,
-		},
-		Spec: infrastructurev1alpha4.ByoHostSpec{},
-	}
-
-	err = k8sClient.Create(context.TODO(), byoHost)
-
-	if err != nil {
-		klog.Fatal(err)
-	}
+	registration.HostRegistrar{K8sClient: k8sClient}.Register(hostName, namespace)
 
 	mgr, err := ctrl.NewManager(config, ctrl.Options{
 		Scheme: scheme,

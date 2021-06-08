@@ -47,8 +47,8 @@ test: generate fmt vet manifests run-test
 run-test: 
 	source ./scripts/fetch_ext_bins.sh; fetch_tools; setup_envs; go test `go list ./... | grep -v test/e2e` -coverprofile cover.out
 
-host-agent-test:
-	source ./scripts/fetch_ext_bins.sh; fetch_tools; setup_envs; ginkgo host_agent -coverprofile cover.out
+agent-test:
+	source ./scripts/fetch_ext_bins.sh; fetch_tools; setup_envs; ginkgo agent -coverprofile cover.out
 	
 # Build manager binary
 manager: generate fmt vet
