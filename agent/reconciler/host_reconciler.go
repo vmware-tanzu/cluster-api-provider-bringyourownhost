@@ -3,9 +3,6 @@ package reconciler
 import (
 	"context"
 	"encoding/base64"
-	"fmt"
-	"os/exec"
-	"strings"
 
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/klog"
@@ -13,6 +10,7 @@ import (
 	"sigs.k8s.io/cluster-api/util/patch"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
+	"github.com/vmware-tanzu/cluster-api-provider-byoh/agent/cloudinit"
 	infrastructurev1alpha4 "github.com/vmware-tanzu/cluster-api-provider-byoh/api/v1alpha4"
 	corev1 "k8s.io/api/core/v1"
 	clusterv1 "sigs.k8s.io/cluster-api/api/v1alpha4"
@@ -24,36 +22,18 @@ type HostReconciler struct {
 }
 
 func (r HostReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
-	machine := &clusterv1.Machine{}
-
-	err := r.Client.Get(ctx, types.NamespacedName{Name: "test-machine", Namespace: req.Namespace}, machine)
-	if err != nil {
-		klog.Fatal(err)
-	}
-
-	secret := &corev1.Secret{}
-	err = r.Client.Get(ctx, types.NamespacedName{Name: *machine.Spec.Bootstrap.DataSecretName, Namespace: req.Namespace}, secret)
-	if err != nil {
-		klog.Fatal(err)
-	}
-	bootstrapScript := secret.Data["value"]
-
-	decodedScript, err := base64.StdEncoding.DecodeString(string(bootstrapScript))
-	if err != nil {
-		klog.Fatal(err)
-	}
-	commands := strings.Split(string(decodedScript), " ")
-
-	cmd := exec.Command(commands[0], strings.Join(commands[1:], " "))
-	out, err := cmd.Output()
-
-	if err != nil {
-		klog.Fatal(err)
-	}
-	fmt.Println(string(out))
-
 	byoHost := &infrastructurev1alpha4.ByoHost{}
-	err = r.Client.Get(ctx, req.NamespacedName, byoHost)
+	err := r.Client.Get(ctx, req.NamespacedName, byoHost)
+	if err != nil {
+		klog.Fatal(err)
+	}
+
+	bootstrapScript, err := r.getBootstrapScript(ctx, byoHost.Status.MachineRef.Name, req.NamespacedName.Namespace)
+	if err != nil {
+		klog.Fatal(err)
+	}
+
+	err = cloudinit.ScriptExecutor{}.Execute(bootstrapScript)
 	if err != nil {
 		klog.Fatal(err)
 	}
@@ -69,4 +49,35 @@ func (r HostReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.R
 	}
 
 	return ctrl.Result{}, nil
+}
+
+func (r HostReconciler) getBootstrapScript(ctx context.Context, machineName string, namespace string) (string, error) {
+	byoMachine := &infrastructurev1alpha4.ByoMachine{}
+	err := r.Client.Get(ctx, types.NamespacedName{Name: machineName, Namespace: namespace}, byoMachine)
+	if err != nil {
+		return "", err
+	}
+
+	machine := &clusterv1.Machine{}
+
+	//TODO: Remove this hard coding of owner reference
+	err = r.Client.Get(ctx, types.NamespacedName{Name: byoMachine.OwnerReferences[0].Name, Namespace: namespace}, machine)
+	if err != nil {
+		return "", err
+	}
+
+	secret := &corev1.Secret{}
+	err = r.Client.Get(ctx, types.NamespacedName{Name: *machine.Spec.Bootstrap.DataSecretName, Namespace: namespace}, secret)
+	if err != nil {
+		return "", err
+	}
+
+	encodedBootstrapSecret := string(secret.Data["value"])
+
+	decodedScript, err := base64.StdEncoding.DecodeString(encodedBootstrapSecret)
+	if err != nil {
+		return "", err
+	}
+
+	return string(decodedScript), nil
 }
