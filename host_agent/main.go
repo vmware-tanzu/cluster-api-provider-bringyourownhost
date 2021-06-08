@@ -42,13 +42,13 @@ type HostReconciler struct {
 
 func (r HostReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 	machine := &clusterv1.Machine{}
-	err := r.Client.Get(context.Background(), types.NamespacedName{Name: "test-machine", Namespace: namespace}, machine)
+	err := r.Client.Get(ctx, types.NamespacedName{Name: "test-machine", Namespace: namespace}, machine)
 	if err != nil {
 		klog.Fatal(err)
 	}
 
 	secret := &corev1.Secret{}
-	err = r.Client.Get(context.Background(), types.NamespacedName{Name: *machine.Spec.Bootstrap.DataSecretName, Namespace: namespace}, secret)
+	err = r.Client.Get(ctx, types.NamespacedName{Name: *machine.Spec.Bootstrap.DataSecretName, Namespace: namespace}, secret)
 	if err != nil {
 		klog.Fatal(err)
 	}
@@ -69,7 +69,7 @@ func (r HostReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.R
 	fmt.Println(string(out))
 
 	byoHost := &infrastructurev1alpha4.ByoHost{}
-	err = r.Client.Get(context.Background(), types.NamespacedName{Name: hostName, Namespace: namespace}, byoHost)
+	err = r.Client.Get(ctx, types.NamespacedName{Name: hostName, Namespace: namespace}, byoHost)
 	if err != nil {
 		klog.Fatal(err)
 	}
@@ -79,7 +79,7 @@ func (r HostReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.R
 		klog.Fatal(err)
 	}
 	conditions.MarkTrue(byoHost, infrastructurev1alpha4.K8sComponentsInstalledCondition)
-	err = helper.Patch(context.Background(), byoHost)
+	err = helper.Patch(ctx, byoHost)
 	if err != nil {
 		klog.Fatal(err)
 	}
@@ -112,7 +112,7 @@ func main() {
 		Spec: infrastructurev1alpha4.ByoHostSpec{},
 	}
 
-	err = k8sClient.Create(context.Background(), byoHost)
+	err = k8sClient.Create(context.TODO(), byoHost)
 
 	if err != nil {
 		klog.Fatal(err)

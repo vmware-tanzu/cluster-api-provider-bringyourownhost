@@ -28,7 +28,7 @@ var _ = Describe("HostAgent", func() {
 			ObjectMeta: metav1.ObjectMeta{Name: "testns-" + rand.String(5)},
 		}
 
-		err := k8sClient.Create(context.Background(), ns)
+		err := k8sClient.Create(context.TODO(), ns)
 		Expect(err).NotTo(HaveOccurred(), "failed to create test namespace")
 
 	})
@@ -36,7 +36,7 @@ var _ = Describe("HostAgent", func() {
 	AfterEach(func() {
 		session.Terminate().Wait()
 
-		err = k8sClient.Delete(context.Background(), ns)
+		err = k8sClient.Delete(context.TODO(), ns)
 		Expect(err).NotTo(HaveOccurred(), "failed to delete test namespace")
 	})
 
@@ -48,7 +48,7 @@ var _ = Describe("HostAgent", func() {
 		byoHostLookupKey := types.NamespacedName{Name: "jaime.com", Namespace: ns.Name}
 		Eventually(func() *infrastructurev1alpha4.ByoHost {
 			createdByoHost := &infrastructurev1alpha4.ByoHost{}
-			err := k8sClient.Get(context.Background(), byoHostLookupKey, createdByoHost)
+			err := k8sClient.Get(context.TODO(), byoHostLookupKey, createdByoHost)
 			if err != nil {
 				return nil
 			}
@@ -68,7 +68,7 @@ var _ = Describe("HostAgent", func() {
 			},
 			Spec: infrastructurev1alpha4.ByoHostSpec{},
 		}
-		err = k8sClient.Create(context.Background(), ByoHost)
+		err = k8sClient.Create(context.TODO(), ByoHost)
 
 		command := exec.Command(pathToHostAgentBinary, "--kubeconfig", kubeconfigFile.Name(), "--namespace", ns.Name)
 		session, err = gexec.Start(command, GinkgoWriter, GinkgoWriter)
@@ -93,7 +93,7 @@ var _ = Describe("HostAgent", func() {
 		byoHost := &infrastructurev1alpha4.ByoHost{}
 		byoHostLookupKey := types.NamespacedName{Name: "jaime.com", Namespace: ns.Name}
 		Eventually(func() bool {
-			err := k8sClient.Get(context.Background(), byoHostLookupKey, byoHost)
+			err := k8sClient.Get(context.TODO(), byoHostLookupKey, byoHost)
 			return err == nil
 		}).ShouldNot(BeFalse())
 
@@ -112,7 +112,7 @@ var _ = Describe("HostAgent", func() {
 			Type: "cluster.x-k8s.io/secret",
 		}
 
-		err = k8sClient.Create(context.Background(), secret)
+		err = k8sClient.Create(context.TODO(), secret)
 		Expect(err).ToNot(HaveOccurred())
 
 		machine := &clusterv1.Machine{
@@ -132,7 +132,7 @@ var _ = Describe("HostAgent", func() {
 			},
 		}
 
-		err = k8sClient.Create(context.Background(), machine)
+		err = k8sClient.Create(context.TODO(), machine)
 		Expect(err).ToNot(HaveOccurred())
 
 		byoMachine := &infrastructurev1alpha4.ByoMachine{
@@ -156,7 +156,7 @@ var _ = Describe("HostAgent", func() {
 			Spec: infrastructurev1alpha4.ByoMachineSpec{},
 		}
 
-		err = k8sClient.Create(context.Background(), byoMachine)
+		err = k8sClient.Create(context.TODO(), byoMachine)
 		Expect(err).ToNot(HaveOccurred())
 
 		helper, err := patch.NewHelper(byoHost, k8sClient)
@@ -169,12 +169,12 @@ var _ = Describe("HostAgent", func() {
 			UID:        byoMachine.UID,
 			APIVersion: byoHost.APIVersion,
 		}
-		err = helper.Patch(context.Background(), byoHost)
+		err = helper.Patch(context.TODO(), byoHost)
 		Expect(err).ToNot(HaveOccurred())
 
 		Eventually(func() corev1.ConditionStatus {
 			createdByoHost := &infrastructurev1alpha4.ByoHost{}
-			err := k8sClient.Get(context.Background(), byoHostLookupKey, createdByoHost)
+			err := k8sClient.Get(context.TODO(), byoHostLookupKey, createdByoHost)
 			if err != nil {
 				return corev1.ConditionFalse
 			}
