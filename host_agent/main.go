@@ -23,7 +23,7 @@ import (
 
 var (
 	hostName  string = "jaime.com"
-	namespace string = "default"
+	namespace string
 	scheme    *runtime.Scheme
 )
 
@@ -32,6 +32,8 @@ func init() {
 	infrastructurev1alpha4.AddToScheme(scheme)
 	corev1.AddToScheme(scheme)
 	clusterv1.AddToScheme(scheme)
+
+	flag.StringVar(&namespace, "namespace", "default", "Namespace in the management cluster where you would like to register this host")
 }
 
 type HostReconciler struct {
@@ -40,13 +42,13 @@ type HostReconciler struct {
 
 func (r HostReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 	machine := &clusterv1.Machine{}
-	err := r.Client.Get(context.Background(), types.NamespacedName{Name: "test-machine", Namespace: "default"}, machine)
+	err := r.Client.Get(context.Background(), types.NamespacedName{Name: "test-machine", Namespace: namespace}, machine)
 	if err != nil {
 		klog.Fatal(err)
 	}
 
 	secret := &corev1.Secret{}
-	err = r.Client.Get(context.Background(), types.NamespacedName{Name: *machine.Spec.Bootstrap.DataSecretName, Namespace: "default"}, secret)
+	err = r.Client.Get(context.Background(), types.NamespacedName{Name: *machine.Spec.Bootstrap.DataSecretName, Namespace: namespace}, secret)
 	if err != nil {
 		klog.Fatal(err)
 	}
@@ -67,7 +69,7 @@ func (r HostReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.R
 	fmt.Println(string(out))
 
 	byoHost := &infrastructurev1alpha4.ByoHost{}
-	err = r.Client.Get(context.Background(), types.NamespacedName{Name: hostName, Namespace: "default"}, byoHost)
+	err = r.Client.Get(context.Background(), types.NamespacedName{Name: hostName, Namespace: namespace}, byoHost)
 	if err != nil {
 		klog.Fatal(err)
 	}

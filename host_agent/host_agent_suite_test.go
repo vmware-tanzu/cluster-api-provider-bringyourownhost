@@ -28,8 +28,9 @@ var (
 	kubeconfigFile        *os.File
 	cfg                   *rest.Config
 	k8sClient             client.Client
-	tmpFilePrefix         string = "kubeconfigFile-"
-	clusterName           string = "test-cluster"
+	tmpFilePrefix         = "kubeconfigFile-"
+	clusterName           = "test-cluster"
+	testEnv               *envtest.Environment
 )
 
 func TestHostAgent(t *testing.T) {
@@ -38,7 +39,7 @@ func TestHostAgent(t *testing.T) {
 }
 
 var _ = BeforeSuite(func() {
-	testEnv := &envtest.Environment{
+	testEnv = &envtest.Environment{
 		CRDDirectoryPaths: []string{
 			filepath.Join("..", "config", "crd", "bases"),
 			filepath.Join(build.Default.GOPATH, "pkg", "mod", "sigs.k8s.io", "cluster-api@v0.3.11-0.20210524195020-fca52981fe0a", "config", "crd", "bases"),
@@ -71,7 +72,8 @@ var _ = BeforeSuite(func() {
 var _ = AfterSuite(func() {
 	gexec.CleanupBuildArtifacts()
 	os.Remove(kubeconfigFile.Name())
-
+	err := testEnv.Stop()
+	Expect(err).ToNot(HaveOccurred())
 })
 
 func writeKubeConfig(cfg *rest.Config) {
