@@ -1,22 +1,15 @@
 package main
 
 import (
-	"context"
-	"encoding/base64"
 	"flag"
-	"fmt"
-	"os/exec"
-	"strings"
 
+	"github.com/vmware-tanzu/cluster-api-provider-byoh/agent/reconciler"
 	"github.com/vmware-tanzu/cluster-api-provider-byoh/agent/registration"
 	infrastructurev1alpha4 "github.com/vmware-tanzu/cluster-api-provider-byoh/api/v1alpha4"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/klog"
 	clusterv1 "sigs.k8s.io/cluster-api/api/v1alpha4"
-	"sigs.k8s.io/cluster-api/util/conditions"
-	"sigs.k8s.io/cluster-api/util/patch"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
@@ -34,57 +27,6 @@ func init() {
 	clusterv1.AddToScheme(scheme)
 
 	flag.StringVar(&namespace, "namespace", "default", "Namespace in the management cluster where you would like to register this host")
-}
-
-type HostReconciler struct {
-	Client client.Client
-}
-
-func (r HostReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
-	machine := &clusterv1.Machine{}
-	err := r.Client.Get(ctx, types.NamespacedName{Name: "test-machine", Namespace: namespace}, machine)
-	if err != nil {
-		klog.Fatal(err)
-	}
-
-	secret := &corev1.Secret{}
-	err = r.Client.Get(ctx, types.NamespacedName{Name: *machine.Spec.Bootstrap.DataSecretName, Namespace: namespace}, secret)
-	if err != nil {
-		klog.Fatal(err)
-	}
-	bootstrapScript := secret.Data["value"]
-
-	decodedScript, err := base64.StdEncoding.DecodeString(string(bootstrapScript))
-	if err != nil {
-		klog.Fatal(err)
-	}
-	commands := strings.Split(string(decodedScript), " ")
-
-	cmd := exec.Command(commands[0], strings.Join(commands[1:], " "))
-	out, err := cmd.Output()
-
-	if err != nil {
-		klog.Fatal(err)
-	}
-	fmt.Println(string(out))
-
-	byoHost := &infrastructurev1alpha4.ByoHost{}
-	err = r.Client.Get(ctx, types.NamespacedName{Name: hostName, Namespace: namespace}, byoHost)
-	if err != nil {
-		klog.Fatal(err)
-	}
-
-	helper, err := patch.NewHelper(byoHost, r.Client)
-	if err != nil {
-		klog.Fatal(err)
-	}
-	conditions.MarkTrue(byoHost, infrastructurev1alpha4.K8sComponentsInstalledCondition)
-	err = helper.Patch(ctx, byoHost)
-	if err != nil {
-		klog.Fatal(err)
-	}
-
-	return ctrl.Result{}, nil
 }
 
 // TODO - fix logging
@@ -105,16 +47,17 @@ func main() {
 	registration.HostRegistrar{K8sClient: k8sClient}.Register(hostName, namespace)
 
 	mgr, err := ctrl.NewManager(config, ctrl.Options{
-		Scheme: scheme,
+		Scheme:    scheme,
+		Namespace: namespace,
 	})
 	if err != nil {
 		klog.Fatal(err, "unable to start manager")
 	}
 
-	reconciler := HostReconciler{Client: k8sClient}
+	hostReconciler := reconciler.HostReconciler{Client: k8sClient}
 	ctrl.NewControllerManagedBy(mgr).
 		For(&infrastructurev1alpha4.ByoHost{}).
-		Complete(reconciler)
+		Complete(hostReconciler)
 
 	if err := mgr.Start(ctrl.SetupSignalHandler()); err != nil {
 		klog.Fatal(err, "problem running manager")
