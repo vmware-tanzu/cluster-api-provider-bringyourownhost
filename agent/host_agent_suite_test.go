@@ -35,7 +35,7 @@ var (
 
 func TestHostAgent(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "HostAgent Suite")
+	RunSpecs(t, "Agent Suite")
 }
 
 var _ = BeforeSuite(func() {
@@ -65,7 +65,7 @@ var _ = BeforeSuite(func() {
 	k8sClient, err = client.New(cfg, client.Options{Scheme: scheme})
 	writeKubeConfig(cfg)
 
-	pathToHostAgentBinary, err = gexec.Build("github.com/vmware-tanzu/cluster-api-provider-byoh/host_agent")
+	pathToHostAgentBinary, err = gexec.Build("github.com/vmware-tanzu/cluster-api-provider-byoh/agent")
 	Expect(err).ToNot(HaveOccurred())
 })
 
