@@ -9,6 +9,7 @@ import (
 	"sigs.k8s.io/cluster-api/util/conditions"
 	"sigs.k8s.io/cluster-api/util/patch"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/manager"
 
 	"github.com/vmware-tanzu/cluster-api-provider-byoh/agent/cloudinit"
 	infrastructurev1alpha4 "github.com/vmware-tanzu/cluster-api-provider-byoh/api/v1alpha4"
@@ -80,4 +81,8 @@ func (r HostReconciler) getBootstrapScript(ctx context.Context, machineName stri
 	}
 
 	return string(decodedScript), nil
+}
+
+func (r HostReconciler) SetupWithManager(mgr manager.Manager) error {
+	return nil
 }
