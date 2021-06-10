@@ -29,26 +29,28 @@ type files struct {
 
 //counterfeiter:generate . FileWriter
 type FileWriter interface {
-	Mkdir(string, os.FileMode)
+	Mkdir(string, os.FileMode) error
 	// CreateFile(string)
-	WriteToFile(string, string)
+	WriteToFile(string, string) error
 }
 
 type RealWhatever struct {
 }
 
-func (w RealWhatever) Mkdir(dirName string, fileMode os.FileMode) {
-	os.Mkdir(dirName, fileMode)
+func (w RealWhatever) Mkdir(dirName string, fileMode os.FileMode) error {
+	return os.Mkdir(dirName, fileMode)
+
 }
 
 // func (w RealWhatever) CreateFile(fileName string) {
 // 	os.Create(fileName)
 // }
 
-func (w RealWhatever) WriteToFile(fileName string, fileContent string) {
+func (w RealWhatever) WriteToFile(fileName string, fileContent string) error {
 	f, _ := os.Create(fileName)
 	defer f.Close()
-	f.WriteString(fileContent)
+	_, err := f.WriteString(fileContent)
+	return err
 }
 
 func (se ScriptExecutor) Execute(bootstrapScript string) error {
@@ -60,7 +62,10 @@ func (se ScriptExecutor) Execute(bootstrapScript string) error {
 	path := cloudInitData.Files[0].Path
 	directory := filepath.Dir(path)
 	// os.Mkdir(directory, 0644)
-	se.Executor.Mkdir(directory, 0644)
+	err := se.Executor.Mkdir(directory, 0644)
+	if err != nil {
+		return err
+	}
 	// f, _ := os.Create(path)
 	se.Executor.WriteToFile(path, cloudInitData.Files[0].Content)
 

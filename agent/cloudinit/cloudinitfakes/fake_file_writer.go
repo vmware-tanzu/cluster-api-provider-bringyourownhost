@@ -9,34 +9,52 @@ import (
 )
 
 type FakeFileWriter struct {
-	MkdirStub        func(string, fs.FileMode)
+	MkdirStub        func(string, fs.FileMode) error
 	mkdirMutex       sync.RWMutex
 	mkdirArgsForCall []struct {
 		arg1 string
 		arg2 fs.FileMode
 	}
-	WriteToFileStub        func(string, string)
+	mkdirReturns struct {
+		result1 error
+	}
+	mkdirReturnsOnCall map[int]struct {
+		result1 error
+	}
+	WriteToFileStub        func(string, string) error
 	writeToFileMutex       sync.RWMutex
 	writeToFileArgsForCall []struct {
 		arg1 string
 		arg2 string
 	}
+	writeToFileReturns struct {
+		result1 error
+	}
+	writeToFileReturnsOnCall map[int]struct {
+		result1 error
+	}
 	invocations      map[string][][]interface{}
 	invocationsMutex sync.RWMutex
 }
 
-func (fake *FakeFileWriter) Mkdir(arg1 string, arg2 fs.FileMode) {
+func (fake *FakeFileWriter) Mkdir(arg1 string, arg2 fs.FileMode) error {
 	fake.mkdirMutex.Lock()
+	ret, specificReturn := fake.mkdirReturnsOnCall[len(fake.mkdirArgsForCall)]
 	fake.mkdirArgsForCall = append(fake.mkdirArgsForCall, struct {
 		arg1 string
 		arg2 fs.FileMode
 	}{arg1, arg2})
 	stub := fake.MkdirStub
+	fakeReturns := fake.mkdirReturns
 	fake.recordInvocation("Mkdir", []interface{}{arg1, arg2})
 	fake.mkdirMutex.Unlock()
 	if stub != nil {
-		fake.MkdirStub(arg1, arg2)
+		return stub(arg1, arg2)
 	}
+	if specificReturn {
+		return ret.result1
+	}
+	return fakeReturns.result1
 }
 
 func (fake *FakeFileWriter) MkdirCallCount() int {
@@ -45,7 +63,7 @@ func (fake *FakeFileWriter) MkdirCallCount() int {
 	return len(fake.mkdirArgsForCall)
 }
 
-func (fake *FakeFileWriter) MkdirCalls(stub func(string, fs.FileMode)) {
+func (fake *FakeFileWriter) MkdirCalls(stub func(string, fs.FileMode) error) {
 	fake.mkdirMutex.Lock()
 	defer fake.mkdirMutex.Unlock()
 	fake.MkdirStub = stub
@@ -58,18 +76,47 @@ func (fake *FakeFileWriter) MkdirArgsForCall(i int) (string, fs.FileMode) {
 	return argsForCall.arg1, argsForCall.arg2
 }
 
-func (fake *FakeFileWriter) WriteToFile(arg1 string, arg2 string) {
+func (fake *FakeFileWriter) MkdirReturns(result1 error) {
+	fake.mkdirMutex.Lock()
+	defer fake.mkdirMutex.Unlock()
+	fake.MkdirStub = nil
+	fake.mkdirReturns = struct {
+		result1 error
+	}{result1}
+}
+
+func (fake *FakeFileWriter) MkdirReturnsOnCall(i int, result1 error) {
+	fake.mkdirMutex.Lock()
+	defer fake.mkdirMutex.Unlock()
+	fake.MkdirStub = nil
+	if fake.mkdirReturnsOnCall == nil {
+		fake.mkdirReturnsOnCall = make(map[int]struct {
+			result1 error
+		})
+	}
+	fake.mkdirReturnsOnCall[i] = struct {
+		result1 error
+	}{result1}
+}
+
+func (fake *FakeFileWriter) WriteToFile(arg1 string, arg2 string) error {
 	fake.writeToFileMutex.Lock()
+	ret, specificReturn := fake.writeToFileReturnsOnCall[len(fake.writeToFileArgsForCall)]
 	fake.writeToFileArgsForCall = append(fake.writeToFileArgsForCall, struct {
 		arg1 string
 		arg2 string
 	}{arg1, arg2})
 	stub := fake.WriteToFileStub
+	fakeReturns := fake.writeToFileReturns
 	fake.recordInvocation("WriteToFile", []interface{}{arg1, arg2})
 	fake.writeToFileMutex.Unlock()
 	if stub != nil {
-		fake.WriteToFileStub(arg1, arg2)
+		return stub(arg1, arg2)
 	}
+	if specificReturn {
+		return ret.result1
+	}
+	return fakeReturns.result1
 }
 
 func (fake *FakeFileWriter) WriteToFileCallCount() int {
@@ -78,7 +125,7 @@ func (fake *FakeFileWriter) WriteToFileCallCount() int {
 	return len(fake.writeToFileArgsForCall)
 }
 
-func (fake *FakeFileWriter) WriteToFileCalls(stub func(string, string)) {
+func (fake *FakeFileWriter) WriteToFileCalls(stub func(string, string) error) {
 	fake.writeToFileMutex.Lock()
 	defer fake.writeToFileMutex.Unlock()
 	fake.WriteToFileStub = stub
@@ -89,6 +136,29 @@ func (fake *FakeFileWriter) WriteToFileArgsForCall(i int) (string, string) {
 	defer fake.writeToFileMutex.RUnlock()
 	argsForCall := fake.writeToFileArgsForCall[i]
 	return argsForCall.arg1, argsForCall.arg2
+}
+
+func (fake *FakeFileWriter) WriteToFileReturns(result1 error) {
+	fake.writeToFileMutex.Lock()
+	defer fake.writeToFileMutex.Unlock()
+	fake.WriteToFileStub = nil
+	fake.writeToFileReturns = struct {
+		result1 error
+	}{result1}
+}
+
+func (fake *FakeFileWriter) WriteToFileReturnsOnCall(i int, result1 error) {
+	fake.writeToFileMutex.Lock()
+	defer fake.writeToFileMutex.Unlock()
+	fake.WriteToFileStub = nil
+	if fake.writeToFileReturnsOnCall == nil {
+		fake.writeToFileReturnsOnCall = make(map[int]struct {
+			result1 error
+		})
+	}
+	fake.writeToFileReturnsOnCall[i] = struct {
+		result1 error
+	}{result1}
 }
 
 func (fake *FakeFileWriter) Invocations() map[string][][]interface{} {

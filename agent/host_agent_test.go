@@ -142,7 +142,7 @@ write_files:
 			// }).Should(Equal(corev1.ConditionTrue))
 
 			Eventually(func() string {
-				buffer, err := ioutil.ReadFile("/tmp/jMe.txt")
+				buffer, err := ioutil.ReadFile("/tmp/jme.txt")
 				if err != nil {
 					return ""
 				}
