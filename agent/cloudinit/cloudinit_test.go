@@ -1,6 +1,7 @@
 package cloudinit_test
 
 import (
+	"errors"
 	"os"
 
 	. "github.com/onsi/ginkgo"
@@ -11,7 +12,7 @@ import (
 )
 
 var _ = Describe("Cloudinit", func() {
-	It("should execute the script", func() {
+	It("should write files successfully", func() {
 		fakeFileWriter := &cloudinitfakes.FakeFileWriter{}
 
 		se := cloudinit.ScriptExecutor{Executor: fakeFileWriter}
@@ -33,17 +34,46 @@ write_files:
 		fileName, fileContents := fakeFileWriter.WriteToFileArgsForCall(0)
 		Expect(fileName).To(Equal("/tmp/jme.txt"))
 		Expect(fileContents).To(Equal("is cooler than Anusha"))
-		// Eventually("/tmp/jme.txt").Should(BeAnExistingFile())
-
-		// Eventually(func() string {
-		// 	buffer, err := ioutil.ReadFile("/tmp/jme.txt")
-		// 	if err != nil {
-		// 		return ""
-		// 	}
-		// 	contents := string(buffer)
-		// 	return contents
-		// }).Should(Equal("is cooler than Anusha"))
 
 	})
+
+	It("should error out when an invalid yaml is passed", func() {
+		fakeFileWriter := &cloudinitfakes.FakeFileWriter{}
+
+		se := cloudinit.ScriptExecutor{Executor: fakeFileWriter}
+		bootstrapSecretUnencoded := "invalid yaml"
+		err := se.Execute(bootstrapSecretUnencoded)
+		Expect(err).To(HaveOccurred())
+		Expect(err.Error()).To(ContainSubstring("error parsing write_files action"))
+
+	})
+
+	It("should error out when there is not enough permission to mkdir", func() {
+		fakeFileWriter := &cloudinitfakes.FakeFileWriter{}
+
+		se := cloudinit.ScriptExecutor{Executor: fakeFileWriter}
+		bootstrapSecretUnencoded := `## template: jinja
+#cloud-config
+write_files:
+-   path: /tmp/jme.txt
+    content: is cooler than Anusha
+`
+		fakeFileWriter.MkdirReturns(errors.New("not enough permissions"))
+		err := se.Execute(bootstrapSecretUnencoded)
+		Expect(err).To(HaveOccurred())
+		Expect(err.Error()).To(ContainSubstring("not enough permissions"))
+
+		Expect(fakeFileWriter.WriteToFileCallCount()).To(Equal(0))
+
+	})
+
+	// It("should get all commands", func() {
+	// 	bootstrapSecretUnencoded := `## template: jinja
+	// 	#cloud-config
+	// 	runCmd:
+	// 	-   echo 'I am echo from the test'
+	// 	`
+
+	// })
 
 })
