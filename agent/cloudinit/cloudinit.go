@@ -1,7 +1,6 @@
 package cloudinit
 
 import (
-	"os"
 	"path/filepath"
 
 	"github.com/pkg/errors"
@@ -9,7 +8,7 @@ import (
 )
 
 type ScriptExecutor struct {
-	Executor FileWriter
+	Executor IFileWriter
 }
 
 type writeFilesAction struct {
@@ -25,49 +24,24 @@ type files struct {
 	//Append      bool   `json:"append,"`
 }
 
-//go:generate go run github.com/maxbrunsfeld/counterfeiter/v6 -generate
-
-//counterfeiter:generate . FileWriter
-type FileWriter interface {
-	Mkdir(string, os.FileMode) error
-	// CreateFile(string)
-	WriteToFile(string, string) error
-}
-
-type RealWhatever struct {
-}
-
-func (w RealWhatever) Mkdir(dirName string, fileMode os.FileMode) error {
-	return os.Mkdir(dirName, fileMode)
-
-}
-
-// func (w RealWhatever) CreateFile(fileName string) {
-// 	os.Create(fileName)
-// }
-
-func (w RealWhatever) WriteToFile(fileName string, fileContent string) error {
-	f, _ := os.Create(fileName)
-	defer f.Close()
-	_, err := f.WriteString(fileContent)
-	return err
-}
-
 func (se ScriptExecutor) Execute(bootstrapScript string) error {
 	cloudInitData := writeFilesAction{}
 	if err := yaml.Unmarshal([]byte(bootstrapScript), &cloudInitData); err != nil {
 		return errors.Wrapf(err, "error parsing write_files action: %s", bootstrapScript)
 	}
 
-	path := cloudInitData.Files[0].Path
-	directory := filepath.Dir(path)
-	// os.Mkdir(directory, 0644)
-	err := se.Executor.Mkdir(directory, 0644)
-	if err != nil {
-		return err
+	for _, file := range cloudInitData.Files {
+		err := se.Executor.MkdirIfNotExists(filepath.Dir(file.Path), 0644)
+		if err != nil {
+			return err
+		}
+
+		err = se.Executor.WriteToFile(file.Path, file.Content)
+		if err != nil {
+			return err
+		}
+
 	}
-	// f, _ := os.Create(path)
-	se.Executor.WriteToFile(path, cloudInitData.Files[0].Content)
 
 	// defer f.Close()
 
