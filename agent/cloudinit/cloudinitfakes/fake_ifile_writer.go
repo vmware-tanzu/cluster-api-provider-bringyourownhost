@@ -8,17 +8,17 @@ import (
 	"github.com/vmware-tanzu/cluster-api-provider-byoh/agent/cloudinit"
 )
 
-type FakeFileWriter struct {
-	MkdirStub        func(string, fs.FileMode) error
-	mkdirMutex       sync.RWMutex
-	mkdirArgsForCall []struct {
+type FakeIFileWriter struct {
+	MkdirIfNotExistsStub        func(string, fs.FileMode) error
+	mkdirIfNotExistsMutex       sync.RWMutex
+	mkdirIfNotExistsArgsForCall []struct {
 		arg1 string
 		arg2 fs.FileMode
 	}
-	mkdirReturns struct {
+	mkdirIfNotExistsReturns struct {
 		result1 error
 	}
-	mkdirReturnsOnCall map[int]struct {
+	mkdirIfNotExistsReturnsOnCall map[int]struct {
 		result1 error
 	}
 	WriteToFileStub        func(string, string) error
@@ -37,17 +37,17 @@ type FakeFileWriter struct {
 	invocationsMutex sync.RWMutex
 }
 
-func (fake *FakeFileWriter) Mkdir(arg1 string, arg2 fs.FileMode) error {
-	fake.mkdirMutex.Lock()
-	ret, specificReturn := fake.mkdirReturnsOnCall[len(fake.mkdirArgsForCall)]
-	fake.mkdirArgsForCall = append(fake.mkdirArgsForCall, struct {
+func (fake *FakeIFileWriter) MkdirIfNotExists(arg1 string, arg2 fs.FileMode) error {
+	fake.mkdirIfNotExistsMutex.Lock()
+	ret, specificReturn := fake.mkdirIfNotExistsReturnsOnCall[len(fake.mkdirIfNotExistsArgsForCall)]
+	fake.mkdirIfNotExistsArgsForCall = append(fake.mkdirIfNotExistsArgsForCall, struct {
 		arg1 string
 		arg2 fs.FileMode
 	}{arg1, arg2})
-	stub := fake.MkdirStub
-	fakeReturns := fake.mkdirReturns
-	fake.recordInvocation("Mkdir", []interface{}{arg1, arg2})
-	fake.mkdirMutex.Unlock()
+	stub := fake.MkdirIfNotExistsStub
+	fakeReturns := fake.mkdirIfNotExistsReturns
+	fake.recordInvocation("MkdirIfNotExists", []interface{}{arg1, arg2})
+	fake.mkdirIfNotExistsMutex.Unlock()
 	if stub != nil {
 		return stub(arg1, arg2)
 	}
@@ -57,49 +57,49 @@ func (fake *FakeFileWriter) Mkdir(arg1 string, arg2 fs.FileMode) error {
 	return fakeReturns.result1
 }
 
-func (fake *FakeFileWriter) MkdirCallCount() int {
-	fake.mkdirMutex.RLock()
-	defer fake.mkdirMutex.RUnlock()
-	return len(fake.mkdirArgsForCall)
+func (fake *FakeIFileWriter) MkdirIfNotExistsCallCount() int {
+	fake.mkdirIfNotExistsMutex.RLock()
+	defer fake.mkdirIfNotExistsMutex.RUnlock()
+	return len(fake.mkdirIfNotExistsArgsForCall)
 }
 
-func (fake *FakeFileWriter) MkdirCalls(stub func(string, fs.FileMode) error) {
-	fake.mkdirMutex.Lock()
-	defer fake.mkdirMutex.Unlock()
-	fake.MkdirStub = stub
+func (fake *FakeIFileWriter) MkdirIfNotExistsCalls(stub func(string, fs.FileMode) error) {
+	fake.mkdirIfNotExistsMutex.Lock()
+	defer fake.mkdirIfNotExistsMutex.Unlock()
+	fake.MkdirIfNotExistsStub = stub
 }
 
-func (fake *FakeFileWriter) MkdirArgsForCall(i int) (string, fs.FileMode) {
-	fake.mkdirMutex.RLock()
-	defer fake.mkdirMutex.RUnlock()
-	argsForCall := fake.mkdirArgsForCall[i]
+func (fake *FakeIFileWriter) MkdirIfNotExistsArgsForCall(i int) (string, fs.FileMode) {
+	fake.mkdirIfNotExistsMutex.RLock()
+	defer fake.mkdirIfNotExistsMutex.RUnlock()
+	argsForCall := fake.mkdirIfNotExistsArgsForCall[i]
 	return argsForCall.arg1, argsForCall.arg2
 }
 
-func (fake *FakeFileWriter) MkdirReturns(result1 error) {
-	fake.mkdirMutex.Lock()
-	defer fake.mkdirMutex.Unlock()
-	fake.MkdirStub = nil
-	fake.mkdirReturns = struct {
+func (fake *FakeIFileWriter) MkdirIfNotExistsReturns(result1 error) {
+	fake.mkdirIfNotExistsMutex.Lock()
+	defer fake.mkdirIfNotExistsMutex.Unlock()
+	fake.MkdirIfNotExistsStub = nil
+	fake.mkdirIfNotExistsReturns = struct {
 		result1 error
 	}{result1}
 }
 
-func (fake *FakeFileWriter) MkdirReturnsOnCall(i int, result1 error) {
-	fake.mkdirMutex.Lock()
-	defer fake.mkdirMutex.Unlock()
-	fake.MkdirStub = nil
-	if fake.mkdirReturnsOnCall == nil {
-		fake.mkdirReturnsOnCall = make(map[int]struct {
+func (fake *FakeIFileWriter) MkdirIfNotExistsReturnsOnCall(i int, result1 error) {
+	fake.mkdirIfNotExistsMutex.Lock()
+	defer fake.mkdirIfNotExistsMutex.Unlock()
+	fake.MkdirIfNotExistsStub = nil
+	if fake.mkdirIfNotExistsReturnsOnCall == nil {
+		fake.mkdirIfNotExistsReturnsOnCall = make(map[int]struct {
 			result1 error
 		})
 	}
-	fake.mkdirReturnsOnCall[i] = struct {
+	fake.mkdirIfNotExistsReturnsOnCall[i] = struct {
 		result1 error
 	}{result1}
 }
 
-func (fake *FakeFileWriter) WriteToFile(arg1 string, arg2 string) error {
+func (fake *FakeIFileWriter) WriteToFile(arg1 string, arg2 string) error {
 	fake.writeToFileMutex.Lock()
 	ret, specificReturn := fake.writeToFileReturnsOnCall[len(fake.writeToFileArgsForCall)]
 	fake.writeToFileArgsForCall = append(fake.writeToFileArgsForCall, struct {
@@ -119,26 +119,26 @@ func (fake *FakeFileWriter) WriteToFile(arg1 string, arg2 string) error {
 	return fakeReturns.result1
 }
 
-func (fake *FakeFileWriter) WriteToFileCallCount() int {
+func (fake *FakeIFileWriter) WriteToFileCallCount() int {
 	fake.writeToFileMutex.RLock()
 	defer fake.writeToFileMutex.RUnlock()
 	return len(fake.writeToFileArgsForCall)
 }
 
-func (fake *FakeFileWriter) WriteToFileCalls(stub func(string, string) error) {
+func (fake *FakeIFileWriter) WriteToFileCalls(stub func(string, string) error) {
 	fake.writeToFileMutex.Lock()
 	defer fake.writeToFileMutex.Unlock()
 	fake.WriteToFileStub = stub
 }
 
-func (fake *FakeFileWriter) WriteToFileArgsForCall(i int) (string, string) {
+func (fake *FakeIFileWriter) WriteToFileArgsForCall(i int) (string, string) {
 	fake.writeToFileMutex.RLock()
 	defer fake.writeToFileMutex.RUnlock()
 	argsForCall := fake.writeToFileArgsForCall[i]
 	return argsForCall.arg1, argsForCall.arg2
 }
 
-func (fake *FakeFileWriter) WriteToFileReturns(result1 error) {
+func (fake *FakeIFileWriter) WriteToFileReturns(result1 error) {
 	fake.writeToFileMutex.Lock()
 	defer fake.writeToFileMutex.Unlock()
 	fake.WriteToFileStub = nil
@@ -147,7 +147,7 @@ func (fake *FakeFileWriter) WriteToFileReturns(result1 error) {
 	}{result1}
 }
 
-func (fake *FakeFileWriter) WriteToFileReturnsOnCall(i int, result1 error) {
+func (fake *FakeIFileWriter) WriteToFileReturnsOnCall(i int, result1 error) {
 	fake.writeToFileMutex.Lock()
 	defer fake.writeToFileMutex.Unlock()
 	fake.WriteToFileStub = nil
@@ -161,11 +161,11 @@ func (fake *FakeFileWriter) WriteToFileReturnsOnCall(i int, result1 error) {
 	}{result1}
 }
 
-func (fake *FakeFileWriter) Invocations() map[string][][]interface{} {
+func (fake *FakeIFileWriter) Invocations() map[string][][]interface{} {
 	fake.invocationsMutex.RLock()
 	defer fake.invocationsMutex.RUnlock()
-	fake.mkdirMutex.RLock()
-	defer fake.mkdirMutex.RUnlock()
+	fake.mkdirIfNotExistsMutex.RLock()
+	defer fake.mkdirIfNotExistsMutex.RUnlock()
 	fake.writeToFileMutex.RLock()
 	defer fake.writeToFileMutex.RUnlock()
 	copiedInvocations := map[string][][]interface{}{}
@@ -175,7 +175,7 @@ func (fake *FakeFileWriter) Invocations() map[string][][]interface{} {
 	return copiedInvocations
 }
 
-func (fake *FakeFileWriter) recordInvocation(key string, args []interface{}) {
+func (fake *FakeIFileWriter) recordInvocation(key string, args []interface{}) {
 	fake.invocationsMutex.Lock()
 	defer fake.invocationsMutex.Unlock()
 	if fake.invocations == nil {
@@ -187,4 +187,4 @@ func (fake *FakeFileWriter) recordInvocation(key string, args []interface{}) {
 	fake.invocations[key] = append(fake.invocations[key], args)
 }
 
-var _ cloudinit.FileWriter = new(FakeFileWriter)
+var _ cloudinit.IFileWriter = new(FakeIFileWriter)
