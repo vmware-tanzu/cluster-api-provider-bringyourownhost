@@ -1,6 +1,7 @@
 package cloudinit
 
 import (
+	"fmt"
 	"path/filepath"
 
 	"github.com/pkg/errors"
@@ -8,11 +9,13 @@ import (
 )
 
 type ScriptExecutor struct {
-	Executor IFileWriter
+	WriteFilesExecutor IFileWriter
+	RunCmdExecutor     ICmdRunner
 }
 
-type writeFilesAction struct {
-	Files []files `json:"write_files,"`
+type bootstrapConfig struct {
+	FilesToWrite      []files  `json:"write_files"`
+	CommandsToExecute []string `json:"runCmd"`
 }
 
 type files struct {
@@ -20,35 +23,34 @@ type files struct {
 	// Encoding    string `json:"encoding,omitempty"`
 	// Owner       string `json:"owner,omitempty"`
 	// Permissions string `json:"permissions,omitempty"`
-	Content string `json:"content,"`
+	Content string `json:"content"`
 	//Append      bool   `json:"append,"`
 }
 
 func (se ScriptExecutor) Execute(bootstrapScript string) error {
-	cloudInitData := writeFilesAction{}
+	cloudInitData := bootstrapConfig{}
 	if err := yaml.Unmarshal([]byte(bootstrapScript), &cloudInitData); err != nil {
 		return errors.Wrapf(err, "error parsing write_files action: %s", bootstrapScript)
 	}
 
-	for _, file := range cloudInitData.Files {
-		err := se.Executor.MkdirIfNotExists(filepath.Dir(file.Path), 0644)
+	for _, file := range cloudInitData.FilesToWrite {
+		directoryToCreate := filepath.Dir(file.Path)
+		err := se.WriteFilesExecutor.MkdirIfNotExists(directoryToCreate)
 		if err != nil {
-			return err
+			return errors.Wrap(err, fmt.Sprintf("Error creating the directory %s", directoryToCreate))
 		}
 
-		err = se.Executor.WriteToFile(file.Path, file.Content)
+		err = se.WriteFilesExecutor.WriteToFile(file.Path, file.Content)
 		if err != nil {
-			return err
+			return errors.Wrap(err, fmt.Sprintf("Error writing the file %s", file.Path))
 		}
-
 	}
 
-	// defer f.Close()
-
-	// if _, err := f.WriteString(cloudInitData.Files[0].Content); err != nil {
-	// 	return errors.Wrapf(err, "failed to write file %s", path)
-	// }
-
+	for _, cmd := range cloudInitData.CommandsToExecute {
+		err := se.RunCmdExecutor.RunCmd(cmd)
+		if err != nil {
+			return err
+		}
+	}
 	return nil
-
 }

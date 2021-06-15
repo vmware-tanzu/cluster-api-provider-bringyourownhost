@@ -3,8 +3,11 @@ package main
 import (
 	"context"
 	"encoding/base64"
+	"fmt"
 	"io/ioutil"
+	"os"
 	"os/exec"
+	"path"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -23,6 +26,7 @@ var _ = Describe("Agent", func() {
 		ns      = &corev1.Namespace{}
 		session *gexec.Session
 		err     error
+		dir     string
 	)
 
 	BeforeEach(func() {
@@ -36,7 +40,6 @@ var _ = Describe("Agent", func() {
 	})
 
 	AfterEach(func() {
-
 		err = k8sClient.Delete(context.TODO(), ns)
 		Expect(err).NotTo(HaveOccurred(), "failed to delete test namespace")
 	})
@@ -74,10 +77,16 @@ var _ = Describe("Agent", func() {
 			command := exec.Command(pathToHostAgentBinary, "--kubeconfig", kubeconfigFile.Name(), "--namespace", ns.Name)
 			session, err = gexec.Start(command, GinkgoWriter, GinkgoWriter)
 			Expect(err).ToNot(HaveOccurred())
+
+			dir, err = ioutil.TempDir("", "cloudinit")
+			Expect(err).ToNot(HaveOccurred())
 		})
 
 		AfterEach(func() {
 			session.Terminate().Wait()
+
+			err := os.RemoveAll(dir)
+			Expect(err).ToNot(HaveOccurred())
 		})
 
 		It("should register the BYOHost with the management cluster", func() {
@@ -101,12 +110,15 @@ var _ = Describe("Agent", func() {
 				return err == nil
 			}).ShouldNot(BeFalse())
 
-			bootstrapSecretUnencoded := `## template: jinja
-#cloud-config
-write_files:
--   path: /tmp/jme.txt
-    content: is cooler than Anusha
-`
+			fileToCreate := path.Join(dir, "test-directory", "test-file.txt")
+
+			bootstrapSecretUnencoded := fmt.Sprintf(`write_files:
+-   path: %s
+    content: expected-content
+runCmd:
+- echo -n ' run cmd' >> %s
+`, fileToCreate, fileToCreate)
+
 			encodedBootstrapSecret := base64.StdEncoding.EncodeToString([]byte(bootstrapSecretUnencoded))
 
 			secret := createSecretCRD("bootstrap-secret-1", encodedBootstrapSecret, ns.Name)
@@ -142,12 +154,13 @@ write_files:
 			// }).Should(Equal(corev1.ConditionTrue))
 
 			Eventually(func() string {
-				buffer, err := ioutil.ReadFile("/tmp/jme.txt")
+				buffer, err := ioutil.ReadFile(fileToCreate)
 				if err != nil {
 					return ""
 				}
 				return string(buffer)
-			}).Should(Equal("is cooler than Anusha"))
+			}).Should(Equal("expected-content run cmd"))
+
 		})
 	})
 

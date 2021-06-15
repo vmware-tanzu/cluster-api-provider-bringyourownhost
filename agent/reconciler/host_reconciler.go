@@ -34,7 +34,9 @@ func (r HostReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.R
 		klog.Fatal(err)
 	}
 
-	err = cloudinit.ScriptExecutor{Executor: cloudinit.FileWriter{}}.Execute(bootstrapScript)
+	err = cloudinit.ScriptExecutor{
+		WriteFilesExecutor: cloudinit.FileWriter{},
+		RunCmdExecutor:     cloudinit.CmdRunner{}}.Execute(bootstrapScript)
 	if err != nil {
 		klog.Fatal(err)
 	}
