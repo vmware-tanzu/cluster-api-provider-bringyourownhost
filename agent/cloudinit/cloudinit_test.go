@@ -2,7 +2,6 @@ package cloudinit_test
 
 import (
 	"errors"
-	"os"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -12,22 +11,29 @@ import (
 )
 
 var someBootstrapSecret = `
-			write_files:
-			-   path: /tmp/file1.txt
-				content: some-content
+write_files:
+-   path: /tmp/file1.txt
+    content: some-content
+runCmd:
+-   echo 'some run command'
 `
 
 var _ = Describe("Cloudinit", func() {
 	Context("Testing write_files and runCmd directives of cloudinit", func() {
 		var (
-			fakeFileWriter *cloudinitfakes.FakeIFileWriter
-			scriptExecutor cloudinit.ScriptExecutor
-			err            error
+			fakeFileWriter  *cloudinitfakes.FakeIFileWriter
+			fakeCmdExecutor *cloudinitfakes.FakeICmdRunner
+			scriptExecutor  cloudinit.ScriptExecutor
+			err             error
 		)
 
 		BeforeEach(func() {
 			fakeFileWriter = &cloudinitfakes.FakeIFileWriter{}
-			scriptExecutor = cloudinit.ScriptExecutor{Executor: fakeFileWriter}
+			fakeCmdExecutor = &cloudinitfakes.FakeICmdRunner{}
+			scriptExecutor = cloudinit.ScriptExecutor{
+				WriteFilesExecutor: fakeFileWriter,
+				RunCmdExecutor:     fakeCmdExecutor,
+			}
 		})
 
 		It("should write files successfully", func() {
@@ -42,16 +48,14 @@ var _ = Describe("Cloudinit", func() {
 			Expect(fakeFileWriter.MkdirIfNotExistsCallCount()).To(Equal(2))
 			Expect(fakeFileWriter.WriteToFileCallCount()).To(Equal(2))
 
-			dirNameForFirstFile, dirPermissionsForFirstFile := fakeFileWriter.MkdirIfNotExistsArgsForCall(0)
+			dirNameForFirstFile := fakeFileWriter.MkdirIfNotExistsArgsForCall(0)
 			Expect(dirNameForFirstFile).To(Equal("/tmp/a"))
-			Expect(dirPermissionsForFirstFile).To(Equal(os.FileMode(0644)))
 			firstFileName, firstFileContents := fakeFileWriter.WriteToFileArgsForCall(0)
 			Expect(firstFileName).To(Equal("/tmp/a/file1.txt"))
 			Expect(firstFileContents).To(Equal("some-content"))
 
-			dirNameForSecondFile, dirPermissionsForSecondFile := fakeFileWriter.MkdirIfNotExistsArgsForCall(1)
+			dirNameForSecondFile := fakeFileWriter.MkdirIfNotExistsArgsForCall(1)
 			Expect(dirNameForSecondFile).To(Equal("/tmp/b"))
-			Expect(dirPermissionsForSecondFile).To(Equal(os.FileMode(0644)))
 			secondFileName, secondFileContents := fakeFileWriter.WriteToFileArgsForCall(1)
 			Expect(secondFileName).To(Equal("/tmp/b/file2.txt"))
 			Expect(secondFileContents).To(Equal("whatever"))
@@ -82,6 +86,36 @@ var _ = Describe("Cloudinit", func() {
 
 			Expect(err).To(HaveOccurred())
 			Expect(err.Error()).To(ContainSubstring("cannot write to file"))
+		})
+
+		It("run the command given in the runCmd directive", func() {
+			err := scriptExecutor.Execute(someBootstrapSecret)
+			Expect(err).ToNot(HaveOccurred())
+
+			Expect(fakeCmdExecutor.RunCmdCallCount()).To(Equal(1))
+			cmd := fakeCmdExecutor.RunCmdArgsForCall(0)
+			Expect(cmd).To(Equal("echo 'some run command'"))
+		})
+
+		It("should not invoke the runCmd or writeFiles directive when absent", func() {
+
+			err := scriptExecutor.Execute("")
+			Expect(err).ToNot(HaveOccurred())
+
+			Expect(fakeCmdExecutor.RunCmdCallCount()).To(Equal(0))
+			Expect(fakeFileWriter.MkdirIfNotExistsCallCount()).To(Equal(0))
+			Expect(fakeFileWriter.WriteToFileCallCount()).To(Equal(0))
+		})
+
+		It("should error out when command execution fails", func() {
+
+			fakeCmdExecutor.RunCmdReturns(errors.New("command execution failed"))
+			err := scriptExecutor.Execute(someBootstrapSecret)
+			Expect(err).To(HaveOccurred())
+
+			Expect(fakeCmdExecutor.RunCmdCallCount()).To(Equal(1))
+
+			Expect(err.Error()).To(ContainSubstring("command execution failed"))
 		})
 	})
 })

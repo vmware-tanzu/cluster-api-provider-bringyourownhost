@@ -8,26 +8,34 @@ import (
 
 //counterfeiter:generate . IFileWriter
 type IFileWriter interface {
-	MkdirIfNotExists(string, os.FileMode) error
+	MkdirIfNotExists(string) error
 	WriteToFile(string, string) error
 }
 
 type FileWriter struct {
 }
 
-func (w FileWriter) MkdirIfNotExists(dirName string, fileMode os.FileMode) error {
+func (w FileWriter) MkdirIfNotExists(dirName string) error {
 	_, err := os.Stat(dirName)
 
 	if os.IsNotExist(err) {
-		return os.Mkdir(dirName, fileMode)
+		return os.MkdirAll(dirName, 0744)
+	}
+
+	if err != nil {
+		return err
 	}
 	return nil
 
 }
 
 func (w FileWriter) WriteToFile(fileName string, fileContent string) error {
-	f, _ := os.Create(fileName)
+	f, err := os.Create(fileName)
+	if err != nil {
+		return err
+	}
+
 	defer f.Close()
-	_, err := f.WriteString(fileContent)
+	_, err = f.WriteString(fileContent)
 	return err
 }

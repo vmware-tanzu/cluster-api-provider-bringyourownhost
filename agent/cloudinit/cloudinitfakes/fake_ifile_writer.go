@@ -2,18 +2,16 @@
 package cloudinitfakes
 
 import (
-	"io/fs"
 	"sync"
 
 	"github.com/vmware-tanzu/cluster-api-provider-byoh/agent/cloudinit"
 )
 
 type FakeIFileWriter struct {
-	MkdirIfNotExistsStub        func(string, fs.FileMode) error
+	MkdirIfNotExistsStub        func(string) error
 	mkdirIfNotExistsMutex       sync.RWMutex
 	mkdirIfNotExistsArgsForCall []struct {
 		arg1 string
-		arg2 fs.FileMode
 	}
 	mkdirIfNotExistsReturns struct {
 		result1 error
@@ -37,19 +35,18 @@ type FakeIFileWriter struct {
 	invocationsMutex sync.RWMutex
 }
 
-func (fake *FakeIFileWriter) MkdirIfNotExists(arg1 string, arg2 fs.FileMode) error {
+func (fake *FakeIFileWriter) MkdirIfNotExists(arg1 string) error {
 	fake.mkdirIfNotExistsMutex.Lock()
 	ret, specificReturn := fake.mkdirIfNotExistsReturnsOnCall[len(fake.mkdirIfNotExistsArgsForCall)]
 	fake.mkdirIfNotExistsArgsForCall = append(fake.mkdirIfNotExistsArgsForCall, struct {
 		arg1 string
-		arg2 fs.FileMode
-	}{arg1, arg2})
+	}{arg1})
 	stub := fake.MkdirIfNotExistsStub
 	fakeReturns := fake.mkdirIfNotExistsReturns
-	fake.recordInvocation("MkdirIfNotExists", []interface{}{arg1, arg2})
+	fake.recordInvocation("MkdirIfNotExists", []interface{}{arg1})
 	fake.mkdirIfNotExistsMutex.Unlock()
 	if stub != nil {
-		return stub(arg1, arg2)
+		return stub(arg1)
 	}
 	if specificReturn {
 		return ret.result1
@@ -63,17 +60,17 @@ func (fake *FakeIFileWriter) MkdirIfNotExistsCallCount() int {
 	return len(fake.mkdirIfNotExistsArgsForCall)
 }
 
-func (fake *FakeIFileWriter) MkdirIfNotExistsCalls(stub func(string, fs.FileMode) error) {
+func (fake *FakeIFileWriter) MkdirIfNotExistsCalls(stub func(string) error) {
 	fake.mkdirIfNotExistsMutex.Lock()
 	defer fake.mkdirIfNotExistsMutex.Unlock()
 	fake.MkdirIfNotExistsStub = stub
 }
 
-func (fake *FakeIFileWriter) MkdirIfNotExistsArgsForCall(i int) (string, fs.FileMode) {
+func (fake *FakeIFileWriter) MkdirIfNotExistsArgsForCall(i int) string {
 	fake.mkdirIfNotExistsMutex.RLock()
 	defer fake.mkdirIfNotExistsMutex.RUnlock()
 	argsForCall := fake.mkdirIfNotExistsArgsForCall[i]
-	return argsForCall.arg1, argsForCall.arg2
+	return argsForCall.arg1
 }
 
 func (fake *FakeIFileWriter) MkdirIfNotExistsReturns(result1 error) {
