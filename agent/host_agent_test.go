@@ -138,20 +138,20 @@ runCmd:
 			err = helper.Patch(context.TODO(), byoHost)
 			Expect(err).ToNot(HaveOccurred())
 
-			// Eventually(func() corev1.ConditionStatus {
-			// 	createdByoHost := &infrastructurev1alpha4.ByoHost{}
-			// 	err := k8sClient.Get(context.TODO(), byoHostLookupKey, createdByoHost)
-			// 	if err != nil {
-			// 		return corev1.ConditionFalse
-			// 	}
+			Eventually(func() corev1.ConditionStatus {
+				createdByoHost := &infrastructurev1alpha4.ByoHost{}
+				err := k8sClient.Get(context.TODO(), byoHostLookupKey, createdByoHost)
+				if err != nil {
+					return corev1.ConditionFalse
+				}
 
-			// 	for _, condition := range createdByoHost.Status.Conditions {
-			// 		if condition.Type == infrastructurev1alpha4.K8sComponentsInstalledCondition {
-			// 			return condition.Status
-			// 		}
-			// 	}
-			// 	return corev1.ConditionFalse
-			// }).Should(Equal(corev1.ConditionTrue))
+				for _, condition := range createdByoHost.Status.Conditions {
+					if condition.Type == infrastructurev1alpha4.K8sComponentsInstalledCondition {
+						return condition.Status
+					}
+				}
+				return corev1.ConditionFalse
+			}).Should(Equal(corev1.ConditionTrue))
 
 			Eventually(func() string {
 				buffer, err := ioutil.ReadFile(fileToCreate)
