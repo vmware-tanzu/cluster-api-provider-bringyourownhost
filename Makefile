@@ -30,6 +30,7 @@ GINKGO := $(TOOLS_BIN_DIR)/ginkgo
 KUSTOMIZE := $(TOOLS_BIN_DIR)/kustomize
 
 BYOH_TEMPLATES := $(REPO_ROOT)/test/e2e/data/infrastructure-provider-byoh
+DOCKER_TEMPLATES := $(REPO_ROOT)/../cluster-api/test/e2e/data/infrastructure-docker
 
 
 # Get the currently used golang install path (in GOPATH/bin, unless GOBIN is set)
@@ -101,6 +102,7 @@ test-e2e: $(GINKGO) cluster-templates ## Run the end-to-end tests
 cluster-templates: $(KUSTOMIZE) cluster-templates-v1alpha4
 
 cluster-templates-v1alpha4: $(KUSTOMIZE) ## Generate cluster templates for v1alpha4
+	$(KUSTOMIZE) build $(DOCKER_TEMPLATES)/v1alpha4/cluster-template --load_restrictor none > $(DOCKER_TEMPLATES)/v1alpha4/cluster-template.yaml
 	$(KUSTOMIZE) build $(BYOH_TEMPLATES)/v1alpha4 --load_restrictor none > $(BYOH_TEMPLATES)/v1alpha4/cluster-template.yaml
 
 $(GINKGO): # Build ginkgo from tools folder.

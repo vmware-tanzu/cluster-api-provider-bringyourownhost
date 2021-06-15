@@ -80,15 +80,15 @@ providers:
   - name: docker
     type: InfrastructureProvider
     versions:
-      - name: v0.3.16 # latest published release
-        value: "https://github.com/kubernetes-sigs/cluster-api/releases/download/v0.3.16/infrastructure-components-development.yaml"
-        type: "url"
-        replacements:
-          - old: --metrics-addr=127.0.0.1:8080
-            new: --metrics-addr=:8080
-        files:
-          # Add cluster templates
-          - sourcePath: "../../../../cluster-api/test/e2e/data/infrastructure-docker/v1alpha3/cluster-template.yaml"
+      # - name: v0.3.16 # latest published release
+      #   value: "https://github.com/kubernetes-sigs/cluster-api/releases/download/v0.3.16/infrastructure-components-development.yaml"
+      #   type: "url"
+      #   replacements:
+      #     - old: --metrics-addr=127.0.0.1:8080
+      #       new: --metrics-addr=:8080
+      #   files:
+      #     # Add cluster templates
+      #     - sourcePath: "../../../../cluster-api/test/e2e/data/infrastructure-docker/v1alpha3/cluster-template.yaml"
       - name: v0.4.99 # next; use manifest from source files
         value: ../../../../cluster-api/test/infrastructure/docker/config/default
         replacements:
