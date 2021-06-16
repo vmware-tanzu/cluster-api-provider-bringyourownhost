@@ -21,6 +21,7 @@ E2E_CONF_FILE  ?= ${REPO_ROOT}/test/e2e/config/provider.yaml
 ARTIFACTS ?= ${REPO_ROOT}/_artifacts
 SKIP_RESOURCE_CLEANUP ?= false
 USE_EXISTING_CLUSTER ?= false
+EXISTING_CLUSTER_KUBECONFIG_PATH ?=
 GINKGO_NOCOLOR ?= false
 
 TOOLS_DIR := $(REPO_ROOT)/hack/tools
@@ -97,7 +98,8 @@ test-e2e: $(GINKGO) cluster-templates ## Run the end-to-end tests
 	$(GINKGO) -v -trace -tags=e2e -focus="$(GINKGO_FOCUS)" $(_SKIP_ARGS) -nodes=$(GINKGO_NODES) --noColor=$(GINKGO_NOCOLOR) $(GINKGO_ARGS) test/e2e -- \
 	    -e2e.artifacts-folder="$(ARTIFACTS)" \
 	    -e2e.config="$(E2E_CONF_FILE)" \
-	    -e2e.skip-resource-cleanup=$(SKIP_RESOURCE_CLEANUP) -e2e.use-existing-cluster=$(USE_EXISTING_CLUSTER)
+	    -e2e.skip-resource-cleanup=$(SKIP_RESOURCE_CLEANUP) -e2e.use-existing-cluster=$(USE_EXISTING_CLUSTER) \
+		-e2e.existing-cluster-kubeconfig-path=$(EXISTING_CLUSTER_KUBECONFIG_PATH)
 
 cluster-templates: $(KUSTOMIZE) cluster-templates-v1alpha4
 
