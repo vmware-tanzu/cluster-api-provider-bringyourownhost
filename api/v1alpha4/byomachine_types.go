@@ -17,6 +17,7 @@ package v1alpha4
 
 import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	clusterv1 "sigs.k8s.io/cluster-api/api/v1alpha4"
 )
 
 // EDIT THIS FILE!  THIS IS SCAFFOLDING FOR YOU TO OWN!
@@ -35,6 +36,10 @@ type ByoMachineStatus struct {
 	// INSERT ADDITIONAL STATUS FIELD - define observed state of cluster
 	// Important: Run "make" to regenerate code after modifying this file
 	Ready bool `json:"ready"`
+
+	// Conditions defines current service state of the BYOMachine.
+	// +optional
+	Conditions clusterv1.Conditions `json:"conditions,omitempty"`
 }
 
 // +kubebuilder:subresource:status
@@ -60,4 +65,12 @@ type ByoMachineList struct {
 
 func init() {
 	SchemeBuilder.Register(&ByoMachine{}, &ByoMachineList{})
+}
+
+func (m *ByoMachine) GetConditions() clusterv1.Conditions {
+	return m.Status.Conditions
+}
+
+func (m *ByoMachine) SetConditions(conditions clusterv1.Conditions) {
+	m.Status.Conditions = conditions
 }

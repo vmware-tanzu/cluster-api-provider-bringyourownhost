@@ -16,6 +16,7 @@ limitations under the License.
 package main
 
 import (
+	"context"
 	"flag"
 	"os"
 
@@ -24,7 +25,9 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
 	_ "k8s.io/client-go/plugin/pkg/client/auth/gcp"
+	"sigs.k8s.io/cluster-api/controllers/remote"
 	ctrl "sigs.k8s.io/controller-runtime"
+	"sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 
 	infrastructurev1alpha4 "github.com/vmware-tanzu/cluster-api-provider-byoh/api/v1alpha4"
@@ -69,10 +72,28 @@ func main() {
 		os.Exit(1)
 	}
 
+	tracker, err := remote.NewClusterCacheTracker(
+		ctrl.Log.WithName("remote").WithName("ClusterCacheTracker"),
+		mgr,
+	)
+	if err != nil {
+		setupLog.Error(err, "unable to create cluster cache tracker")
+		os.Exit(1)
+	}
+	if err := (&remote.ClusterCacheReconciler{
+		Client:  mgr.GetClient(),
+		Log:     ctrl.Log.WithName("remote").WithName("ClusterCacheReconciler"),
+		Tracker: tracker,
+	}).SetupWithManager(context.TODO(), mgr, concurrency(0)); err != nil {
+		setupLog.Error(err, "unable to create controller", "controller", "ClusterCacheReconciler")
+		os.Exit(1)
+	}
+
 	if err = (&controllers.ByoMachineReconciler{
-		Client: mgr.GetClient(),
-		Log:    ctrl.Log.WithName("controllers").WithName("ByohMachine"),
-		Scheme: mgr.GetScheme(),
+		Client:  mgr.GetClient(),
+		Log:     ctrl.Log.WithName("controllers").WithName("ByohMachine"),
+		Scheme:  mgr.GetScheme(),
+		Tracker: tracker,
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "ByohMachine")
 		os.Exit(1)
@@ -100,4 +121,8 @@ func main() {
 		setupLog.Error(err, "problem running manager")
 		os.Exit(1)
 	}
+}
+
+func concurrency(c int) controller.Options {
+	return controller.Options{MaxConcurrentReconciles: c}
 }

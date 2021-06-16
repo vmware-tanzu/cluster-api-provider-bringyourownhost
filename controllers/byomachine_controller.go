@@ -17,11 +17,15 @@ package controllers
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/go-logr/logr"
 	infrastructurev1alpha4 "github.com/vmware-tanzu/cluster-api-provider-byoh/api/v1alpha4"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/runtime"
+	"sigs.k8s.io/cluster-api/controllers/remote"
+	"sigs.k8s.io/cluster-api/util"
+	"sigs.k8s.io/cluster-api/util/conditions"
 	"sigs.k8s.io/cluster-api/util/patch"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -31,8 +35,9 @@ import (
 // ByoMachineReconciler reconciles a ByoMachine object
 type ByoMachineReconciler struct {
 	client.Client
-	Log    logr.Logger
-	Scheme *runtime.Scheme
+	Log     logr.Logger
+	Scheme  *runtime.Scheme
+	Tracker *remote.ClusterCacheTracker
 }
 
 // +kubebuilder:rbac:groups=infrastructure.cluster.x-k8s.io,resources=byomachines,verbs=get;list;watch;create;update;patch;delete
@@ -77,6 +82,31 @@ func (r *ByoMachineReconciler) Reconcile(ctx context.Context, req reconcile.Requ
 	// if err != nil {
 	// 	return ctrl.Result{}, err
 	// }
+
+	cluster, _ := util.GetClusterFromMetadata(ctx, r.Client, byoMachine.ObjectMeta)
+	remoteClient, err := r.Tracker.GetClient(ctx, util.ObjectKey(cluster))
+	if err != nil {
+		return ctrl.Result{}, err
+	}
+
+	node := &corev1.Node{}
+	key := client.ObjectKey{Name: host.Name}
+	err = remoteClient.Get(ctx, key, node)
+	if err != nil {
+		return ctrl.Result{}, err
+	}
+	providerID := fmt.Sprintf("byon://%s/%s", host.Name, util.RandomString(6))
+	helper, _ = patch.NewHelper(node, remoteClient)
+
+	node.Spec.ProviderID = providerID
+	helper.Patch(ctx, node)
+
+	helper, _ = patch.NewHelper(byoMachine, r.Client)
+	byoMachine.Spec.ProviderID = providerID
+	byoMachine.Status.Ready = true
+
+	conditions.MarkTrue(byoMachine, infrastructurev1alpha4.HostReadyCondition)
+	helper.Patch(ctx, byoMachine)
 	return ctrl.Result{}, nil
 }
 

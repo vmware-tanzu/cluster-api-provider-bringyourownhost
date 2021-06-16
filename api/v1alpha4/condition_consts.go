@@ -9,4 +9,5 @@ const (
 	// if the host is unmanaged; insteead, in case of managed host, it depends
 	// by the nodecurrently being hosting a BYOHmachine or not.
 	K8sComponentsInstalledCondition clusterv1.ConditionType = "K8sComponentsInstalled"
+	HostReadyCondition              clusterv1.ConditionType = "HostReady"
 )
