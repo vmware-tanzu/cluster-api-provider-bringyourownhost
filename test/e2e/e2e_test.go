@@ -27,7 +27,6 @@ import (
 	infrastructurev1alpha4 "github.com/vmware-tanzu/cluster-api-provider-byoh/api/v1alpha4"
 	"github.com/vmware-tanzu/cluster-api-provider-byoh/test/e2e/helpers/clusterctl_byoh"
 	corev1 "k8s.io/api/core/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/utils/pointer"
 	"sigs.k8s.io/cluster-api/test/framework/clusterctl"
@@ -73,21 +72,21 @@ var _ = Describe("When BYOH joins existing cluster", func() {
 	It("Should create a workload cluster with single BYOH host", func() {
 
 		clusterName := fmt.Sprintf("%s-%s", specName, util.RandomString(6))
-		hostName := "test.com"
+		// hostName := "test.com"
 
-		ByoHost := &infrastructurev1alpha4.ByoHost{
-			TypeMeta: metav1.TypeMeta{
-				Kind:       "ByoHost",
-				APIVersion: "infrastructure.cluster.x-k8s.io/v1alpha4",
-			},
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      hostName,
-				Namespace: namespace.Name,
-			},
-			Spec: infrastructurev1alpha4.ByoHostSpec{},
-		}
+		// ByoHost := &infrastructurev1alpha4.ByoHost{
+		// 	TypeMeta: metav1.TypeMeta{
+		// 		Kind:       "ByoHost",
+		// 		APIVersion: "infrastructure.cluster.x-k8s.io/v1alpha4",
+		// 	},
+		// 	ObjectMeta: metav1.ObjectMeta{
+		// 		Name:      hostName,
+		// 		Namespace: namespace.Name,
+		// 	},
+		// 	Spec: infrastructurev1alpha4.ByoHostSpec{},
+		// }
 		client := bootstrapClusterProxy.GetClient()
-		Expect(client.Create(ctx, ByoHost)).Should(Succeed())
+		// Expect(client.Create(ctx, ByoHost)).Should(Succeed())
 
 		clusterctl_byoh.ApplyClusterTemplateAndWait(ctx, clusterctl.ApplyClusterTemplateAndWaitInput{
 			ClusterProxy: bootstrapClusterProxy,
@@ -108,7 +107,7 @@ var _ = Describe("When BYOH joins existing cluster", func() {
 			WaitForMachineDeployments:    e2eConfig.GetIntervals(specName, "wait-worker-nodes"),
 		}, clusterResources)
 
-		ByoHostLookupKey := types.NamespacedName{Name: hostName, Namespace: namespace.Name}
+		ByoHostLookupKey := types.NamespacedName{Name: "jaime.com", Namespace: "default"}
 
 		// TODO: Remove the below interim assertion after implementing Host Agent
 

@@ -49,7 +49,7 @@ func (se ScriptExecutor) Execute(bootstrapScript string) error {
 	for _, cmd := range cloudInitData.CommandsToExecute {
 		err := se.RunCmdExecutor.RunCmd(cmd)
 		if err != nil {
-			return err
+			return errors.Wrap(err, fmt.Sprintf("Error running the command %s", cmd))
 		}
 	}
 	return nil

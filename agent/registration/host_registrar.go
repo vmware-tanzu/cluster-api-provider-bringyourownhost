@@ -29,6 +29,8 @@ func (hr HostRegistrar) Register(hostName, namespace string) {
 	err := hr.K8sClient.Create(context.TODO(), byoHost)
 
 	if err != nil {
-		klog.Fatal(err)
+		klog.Errorf("Failed to register host: %s", err.Error())
+	} else {
+		klog.Infof("Successfully registered host %s with management cluster", hostName)
 	}
 }

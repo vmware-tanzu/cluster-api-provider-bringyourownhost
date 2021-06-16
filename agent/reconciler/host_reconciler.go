@@ -2,7 +2,6 @@ package reconciler
 
 import (
 	"context"
-	"encoding/base64"
 
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/klog"
@@ -29,7 +28,12 @@ func (r HostReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.R
 		klog.Fatal(err)
 	}
 
-	bootstrapScript, err := r.getBootstrapScript(ctx, byoHost.Status.MachineRef.Name, req.NamespacedName.Namespace)
+	if byoHost.Status.MachineRef == nil {
+		klog.Info("Machine ref not yet set")
+		return ctrl.Result{}, nil
+	}
+
+	bootstrapScript, err := r.getBootstrapScript(ctx, byoHost.Status.MachineRef.Name, byoHost.Status.MachineRef.Namespace)
 	if err != nil {
 		klog.Fatal(err)
 	}
@@ -75,14 +79,9 @@ func (r HostReconciler) getBootstrapScript(ctx context.Context, machineName stri
 		return "", err
 	}
 
-	encodedBootstrapSecret := string(secret.Data["value"])
+	bootstrapSecret := string(secret.Data["value"])
 
-	decodedScript, err := base64.StdEncoding.DecodeString(encodedBootstrapSecret)
-	if err != nil {
-		return "", err
-	}
-
-	return string(decodedScript), nil
+	return string(bootstrapSecret), nil
 }
 
 func (r HostReconciler) SetupWithManager(mgr manager.Manager) error {

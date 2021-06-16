@@ -2,7 +2,6 @@ package main
 
 import (
 	"context"
-	"encoding/base64"
 	"fmt"
 	"io/ioutil"
 	"os"
@@ -119,9 +118,9 @@ runCmd:
 - echo -n ' run cmd' >> %s
 `, fileToCreate, fileToCreate)
 
-			encodedBootstrapSecret := base64.StdEncoding.EncodeToString([]byte(bootstrapSecretUnencoded))
+			// encodedBootstrapSecret := base64.StdEncoding.EncodeToString([]byte(bootstrapSecretUnencoded))
 
-			secret := createSecretCRD("bootstrap-secret-1", encodedBootstrapSecret, ns.Name)
+			secret := createSecretCRD("bootstrap-secret-1", bootstrapSecretUnencoded, ns.Name)
 			machine := createClusterAPIMachine(&secret.Name, "test-machine", ns.Name)
 			byoMachine := createBYOMachineCRD("test-byomachine", ns.Name, machine)
 
@@ -221,8 +220,8 @@ func createSecretCRD(bootstrapSecretName, stringDataValue, namespace string) *co
 			Name:      bootstrapSecretName,
 			Namespace: namespace,
 		},
-		StringData: map[string]string{
-			"value": stringDataValue,
+		Data: map[string][]byte{
+			"value": []byte(stringDataValue),
 		},
 		Type: "cluster.x-k8s.io/secret",
 	}
