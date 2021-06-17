@@ -2,6 +2,7 @@ package reconciler
 
 import (
 	"context"
+	"errors"
 
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/klog"
@@ -35,7 +36,7 @@ func (r HostReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.R
 
 	bootstrapScript, err := r.getBootstrapScript(ctx, byoHost.Status.MachineRef.Name, byoHost.Status.MachineRef.Namespace)
 	if err != nil {
-		klog.Fatal(err)
+		return ctrl.Result{}, err
 	}
 
 	err = cloudinit.ScriptExecutor{
@@ -67,10 +68,20 @@ func (r HostReconciler) getBootstrapScript(ctx context.Context, machineName stri
 
 	machine := &clusterv1.Machine{}
 
+	if len(byoMachine.OwnerReferences) == 0 {
+		klog.Info("owner ref not yet set")
+		return "", errors.New("owner ref not yet set")
+	}
+
 	//TODO: Remove this hard coding of owner reference
 	err = r.Client.Get(ctx, types.NamespacedName{Name: byoMachine.OwnerReferences[0].Name, Namespace: namespace}, machine)
 	if err != nil {
 		return "", err
+	}
+
+	if machine.Spec.Bootstrap.DataSecretName == nil {
+		klog.Info("Bootstrap secret not ready")
+		return "", errors.New("Bootstrap secret not ready")
 	}
 
 	secret := &corev1.Secret{}

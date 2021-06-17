@@ -32,6 +32,7 @@ import (
 
 	infrastructurev1alpha4 "github.com/vmware-tanzu/cluster-api-provider-byoh/api/v1alpha4"
 	"github.com/vmware-tanzu/cluster-api-provider-byoh/controllers"
+	clusterv1 "sigs.k8s.io/cluster-api/api/v1alpha4"
 	// +kubebuilder:scaffold:imports
 )
 
@@ -44,7 +45,9 @@ func init() {
 	_ = clientgoscheme.AddToScheme(scheme)
 
 	_ = infrastructurev1alpha4.AddToScheme(scheme)
+	_ = clusterv1.AddToScheme(scheme)
 	utilruntime.Must(infrastructurev1alpha4.AddToScheme(scheme))
+	utilruntime.Must(clusterv1.AddToScheme(scheme))
 	// +kubebuilder:scaffold:scheme
 }
 
