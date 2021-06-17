@@ -17,6 +17,7 @@ package controllers
 
 import (
 	"context"
+	"errors"
 	"fmt"
 
 	"github.com/go-logr/logr"
@@ -64,6 +65,10 @@ func (r *ByoMachineReconciler) Reconcile(ctx context.Context, req reconcile.Requ
 	// 	return ctrl.Result{}, err
 	// }
 
+	if len(hostsList.Items) == 0 {
+		r.Log.Info("No hosts found, waiting..")
+		return ctrl.Result{}, errors.New("no hosts found")
+	}
 	// TODO- Needs smarter logic
 	host := hostsList.Items[0]
 
@@ -83,7 +88,10 @@ func (r *ByoMachineReconciler) Reconcile(ctx context.Context, req reconcile.Requ
 	// 	return ctrl.Result{}, err
 	// }
 
-	cluster, _ := util.GetClusterFromMetadata(ctx, r.Client, byoMachine.ObjectMeta)
+	cluster, err := util.GetClusterFromMetadata(ctx, r.Client, byoMachine.ObjectMeta)
+	if err != nil {
+		return ctrl.Result{}, err
+	}
 	remoteClient, err := r.Tracker.GetClient(ctx, util.ObjectKey(cluster))
 	if err != nil {
 		return ctrl.Result{}, err

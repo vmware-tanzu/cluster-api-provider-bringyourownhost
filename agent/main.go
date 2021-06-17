@@ -2,7 +2,9 @@ package main
 
 import (
 	"flag"
+	"os"
 
+	"github.com/pkg/errors"
 	"github.com/vmware-tanzu/cluster-api-provider-byoh/agent/reconciler"
 	"github.com/vmware-tanzu/cluster-api-provider-byoh/agent/registration"
 	infrastructurev1alpha4 "github.com/vmware-tanzu/cluster-api-provider-byoh/api/v1alpha4"
@@ -15,7 +17,6 @@ import (
 )
 
 var (
-	hostName  string = "jaime.com"
 	namespace string
 	scheme    *runtime.Scheme
 )
@@ -42,6 +43,11 @@ func main() {
 	k8sClient, err := client.New(config, client.Options{Scheme: scheme})
 	if err != nil {
 		klog.Fatal(err)
+	}
+
+	hostName, err := os.Hostname()
+	if err != nil {
+		klog.Fatal(errors.Wrap(err, "couldn't determine hostname"))
 	}
 
 	registration.HostRegistrar{K8sClient: k8sClient}.Register(hostName, namespace)
