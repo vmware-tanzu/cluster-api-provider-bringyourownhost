@@ -5,7 +5,6 @@ import (
 
 	infrastructurev1alpha4 "github.com/vmware-tanzu/cluster-api-provider-byoh/api/v1alpha4"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/klog"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
@@ -13,7 +12,7 @@ type HostRegistrar struct {
 	K8sClient client.Client
 }
 
-func (hr HostRegistrar) Register(hostName, namespace string) {
+func (hr HostRegistrar) Register(hostName, namespace string) error {
 	byoHost := &infrastructurev1alpha4.ByoHost{
 		TypeMeta: metav1.TypeMeta{
 			Kind:       "ByoHost",
@@ -26,11 +25,5 @@ func (hr HostRegistrar) Register(hostName, namespace string) {
 		Spec: infrastructurev1alpha4.ByoHostSpec{},
 	}
 
-	err := hr.K8sClient.Create(context.TODO(), byoHost)
-
-	if err != nil {
-		klog.Errorf("Failed to register host: %s", err.Error())
-	} else {
-		klog.Infof("Successfully registered host %s with management cluster", hostName)
-	}
+	return hr.K8sClient.Create(context.TODO(), byoHost)
 }

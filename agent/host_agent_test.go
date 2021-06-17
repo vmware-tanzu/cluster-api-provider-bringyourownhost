@@ -22,16 +22,19 @@ import (
 
 var _ = Describe("Agent", func() {
 	var (
-		ns      = &corev1.Namespace{}
-		session *gexec.Session
-		err     error
-		dir     string
+		ns       = &corev1.Namespace{}
+		session  *gexec.Session
+		err      error
+		dir      string
+		hostName string
 	)
 
 	BeforeEach(func() {
 		*ns = corev1.Namespace{
 			ObjectMeta: metav1.ObjectMeta{Name: "testns-" + rand.String(5)},
 		}
+		hostName, err = os.Hostname()
+		Expect(err).NotTo(HaveOccurred())
 
 		err = k8sClient.Create(context.TODO(), ns)
 		Expect(err).NotTo(HaveOccurred(), "failed to create test namespace")
@@ -39,6 +42,7 @@ var _ = Describe("Agent", func() {
 	})
 
 	AfterEach(func() {
+		session.Terminate().Wait()
 		err = k8sClient.Delete(context.TODO(), ns)
 		Expect(err).NotTo(HaveOccurred(), "failed to delete test namespace")
 	})
@@ -82,7 +86,6 @@ var _ = Describe("Agent", func() {
 		})
 
 		AfterEach(func() {
-			session.Terminate().Wait()
 
 			err := os.RemoveAll(dir)
 			Expect(err).ToNot(HaveOccurred())
@@ -90,7 +93,7 @@ var _ = Describe("Agent", func() {
 
 		It("should register the BYOHost with the management cluster", func() {
 
-			byoHostLookupKey := types.NamespacedName{Name: "jaime.com", Namespace: ns.Name}
+			byoHostLookupKey := types.NamespacedName{Name: hostName, Namespace: ns.Name}
 			Eventually(func() *infrastructurev1alpha4.ByoHost {
 				createdByoHost := &infrastructurev1alpha4.ByoHost{}
 				err := k8sClient.Get(context.TODO(), byoHostLookupKey, createdByoHost)
@@ -103,7 +106,7 @@ var _ = Describe("Agent", func() {
 
 		It("should bootstrap the node when MachineRef is set", func() {
 			byoHost := &infrastructurev1alpha4.ByoHost{}
-			byoHostLookupKey := types.NamespacedName{Name: "jaime.com", Namespace: ns.Name}
+			byoHostLookupKey := types.NamespacedName{Name: hostName, Namespace: ns.Name}
 			Eventually(func() bool {
 				err = k8sClient.Get(context.TODO(), byoHostLookupKey, byoHost)
 				return err == nil

@@ -50,7 +50,10 @@ func main() {
 		klog.Fatal(errors.Wrap(err, "couldn't determine hostname"))
 	}
 
-	registration.HostRegistrar{K8sClient: k8sClient}.Register(hostName, namespace)
+	err = registration.HostRegistrar{K8sClient: k8sClient}.Register(hostName, namespace)
+	if err != nil {
+		klog.Fatal(err)
+	}
 
 	mgr, err := ctrl.NewManager(config, ctrl.Options{
 		Scheme:    scheme,
