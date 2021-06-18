@@ -83,38 +83,27 @@ func (r *ByoMachineReconciler) Reconcile(ctx context.Context, req reconcile.Requ
 	}
 
 	helper.Patch(ctx, &host)
-	// TODO - TDD this check
+
+	providerID := fmt.Sprintf("byoh://%s/%s", host.Name, util.RandomString(6))
+	remoteClient, _ := r.getRemoteClient(ctx, byoMachine)
 	// if err != nil {
 	// 	return ctrl.Result{}, err
 	// }
-
-	cluster, err := util.GetClusterFromMetadata(ctx, r.Client, byoMachine.ObjectMeta)
-	if err != nil {
-		return ctrl.Result{}, err
-	}
-	remoteClient, err := r.Tracker.GetClient(ctx, util.ObjectKey(cluster))
-	if err != nil {
-		return ctrl.Result{}, err
-	}
-
-	node := &corev1.Node{}
-	key := client.ObjectKey{Name: host.Name}
-	err = remoteClient.Get(ctx, key, node)
-	if err != nil {
-		return ctrl.Result{}, err
-	}
-	providerID := fmt.Sprintf("byon://%s/%s", host.Name, util.RandomString(6))
-	helper, _ = patch.NewHelper(node, remoteClient)
-
-	node.Spec.ProviderID = providerID
-	helper.Patch(ctx, node)
+	r.setNodeProviderID(ctx, remoteClient, host, providerID)
+	// if err != nil {
+	// 	return ctrl.Result{}, err
+	// }
 
 	helper, _ = patch.NewHelper(byoMachine, r.Client)
 	byoMachine.Spec.ProviderID = providerID
 	byoMachine.Status.Ready = true
 
 	conditions.MarkTrue(byoMachine, infrastructurev1alpha4.HostReadyCondition)
-	helper.Patch(ctx, byoMachine)
+	//fmt.Println(byoMachine.Status)
+	err := helper.Patch(ctx, byoMachine)
+	if err != nil {
+		fmt.Printf("err: %s", err.Error())
+	}
 	return ctrl.Result{}, nil
 }
 
@@ -122,4 +111,33 @@ func (r *ByoMachineReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&infrastructurev1alpha4.ByoMachine{}).
 		Complete(r)
+}
+
+func (r *ByoMachineReconciler) setNodeProviderID(ctx context.Context, remoteClient client.Client, host infrastructurev1alpha4.ByoHost, providerID string) error {
+
+	node := &corev1.Node{}
+	key := client.ObjectKey{Name: host.Name, Namespace: host.Namespace}
+	err := remoteClient.Get(ctx, key, node)
+	if err != nil {
+		return err
+	}
+	helper, _ := patch.NewHelper(node, remoteClient)
+
+	node.Spec.ProviderID = providerID
+	helper.Patch(ctx, node)
+
+	return nil
+}
+
+func (r *ByoMachineReconciler) getRemoteClient(ctx context.Context, byoMachine *infrastructurev1alpha4.ByoMachine) (client.Client, error) {
+	cluster, err := util.GetClusterFromMetadata(ctx, r.Client, byoMachine.ObjectMeta)
+	if err != nil {
+		return nil, err
+	}
+	remoteClient, err := r.Tracker.GetClient(ctx, util.ObjectKey(cluster))
+	if err != nil {
+		return nil, err
+	}
+
+	return remoteClient, nil
 }
