@@ -166,51 +166,6 @@ runCmd:
 		})
 	})
 
-	// Context("When the host reads the BootstrapDataSecret", func() {
-
-	// 	// Q to jMe
-	// 	// in the below BeforeEach, I started the reconciler separately in the hope that
-	// 	// 	we only need the reconciler running and not the agent itself for this test
-	// 	//	But still seems like we should do almost everything that the previous test is doing, no? Why?
-	// 	//		Because reconciler responds to only BYOH changes - unless there's a way to invoke cloudinit only?
-	// 	//		create BYOH crd with proper byo machine ref, capi owner ref and secret (this can't be simple echo now)
-	// 	//
-	// 	BeforeEach(func() {
-	// 		// should we be using scheme defined in host_agent_suite_test instead?
-	// 		// because this scheme does not have the CRDs that we want
-	// 		scheme := runtime.NewScheme()
-	// 		k8sManager, err := ctrl.NewManager(cfg, ctrl.Options{
-	// 			Scheme: scheme,
-	// 		})
-	// 		Expect(err).ToNot(HaveOccurred())
-
-	// 		// TODO -
-	// 		// SetupWithManager is hardwired into main.go
-	// 		// extract it out to the empty func in host_reconciler.go
-	// 		err = (&reconciler.HostReconciler{
-	// 			Client: k8sClient,
-	// 		}).SetupWithManager(k8sManager)
-	// 		Expect(err).ToNot(HaveOccurred())
-
-	// 		go func() {
-	// 			err = k8sManager.Start(ctrl.SetupSignalHandler())
-	// 			Expect(err).ToNot(HaveOccurred())
-	// 		}()
-	// 	})
-
-	// 	It("should write files/create directory as mentioned in BootstrapDataSecret", func() {
-	// 		Eventually("/run/kubeadm/kubeadm-join-config.yaml").Should(BeAnExistingFile())
-	// 		Eventually("/run/cluster-api").Should(BeADirectory())
-	// 	})
-
-	// 	It("should execute the commands listed in BootstrapDataSecret", func() {
-	// 		buffer, _ := ioutil.ReadFile("/run/cluster-api/bootstrap-success.complete")
-	// 		contents := string(buffer)
-	// 		Eventually(contents).Should(ContainSubstring("success"))
-	// 	})
-
-	// })
-
 })
 
 func createSecretCRD(bootstrapSecretName, stringDataValue, namespace string) *corev1.Secret {
