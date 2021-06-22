@@ -86,7 +86,7 @@ export NAMESPACE="default"
 export KUBERNETES_VERSION="v1.19.1"
 export CONTROL_PLANE_MACHINE_COUNT=1
 
-cat test/docker-cp.yaml | envsubst | kubectl apply -f -
+cat test/docker-CP.yaml | envsubst | kubectl apply -f -
 ```
 
 Check if the control plane node is running.
