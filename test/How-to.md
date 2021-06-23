@@ -97,7 +97,7 @@ kubectl get machines
 
 ### Add one or more hosts to the capacity pool
 
-(from the folder where Cluster-API source code is cloned)
+(from the folder where Cluster-API-Provider-BYOH source code is cloned)
 
 Create an unmanaged host.
 
