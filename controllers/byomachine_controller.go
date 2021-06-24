@@ -106,7 +106,7 @@ func (r *ByoMachineReconciler) Reconcile(ctx context.Context, req reconcile.Requ
 
 	// TODO: what happens when Patch fails?
 	defer PatchForByoMachine(ctx, byoMachine, helper)
-	PatchForByoMachine(ctx, byoMachine, helper)
+	//PatchForByoMachine(ctx, byoMachine, helper)
 
 	r.Client.Get(ctx, req.NamespacedName, byoMachine)
 
