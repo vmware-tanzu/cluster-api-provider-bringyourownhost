@@ -103,12 +103,22 @@ func (r *ByoMachineReconciler) Reconcile(ctx context.Context, req reconcile.Requ
 	byoMachine.Status.Ready = true
 
 	conditions.MarkTrue(byoMachine, infrastructurev1alpha4.HostReadyCondition)
-	//fmt.Println(byoMachine.Status)
+
+	// TODO: what happens when Patch fails?
+	defer PatchForByoMachine(ctx, byoMachine, helper)
+	PatchForByoMachine(ctx, byoMachine, helper)
+
+	r.Client.Get(ctx, req.NamespacedName, byoMachine)
+
+	return ctrl.Result{}, nil
+}
+
+func PatchForByoMachine(ctx context.Context, byoMachine *infrastructurev1alpha4.ByoMachine, helper *patch.Helper) {
 	err := helper.Patch(ctx, byoMachine)
 	if err != nil {
-		fmt.Printf("err: %s", err.Error())
+		fmt.Printf("helper.Patch return failed, err= %s\n", err.Error())
 	}
-	return ctrl.Result{}, nil
+
 }
 
 func (r *ByoMachineReconciler) SetupWithManager(mgr ctrl.Manager) error {

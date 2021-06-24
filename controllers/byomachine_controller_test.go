@@ -2,6 +2,7 @@ package controllers
 
 import (
 	"context"
+	"strings"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -10,6 +11,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	clusterapi "sigs.k8s.io/cluster-api/api/v1alpha4"
+	"sigs.k8s.io/cluster-api/util/conditions"
 )
 
 const (
@@ -44,7 +46,6 @@ var _ = Describe("Controllers/ByomachineController", func() {
 
 		It("claims the first available host", func() {
 			byoMachine = createByoMachine()
-
 			byoHostLookupKey := types.NamespacedName{Name: byoHost.Name, Namespace: byoHost.Namespace}
 
 			Eventually(func() *corev1.ObjectReference {
@@ -59,21 +60,27 @@ var _ = Describe("Controllers/ByomachineController", func() {
 			byoMachineLookupkey := types.NamespacedName{Name: byoMachineName, Namespace: byoMachineNamespace}
 
 			Eventually(func() bool {
-				err := k8sClient.Get(ctx, byoMachineLookupkey, byoMachine)
+				createdByoMachine := &infrastructurev1alpha4.ByoMachine{}
+				err := k8sClient.Get(ctx, byoMachineLookupkey, createdByoMachine)
 				if err != nil {
 					return false
 				}
-				return byoMachine.Status.Ready
+				if createdByoMachine.Status.Ready == false {
+					return false
+				}
+				readyCondition := conditions.Get(createdByoMachine, infrastructurev1alpha4.HostReadyCondition)
+				if readyCondition == nil {
+					return false
+				}
+				if readyCondition.Status != corev1.ConditionTrue {
+					return false
+				}
+				if !strings.Contains(createdByoMachine.Spec.ProviderID, "byoh://") {
+					return false
+				}
+				return true
+
 			}).Should(BeTrue())
-
-			k8sClient.Get(ctx, byoMachineLookupkey, byoMachine)
-
-			//TODO: Debug the below assertion
-			// readyCondition := conditions.Get(byoMachine, infrastructurev1alpha4.HostReadyCondition)
-			// Expect(readyCondition).ToNot(BeNil())
-			// Expect(readyCondition.Status).To(Equal(corev1.ConditionTrue))
-
-			// Expect(byoMachine.Spec.ProviderID).To(ContainSubstring("byoh://"))
 
 			node := corev1.Node{}
 			err := clientFake.Get(ctx, types.NamespacedName{Name: "test-host", Namespace: "default"}, &node)
