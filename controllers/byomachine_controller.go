@@ -44,12 +44,14 @@ type ByoMachineReconciler struct {
 
 // +kubebuilder:rbac:groups=infrastructure.cluster.x-k8s.io,resources=byomachines,verbs=get;list;watch;create;update;patch;delete
 // +kubebuilder:rbac:groups=infrastructure.cluster.x-k8s.io,resources=byomachines/status,verbs=get;update;patch
+// +kubebuilder:rbac:groups=infrastructure.cluster.x-k8s.io,resources=byohosts,verbs=get;list;watch
+// +kubebuilder:rbac:groups=infrastructure.cluster.x-k8s.io,resources=byohosts/status,verbs=get;update;patch
 // +kubebuilder:rbac:groups=cluster.x-k8s.io,resources=clusters;machines,verbs=get;list;watch
 // +kubebuilder:rbac:groups=cluster.x-k8s.io,resources=machines;machines/status,verbs=get;list;watch
 // +kubebuilder:rbac:groups="",resources=events,verbs=get;list;watch;create;update;patch
 // +kubebuilder:rbac:groups="",resources=secrets,verbs=get;list;watch
 
-func (r *ByoMachineReconciler) Reconcile(ctx context.Context, req reconcile.Request) (ctrl.Result, error) {
+func (r *ByoMachineReconciler) Reconcile(ctx context.Context, req reconcile.Request) (_ ctrl.Result, reterr error) {
 	_ = r.Log.WithValues("Byomachine", req.NamespacedName)
 
 	byoMachine := &infrastructurev1alpha4.ByoMachine{}
@@ -62,12 +64,11 @@ func (r *ByoMachineReconciler) Reconcile(ctx context.Context, req reconcile.Requ
 	}
 
 	hostsList := &infrastructurev1alpha4.ByoHostList{}
-	r.Client.List(ctx, hostsList)
+	err = r.Client.List(ctx, hostsList)
 
-	// TODO - TDD this check
-	// if err != nil {
-	//		return ctrl.Result{}, err
-	// }
+	if err != nil {
+		return ctrl.Result{}, err
+	}
 
 	if len(hostsList.Items) == 0 {
 		r.Log.Info("No hosts found, waiting..")
@@ -108,10 +109,12 @@ func (r *ByoMachineReconciler) Reconcile(ctx context.Context, req reconcile.Requ
 
 	conditions.MarkTrue(byoMachine, infrastructurev1alpha4.HostReadyCondition)
 
-	err = helper.Patch(ctx, byoMachine)
-	if err != nil {
-		fmt.Printf("err: %s", err.Error())
-	}
+	defer func() {
+		if err := helper.Patch(ctx, byoMachine); err != nil && reterr == nil {
+			reterr = err
+		}
+	}()
+
 	return ctrl.Result{}, nil
 }
 
