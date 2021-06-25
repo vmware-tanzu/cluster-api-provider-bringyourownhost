@@ -23,6 +23,7 @@ import (
 	"github.com/go-logr/logr"
 	infrastructurev1alpha4 "github.com/vmware-tanzu/cluster-api-provider-byoh/api/v1alpha4"
 	corev1 "k8s.io/api/core/v1"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
 	"sigs.k8s.io/cluster-api/controllers/remote"
 	"sigs.k8s.io/cluster-api/util"
@@ -52,21 +53,20 @@ func (r *ByoMachineReconciler) Reconcile(ctx context.Context, req reconcile.Requ
 	_ = r.Log.WithValues("Byomachine", req.NamespacedName)
 
 	byoMachine := &infrastructurev1alpha4.ByoMachine{}
-	r.Client.Get(ctx, req.NamespacedName, byoMachine)
-	//TODO - TDD this error check
-	//if err != nil {
-	//	if apierrors.IsNotFound(err) {
-	//		return ctrl.Result{}, nil
-	//	}
-	//	return ctrl.Result{}, err
-	//}
+	err := r.Client.Get(ctx, req.NamespacedName, byoMachine)
+	if err != nil {
+		if apierrors.IsNotFound(err) {
+			return ctrl.Result{}, nil
+		}
+		return ctrl.Result{}, err
+	}
 
 	hostsList := &infrastructurev1alpha4.ByoHostList{}
 	r.Client.List(ctx, hostsList)
 
 	// TODO - TDD this check
-	// if err := ; err != nil {
-	// 	return ctrl.Result{}, err
+	// if err != nil {
+	//		return ctrl.Result{}, err
 	// }
 
 	if len(hostsList.Items) == 0 {
@@ -86,13 +86,17 @@ func (r *ByoMachineReconciler) Reconcile(ctx context.Context, req reconcile.Requ
 		UID:        byoMachine.UID,
 	}
 
-	helper.Patch(ctx, &host)
+	err = helper.Patch(ctx, &host)
+	if err != nil {
+		return ctrl.Result{}, err
+	}
 
 	providerID := fmt.Sprintf("byoh://%s/%s", host.Name, util.RandomString(6))
-	remoteClient, _ := r.getRemoteClient(ctx, byoMachine)
-	// if err != nil {
-	// 	return ctrl.Result{}, err
-	// }
+	remoteClient, err := r.getRemoteClient(ctx, byoMachine)
+	if err != nil {
+		return ctrl.Result{}, err
+	}
+
 	r.setNodeProviderID(ctx, remoteClient, host, providerID)
 	// if err != nil {
 	// 	return ctrl.Result{}, err
@@ -103,8 +107,8 @@ func (r *ByoMachineReconciler) Reconcile(ctx context.Context, req reconcile.Requ
 	byoMachine.Status.Ready = true
 
 	conditions.MarkTrue(byoMachine, infrastructurev1alpha4.HostReadyCondition)
-	//fmt.Println(byoMachine.Status)
-	err := helper.Patch(ctx, byoMachine)
+
+	err = helper.Patch(ctx, byoMachine)
 	if err != nil {
 		fmt.Printf("err: %s", err.Error())
 	}

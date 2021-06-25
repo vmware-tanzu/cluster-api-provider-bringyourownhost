@@ -35,6 +35,7 @@ type ByoMachineSpec struct {
 type ByoMachineStatus struct {
 	// INSERT ADDITIONAL STATUS FIELD - define observed state of cluster
 	// Important: Run "make" to regenerate code after modifying this file
+	// +optional
 	Ready bool `json:"ready"`
 
 	// Conditions defines current service state of the BYOMachine.

@@ -91,8 +91,6 @@ spec:
                   of cluster Important: Run "make" to regenerate code after modifying
                   this file'
                 type: boolean
-            required:
-            - ready
             type: object
         type: object
     served: true
