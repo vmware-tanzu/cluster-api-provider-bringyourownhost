@@ -10,6 +10,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	clusterapi "sigs.k8s.io/cluster-api/api/v1alpha4"
+	"sigs.k8s.io/cluster-api/util/conditions"
 )
 
 const (
@@ -57,23 +58,36 @@ var _ = Describe("Controllers/ByomachineController", func() {
 			}).ShouldNot(BeNil())
 
 			byoMachineLookupkey := types.NamespacedName{Name: byoMachineName, Namespace: byoMachineNamespace}
+			createdByoMachine := &infrastructurev1alpha4.ByoMachine{}
+
+			Eventually(func() string {
+				err := k8sClient.Get(ctx, byoMachineLookupkey, createdByoMachine)
+				if err != nil {
+					return ""
+				}
+				return createdByoMachine.Spec.ProviderID
+			}).Should(ContainSubstring("byoh://"))
 
 			Eventually(func() bool {
-				err := k8sClient.Get(ctx, byoMachineLookupkey, byoMachine)
+				err := k8sClient.Get(ctx, byoMachineLookupkey, createdByoMachine)
 				if err != nil {
 					return false
 				}
-				return byoMachine.Status.Ready
+				return createdByoMachine.Status.Ready
 			}).Should(BeTrue())
 
-			k8sClient.Get(ctx, byoMachineLookupkey, byoMachine)
+			Eventually(func() corev1.ConditionStatus {
 
-			//TODO: Debug the below assertion
-			// readyCondition := conditions.Get(byoMachine, infrastructurev1alpha4.HostReadyCondition)
-			// Expect(readyCondition).ToNot(BeNil())
-			// Expect(readyCondition.Status).To(Equal(corev1.ConditionTrue))
-
-			// Expect(byoMachine.Spec.ProviderID).To(ContainSubstring("byoh://"))
+				err := k8sClient.Get(ctx, byoMachineLookupkey, createdByoMachine)
+				if err != nil {
+					return corev1.ConditionFalse
+				}
+				readyCondition := conditions.Get(createdByoMachine, infrastructurev1alpha4.HostReadyCondition)
+				if readyCondition != nil {
+					return readyCondition.Status
+				}
+				return corev1.ConditionFalse
+			}).Should(Equal(corev1.ConditionTrue))
 
 			node := corev1.Node{}
 			err := clientFake.Get(ctx, types.NamespacedName{Name: "test-host", Namespace: "default"}, &node)
