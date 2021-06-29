@@ -1,119 +1,56 @@
-package controllers
+package controllers_test
 
 import (
 	"context"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-	infrastructurev1alpha4 "github.com/vmware-tanzu/cluster-api-provider-byoh/api/v1alpha4"
-	corev1 "k8s.io/api/core/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"github.com/vmware-tanzu/cluster-api-provider-byoh/controllers"
+	"github.com/vmware-tanzu/cluster-api-provider-byoh/controllers/controllersfakes"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
-	clusterapi "sigs.k8s.io/cluster-api/api/v1alpha4"
-	"sigs.k8s.io/cluster-api/util/conditions"
+	"k8s.io/client-go/kubernetes/scheme"
+	"sigs.k8s.io/cluster-api/controllers/remote"
+	ctrl "sigs.k8s.io/controller-runtime"
+	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/log"
+	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 )
 
-const (
-	byoMachineName      = "test-machine"
-	byoHostName         = "test-host"
-	byoMachineNamespace = "default"
-)
+var _ = Describe("Unit tests for BYOMachine Controller", func() {
+	var (
+		reconciler          *controllers.ByoMachineReconciler
+		clientFake          *controllersfakes.FakeClient
+		groupResource       schema.GroupResource
+		byoMachineName      = "test-machine"
+		byoMachineNamespace = "test-ns"
+		err                 error
+	)
 
-var (
-	ctx        context.Context
-	byoHost    *infrastructurev1alpha4.ByoHost
-	byoMachine *infrastructurev1alpha4.ByoMachine
-)
+	BeforeEach(func() {
 
-var _ = Describe("Controllers/ByomachineController", func() {
-	Context("When a BYO Host is available", func() {
-		BeforeEach(func() {
-			ctx = context.Background()
-			byoHost = &infrastructurev1alpha4.ByoHost{
-				TypeMeta: metav1.TypeMeta{
-					Kind:       "ByoHost",
-					APIVersion: "infrastructure.cluster.x-k8s.io/v1alpha4",
-				},
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      byoHostName,
-					Namespace: byoMachineNamespace,
-				},
-				Spec: infrastructurev1alpha4.ByoHostSpec{},
-			}
-			Expect(k8sClient.Create(ctx, byoHost)).Should(Succeed())
-		})
+		clientFake = &controllersfakes.FakeClient{}
+		groupResource = schema.GroupResource{
+			Group:    "infrastructure.cluster.x-k8s.io",
+			Resource: "Byomachine",
+		}
 
-		It("claims the first available host", func() {
-			byoMachine = createByoMachine()
-
-			byoHostLookupKey := types.NamespacedName{Name: byoHost.Name, Namespace: byoHost.Namespace}
-
-			Eventually(func() *corev1.ObjectReference {
-				createdByoHost := &infrastructurev1alpha4.ByoHost{}
-				err := k8sClient.Get(ctx, byoHostLookupKey, createdByoHost)
-				if err != nil {
-					return nil
-				}
-				return createdByoHost.Status.MachineRef
-			}).ShouldNot(BeNil())
-
-			byoMachineLookupkey := types.NamespacedName{Name: byoMachineName, Namespace: byoMachineNamespace}
-			createdByoMachine := &infrastructurev1alpha4.ByoMachine{}
-
-			Eventually(func() string {
-				err := k8sClient.Get(ctx, byoMachineLookupkey, createdByoMachine)
-				if err != nil {
-					return ""
-				}
-				return createdByoMachine.Spec.ProviderID
-			}).Should(ContainSubstring("byoh://"))
-
-			Eventually(func() bool {
-				err := k8sClient.Get(ctx, byoMachineLookupkey, createdByoMachine)
-				if err != nil {
-					return false
-				}
-				return createdByoMachine.Status.Ready
-			}).Should(BeTrue())
-
-			Eventually(func() corev1.ConditionStatus {
-
-				err := k8sClient.Get(ctx, byoMachineLookupkey, createdByoMachine)
-				if err != nil {
-					return corev1.ConditionFalse
-				}
-				readyCondition := conditions.Get(createdByoMachine, infrastructurev1alpha4.HostReadyCondition)
-				if readyCondition != nil {
-					return readyCondition.Status
-				}
-				return corev1.ConditionFalse
-			}).Should(Equal(corev1.ConditionTrue))
-
-			node := corev1.Node{}
-			err := clientFake.Get(ctx, types.NamespacedName{Name: "test-host", Namespace: "default"}, &node)
-			Expect(err).ToNot(HaveOccurred())
-
-			Expect(node.Spec.ProviderID).To(ContainSubstring("byoh://"))
-		})
+		reconciler = &controllers.ByoMachineReconciler{
+			Client:  clientFake,
+			Log:     ctrl.Log.WithName("controllers").WithName("ByoMachine"),
+			Tracker: remote.NewTestClusterCacheTracker(log.NullLogger{}, clientFake, scheme.Scheme, client.ObjectKey{Name: "test-cluster", Namespace: "test-ns"}),
+		}
 
 	})
-})
 
-func createByoMachine() *infrastructurev1alpha4.ByoMachine {
-	byoMachine := &infrastructurev1alpha4.ByoMachine{
-		TypeMeta: metav1.TypeMeta{
-			Kind:       "ByoMachine",
-			APIVersion: "infrastructure.cluster.x-k8s.io/v1alpha4",
-		},
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      byoMachineName,
-			Namespace: byoMachineNamespace,
-			Labels: map[string]string{
-				clusterapi.ClusterLabelName: "test-cluster",
-			},
-		},
-		Spec: infrastructurev1alpha4.ByoMachineSpec{},
-	}
-	Expect(k8sClient.Create(ctx, byoMachine)).Should(Succeed())
-	return byoMachine
-}
+	It("should not error when byomachine is not present", func() {
+		clientFake.GetReturns(apierrors.NewNotFound(groupResource, byoMachineName))
+
+		byoMachineLookupkey := types.NamespacedName{Name: "fake-machine", Namespace: byoMachineNamespace}
+		request := reconcile.Request{NamespacedName: byoMachineLookupkey}
+		_, err = reconciler.Reconcile(context.TODO(), request)
+		Expect(err).To(Not(HaveOccurred()))
+	})
+
+})
