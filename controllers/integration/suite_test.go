@@ -24,6 +24,7 @@ import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	infrastructurev1alpha4 "github.com/vmware-tanzu/cluster-api-provider-byoh/api/v1alpha4"
+	"github.com/vmware-tanzu/cluster-api-provider-byoh/controllers"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes/scheme"
@@ -63,7 +64,7 @@ var _ = BeforeSuite(func() {
 	By("bootstrapping test environment")
 	testEnv = &envtest.Environment{
 		CRDDirectoryPaths: []string{
-			filepath.Join("..", "config", "crd", "bases"),
+			filepath.Join("..", "..", "config", "crd", "bases"),
 			filepath.Join(build.Default.GOPATH, "pkg", "mod", "github.com", "anusha94", "cluster-api@v0.3.11-0.20210602061917-9f752754f145", "config", "crd", "bases"),
 			filepath.Join(build.Default.GOPATH, "pkg", "mod", "github.com", "anusha94", "cluster-api@v0.3.11-0.20210602061917-9f752754f145", "bootstrap", "kubeadm", "config", "crd", "bases"),
 		},
@@ -124,7 +125,7 @@ var _ = BeforeSuite(func() {
 		node,
 	).Build()
 
-	err = (&ByoMachineReconciler{
+	err = (&controllers.ByoMachineReconciler{
 		Client:  k8sClient,
 		Log:     ctrl.Log.WithName("controllers").WithName("ByoMachine"),
 		Tracker: remote.NewTestClusterCacheTracker(log.NullLogger{}, clientFake, scheme.Scheme, client.ObjectKey{Name: testCluster.Name, Namespace: testCluster.Namespace}),
