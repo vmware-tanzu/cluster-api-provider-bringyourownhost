@@ -35,8 +35,8 @@ providers:
         replacements:
           - old: --metrics-addr=127.0.0.1:8080
             new: --metrics-addr=:8080
-      - name: v0.4.99 # next; use manifest from source files
-        value: ../../../../cluster-api/config/default
+      - name: v0.4.0 # next; use manifest from source files
+        value: "https://github.com/kubernetes-sigs/cluster-api/tree/v0.4.0/config/default"
         replacements:
           - old: --metrics-bind-addr=127.0.0.1:8080
             new: --metrics-bind-addr=:8080
@@ -89,7 +89,7 @@ providers:
       #   files:
       #     # Add cluster templates
       #     - sourcePath: "../../../../cluster-api/test/e2e/data/infrastructure-docker/v1alpha3/cluster-template.yaml"
-      - name: v0.4.0 # next; use manifest from source files
+      - name: v0.4.99 # next; use manifest from source files
         value: ../../../../cluster-api/test/infrastructure/docker/config/default
         replacements:
           - old: --metrics-bind-addr=127.0.0.1:8080
