@@ -89,7 +89,7 @@ providers:
       #   files:
       #     # Add cluster templates
       #     - sourcePath: "../../../../cluster-api/test/e2e/data/infrastructure-docker/v1alpha3/cluster-template.yaml"
-      - name: v0.4.99 # next; use manifest from source files
+      - name: v0.4.0 # next; use manifest from source files
         value: ../../../../cluster-api/test/infrastructure/docker/config/default
         replacements:
           - old: --metrics-bind-addr=127.0.0.1:8080
