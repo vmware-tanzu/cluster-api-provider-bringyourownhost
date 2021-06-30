@@ -18,9 +18,8 @@ package main
 import (
 	"context"
 	"flag"
-	"os"
-
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
+	"os"
 
 	"k8s.io/apimachinery/pkg/runtime"
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
@@ -75,10 +74,9 @@ func main() {
 		os.Exit(1)
 	}
 
-	tracker, err := remote.NewClusterCacheTracker(
-		ctrl.Log.WithName("remote").WithName("ClusterCacheTracker"),
-		mgr,
-	)
+	options := remote.ClusterCacheTrackerOptions{Log: ctrl.Log.WithName("remote").WithName("ClusterCacheTracker")}
+
+	tracker, err := remote.NewClusterCacheTracker(mgr, options)
 	if err != nil {
 		setupLog.Error(err, "unable to create cluster cache tracker")
 		os.Exit(1)
