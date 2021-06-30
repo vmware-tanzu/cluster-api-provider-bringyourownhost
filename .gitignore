@@ -32,3 +32,7 @@ _artifacts
 
 # editor settings
 .vscode
+
+# Tilt tmp files
+.tiltbuild/
+
