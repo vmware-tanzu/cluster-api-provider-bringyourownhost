@@ -37,6 +37,7 @@ providers:
             new: --metrics-addr=:8080
       - name: v0.4.0 # next; use manifest from source files
         value: "https://github.com/kubernetes-sigs/cluster-api/releases/download/v0.4.0/core-components.yaml"
+        type: "url"
         replacements:
           - old: --metrics-bind-addr=127.0.0.1:8080
             new: --metrics-bind-addr=:8080
@@ -54,6 +55,7 @@ providers:
             new: --metrics-addr=:8080
       - name: v0.4.0 # next; use manifest from source files
         value: "https://github.com/kubernetes-sigs/cluster-api/releases/download/v0.4.0/bootstrap-components.yaml"
+        type: "url"
         replacements:
           - old: --metrics-bind-addr=127.0.0.1:8080
             new: --metrics-bind-addr=:8080
@@ -71,6 +73,7 @@ providers:
             new: --metrics-addr=:8080
       - name: v0.4.0 # next; use manifest from source files
         value: "https://github.com/kubernetes-sigs/cluster-api/releases/download/v0.4.0/control-plane-components.yaml"
+        type: "url"
         replacements:
           - old: --metrics-bind-addr=127.0.0.1:8080
             new: --metrics-bind-addr=:8080
@@ -91,6 +94,7 @@ providers:
       #     - sourcePath: "../../../../cluster-api/test/e2e/data/infrastructure-docker/v1alpha3/cluster-template.yaml"
       - name: v0.4.0 # next; use manifest from source files
         value: "https://github.com/kubernetes-sigs/cluster-api/releases/download/v0.4.0/infrastructure-components-development.yaml"
+        type: "url"
         replacements:
           - old: --metrics-bind-addr=127.0.0.1:8080
             new: --metrics-bind-addr=:8080
