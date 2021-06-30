@@ -86,7 +86,7 @@ generate: controller-gen
 	$(CONTROLLER_GEN) object:headerFile=./hack/boilerplate.go.txt paths="./..."
 
 # Build the docker image
-docker-build: test
+docker-build:
 	docker build . -t ${IMG}
 
 # Push the docker image
@@ -112,6 +112,21 @@ $(GINKGO): # Build ginkgo from tools folder.
 
 $(KUSTOMIZE): # Build kustomize from tools folder.
 	$(REPO_ROOT)/hack/ensure-kustomize.sh
+
+release-binaries: ## Builds the binaries to publish with a release
+	RELEASE_BINARY=./agent GOOS=linux GOARCH=amd64 $(MAKE) release-binary
+
+release-binary: $(RELEASE_DIR)
+	docker run \
+		--rm \
+		-e CGO_ENABLED=0 \
+		-e GOOS=$(GOOS) \
+		-e GOARCH=$(GOARCH) \
+		-v "$$(pwd):/workspace$(DOCKER_VOL_OPTS)" \
+		-w /workspace \
+		golang:1.15.3 \
+		go build -a -ldflags "$(LDFLAGS) -extldflags '-static'" \
+		-o ./bin/$(notdir $(RELEASE_BINARY))-$(GOOS)-$(GOARCH) $(RELEASE_BINARY)
 
 # find or download controller-gen
 # download controller-gen if necessary
