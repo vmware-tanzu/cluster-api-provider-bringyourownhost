@@ -36,7 +36,7 @@ providers:
           - old: --metrics-addr=127.0.0.1:8080
             new: --metrics-addr=:8080
       - name: v0.4.0 # next; use manifest from source files
-        value: "https://github.com/kubernetes-sigs/cluster-api/tree/v0.4.0/config/default"
+        value: "https://github.com/kubernetes-sigs/cluster-api/releases/download/v0.4.0/core-components.yaml"
         replacements:
           - old: --metrics-bind-addr=127.0.0.1:8080
             new: --metrics-bind-addr=:8080
@@ -52,8 +52,8 @@ providers:
         replacements:
           - old: --metrics-addr=127.0.0.1:8080
             new: --metrics-addr=:8080
-      - name: v0.4.99 # next; use manifest from source files
-        value: ../../../../cluster-api/bootstrap/kubeadm/config/default
+      - name: v0.4.0 # next; use manifest from source files
+        value: "https://github.com/kubernetes-sigs/cluster-api/releases/download/v0.4.0/bootstrap-components.yaml"
         replacements:
           - old: --metrics-bind-addr=127.0.0.1:8080
             new: --metrics-bind-addr=:8080
@@ -69,8 +69,8 @@ providers:
         replacements:
           - old: --metrics-addr=127.0.0.1:8080
             new: --metrics-addr=:8080
-      - name: v0.4.99 # next; use manifest from source files
-        value: ../../../../cluster-api/controlplane/kubeadm/config/default
+      - name: v0.4.0 # next; use manifest from source files
+        value: "https://github.com/kubernetes-sigs/cluster-api/releases/download/v0.4.0/control-plane-components.yaml"
         replacements:
           - old: --metrics-bind-addr=127.0.0.1:8080
             new: --metrics-bind-addr=:8080
