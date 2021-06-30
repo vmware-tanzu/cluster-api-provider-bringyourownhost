@@ -17,13 +17,26 @@ limitations under the License.
 package e2e
 
 import (
+	"bufio"
 	"context"
 	"fmt"
+	"io"
 	"os"
 	"path/filepath"
+	"regexp"
 
+	"github.com/docker/cli/cli/command"
+	"github.com/docker/docker/api/types"
+	"github.com/docker/docker/api/types/container"
+	"github.com/docker/docker/api/types/filters"
+	"github.com/docker/docker/api/types/network"
+	"github.com/docker/docker/client"
+	"github.com/docker/docker/pkg/archive"
+	"github.com/docker/docker/pkg/system"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+	"github.com/onsi/gomega/gexec"
+	"github.com/pkg/errors"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/utils/pointer"
 	"sigs.k8s.io/cluster-api/test/framework/clusterctl"
@@ -31,22 +44,129 @@ import (
 )
 
 const (
-	KubernetesVersion = "KUBERNETES_VERSION"
-	CNIPath           = "CNI"
-	CNIResources      = "CNI_RESOURCES"
-	IPFamily          = "IP_FAMILY"
+	KubernetesVersion  = "KUBERNETES_VERSION"
+	CNIPath            = "CNI"
+	CNIResources       = "CNI_RESOURCES"
+	IPFamily           = "IP_FAMILY"
+	KindImage          = "kindest/node:v1.19.11"
+	TempKubeconfigPath = "/tmp/mgmt.conf"
 )
+
+type cpConfig struct {
+	followLink bool
+	copyUIDGID bool
+	sourcePath string
+	destPath   string
+	container  string
+}
+
+func resolveLocalPath(localPath string) (absPath string, err error) {
+	if absPath, err = filepath.Abs(localPath); err != nil {
+		return
+	}
+	return archive.PreserveTrailingDotOrSeparator(absPath, localPath, filepath.Separator), nil
+}
+
+func copyToContainer(ctx context.Context, cli *client.Client, copyConfig cpConfig) (err error) {
+	srcPath := copyConfig.sourcePath
+	dstPath := copyConfig.destPath
+
+	srcPath, err = resolveLocalPath(srcPath)
+	if err != nil {
+		return err
+	}
+
+	// Prepare destination copy info by stat-ing the container path.
+	dstInfo := archive.CopyInfo{Path: dstPath}
+	dstStat, err := cli.ContainerStatPath(ctx, copyConfig.container, dstPath)
+
+	// If the destination is a symbolic link, we should evaluate it.
+	if err == nil && dstStat.Mode&os.ModeSymlink != 0 {
+		linkTarget := dstStat.LinkTarget
+		if !system.IsAbs(linkTarget) {
+			// Join with the parent directory.
+			dstParent, _ := archive.SplitPathDirEntry(dstPath)
+			linkTarget = filepath.Join(dstParent, linkTarget)
+		}
+
+		dstInfo.Path = linkTarget
+		dstStat, err = cli.ContainerStatPath(ctx, copyConfig.container, linkTarget)
+	}
+
+	// Validate the destination path
+	if err := command.ValidateOutputPathFileMode(dstStat.Mode); err != nil {
+		return errors.Wrapf(err, `destination "%s:%s" must be a directory or a regular file`, copyConfig.container, dstPath)
+	}
+
+	// Ignore any error and assume that the parent directory of the destination
+	// path exists, in which case the copy may still succeed. If there is any
+	// type of conflict (e.g., non-directory overwriting an existing directory
+	// or vice versa) the extraction will fail. If the destination simply did
+	// not exist, but the parent directory does, the extraction will still
+	// succeed.
+	if err == nil {
+		dstInfo.Exists, dstInfo.IsDir = true, dstStat.Mode.IsDir()
+	}
+
+	var (
+		content         io.ReadCloser
+		resolvedDstPath string
+	)
+
+	// Prepare source copy info.
+	srcInfo, err := archive.CopyInfoSourcePath(srcPath, copyConfig.followLink)
+	if err != nil {
+		return err
+	}
+
+	srcArchive, err := archive.TarResource(srcInfo)
+	if err != nil {
+		return err
+	}
+	defer srcArchive.Close()
+
+	// With the stat info about the local source as well as the
+	// destination, we have enough information to know whether we need to
+	// alter the archive that we upload so that when the server extracts
+	// it to the specified directory in the container we get the desired
+	// copy behavior.
+
+	// See comments in the implementation of `archive.PrepareArchiveCopy`
+	// for exactly what goes into deciding how and whether the source
+	// archive needs to be altered for the correct copy behavior when it is
+	// extracted. This function also infers from the source and destination
+	// info which directory to extract to, which may be the parent of the
+	// destination that the user specified.
+	dstDir, preparedArchive, err := archive.PrepareArchiveCopy(srcArchive, srcInfo, dstInfo)
+	if err != nil {
+		return err
+	}
+	defer preparedArchive.Close()
+
+	resolvedDstPath = dstDir
+	content = preparedArchive
+
+	options := types.CopyToContainerOptions{
+		AllowOverwriteDirWithFile: false,
+		CopyUIDGID:                copyConfig.copyUIDGID,
+	}
+
+	return cli.CopyToContainer(ctx, copyConfig.container, resolvedDstPath, content, options)
+}
 
 // creating a workload cluster
 // This test is meant to provide a first, fast signal to detect regression; it is recommended to use it as a PR blocker test.
 var _ = Describe("When BYOH joins existing cluster", func() {
 
-	var ctx context.Context
 	var (
+		ctx              context.Context
 		specName         = "quick-start"
 		namespace        *corev1.Namespace
 		cancelWatches    context.CancelFunc
 		clusterResources *clusterctl.ApplyClusterTemplateAndWaitResult
+		dockerClient     *client.Client
+		byohost          container.ContainerCreateCreatedBody
+		err              error
 	)
 
 	BeforeEach(func() {
@@ -67,7 +187,81 @@ var _ = Describe("When BYOH joins existing cluster", func() {
 	})
 
 	It("Should create a workload cluster with single BYOH host", func() {
+
 		clusterName := fmt.Sprintf("%s-%s", specName, util.RandomString(6))
+		dockerClient, err = client.NewClientWithOpts(client.FromEnv)
+		Expect(err).ToNot(HaveOccurred())
+
+		tmpfs := map[string]string{"/run": "", "/tmp": ""}
+
+		byohost, err = dockerClient.ContainerCreate(ctx,
+			&container.Config{Hostname: "byohost",
+				Image: KindImage,
+			},
+			&container.HostConfig{Privileged: true,
+				SecurityOpt: []string{"seccomp=unconfined"},
+				Tmpfs:       tmpfs,
+				NetworkMode: "kind",
+				Binds:       []string{"/var", "/lib/modules:/lib/modules:ro"},
+			},
+			&network.NetworkingConfig{EndpointsConfig: map[string]*network.EndpointSettings{"kind": {}}},
+			nil, "byohost")
+
+		Expect(err).ToNot(HaveOccurred())
+
+		Expect(dockerClient.ContainerStart(ctx, byohost.ID, types.ContainerStartOptions{})).ToNot(HaveOccurred())
+
+		pathToHostAgentBinary, err := gexec.Build("github.com/vmware-tanzu/cluster-api-provider-byoh/agent")
+		Expect(err).ToNot(HaveOccurred())
+
+		config := cpConfig{
+			sourcePath: pathToHostAgentBinary,
+			destPath:   "/agent",
+			container:  byohost.ID,
+		}
+
+		Expect(copyToContainer(ctx, dockerClient, config)).ToNot(HaveOccurred())
+
+		listopt := types.ContainerListOptions{}
+		listopt.Filters = filters.NewArgs()
+		listopt.Filters.Add("name", clusterConName+"-control-plane")
+
+		containers, err := dockerClient.ContainerList(ctx, listopt)
+		Expect(err).ToNot(HaveOccurred())
+		Expect(len(containers)).To(Equal(1))
+
+		profile, err := dockerClient.ContainerInspect(ctx, containers[0].ID)
+		Expect(err).ToNot(HaveOccurred())
+
+		kubeconfig, err := os.ReadFile(bootstrapClusterProxy.GetKubeconfigPath())
+		Expect(err).ToNot(HaveOccurred())
+
+		re := regexp.MustCompile("server:.*")
+		kubeconfig = re.ReplaceAll(kubeconfig, []byte("server: https://"+profile.NetworkSettings.Networks["kind"].IPAddress+":6443"))
+
+		os.WriteFile(TempKubeconfigPath, kubeconfig, 0666)
+
+		config.sourcePath = TempKubeconfigPath
+		config.destPath = "/mgmt.conf"
+		Expect(copyToContainer(ctx, dockerClient, config)).ToNot(HaveOccurred())
+
+		rconfig := types.ExecConfig{
+			AttachStdout: true,
+			AttachStderr: true,
+			Cmd:          []string{"./agent", "--kubeconfig", "/mgmt.conf"},
+		}
+
+		resp, err := dockerClient.ContainerExecCreate(ctx, byohost.ID, rconfig)
+		Expect(err).ToNot(HaveOccurred())
+
+		output, err := dockerClient.ContainerExecAttach(ctx, resp.ID, types.ExecStartCheck{})
+		Expect(err).ToNot(HaveOccurred())
+		defer output.Close()
+
+		buf := bufio.NewReader(output.Reader)
+		line, err := buf.ReadBytes('\n')
+		Expect(err).ToNot(HaveOccurred())
+		Byf("agent:output %s", string(line))
 
 		clusterctl.ApplyClusterTemplateAndWait(ctx, clusterctl.ApplyClusterTemplateAndWaitInput{
 			ClusterProxy: bootstrapClusterProxy,
@@ -90,6 +284,11 @@ var _ = Describe("When BYOH joins existing cluster", func() {
 	})
 
 	AfterEach(func() {
+		if dockerClient != nil && byohost.ID != "" {
+			dockerClient.ContainerStop(ctx, byohost.ID, nil)
+			dockerClient.ContainerRemove(ctx, byohost.ID, types.ContainerRemoveOptions{})
+		}
+
 		// Dumps all the resources in the spec namespace, then cleanups the cluster object and the spec namespace itself.
 		dumpSpecResourcesAndCleanup(ctx, specName, bootstrapClusterProxy, artifactFolder, namespace, cancelWatches, clusterResources.Cluster, e2eConfig.GetIntervals, skipCleanup)
 	})
