@@ -103,7 +103,7 @@ var _ = BeforeSuite(func() {
 		},
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      "test-cluster",
-			Namespace: byoMachineNamespace,
+			Namespace: namespace,
 		},
 		Spec: clusterapi.ClusterSpec{},
 	}
@@ -115,7 +115,7 @@ var _ = BeforeSuite(func() {
 		},
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      "test-host",
-			Namespace: byoMachineNamespace,
+			Namespace: namespace,
 		},
 		Spec:   corev1.NodeSpec{},
 		Status: corev1.NodeStatus{},
