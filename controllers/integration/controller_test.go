@@ -2,11 +2,12 @@ package controllers
 
 import (
 	"context"
-	"sync"
+	"time"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	infrastructurev1alpha4 "github.com/vmware-tanzu/cluster-api-provider-byoh/api/v1alpha4"
+
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
@@ -95,8 +96,6 @@ var _ = Describe("Controllers/ByomachineController", func() {
 		var ctx context.Context
 		var byoMachine *infrastructurev1alpha4.ByoMachine
 		const byoMachineName = "test-machine-2"
-		var wg sync.WaitGroup
-		wg.Add(1)
 
 		BeforeEach(func() {
 			ctx = context.Background()
@@ -104,6 +103,16 @@ var _ = Describe("Controllers/ByomachineController", func() {
 		It("Should return nil", func() {
 			byoMachine = createByoMachine(byoMachineName, namespace)
 			Expect(k8sClient.Create(ctx, byoMachine)).Should(BeNil())
+
+			//wait 2 seconds for controller to reconcile
+			time.Sleep(2 * time.Second)
+
+			byoMachineLookupkey := types.NamespacedName{Name: byoMachineName, Namespace: namespace}
+			createdByoMachine := &infrastructurev1alpha4.ByoMachine{}
+			Expect(k8sClient.Get(ctx, byoMachineLookupkey, createdByoMachine)).Should(BeNil())
+			Expect(createdByoMachine.Spec.ProviderID).Should(BeEmpty())
+			Expect(createdByoMachine.Status.Ready).Should(BeFalse())
+			Expect(conditions.Get(createdByoMachine, infrastructurev1alpha4.HostReadyCondition)).Should(BeNil())
 		})
 	})
 })

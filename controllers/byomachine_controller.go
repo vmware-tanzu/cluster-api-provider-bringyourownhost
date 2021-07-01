@@ -63,6 +63,7 @@ func (r *ByoMachineReconciler) Reconcile(ctx context.Context, req reconcile.Requ
 		return ctrl.Result{}, err
 	}
 
+	// TODO- Needs smarter logic
 	hostsList := &infrastructurev1alpha4.ByoHostList{}
 	err = r.Client.List(ctx, hostsList)
 
@@ -70,12 +71,20 @@ func (r *ByoMachineReconciler) Reconcile(ctx context.Context, req reconcile.Requ
 		return ctrl.Result{}, err
 	}
 
-	if len(hostsList.Items) == 0 {
-		r.Log.Info("No hosts found, waiting..")
+	isHostAvailable := false
+	var host infrastructurev1alpha4.ByoHost
+
+	for j := 0; j < len(hostsList.Items); j++ {
+		host = hostsList.Items[j]
+		if host.Status.MachineRef == nil {
+			isHostAvailable = true
+			break
+		}
+	}
+	if isHostAvailable == false {
+		r.Log.Info("No available hosts found, waiting..")
 		return ctrl.Result{}, errors.New("no hosts found")
 	}
-	// TODO- Needs smarter logic
-	host := hostsList.Items[0]
 
 	helper, _ := patch.NewHelper(&host, r.Client)
 
@@ -98,10 +107,10 @@ func (r *ByoMachineReconciler) Reconcile(ctx context.Context, req reconcile.Requ
 		return ctrl.Result{}, err
 	}
 
-	r.setNodeProviderID(ctx, remoteClient, host, providerID)
-	// if err != nil {
-	// 	return ctrl.Result{}, err
-	// }
+	err = r.setNodeProviderID(ctx, remoteClient, host, providerID)
+	if err != nil {
+		return ctrl.Result{}, err
+	}
 
 	helper, _ = patch.NewHelper(byoMachine, r.Client)
 	byoMachine.Spec.ProviderID = providerID
@@ -114,7 +123,6 @@ func (r *ByoMachineReconciler) Reconcile(ctx context.Context, req reconcile.Requ
 			reterr = err
 		}
 	}()
-
 	return ctrl.Result{}, nil
 }
 
