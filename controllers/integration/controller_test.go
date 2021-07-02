@@ -115,7 +115,7 @@ func createByoMachine(byoMachineName string, byoMachineNamespace string) *infras
 	return byoMachine
 }
 
-func createByoHost(byoHostName string, byoHostNamspace string) *infrastructurev1alpha4.ByoHost {
+func createByoHost(byoHostName string, byoHostNamespace string) *infrastructurev1alpha4.ByoHost {
 	byoHost := &infrastructurev1alpha4.ByoHost{
 		TypeMeta: metav1.TypeMeta{
 			Kind:       "ByoHost",
