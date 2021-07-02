@@ -123,7 +123,7 @@ func createByoHost(byoHostName string, byoHostNamspace string) *infrastructurev1
 		},
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      byoHostName,
-			Namespace: byoHostNamspace,
+			Namespace: byoHostNamespace,
 		},
 		Spec: infrastructurev1alpha4.ByoHostSpec{},
 	}
