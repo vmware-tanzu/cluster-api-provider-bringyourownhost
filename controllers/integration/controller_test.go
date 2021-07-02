@@ -105,7 +105,7 @@ func createByoMachine(byoMachineName string, byoMachineNamespace string) *infras
 		},
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      byoMachineName,
-			Namespace: byoMachineNamspace,
+			Namespace: byoMachineNamespace,
 			Labels: map[string]string{
 				clusterapi.ClusterLabelName: "test-cluster",
 			},
