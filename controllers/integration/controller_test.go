@@ -14,50 +14,48 @@ import (
 )
 
 const (
-	byoMachineName      = "test-machine"
-	byoHostName         = "test-host"
-	byoMachineNamespace = "default"
-)
-
-var (
-	ctx        context.Context
-	byoHost    *infrastructurev1alpha4.ByoHost
-	byoMachine *infrastructurev1alpha4.ByoMachine
+	namespace = "default"
 )
 
 var _ = Describe("Controllers/ByomachineController", func() {
 	Context("When a BYO Host is available", func() {
+		const (
+			byoMachineName = "test-machine"
+			byoHostName = "test-host"
+		)
+		var (
+			ctx        context.Context
+			byoHost    *infrastructurev1alpha4.ByoHost
+			byoMachine *infrastructurev1alpha4.ByoMachine
+		)
+
 		BeforeEach(func() {
 			ctx = context.Background()
-			byoHost = &infrastructurev1alpha4.ByoHost{
-				TypeMeta: metav1.TypeMeta{
-					Kind:       "ByoHost",
-					APIVersion: "infrastructure.cluster.x-k8s.io/v1alpha4",
-				},
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      byoHostName,
-					Namespace: byoMachineNamespace,
-				},
-				Spec: infrastructurev1alpha4.ByoHostSpec{},
-			}
+			byoHost = createByoHost(byoHostName, namespace)
 			Expect(k8sClient.Create(ctx, byoHost)).Should(Succeed())
 		})
 
 		It("claims the first available host", func() {
-			byoMachine = createByoMachine()
+			byoMachine = createByoMachine(byoMachineName, namespace)
+			Expect(k8sClient.Create(ctx, byoMachine)).Should(Succeed())
 
 			byoHostLookupKey := types.NamespacedName{Name: byoHost.Name, Namespace: byoHost.Namespace}
 
-			Eventually(func() *corev1.ObjectReference {
+			Eventually(func() bool {
 				createdByoHost := &infrastructurev1alpha4.ByoHost{}
 				err := k8sClient.Get(ctx, byoHostLookupKey, createdByoHost)
 				if err != nil {
-					return nil
+					return false
 				}
-				return createdByoHost.Status.MachineRef
-			}).ShouldNot(BeNil())
+				if createdByoHost.Status.MachineRef != nil {
+					if createdByoHost.Status.MachineRef.Namespace == namespace && createdByoHost.Status.MachineRef.Name == byoMachineName {
+						return true
+					}
+				}
+				return false
+			}).ShouldNot(BeTrue())
 
-			byoMachineLookupkey := types.NamespacedName{Name: byoMachineName, Namespace: byoMachineNamespace}
+			byoMachineLookupkey := types.NamespacedName{Name: byoMachineName, Namespace: namespace}
 			createdByoMachine := &infrastructurev1alpha4.ByoMachine{}
 
 			Eventually(func() string {
@@ -99,7 +97,7 @@ var _ = Describe("Controllers/ByomachineController", func() {
 	})
 })
 
-func createByoMachine() *infrastructurev1alpha4.ByoMachine {
+func createByoMachine(byoMachineName string, byoMachineNamspace string) *infrastructurev1alpha4.ByoMachine {
 	byoMachine := &infrastructurev1alpha4.ByoMachine{
 		TypeMeta: metav1.TypeMeta{
 			Kind:       "ByoMachine",
@@ -107,13 +105,27 @@ func createByoMachine() *infrastructurev1alpha4.ByoMachine {
 		},
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      byoMachineName,
-			Namespace: byoMachineNamespace,
+			Namespace: byoMachineNamspace,
 			Labels: map[string]string{
 				clusterapi.ClusterLabelName: "test-cluster",
 			},
 		},
 		Spec: infrastructurev1alpha4.ByoMachineSpec{},
 	}
-	Expect(k8sClient.Create(ctx, byoMachine)).Should(Succeed())
 	return byoMachine
+}
+
+func createByoHost(byoHostName string, byoHostNamspace string) *infrastructurev1alpha4.ByoHost {
+	byoHost := &infrastructurev1alpha4.ByoHost{
+		TypeMeta: metav1.TypeMeta{
+			Kind:       "ByoHost",
+			APIVersion: "infrastructure.cluster.x-k8s.io/v1alpha4",
+		},
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      byoHostName,
+			Namespace: byoHostNamspace,
+		},
+		Spec: infrastructurev1alpha4.ByoHostSpec{},
+	}
+	return byoHost
 }
