@@ -53,7 +53,7 @@ var _ = Describe("Controllers/ByomachineController", func() {
 					}
 				}
 				return false
-			}).ShouldNot(BeTrue())
+			}).Should(BeTrue())
 
 			byoMachineLookupkey := types.NamespacedName{Name: byoMachineName, Namespace: namespace}
 			createdByoMachine := &infrastructurev1alpha4.ByoMachine{}
