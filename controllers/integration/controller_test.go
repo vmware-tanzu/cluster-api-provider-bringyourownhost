@@ -97,7 +97,7 @@ var _ = Describe("Controllers/ByomachineController", func() {
 	})
 })
 
-func createByoMachine(byoMachineName string, byoMachineNamspace string) *infrastructurev1alpha4.ByoMachine {
+func createByoMachine(byoMachineName string, byoMachineNamespace string) *infrastructurev1alpha4.ByoMachine {
 	byoMachine := &infrastructurev1alpha4.ByoMachine{
 		TypeMeta: metav1.TypeMeta{
 			Kind:       "ByoMachine",
