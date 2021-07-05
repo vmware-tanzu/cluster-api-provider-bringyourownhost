@@ -34,14 +34,14 @@ var _ = Describe("Controllers/ByomachineController/Unitests", func() {
 			ctx = context.Background()
 		})
 
-		It("Should return nil When namespace does not existed", func() {
+		It("Should return nil When byomachine namespace does not existed", func() {
 			byoMachineLookupkey := types.NamespacedName{Name: defaultByoMachineName, Namespace: namespace}
 			request := reconcile.Request{NamespacedName: byoMachineLookupkey}
 			_, err := reconciler.Reconcile(ctx, request)
 			Expect(err).To(BeNil())
 		})
 
-		It("Should return nil When byomachine does not existed", func() {
+		It("Should return nil When byomachine name does not existed", func() {
 			byoMachineLookupkey := types.NamespacedName{Name: byoMachineName, Namespace: defaultNamespace}
 			request := reconcile.Request{NamespacedName: byoMachineLookupkey}
 			_, err := reconciler.Reconcile(ctx, request)
@@ -106,35 +106,6 @@ var _ = Describe("Controllers/ByomachineController/Unitests", func() {
 		})
 	})
 
-	Context("When one byohost available for one byomachine", func() {
-		var (
-			ctx        context.Context
-			byoMachine *infrastructurev1alpha4.ByoMachine
-			byoHost    *infrastructurev1alpha4.ByoHost
-		)
-
-		BeforeEach(func() {
-			ctx = context.Background()
-			byoMachine = createByoMachine(defaultByoMachineName, defaultNamespace, defaultClusterName)
-			Expect(k8sClient.Create(ctx, byoMachine)).Should(Succeed())
-			byoHost = createByoHost(defaultByoHostName, defaultNamespace)
-			Expect(k8sClient.Create(ctx, byoHost)).Should(Succeed())
-		})
-
-		It("Should return success", func() {
-			byoMachineLookupkey := types.NamespacedName{Name: defaultByoMachineName, Namespace: defaultNamespace}
-			request := reconcile.Request{NamespacedName: byoMachineLookupkey}
-
-			_, err := reconciler.Reconcile(ctx, request)
-			Expect(err).ShouldNot(HaveOccurred())
-		})
-
-		AfterEach(func() {
-			Expect(k8sClient.Delete(ctx, byoMachine)).Should(Succeed())
-			Expect(k8sClient.Delete(ctx, byoHost)).Should(Succeed())
-		})
-	})
-
 	Context("When node is not available", func() {
 		//Reconcile assumes the node name equal to host name, or setNodeProviderID will be failed.
 		//We only have one node "host-unit-test" in testEnv, not "host-unit-test-2"
@@ -160,7 +131,7 @@ var _ = Describe("Controllers/ByomachineController/Unitests", func() {
 			byoMachineLookupkey := types.NamespacedName{Name: defaultByoMachineName, Namespace: defaultNamespace}
 			request := reconcile.Request{NamespacedName: byoMachineLookupkey}
 			_, err := reconciler.Reconcile(ctx, request)
-			Expect(err).NotTo(BeNil())
+			Expect(err).To(HaveOccurred()))
 		})
 
 		AfterEach(func() {
