@@ -66,6 +66,9 @@ var (
 
 	// bootstrapClusterProxy allows to interact with the bootstrap cluster to be used for the e2e tests.
 	bootstrapClusterProxy framework.ClusterProxy
+
+	// TODO: Remove this later
+	clusterConName string
 )
 
 func init() {
@@ -104,6 +107,7 @@ var _ = SynchronizedBeforeSuite(func() []byte {
 	By("Initializing the bootstrap cluster")
 	initBootstrapCluster(bootstrapClusterProxy, e2eConfig, clusterctlConfigPath, artifactFolder)
 
+	clusterConName = e2eConfig.ManagementClusterName
 	return []byte(
 		strings.Join([]string{
 			artifactFolder,
