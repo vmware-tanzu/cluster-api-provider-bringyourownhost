@@ -22,11 +22,10 @@ var _ = Describe("Controllers/ByomachineController/Unitests", func() {
 
 	Context("When byomachine is not found", func() {
 		var (
-			ctx        context.Context
-			byoMachine *infrastructurev1alpha4.ByoMachine
+			ctx context.Context
 		)
 		const (
-			namespace = "fake-name-space-unit-test"
+			namespace      = "fake-name-space-unit-test"
 			byoMachineName = "fake-machine-unit-test"
 		)
 
@@ -97,7 +96,7 @@ var _ = Describe("Controllers/ByomachineController/Unitests", func() {
 			request := reconcile.Request{NamespacedName: byoMachineLookupkey}
 
 			_, err := reconciler.Reconcile(ctx, request)
-			Expect(err).To(HaveOccurred()))
+			Expect(err).To(HaveOccurred())
 		})
 
 		AfterEach(func() {
@@ -131,7 +130,7 @@ var _ = Describe("Controllers/ByomachineController/Unitests", func() {
 			byoMachineLookupkey := types.NamespacedName{Name: defaultByoMachineName, Namespace: defaultNamespace}
 			request := reconcile.Request{NamespacedName: byoMachineLookupkey}
 			_, err := reconciler.Reconcile(ctx, request)
-			Expect(err).To(HaveOccurred()))
+			Expect(err).To(HaveOccurred())
 		})
 
 		AfterEach(func() {
