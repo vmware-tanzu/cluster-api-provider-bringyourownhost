@@ -58,6 +58,7 @@ var _ = Describe("Controllers/ByomachineController/Unitests", func() {
 			byoMachineLookupkey := types.NamespacedName{Name: defaultByoMachineName, Namespace: defaultNamespace}
 			request := reconcile.Request{NamespacedName: byoMachineLookupkey}
 			_, err := reconciler.Reconcile(ctx, request)
+			Expect(err).To(HaveOccurred())
 			Expect(err.Error()).To(ContainSubstring("no hosts found"))
 		})
 
