@@ -66,7 +66,7 @@ var _ = Describe("Controllers/ByomachineController/Unitests", func() {
 		})
 	})
 
-	Context("When cluster does not existed", func() {
+	Context("When cluster does not exist", func() {
 		const (
 			clusterName = "fake-cluster-unit-test"
 		)
