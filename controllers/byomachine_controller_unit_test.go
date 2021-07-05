@@ -26,18 +26,18 @@ var _ = Describe("Controllers/ByomachineController/Unitests", func() {
 			ctx = context.Background()
 		})
 
-		It("Should not error out when byomachine namespace does not exist", func() {
+		It("Should not attempt to reconcile when byomachine namespace does not exist", func() {
 			byoMachineLookupkey := types.NamespacedName{Name: defaultByoMachineName, Namespace: namespace}
 			request := reconcile.Request{NamespacedName: byoMachineLookupkey}
 			_, err := reconciler.Reconcile(ctx, request)
-			Expect(err).To(Not(HaveOccurred()))
+			Expect(err).ToNot(HaveOccurred())
 		})
 
-		It("Should not error out when byomachine name does not exist", func() {
+		It("Should not attempt to reconcile when byomachine name does not exist", func() {
 			byoMachineLookupkey := types.NamespacedName{Name: byoMachineName, Namespace: defaultNamespace}
 			request := reconcile.Request{NamespacedName: byoMachineLookupkey}
 			_, err := reconciler.Reconcile(ctx, request)
-			Expect(err).To(Not(HaveOccurred()))
+			Expect(err).ToNot(HaveOccurred())
 		})
 
 	})
@@ -50,7 +50,7 @@ var _ = Describe("Controllers/ByomachineController/Unitests", func() {
 
 		BeforeEach(func() {
 			ctx = context.Background()
-			byoMachine = createByoMachine(defaultByoMachineName, defaultNamespace, defaultClusterName)
+			byoMachine = newByoMachine(defaultByoMachineName, defaultNamespace, defaultClusterName)
 			Expect(k8sClient.Create(ctx, byoMachine)).Should(Succeed())
 		})
 
@@ -59,7 +59,7 @@ var _ = Describe("Controllers/ByomachineController/Unitests", func() {
 			request := reconcile.Request{NamespacedName: byoMachineLookupkey}
 			_, err := reconciler.Reconcile(ctx, request)
 			Expect(err).To(HaveOccurred())
-			Expect(err.Error()).To(ContainSubstring("no hosts found"))
+			Expect(err).To(MatchError("no hosts found"))
 		})
 
 		AfterEach(func() {
@@ -79,9 +79,9 @@ var _ = Describe("Controllers/ByomachineController/Unitests", func() {
 
 		BeforeEach(func() {
 			ctx = context.Background()
-			byoMachine = createByoMachine(defaultByoMachineName, defaultNamespace, clusterName)
+			byoMachine = newByoMachine(defaultByoMachineName, defaultNamespace, clusterName)
 			Expect(k8sClient.Create(ctx, byoMachine)).Should(Succeed())
-			byoHost = createByoHost(defaultByoHostName, defaultNamespace)
+			byoHost = newByoHost(defaultByoHostName, defaultNamespace)
 			Expect(k8sClient.Create(ctx, byoHost)).Should(Succeed())
 		})
 
@@ -114,9 +114,9 @@ var _ = Describe("Controllers/ByomachineController/Unitests", func() {
 
 		BeforeEach(func() {
 			ctx = context.Background()
-			byoMachine = createByoMachine(defaultByoMachineName, defaultNamespace, defaultClusterName)
+			byoMachine = newByoMachine(defaultByoMachineName, defaultNamespace, defaultClusterName)
 			Expect(k8sClient.Create(ctx, byoMachine)).Should(Succeed())
-			byoHost = createByoHost(hostname, defaultNamespace)
+			byoHost = newByoHost(hostname, defaultNamespace)
 			Expect(k8sClient.Create(ctx, byoHost)).Should(Succeed())
 		})
 
