@@ -20,40 +20,13 @@ const (
 
 var _ = Describe("Controllers/ByomachineController/Unitests", func() {
 
-	Context("When namespace is not existed", func() {
+	Context("When byomachine is not found", func() {
 		var (
 			ctx        context.Context
 			byoMachine *infrastructurev1alpha4.ByoMachine
 		)
 		const (
 			namespace = "fake-name-space-unit-test"
-		)
-
-		BeforeEach(func() {
-			ctx = context.Background()
-			ctx = context.Background()
-			byoMachine = createByoMachine(defaultByoMachineName, defaultNamespace, defaultClusterName)
-			Expect(k8sClient.Create(ctx, byoMachine)).Should(Succeed())
-		})
-
-		It("Should return nil", func() {
-			byoMachineLookupkey := types.NamespacedName{Name: defaultByoMachineName, Namespace: namespace}
-			request := reconcile.Request{NamespacedName: byoMachineLookupkey}
-			_, err := reconciler.Reconcile(ctx, request)
-			Expect(err).To(BeNil())
-		})
-
-		AfterEach(func() {
-			Expect(k8sClient.Delete(ctx, byoMachine)).Should(Succeed())
-		})
-
-	})
-
-	Context("When byomachine is not existed", func() {
-		var (
-			ctx context.Context
-		)
-		const (
 			byoMachineName = "fake-machine-unit-test"
 		)
 
@@ -61,7 +34,14 @@ var _ = Describe("Controllers/ByomachineController/Unitests", func() {
 			ctx = context.Background()
 		})
 
-		It("Should return nil", func() {
+		It("Should return nil When namespace does not existed", func() {
+			byoMachineLookupkey := types.NamespacedName{Name: defaultByoMachineName, Namespace: namespace}
+			request := reconcile.Request{NamespacedName: byoMachineLookupkey}
+			_, err := reconciler.Reconcile(ctx, request)
+			Expect(err).To(BeNil())
+		})
+
+		It("Should return nil When byomachine does not existed", func() {
 			byoMachineLookupkey := types.NamespacedName{Name: byoMachineName, Namespace: defaultNamespace}
 			request := reconcile.Request{NamespacedName: byoMachineLookupkey}
 			_, err := reconciler.Reconcile(ctx, request)
@@ -94,7 +74,7 @@ var _ = Describe("Controllers/ByomachineController/Unitests", func() {
 		})
 	})
 
-	Context("When cluster is not existed", func() {
+	Context("When cluster does not existed", func() {
 		const (
 			clusterName = "fake-cluster-unit-test"
 		)
@@ -117,7 +97,7 @@ var _ = Describe("Controllers/ByomachineController/Unitests", func() {
 			request := reconcile.Request{NamespacedName: byoMachineLookupkey}
 
 			_, err := reconciler.Reconcile(ctx, request)
-			Expect(err).NotTo(BeNil())
+			Expect(err).To(HaveOccurred()))
 		})
 
 		AfterEach(func() {
