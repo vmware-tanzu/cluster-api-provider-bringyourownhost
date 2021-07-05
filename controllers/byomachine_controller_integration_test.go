@@ -21,12 +21,12 @@ var _ = Describe("Controllers/ByomachineController", func() {
 
 		BeforeEach(func() {
 			ctx = context.Background()
-			byoHost = createByoHost(defaultByoHostName, defaultNamespace)
+			byoHost = newByoHost(defaultByoHostName, defaultNamespace)
 			Expect(k8sClient.Create(ctx, byoHost)).Should(Succeed())
 		})
 
 		It("claims the first available host", func() {
-			byoMachine = createByoMachine(defaultByoMachineName, defaultNamespace, defaultClusterName)
+			byoMachine = newByoMachine(defaultByoMachineName, defaultNamespace, defaultClusterName)
 			Expect(k8sClient.Create(ctx, byoMachine)).Should(Succeed())
 
 			byoHostLookupKey := types.NamespacedName{Name: byoHost.Name, Namespace: byoHost.Namespace}

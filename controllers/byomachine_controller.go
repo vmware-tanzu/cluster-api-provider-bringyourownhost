@@ -132,7 +132,10 @@ func (r *ByoMachineReconciler) setNodeProviderID(ctx context.Context, remoteClie
 	if err != nil {
 		return err
 	}
-	helper, _ := patch.NewHelper(node, remoteClient)
+	helper, err := patch.NewHelper(node, remoteClient)
+	if err != nil {
+		return err
+	}
 
 	node.Spec.ProviderID = providerID
 	helper.Patch(ctx, node)

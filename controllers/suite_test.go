@@ -151,7 +151,7 @@ var _ = AfterSuite(func() {
 	Expect(err).ToNot(HaveOccurred())
 })
 
-func createByoMachine(byoMachineName string, byoMachineNamespace string, clusterName string) *infrastructurev1alpha4.ByoMachine {
+func newByoMachine(byoMachineName string, byoMachineNamespace string, clusterName string) *infrastructurev1alpha4.ByoMachine {
 	byoMachine := &infrastructurev1alpha4.ByoMachine{
 		TypeMeta: metav1.TypeMeta{
 			Kind:       "ByoMachine",
@@ -169,7 +169,7 @@ func createByoMachine(byoMachineName string, byoMachineNamespace string, cluster
 	return byoMachine
 }
 
-func createByoHost(byoHostName string, byoHostNamespace string) *infrastructurev1alpha4.ByoHost {
+func newByoHost(byoHostName string, byoHostNamespace string) *infrastructurev1alpha4.ByoHost {
 	byoHost := &infrastructurev1alpha4.ByoHost{
 		TypeMeta: metav1.TypeMeta{
 			Kind:       "ByoHost",
