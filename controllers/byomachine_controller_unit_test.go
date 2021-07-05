@@ -33,7 +33,7 @@ var _ = Describe("Controllers/ByomachineController/Unitests", func() {
 			Expect(err).To(BeNil())
 		})
 
-		It("Should return nil When byomachine name does not existed", func() {
+		It("Should not error out when byomachine name does not exist", func() {
 			byoMachineLookupkey := types.NamespacedName{Name: byoMachineName, Namespace: defaultNamespace}
 			request := reconcile.Request{NamespacedName: byoMachineLookupkey}
 			_, err := reconciler.Reconcile(ctx, request)
