@@ -98,10 +98,10 @@ func (r *ByoMachineReconciler) Reconcile(ctx context.Context, req reconcile.Requ
 		return ctrl.Result{}, err
 	}
 
-	r.setNodeProviderID(ctx, remoteClient, host, providerID)
-	// if err != nil {
-	// 	return ctrl.Result{}, err
-	// }
+	err = r.setNodeProviderID(ctx, remoteClient, host, providerID)
+	if err != nil {
+		return ctrl.Result{}, err
+	}
 
 	helper, _ = patch.NewHelper(byoMachine, r.Client)
 	byoMachine.Spec.ProviderID = providerID
