@@ -26,7 +26,7 @@ var _ = Describe("Controllers/ByomachineController/Unitests", func() {
 			ctx = context.Background()
 		})
 
-		It("Should return nil When byomachine namespace does not existed", func() {
+		It("Should not error out when byomachine namespace does not exist", func() {
 			byoMachineLookupkey := types.NamespacedName{Name: defaultByoMachineName, Namespace: namespace}
 			request := reconcile.Request{NamespacedName: byoMachineLookupkey}
 			_, err := reconciler.Reconcile(ctx, request)
