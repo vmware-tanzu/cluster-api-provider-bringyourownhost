@@ -24,7 +24,6 @@ import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	infrastructurev1alpha4 "github.com/vmware-tanzu/cluster-api-provider-byoh/api/v1alpha4"
-	"github.com/vmware-tanzu/cluster-api-provider-byoh/controllers"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes/scheme"
@@ -46,10 +45,16 @@ import (
 // http://onsi.github.io/ginkgo/ to learn more about Ginkgo.
 
 var (
-	cfg        *rest.Config
-	k8sClient  client.Client
-	testEnv    *envtest.Environment
-	clientFake client.Client
+	cfg                   *rest.Config
+	k8sClient             client.Client
+	testEnv               *envtest.Environment
+	clientFake            client.Client
+	reconciler            *ByoMachineReconciler
+	defaultClusterName    string = "my-cluster"
+	defaultNodeName       string = "my-host"
+	defaultByoHostName    string = "my-host"
+	defaultByoMachineName string = "my-machine"
+	defaultNamespace      string = "default"
 )
 
 func TestAPIs(t *testing.T) {
@@ -64,7 +69,7 @@ var _ = BeforeSuite(func() {
 	By("bootstrapping test environment")
 	testEnv = &envtest.Environment{
 		CRDDirectoryPaths: []string{
-			filepath.Join("..", "..", "config", "crd", "bases"),
+			filepath.Join("..", "config", "crd", "bases"),
 			filepath.Join(build.Default.GOPATH, "pkg", "mod", "sigs.k8s.io", "cluster-api@v0.4.0", "config", "crd", "bases"),
 			filepath.Join(build.Default.GOPATH, "pkg", "mod", "sigs.k8s.io", "cluster-api@v0.4.0", "bootstrap", "kubeadm", "config", "crd", "bases"),
 		},
@@ -92,7 +97,8 @@ var _ = BeforeSuite(func() {
 	Expect(k8sClient).ToNot(BeNil())
 
 	k8sManager, err := ctrl.NewManager(cfg, ctrl.Options{
-		Scheme: scheme.Scheme,
+		Scheme:             scheme.Scheme,
+		MetricsBindAddress: ":6080",
 	})
 	Expect(err).ToNot(HaveOccurred())
 
@@ -102,20 +108,21 @@ var _ = BeforeSuite(func() {
 			APIVersion: "cluster.x-k8s.io/v1alpha4",
 		},
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      "test-cluster",
-			Namespace: byoMachineNamespace,
+			Name:      defaultClusterName,
+			Namespace: defaultNamespace,
 		},
 		Spec: clusterapi.ClusterSpec{},
 	}
 	Expect(k8sClient.Create(context.Background(), testCluster)).Should(Succeed())
+
 	node := &corev1.Node{
 		TypeMeta: metav1.TypeMeta{
 			Kind:       "Node",
 			APIVersion: "v1alpha4",
 		},
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      "test-host",
-			Namespace: byoMachineNamespace,
+			Name:      defaultNodeName,
+			Namespace: defaultNamespace,
 		},
 		Spec:   corev1.NodeSpec{},
 		Status: corev1.NodeStatus{},
@@ -125,11 +132,12 @@ var _ = BeforeSuite(func() {
 		node,
 	).Build()
 
-	err = (&controllers.ByoMachineReconciler{
+	reconciler = &ByoMachineReconciler{
 		Client:  k8sClient,
 		Log:     ctrl.Log.WithName("controllers").WithName("ByoMachine"),
 		Tracker: remote.NewTestClusterCacheTracker(log.NullLogger{}, clientFake, scheme.Scheme, client.ObjectKey{Name: testCluster.Name, Namespace: testCluster.Namespace}),
-	}).SetupWithManager(k8sManager)
+	}
+	err = reconciler.SetupWithManager(k8sManager)
 	Expect(err).ToNot(HaveOccurred())
 
 	go func() {
@@ -142,3 +150,36 @@ var _ = AfterSuite(func() {
 	err := testEnv.Stop()
 	Expect(err).ToNot(HaveOccurred())
 })
+
+func newByoMachine(byoMachineName string, byoMachineNamespace string, clusterName string) *infrastructurev1alpha4.ByoMachine {
+	byoMachine := &infrastructurev1alpha4.ByoMachine{
+		TypeMeta: metav1.TypeMeta{
+			Kind:       "ByoMachine",
+			APIVersion: "infrastructure.cluster.x-k8s.io/v1alpha4",
+		},
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      byoMachineName,
+			Namespace: byoMachineNamespace,
+			Labels: map[string]string{
+				clusterapi.ClusterLabelName: clusterName,
+			},
+		},
+		Spec: infrastructurev1alpha4.ByoMachineSpec{},
+	}
+	return byoMachine
+}
+
+func newByoHost(byoHostName string, byoHostNamespace string) *infrastructurev1alpha4.ByoHost {
+	byoHost := &infrastructurev1alpha4.ByoHost{
+		TypeMeta: metav1.TypeMeta{
+			Kind:       "ByoHost",
+			APIVersion: "infrastructure.cluster.x-k8s.io/v1alpha4",
+		},
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      byoHostName,
+			Namespace: byoHostNamespace,
+		},
+		Spec: infrastructurev1alpha4.ByoHostSpec{},
+	}
+	return byoHost
+}
