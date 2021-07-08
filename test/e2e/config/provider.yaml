@@ -42,7 +42,7 @@ providers:
           - old: --metrics-bind-addr=127.0.0.1:8080
             new: --metrics-bind-addr=:8080
         files:
-          - sourcePath: "../data/infrastructure-provider-byoh/v1alpha4/metadata.yaml"
+          - sourcePath: "../data/shared/metadata.yaml"
 
   - name: kubeadm
     type: BootstrapProvider
@@ -60,7 +60,7 @@ providers:
           - old: --metrics-bind-addr=127.0.0.1:8080
             new: --metrics-bind-addr=:8080
         files:
-          - sourcePath: "../data/infrastructure-provider-byoh/v1alpha4/metadata.yaml"
+          - sourcePath: "../data/shared/metadata.yaml"
 
   - name: kubeadm
     type: ControlPlaneProvider
@@ -78,7 +78,7 @@ providers:
           - old: --metrics-bind-addr=127.0.0.1:8080
             new: --metrics-bind-addr=:8080
         files:
-          - sourcePath: "../data/infrastructure-provider-byoh/v1alpha4/metadata.yaml"
+          - sourcePath: "../data/shared/metadata.yaml"
 
   - name: docker
     type: InfrastructureProvider
@@ -99,9 +99,7 @@ providers:
           - old: --metrics-bind-addr=127.0.0.1:8080
             new: --metrics-bind-addr=:8080
         files:
-          # Add cluster templates
-          - sourcePath: "../../../../cluster-api/test/e2e/data/infrastructure-docker/v1alpha4/cluster-template.yaml"
-          - sourcePath: "../../../../cluster-api-provider-byoh/test/e2e/data/infrastructure-provider-byoh/v1alpha4/metadata.yaml"
+          - sourcePath: "../data/shared/metadata.yaml"
 
   - name: byoh
     type: InfrastructureProvider
@@ -119,7 +117,7 @@ providers:
         files:
           # Add a cluster template
           - sourcePath: "../data/infrastructure-provider-byoh/v1alpha4/cluster-template.yaml"
-          - sourcePath: "../data/infrastructure-provider-byoh/v1alpha4/metadata.yaml"
+          - sourcePath: "../data/shared/metadata.yaml"
 variables:
   # default variables for the e2e test; those values could be overridden via env variables, thus
   # allowing the same e2e config file to be re-used in different prow jobs e.g. each one with a K8s version permutation
