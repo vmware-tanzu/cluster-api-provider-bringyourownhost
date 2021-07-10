@@ -7,6 +7,7 @@ import (
 	"os"
 	"os/exec"
 	"path"
+	"time"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -21,63 +22,67 @@ import (
 )
 
 var _ = Describe("Agent", func() {
-	var (
-		ns       = &corev1.Namespace{}
-		session  *gexec.Session
-		err      error
-		dir      string
-		hostName string
-	)
 
-	BeforeEach(func() {
-		*ns = corev1.Namespace{
-			ObjectMeta: metav1.ObjectMeta{Name: "testns-" + rand.String(5)},
-		}
-		hostName, err = os.Hostname()
-		Expect(err).NotTo(HaveOccurred())
+	Context("negative case", func() {
+		var (
+			ns              *corev1.Namespace
+			err             error
+			hostName        string
+			fakedKubeConfig string = "on-existent-path"
+			session         *gexec.Session
+		)
 
-		err = k8sClient.Create(context.TODO(), ns)
-		Expect(err).NotTo(HaveOccurred(), "failed to create test namespace")
+		BeforeEach(func() {
+			ns, err = createNamespace("testns-" + RandStr(5))
+			Expect(err).NotTo(HaveOccurred(), "failed to create test namespace")
 
-	})
+			hostName, err = os.Hostname()
+			Expect(err).NotTo(HaveOccurred())
+		})
 
-	AfterEach(func() {
-		session.Terminate().Wait()
-		err = k8sClient.Delete(context.TODO(), ns)
-		Expect(err).NotTo(HaveOccurred(), "failed to delete test namespace")
-	})
+		AfterEach(func() {
+			err = k8sClient.Delete(context.TODO(), ns)
+			Expect(err).NotTo(HaveOccurred(), "failed to delete test namespace")
+			session.Terminate().Wait()
+		})
 
-	It("should error out if the host already exists", func() {
-		ByoHost := &infrastructurev1alpha4.ByoHost{
-			TypeMeta: metav1.TypeMeta{
-				Kind:       "ByoHost",
-				APIVersion: "infrastructure.cluster.x-k8s.io/v1alpha4",
-			},
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      hostName,
-				Namespace: ns.Name,
-			},
-			Spec: infrastructurev1alpha4.ByoHostSpec{},
-		}
-		err = k8sClient.Create(context.TODO(), ByoHost)
+		It("should error out if the host already exists", func() {
+			_, err := createByoHost(hostName, ns.Name)
+			Expect(err).ToNot(HaveOccurred())
 
-		command := exec.Command(pathToHostAgentBinary, "--kubeconfig", kubeconfigFile.Name(), "--namespace", ns.Name)
-		session, err = gexec.Start(command, GinkgoWriter, GinkgoWriter)
-		Expect(err).ToNot(HaveOccurred())
+			command := exec.Command(pathToHostAgentBinary, "--kubeconfig", kubeconfigFile.Name(), "--namespace", ns.Name)
+			session, err = gexec.Start(command, GinkgoWriter, GinkgoWriter)
+			Expect(err).ToNot(HaveOccurred())
+			Eventually(session).Should(gexec.Exit(255))
+		})
 
-		Eventually(session).Should(gexec.Exit(255))
-	})
-
-	It("should return an error when invalid kubeconfig is passed in", func() {
-		command := exec.Command(pathToHostAgentBinary, "--kubeconfig", "non-existent-path")
-		session, err = gexec.Start(command, GinkgoWriter, GinkgoWriter)
-		Expect(err).ToNot(HaveOccurred())
-		Eventually(session).Should(gexec.Exit(255))
+		It("should return an error when invalid kubeconfig is passed in", func() {
+			command := exec.Command(pathToHostAgentBinary, "--kubeconfig", fakedKubeConfig)
+			session, err = gexec.Start(command, GinkgoWriter, GinkgoWriter)
+			Expect(err).ToNot(HaveOccurred())
+			Eventually(session).Should(gexec.Exit(255))
+		})
 	})
 
 	Context("When the host agent is able to connect to API Server", func() {
+
+		var (
+			ns       *corev1.Namespace
+			session  *gexec.Session
+			err      error
+			dir      string
+			hostName string
+		)
+
 		BeforeEach(func() {
+			ns, err = createNamespace("testns-" + RandStr(5))
+			Expect(err).NotTo(HaveOccurred(), "failed to create test namespace")
+
+			hostName, err = os.Hostname()
+			Expect(err).NotTo(HaveOccurred())
+
 			command := exec.Command(pathToHostAgentBinary, "--kubeconfig", kubeconfigFile.Name(), "--namespace", ns.Name)
+
 			session, err = gexec.Start(command, GinkgoWriter, GinkgoWriter)
 			Expect(err).ToNot(HaveOccurred())
 
@@ -86,13 +91,13 @@ var _ = Describe("Agent", func() {
 		})
 
 		AfterEach(func() {
-
-			err := os.RemoveAll(dir)
+			err = k8sClient.Delete(context.TODO(), ns)
 			Expect(err).ToNot(HaveOccurred())
+			os.RemoveAll(dir)
+			session.Terminate().Wait()
 		})
 
 		It("should register the BYOHost with the management cluster", func() {
-
 			byoHostLookupKey := types.NamespacedName{Name: hostName, Namespace: ns.Name}
 			Eventually(func() *infrastructurev1alpha4.ByoHost {
 				createdByoHost := &infrastructurev1alpha4.ByoHost{}
@@ -115,17 +120,19 @@ var _ = Describe("Agent", func() {
 			fileToCreate := path.Join(dir, "test-directory", "test-file.txt")
 
 			bootstrapSecretUnencoded := fmt.Sprintf(`write_files:
--   path: %s
-    content: expected-content
+- path: %s
+  content: expected-content
 runCmd:
-- echo -n ' run cmd' >> %s
-`, fileToCreate, fileToCreate)
+- echo -n ' run cmd' >> %s`, fileToCreate, fileToCreate)
 
-			// encodedBootstrapSecret := base64.StdEncoding.EncodeToString([]byte(bootstrapSecretUnencoded))
+			secret, err := createSecret("bootstrap-secret-1", bootstrapSecretUnencoded, ns.Name)
+			Expect(err).ToNot(HaveOccurred())
 
-			secret := createSecretCRD("bootstrap-secret-1", bootstrapSecretUnencoded, ns.Name)
-			machine := createClusterAPIMachine(&secret.Name, "test-machine", ns.Name)
-			byoMachine := createBYOMachineCRD("test-byomachine", ns.Name, machine)
+			machine, err := createMachine(&secret.Name, "test-machine", ns.Name)
+			Expect(err).ToNot(HaveOccurred())
+
+			byoMachine, err := createByoMachine("test-byomachine", ns.Name, machine)
+			Expect(err).ToNot(HaveOccurred())
 
 			helper, err := patch.NewHelper(byoHost, k8sClient)
 			Expect(err).ToNot(HaveOccurred())
@@ -146,7 +153,6 @@ runCmd:
 				if err != nil {
 					return corev1.ConditionFalse
 				}
-
 				for _, condition := range createdByoHost.Status.Conditions {
 					if condition.Type == infrastructurev1alpha4.K8sComponentsInstalledCondition {
 						return condition.Status
@@ -168,7 +174,43 @@ runCmd:
 
 })
 
-func createSecretCRD(bootstrapSecretName, stringDataValue, namespace string) *corev1.Secret {
+func RandStr(length int) string {
+	str := "0123456789abcdefghijklmnopqrstuvwxyz"
+	bytes := []byte(str)
+	result := []byte{}
+	rand.Seed(time.Now().UnixNano() + int64(rand.Intn(100)))
+	for i := 0; i < length; i++ {
+		result = append(result, bytes[rand.Intn(len(bytes))])
+	}
+	return string(result)
+}
+
+func createNamespace(namespace string) (*corev1.Namespace, error) {
+	ns := &corev1.Namespace{
+		ObjectMeta: metav1.ObjectMeta{Name: namespace},
+	}
+	err := k8sClient.Create(context.TODO(), ns)
+	return ns, err
+}
+
+func createByoHost(byoHostName string, byoHostNamespace string) (*infrastructurev1alpha4.ByoHost, error) {
+	byoHost := &infrastructurev1alpha4.ByoHost{
+		TypeMeta: metav1.TypeMeta{
+			Kind:       "ByoHost",
+			APIVersion: "infrastructure.cluster.x-k8s.io/v1alpha4",
+		},
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      byoHostName,
+			Namespace: byoHostNamespace,
+		},
+		Spec: infrastructurev1alpha4.ByoHostSpec{},
+	}
+
+	err := k8sClient.Create(context.TODO(), byoHost)
+	return byoHost, err
+}
+
+func createSecret(bootstrapSecretName, stringDataValue, namespace string) (*corev1.Secret, error) {
 	secret := &corev1.Secret{
 		TypeMeta: metav1.TypeMeta{
 			Kind:       "Secret",
@@ -184,12 +226,11 @@ func createSecretCRD(bootstrapSecretName, stringDataValue, namespace string) *co
 		Type: "cluster.x-k8s.io/secret",
 	}
 
-	err = k8sClient.Create(context.TODO(), secret)
-	Expect(err).ToNot(HaveOccurred())
-	return secret
+	err := k8sClient.Create(context.TODO(), secret)
+	return secret, err
 }
 
-func createClusterAPIMachine(bootstrapSecret *string, machineName, namespace string) *clusterv1.Machine {
+func createMachine(bootstrapSecret *string, machineName, namespace string) (*clusterv1.Machine, error) {
 	machine := &clusterv1.Machine{
 		TypeMeta: metav1.TypeMeta{
 			Kind:       "Machine",
@@ -207,12 +248,11 @@ func createClusterAPIMachine(bootstrapSecret *string, machineName, namespace str
 		},
 	}
 
-	err = k8sClient.Create(context.TODO(), machine)
-	Expect(err).ToNot(HaveOccurred())
-	return machine
+	err := k8sClient.Create(context.TODO(), machine)
+	return machine, err
 }
 
-func createBYOMachineCRD(byoMachineName, namespace string, machine *clusterv1.Machine) *infrastructurev1alpha4.ByoMachine {
+func createByoMachine(byoMachineName, namespace string, machine *clusterv1.Machine) (*infrastructurev1alpha4.ByoMachine, error) {
 	byoMachine := &infrastructurev1alpha4.ByoMachine{
 		TypeMeta: metav1.TypeMeta{
 			Kind:       "ByoMachine",
@@ -233,9 +273,6 @@ func createBYOMachineCRD(byoMachineName, namespace string, machine *clusterv1.Ma
 		},
 		Spec: infrastructurev1alpha4.ByoMachineSpec{},
 	}
-
-	err = k8sClient.Create(context.TODO(), byoMachine)
-	Expect(err).ToNot(HaveOccurred())
-
-	return byoMachine
+	err := k8sClient.Create(context.TODO(), byoMachine)
+	return byoMachine, err
 }
