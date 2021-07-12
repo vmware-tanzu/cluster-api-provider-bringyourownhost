@@ -80,7 +80,7 @@ func writeKubeConfig() {
 	kubeconfigFile, err = ioutil.TempFile("", tmpFilePrefix)
 	Expect(err).NotTo(HaveOccurred())
 
-	user, err1 := testEnv.ControlPlane.AddUser(envtest.User{
+	user, err := testEnv.ControlPlane.AddUser(envtest.User{
 		Name:   "envtest-admin",
 		Groups: []string{"system:masters"},
 	}, nil)
