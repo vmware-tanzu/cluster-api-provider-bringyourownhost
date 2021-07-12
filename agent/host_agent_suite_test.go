@@ -1,12 +1,12 @@
 package main
 
 import (
-	"fmt"
 	"go/build"
 	"io/ioutil"
 	"os"
 	"path/filepath"
 	"testing"
+	"time"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -15,8 +15,6 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/rest"
-	"k8s.io/client-go/tools/clientcmd"
-	kcapi "k8s.io/client-go/tools/clientcmd/api"
 	clusterv1 "sigs.k8s.io/cluster-api/api/v1alpha4"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/envtest"
@@ -31,6 +29,7 @@ var (
 	tmpFilePrefix         = "kubeconfigFile-"
 	clusterName           = "test-cluster"
 	testEnv               *envtest.Environment
+	defaultNamespace      string = "default"
 )
 
 func TestHostAgent(t *testing.T) {
@@ -63,7 +62,7 @@ var _ = BeforeSuite(func() {
 	Expect(err).NotTo(HaveOccurred())
 
 	k8sClient, err = client.New(cfg, client.Options{Scheme: scheme})
-	writeKubeConfig(cfg)
+	writeKubeConfig()
 
 	pathToHostAgentBinary, err = gexec.Build("github.com/vmware-tanzu/cluster-api-provider-byoh/agent")
 	Expect(err).ToNot(HaveOccurred())
@@ -72,30 +71,25 @@ var _ = BeforeSuite(func() {
 var _ = AfterSuite(func() {
 	gexec.CleanupBuildArtifacts()
 	os.Remove(kubeconfigFile.Name())
+	gexec.TerminateAndWait(time.Duration(10) * time.Second)
 	err := testEnv.Stop()
 	Expect(err).ToNot(HaveOccurred())
 })
 
-func writeKubeConfig(cfg *rest.Config) {
-
+func writeKubeConfig() {
 	kubeconfigFile, err = ioutil.TempFile("", tmpFilePrefix)
 	Expect(err).NotTo(HaveOccurred())
 
-	kubeConfig := kcapi.NewConfig()
-	kubeConfig.Clusters[clusterName] = &kcapi.Cluster{
-		Server: fmt.Sprintf("http://%s", cfg.Host),
-	}
-	kcCtx := kcapi.NewContext()
-	kcCtx.Cluster = clusterName
-	kubeConfig.Contexts[clusterName] = kcCtx
-	kubeConfig.CurrentContext = clusterName
+	user, err := testEnv.ControlPlane.AddUser(envtest.User{
+		Name:   "envtest-admin",
+		Groups: []string{"system:masters"},
+	}, nil)
+	Expect(err).NotTo(HaveOccurred())
 
+	kubeConfig, err := user.KubeConfig()
+	Expect(err).NotTo(HaveOccurred())
+
+	_, err = kubeconfigFile.Write(kubeConfig)
+	Expect(err).NotTo(HaveOccurred())
 	defer kubeconfigFile.Close()
-
-	contents, err := clientcmd.Write(*kubeConfig)
-	Expect(err).NotTo(HaveOccurred())
-
-	amt, err := kubeconfigFile.Write(contents)
-	Expect(err).NotTo(HaveOccurred())
-	Expect(contents).To(HaveLen(amt))
 }
