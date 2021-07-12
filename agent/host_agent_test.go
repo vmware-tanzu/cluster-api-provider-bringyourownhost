@@ -23,7 +23,7 @@ import (
 
 var _ = Describe("Agent", func() {
 
-	Context("negative case", func() {
+	Context("When the host is unable to register with the API server", func() {
 		var (
 			ns              *corev1.Namespace
 			err             error
