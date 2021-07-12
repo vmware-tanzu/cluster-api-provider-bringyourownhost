@@ -84,7 +84,7 @@ func writeKubeConfig() {
 		Name:   "envtest-admin",
 		Groups: []string{"system:masters"},
 	}, nil)
-	Expect(err1).NotTo(HaveOccurred())
+	Expect(err).NotTo(HaveOccurred())
 
 	kubeConfig, err := user.KubeConfig()
 	Expect(err).NotTo(HaveOccurred())
