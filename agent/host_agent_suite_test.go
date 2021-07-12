@@ -91,4 +91,5 @@ func writeKubeConfig() {
 
 	_, err = kubeconfigFile.Write(kubeConfig)
 	Expect(err).NotTo(HaveOccurred())
+	defer kubeconfigFile.Close()
 }
