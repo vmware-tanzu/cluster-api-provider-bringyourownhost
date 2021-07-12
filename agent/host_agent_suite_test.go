@@ -86,8 +86,8 @@ func writeKubeConfig() {
 	}, nil)
 	Expect(err1).NotTo(HaveOccurred())
 
-	kubeConfig, err2 := user.KubeConfig()
-	Expect(err2).NotTo(HaveOccurred())
+	kubeConfig, err := user.KubeConfig()
+	Expect(err).NotTo(HaveOccurred())
 
 	_, err = kubeconfigFile.Write(kubeConfig)
 	Expect(err).NotTo(HaveOccurred())
