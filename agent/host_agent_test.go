@@ -28,7 +28,7 @@ var _ = Describe("Agent", func() {
 			ns              *corev1.Namespace
 			err             error
 			hostName        string
-			fakedKubeConfig string = "on-existent-path"
+			fakedKubeConfig string = "fake-kubeconfig-path"
 			session         *gexec.Session
 		)
 
