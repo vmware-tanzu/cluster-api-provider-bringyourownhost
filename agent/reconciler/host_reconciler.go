@@ -27,6 +27,7 @@ func (r HostReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.R
 	err := r.Client.Get(ctx, req.NamespacedName, byoHost)
 	if err != nil {
 		klog.Fatal(err)
+		return ctrl.Result{}, err
 	}
 
 	if byoHost.Status.MachineRef == nil {
@@ -44,6 +45,7 @@ func (r HostReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.R
 		RunCmdExecutor:     cloudinit.CmdRunner{}}.Execute(bootstrapScript)
 	if err != nil {
 		klog.Fatal(err)
+		return ctrl.Result{}, err
 	}
 
 	helper, err := patch.NewHelper(byoHost, r.Client)
@@ -54,6 +56,7 @@ func (r HostReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.R
 	err = helper.Patch(ctx, byoHost)
 	if err != nil {
 		klog.Fatal(err)
+		return ctrl.Result{}, err
 	}
 
 	return ctrl.Result{}, nil

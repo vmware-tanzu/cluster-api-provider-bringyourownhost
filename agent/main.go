@@ -60,7 +60,7 @@ func main() {
 		Namespace: namespace,
 	})
 	if err != nil {
-		klog.Fatal(err, "unable to start manager")
+		klog.Fatal(errors.Wrap(err, "unable to start manager"))
 	}
 
 	hostReconciler := reconciler.HostReconciler{Client: k8sClient}
@@ -69,6 +69,6 @@ func main() {
 		Complete(hostReconciler)
 
 	if err := mgr.Start(ctrl.SetupSignalHandler()); err != nil {
-		klog.Fatal(err, "problem running manager")
+		klog.Fatal(errors.Wrap(err, "problem running manager"))
 	}
 }
