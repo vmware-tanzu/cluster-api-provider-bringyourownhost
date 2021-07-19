@@ -24,6 +24,9 @@ type FakeIFileWriter struct {
 	writeToFileArgsForCall []struct {
 		arg1 string
 		arg2 string
+		arg3 string
+		arg4 string
+		arg5 bool
 	}
 	writeToFileReturns struct {
 		result1 error
@@ -96,13 +99,16 @@ func (fake *FakeIFileWriter) MkdirIfNotExistsReturnsOnCall(i int, result1 error)
 	}{result1}
 }
 
-func (fake *FakeIFileWriter) WriteToFile(arg1 string, arg2 string) error {
+func (fake *FakeIFileWriter) WriteToFile(arg1 string, arg2 string, arg3 string, arg4 string, arg5 bool) error {
 	fake.writeToFileMutex.Lock()
 	ret, specificReturn := fake.writeToFileReturnsOnCall[len(fake.writeToFileArgsForCall)]
 	fake.writeToFileArgsForCall = append(fake.writeToFileArgsForCall, struct {
 		arg1 string
 		arg2 string
-	}{arg1, arg2})
+		arg3 string
+		arg4 string
+		arg5 bool
+	}{arg1, arg2, arg3, arg4, arg5})
 	stub := fake.WriteToFileStub
 	fakeReturns := fake.writeToFileReturns
 	fake.recordInvocation("WriteToFile", []interface{}{arg1, arg2})
