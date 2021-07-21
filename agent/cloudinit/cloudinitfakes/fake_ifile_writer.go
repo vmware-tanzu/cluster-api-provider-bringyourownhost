@@ -19,14 +19,10 @@ type FakeIFileWriter struct {
 	mkdirIfNotExistsReturnsOnCall map[int]struct {
 		result1 error
 	}
-	WriteToFileStub        func(string, string) error
+	WriteToFileStub        func(cloudinit.Files) error
 	writeToFileMutex       sync.RWMutex
 	writeToFileArgsForCall []struct {
-		arg1 string
-		arg2 string
-		arg3 string
-		arg4 string
-		arg5 bool
+		arg1 cloudinit.Files
 	}
 	writeToFileReturns struct {
 		result1 error
@@ -99,22 +95,18 @@ func (fake *FakeIFileWriter) MkdirIfNotExistsReturnsOnCall(i int, result1 error)
 	}{result1}
 }
 
-func (fake *FakeIFileWriter) WriteToFile(arg1 string, arg2 string, arg3 string, arg4 string, arg5 bool) error {
+func (fake *FakeIFileWriter) WriteToFile(arg1 cloudinit.Files) error {
 	fake.writeToFileMutex.Lock()
 	ret, specificReturn := fake.writeToFileReturnsOnCall[len(fake.writeToFileArgsForCall)]
 	fake.writeToFileArgsForCall = append(fake.writeToFileArgsForCall, struct {
-		arg1 string
-		arg2 string
-		arg3 string
-		arg4 string
-		arg5 bool
-	}{arg1, arg2, arg3, arg4, arg5})
+		arg1 cloudinit.Files
+	}{arg1})
 	stub := fake.WriteToFileStub
 	fakeReturns := fake.writeToFileReturns
-	fake.recordInvocation("WriteToFile", []interface{}{arg1, arg2})
+	fake.recordInvocation("WriteToFile", []interface{}{arg1})
 	fake.writeToFileMutex.Unlock()
 	if stub != nil {
-		return stub(arg1, arg2)
+		return stub(arg1)
 	}
 	if specificReturn {
 		return ret.result1
@@ -128,17 +120,17 @@ func (fake *FakeIFileWriter) WriteToFileCallCount() int {
 	return len(fake.writeToFileArgsForCall)
 }
 
-func (fake *FakeIFileWriter) WriteToFileCalls(stub func(string, string) error) {
+func (fake *FakeIFileWriter) WriteToFileCalls(stub func(cloudinit.Files) error) {
 	fake.writeToFileMutex.Lock()
 	defer fake.writeToFileMutex.Unlock()
 	fake.WriteToFileStub = stub
 }
 
-func (fake *FakeIFileWriter) WriteToFileArgsForCall(i int) (string, string) {
+func (fake *FakeIFileWriter) WriteToFileArgsForCall(i int) cloudinit.Files {
 	fake.writeToFileMutex.RLock()
 	defer fake.writeToFileMutex.RUnlock()
 	argsForCall := fake.writeToFileArgsForCall[i]
-	return argsForCall.arg1, argsForCall.arg2
+	return argsForCall.arg1
 }
 
 func (fake *FakeIFileWriter) WriteToFileReturns(result1 error) {

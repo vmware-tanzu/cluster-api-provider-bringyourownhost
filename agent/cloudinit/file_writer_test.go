@@ -44,36 +44,47 @@ var _ = Describe("FileWriter", func() {
 	})
 
 	It("Should create and write to file", func() {
-		fileName := path.Join(workDir, "file1.txt")
-		fileContent := "some-content"
+		file := Files{
+			Path:        path.Join(workDir, "file1.txt"),
+			Encoding:    "",
+			Owner:       "",
+			Permissions: "",
+			Content:     "some-content",
+			Append:      false,
+		}
 
 		err := FileWriter{}.MkdirIfNotExists(workDir)
 		Expect(err).ToNot(HaveOccurred())
 
-		err = FileWriter{}.WriteToFile(fileName, fileContent, "", "", false)
+		err = FileWriter{}.WriteToFile(file)
 		Expect(err).NotTo(HaveOccurred())
 
-		buffer, err := ioutil.ReadFile(fileName)
+		buffer, err := ioutil.ReadFile(file.Path)
 		Expect(err).NotTo(HaveOccurred())
-		Expect(string(buffer)).To(Equal(fileContent))
+		Expect(string(buffer)).To(Equal(file.Content))
 
 	})
 
 	It("Should create and write to file with correct attributes", func() {
-
-		fileName := path.Join(workDir, "file2.txt")
 		userName := "root"
 		groupName := "root"
-		fileContent := "some-content"
 		filePermission := 0777
+		file := Files{
+			Path:        path.Join(workDir, "file2.txt"),
+			Encoding:    "",
+			Owner:       userName + ":" + groupName,
+			Permissions: strconv.FormatInt(int64(filePermission), 8),
+			Content:     "some-content",
+			Append:      false,
+		}
 
 		err := FileWriter{}.MkdirIfNotExists(workDir)
 		Expect(err).ToNot(HaveOccurred())
 
-		err = FileWriter{}.WriteToFile(fileName, fileContent, strconv.FormatInt(int64(filePermission), 8), userName+":"+groupName, false)
+		err = FileWriter{}.WriteToFile(file)
 		Expect(err).NotTo(HaveOccurred())
 
-		stats, err := os.Stat(fileName)
+		stats, err := os.Stat(file.Path)
 		Expect(err).NotTo(HaveOccurred())
 		Expect(stats.Mode()).To(Equal(fs.FileMode(filePermission)))
 
@@ -90,22 +101,31 @@ var _ = Describe("FileWriter", func() {
 	})
 
 	It("Should append content to file when append mode is enabled", func() {
-		fileName := path.Join(workDir, "file3.txt")
+		//fileName := path.Join(workDir, "file3.txt")
 		fileOriginContent := "some-content-1"
-		fileAppendContent := "some-content-2"
+		//fileAppendContent := "some-content-2"
+
+		file := Files{
+			Path:        path.Join(workDir, "file3.txt"),
+			Encoding:    "",
+			Owner:       "",
+			Permissions: "",
+			Content:     "some-content-2",
+			Append:      true,
+		}
 
 		err := FileWriter{}.MkdirIfNotExists(workDir)
 		Expect(err).NotTo(HaveOccurred())
 
-		err = ioutil.WriteFile(fileName, []byte(fileOriginContent), 0644)
+		err = ioutil.WriteFile(file.Path, []byte(fileOriginContent), 0644)
 		Expect(err).NotTo(HaveOccurred())
 
-		err = FileWriter{}.WriteToFile(fileName, fileAppendContent, "", "", true)
+		err = FileWriter{}.WriteToFile(file)
 		Expect(err).NotTo(HaveOccurred())
 
-		buffer, err := ioutil.ReadFile(fileName)
+		buffer, err := ioutil.ReadFile(file.Path)
 		Expect(err).NotTo(HaveOccurred())
-		Expect(string(buffer)).To(Equal(fileOriginContent + fileAppendContent))
+		Expect(string(buffer)).To(Equal(fileOriginContent + file.Content))
 
 	})
 })
