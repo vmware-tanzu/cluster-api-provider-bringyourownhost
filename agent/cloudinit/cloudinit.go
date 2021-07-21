@@ -45,8 +45,8 @@ func (se ScriptExecutor) Execute(bootstrapScript string) error {
 			return errors.Wrap(err, fmt.Sprintf("Error creating the directory %s", directoryToCreate))
 		}
 
-		encodings := fixEncoding(file.Encoding)
-		file.Content, err = fixContent(file.Content, encodings)
+		encodings := parseEncodingScheme(file.Encoding)
+		file.Content, err = decodeContent(file.Content, encodings)
 		if err != nil {
 			return errors.Wrap(err, fmt.Sprintf("error decoding content for %s", file.Path))
 		}
@@ -65,7 +65,7 @@ func (se ScriptExecutor) Execute(bootstrapScript string) error {
 	return nil
 }
 
-func fixEncoding(e string) []string {
+func parseEncodingScheme(e string) []string {
 	e = strings.ToLower(e)
 	e = strings.TrimSpace(e)
 
@@ -79,7 +79,7 @@ func fixEncoding(e string) []string {
 	return []string{"text/plain"}
 }
 
-func fixContent(content string, encodings []string) (string, error) {
+func decodeContent(content string, encodings []string) (string, error) {
 	for _, e := range encodings {
 		switch e {
 		case "application/base64":
