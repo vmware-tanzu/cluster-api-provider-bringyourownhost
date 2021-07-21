@@ -7,6 +7,7 @@ import (
 	"io/ioutil"
 	"os"
 	"path"
+	"strings"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -19,16 +20,6 @@ var _ = Describe("Cloudinit", func() {
 		workDir string
 		err     error
 	)
-
-	BeforeEach(func() {
-		workDir, err = ioutil.TempDir("", "cloudinit_ut")
-		Expect(err).ToNot(HaveOccurred())
-	})
-
-	AfterEach(func() {
-		err := os.RemoveAll(workDir)
-		Expect(err).ToNot(HaveOccurred())
-	})
 
 	Context("Testing write_files and runCmd directives of cloudinit", func() {
 		var (
@@ -51,6 +42,9 @@ var _ = Describe("Cloudinit", func() {
   content: some-content
 runCmd:
 - echo 'some run command'`, workDir)
+
+			workDir, err = ioutil.TempDir("", "cloudinit_ut")
+			Expect(err).ToNot(HaveOccurred())
 		})
 
 		AfterEach(func() {
@@ -99,6 +93,9 @@ runCmd:
 			secondFile := fakeFileWriter.WriteToFileArgsForCall(1)
 			Expect(secondFile.Path).To(Equal(fileName2))
 			Expect(secondFile.Content).To(Equal(fileContent2))
+			Expect(secondFile.Permissions).To(Equal(permissions))
+			Expect(secondFile.Owner).To(Equal(strings.Join([]string{user, group}, ":")))
+			Expect(secondFile.Append).To(BeTrue())
 
 		})
 
