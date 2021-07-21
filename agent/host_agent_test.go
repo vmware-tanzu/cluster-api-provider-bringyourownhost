@@ -122,9 +122,31 @@ var _ = Describe("Agent", func() {
 			machineName := "test-machine-1"
 			byoMachineName := "test-byomachine-1"
 
-			fileName := path.Join(workDir, "file.txt")
-			fileOriginContent := "some-content-1"
-			fileNewContent := " run cmd"
+			fileName1 := path.Join(workDir, "file-1.txt")
+			fileOriginContent1 := "some-content-1"
+			fileNewContent1 := " run cmd"
+
+			fileName2 := path.Join(workDir, "file-2.txt")
+			fileOriginContent2 := "some-content-2"
+			fileAppendContent2 := "some-content-append-2"
+			filePermission2 := 0777
+			userName2 := "root"
+			groupName2 := "root"
+			isAppend2 := true
+
+			fileName3 := path.Join(workDir, "file-3.txt")
+			fileContent3 := "some-content-3"
+			fileBase64Content3 := base64.StdEncoding.EncodeToString([]byte(fileContent3))
+
+			fileName4 := path.Join(workDir, "file-4.txt")
+			fileContent4 := "some-content-4"
+			fileGzipContent4, err := gZipData([]byte(fileContent4))
+			Expect(err).ToNot(HaveOccurred())
+			fileGzipBase64Content4 := base64.StdEncoding.EncodeToString(fileGzipContent4)
+
+			//Init second file
+			err = ioutil.WriteFile(fileName2, []byte(fileOriginContent2), 0644)
+			Expect(err).NotTo(HaveOccurred())
 
 			byoHost := &infrastructurev1alpha4.ByoHost{}
 			byoHostLookupKey := types.NamespacedName{Name: hostName, Namespace: ns.Name}
@@ -136,8 +158,19 @@ var _ = Describe("Agent", func() {
 			bootstrapSecretUnencoded := fmt.Sprintf(`write_files:
 - path: %s
   content: %s
+- path: %s
+  owner: %s:%s
+  permissions: '%s'
+  content: %s
+  append: %v
+- path: %s
+  content: %s
+  encoding: base64
+- path: %s
+  encoding: gzip+base64
+  content: %s
 runCmd:
-- echo -n '%s' >> %s`, fileName, fileOriginContent, fileNewContent, fileName)
+- echo -n '%s' >> %s`, fileName1, fileOriginContent1, fileName2, userName2, groupName2, strconv.FormatInt(int64(filePermission2), 8), fileAppendContent2, isAppend2, fileName3, fileBase64Content3, fileName4, fileGzipBase64Content4, fileNewContent1, fileName1)
 
 			secret, err := createSecret(bootstrapSecretName, bootstrapSecretUnencoded, ns.Name)
 			Expect(err).ToNot(HaveOccurred())
@@ -175,95 +208,42 @@ runCmd:
 				return corev1.ConditionFalse
 			}).Should(Equal(corev1.ConditionTrue))
 
+			//check first file's content
 			Eventually(func() string {
-				buffer, err := ioutil.ReadFile(fileName)
+				buffer, err := ioutil.ReadFile(fileName1)
 				if err != nil {
 					return ""
 				}
 				return string(buffer)
-			}).Should(Equal(fileOriginContent + fileNewContent))
+			}).Should(Equal(fileOriginContent1 + fileNewContent1))
 
-		})
-
-		It("check if file created by bootstrap script in correct attributes", func() {
-			bootstrapSecretName := "bootstrap-secret-2"
-			machineName := "test-machine-2"
-			byoMachineName := "test-byomachine-2"
-			fileName := path.Join(workDir, "file-2.txt")
-			fileOriginContent := "some-content-2"
-			fileAppendContent := "some-content-append"
-			filePermission := 0777
-			userName := "root"
-			groupName := "root"
-			isAppend := true
-
-			//Init file
-			err = ioutil.WriteFile(fileName, []byte(fileOriginContent), 0644)
-			Expect(err).NotTo(HaveOccurred())
-
-			bootstrapSecretUnencoded := fmt.Sprintf(`write_files:
-- path: %s
-  owner: %s:%s
-  permissions: '%s'
-  content: %s
-  append: %v`, fileName, userName, groupName, strconv.FormatInt(int64(filePermission), 8), fileAppendContent, isAppend)
-
-			byoHost := &infrastructurev1alpha4.ByoHost{}
-			byoHostLookupKey := types.NamespacedName{Name: hostName, Namespace: ns.Name}
-			Eventually(func() bool {
-				err = k8sClient.Get(context.TODO(), byoHostLookupKey, byoHost)
-				return err == nil
-			}).ShouldNot(BeFalse())
-
-			secret, err := createSecret(bootstrapSecretName, bootstrapSecretUnencoded, ns.Name)
-			Expect(err).ToNot(HaveOccurred())
-
-			machine, err := createMachine(&secret.Name, machineName, ns.Name)
-			Expect(err).ToNot(HaveOccurred())
-
-			byoMachine, err := createByoMachine(byoMachineName, ns.Name, machine)
-			Expect(err).ToNot(HaveOccurred())
-
-			helper, err := patch.NewHelper(byoHost, k8sClient)
-			Expect(err).ToNot(HaveOccurred())
-
-			byoHost.Status.MachineRef = &corev1.ObjectReference{
-				Kind:       "ByoMachine",
-				Namespace:  ns.Name,
-				Name:       byoMachine.Name,
-				UID:        byoMachine.UID,
-				APIVersion: byoHost.APIVersion,
-			}
-			err = helper.Patch(context.TODO(), byoHost)
-			Expect(err).ToNot(HaveOccurred())
-
-			//check file content
+			//check second file's content
 			Eventually(func() string {
-				buffer, err := ioutil.ReadFile(fileName)
+				buffer, err := ioutil.ReadFile(fileName2)
 				if err != nil {
 					return ""
 				}
 				return string(buffer)
-			}).Should(Equal(fileOriginContent + fileAppendContent))
+			}).Should(Equal(fileOriginContent2 + fileAppendContent2))
 
-			//check file permission
+			//check second file permission
 			Eventually(func() bool {
-				stats, err := os.Stat(fileName)
-				if err == nil && stats.Mode() == fs.FileMode(filePermission) {
+				stats, err := os.Stat(fileName2)
+				if err == nil && stats.Mode() == fs.FileMode(filePermission2) {
 					return true
 				}
 				return false
 			}).Should(BeTrue())
 
-			//check file owner
+			//check second file's owner
 			Eventually(func() bool {
-				stats, err := os.Stat(fileName)
+				stats, err := os.Stat(fileName2)
 				if err != nil {
 					return false
 				}
 				stat := stats.Sys().(*syscall.Stat_t)
 
-				userInfo, err := user.Lookup(userName)
+				userInfo, err := user.Lookup(userName2)
 				if err != nil {
 					return false
 				}
@@ -285,77 +265,23 @@ runCmd:
 
 			}).Should(BeTrue())
 
-		})
-
-		It("check if file created by bootstrap script in correct encoding way", func() {
-			bootstrapSecretName := "bootstrap-secret-3"
-			machineName := "test-machine-3"
-			byoMachineName := "test-byomachine-3"
-
-			fileName1 := path.Join(workDir, "file-3-1.txt")
-			fileContent1 := "some-content-3-1"
-			fileBase64Content1 := base64.StdEncoding.EncodeToString([]byte(fileContent1))
-
-			fileName2 := path.Join(workDir, "file-3-2.txt")
-			fileContent2 := "some-content-3-2"
-			fileGzipContent2, err := gZipData([]byte(fileContent2))
-			Expect(err).ToNot(HaveOccurred())
-			fileGzipBase64Content2 := base64.StdEncoding.EncodeToString(fileGzipContent2)
-
-			bootstrapSecretUnencoded := fmt.Sprintf(`write_files:
-- path: %s
-  content: %s
-  encoding: base64
-- path: %s
-  encoding: gzip+base64
-  content: %s`, fileName1, fileBase64Content1, fileName2, fileGzipBase64Content2)
-
-			byoHost := &infrastructurev1alpha4.ByoHost{}
-			byoHostLookupKey := types.NamespacedName{Name: hostName, Namespace: ns.Name}
-			Eventually(func() bool {
-				err = k8sClient.Get(context.TODO(), byoHostLookupKey, byoHost)
-				return err == nil
-			}).ShouldNot(BeFalse())
-
-			secret, err := createSecret(bootstrapSecretName, bootstrapSecretUnencoded, ns.Name)
-			Expect(err).ToNot(HaveOccurred())
-
-			machine, err := createMachine(&secret.Name, machineName, ns.Name)
-			Expect(err).ToNot(HaveOccurred())
-
-			byoMachine, err := createByoMachine(byoMachineName, ns.Name, machine)
-			Expect(err).ToNot(HaveOccurred())
-
-			helper, err := patch.NewHelper(byoHost, k8sClient)
-			Expect(err).ToNot(HaveOccurred())
-
-			byoHost.Status.MachineRef = &corev1.ObjectReference{
-				Kind:       "ByoMachine",
-				Namespace:  ns.Name,
-				Name:       byoMachine.Name,
-				UID:        byoMachine.UID,
-				APIVersion: byoHost.APIVersion,
-			}
-			err = helper.Patch(context.TODO(), byoHost)
-			Expect(err).ToNot(HaveOccurred())
-
-			//bas64
+			//check if third files's content decoded in base64 way successfully
 			Eventually(func() string {
-				buffer, err := ioutil.ReadFile(fileName1)
+				buffer, err := ioutil.ReadFile(fileName3)
 				if err != nil {
 					return ""
 				}
 				return string(buffer)
-			}).Should(Equal(fileContent1))
+			}).Should(Equal(fileContent3))
 
-			//gzip+base64
+			//check if fourth files's content decoded in gzip+base64 way successfully
 			Eventually(func() string {
-				buffer, err := ioutil.ReadFile(fileName2)
+				buffer, err := ioutil.ReadFile(fileName4)
 				if err != nil {
 					return ""
 				}
 				return string(buffer)
-			}).Should(Equal(fileContent2))
+			}).Should(Equal(fileContent4))
 
 		})
 	})

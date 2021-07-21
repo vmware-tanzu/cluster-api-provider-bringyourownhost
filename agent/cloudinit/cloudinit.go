@@ -19,11 +19,11 @@ type ScriptExecutor struct {
 }
 
 type bootstrapConfig struct {
-	FilesToWrite      []files  `json:"write_files"`
+	FilesToWrite      []Files  `json:"write_files"`
 	CommandsToExecute []string `json:"runCmd"`
 }
 
-type files struct {
+type Files struct {
 	Path        string `json:"path,"`
 	Encoding    string `json:"encoding,omitempty"`
 	Owner       string `json:"owner,omitempty"`
@@ -46,12 +46,11 @@ func (se ScriptExecutor) Execute(bootstrapScript string) error {
 		}
 
 		encodings := fixEncoding(file.Encoding)
-		content, err := fixContent(file.Content, encodings)
+		file.Content, err = fixContent(file.Content, encodings)
 		if err != nil {
 			return errors.Wrap(err, fmt.Sprintf("error decoding content for %s", file.Path))
 		}
-
-		err = se.WriteFilesExecutor.WriteToFile(file.Path, content, file.Permissions, file.Owner, file.Append)
+		err = se.WriteFilesExecutor.WriteToFile(file)
 		if err != nil {
 			return errors.Wrap(err, fmt.Sprintf("Error writing the file %s", file.Path))
 		}
@@ -70,9 +69,10 @@ func fixEncoding(e string) []string {
 	e = strings.ToLower(e)
 	e = strings.TrimSpace(e)
 
-	if e == "gz+base64" || e == "gzip+base64" || e == "gz+b64" || e == "gzip+b64" {
+	switch e {
+	case "gz+base64", "gzip+base64", "gz+b64", "gzip+b64":
 		return []string{"application/base64", "application/x-gzip"}
-	} else if e == "base64" || e == "b64" {
+	case "base64", "b64":
 		return []string{"application/base64"}
 	}
 

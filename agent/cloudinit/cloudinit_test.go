@@ -66,12 +66,21 @@ runCmd:
 			fileDir2 := path.Join(workDir, "dir2")
 			fileName2 := path.Join(fileDir2, "file2.txt")
 			fileContent2 := "some-content-2"
+			fileBase64Content := base64.StdEncoding.EncodeToString([]byte(fileContent2))
+			user := "root"
+			group := "root"
+			permissions := "0777"
+			encoding := "base64"
 
 			bootstrapSecretUnencoded := fmt.Sprintf(`write_files:
 - path: %s
   content: %s
 - path: %s
-  content: %s`, fileName1, fileContent1, fileName2, fileContent2)
+  content: %s
+  owner: %s:%s
+  permissions: '%s'
+  append: true
+  encoding: %s`, fileName1, fileContent1, fileName2, fileBase64Content, user, group, permissions, encoding)
 
 			err = scriptExecutor.Execute(bootstrapSecretUnencoded)
 			Expect(err).ToNot(HaveOccurred())
@@ -81,38 +90,16 @@ runCmd:
 
 			dirNameForFirstFile := fakeFileWriter.MkdirIfNotExistsArgsForCall(0)
 			Expect(dirNameForFirstFile).To(Equal(fileDir1))
-			firstFileName, firstFileContents := fakeFileWriter.WriteToFileArgsForCall(0)
-			Expect(firstFileName).To(Equal(fileName1))
-			Expect(firstFileContents).To(Equal(fileContent1))
+			firstFile := fakeFileWriter.WriteToFileArgsForCall(0)
+			Expect(firstFile.Path).To(Equal(fileName1))
+			Expect(firstFile.Content).To(Equal(fileContent1))
 
 			dirNameForSecondFile := fakeFileWriter.MkdirIfNotExistsArgsForCall(1)
 			Expect(dirNameForSecondFile).To(Equal(fileDir2))
-			secondFileName, secondFileContents := fakeFileWriter.WriteToFileArgsForCall(1)
-			Expect(secondFileName).To(Equal(fileName2))
-			Expect(secondFileContents).To(Equal(fileContent2))
-		})
+			secondFile := fakeFileWriter.WriteToFileArgsForCall(1)
+			Expect(secondFile.Path).To(Equal(fileName2))
+			Expect(secondFile.Content).To(Equal(fileContent2))
 
-		It("could recognize owner, permissions, and append attributes", func() {
-
-			fileDir := path.Join(workDir, "dir")
-			fileName := path.Join(fileDir, "file.txt")
-			fileContent := "some-content-append"
-			fileBase64Content := base64.StdEncoding.EncodeToString([]byte(fileContent))
-			user := "root"
-			group := "root"
-			permissions := "0777"
-			encoding := "base64"
-
-			bootstrapSecretUnencoded := fmt.Sprintf(`write_files:
-- path: %s
-  content: %s
-  owner: %s:%s
-  permissions: '%s'
-  append: true
-  encoding: %s`, fileName, fileBase64Content, user, group, permissions, encoding)
-
-			err = scriptExecutor.Execute(bootstrapSecretUnencoded)
-			Expect(err).ToNot(HaveOccurred())
 		})
 
 		It("should error out when an invalid yaml is passed", func() {

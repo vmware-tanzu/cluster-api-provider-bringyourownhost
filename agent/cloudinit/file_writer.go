@@ -18,7 +18,7 @@ import (
 //counterfeiter:generate . IFileWriter
 type IFileWriter interface {
 	MkdirIfNotExists(string) error
-	WriteToFile(string, string, string, string, bool) error
+	WriteToFile(Files) error
 }
 
 type FileWriter struct {
@@ -38,24 +38,24 @@ func (w FileWriter) MkdirIfNotExists(dirName string) error {
 
 }
 
-func (w FileWriter) WriteToFile(fileName string, fileContent string, filePermission string, fileOwner string, append bool) error {
+func (w FileWriter) WriteToFile(file Files) error {
 	initPermission := fs.FileMode(0644)
-	if stats, err := os.Stat(fileName); os.IsExist(err) {
+	if stats, err := os.Stat(file.Path); os.IsExist(err) {
 		initPermission = stats.Mode()
 	}
 
 	flag := os.O_WRONLY | os.O_CREATE
-	if append {
+	if file.Append {
 		flag |= os.O_APPEND
 	}
 
-	f, err := os.OpenFile(fileName, flag, initPermission)
+	f, err := os.OpenFile(file.Path, flag, initPermission)
 	if err != nil {
 		return err
 	}
 
 	defer f.Close()
-	_, err = f.WriteString(fileContent)
+	_, err = f.WriteString(file.Content)
 	if err != nil {
 		return err
 	}
@@ -64,10 +64,10 @@ func (w FileWriter) WriteToFile(fileName string, fileContent string, filePermiss
 	if err != nil {
 		return err
 	}
-	if len(filePermission) > 0 {
+	if len(file.Permissions) > 0 {
 		isRootOrFileOwner := false
 		if u.Username != "root" {
-			stats, err := os.Stat(fileName)
+			stats, err := os.Stat(file.Path)
 			if err != nil {
 				return err
 			}
@@ -82,9 +82,9 @@ func (w FileWriter) WriteToFile(fileName string, fileContent string, filePermiss
 		//Fetch permission information
 		if isRootOrFileOwner {
 			//Make sure agent run as root or file owner
-			fileMode, err := strconv.ParseUint(filePermission, 8, 32)
+			fileMode, err := strconv.ParseUint(file.Permissions, 8, 32)
 			if err != nil {
-				return errors.Wrap(err, fmt.Sprintf("Error parse the file permission %s", filePermission))
+				return errors.Wrap(err, fmt.Sprintf("Error parse the file permission %s", file.Permissions))
 			}
 
 			err = f.Chmod(fs.FileMode(fileMode))
@@ -93,7 +93,7 @@ func (w FileWriter) WriteToFile(fileName string, fileContent string, filePermiss
 			}
 		} else {
 			//Make sure current user is sudoer, and there is "sudo" and "chmod" command in system
-			cmd := fmt.Sprintf("sudo chmod %s %s", filePermission, fileName)
+			cmd := fmt.Sprintf("sudo chmod %s %s", file.Permissions, file.Path)
 			command := exec.Command("/bin/sh", "-c", cmd)
 			_, err := command.Output()
 			if err != nil {
@@ -102,14 +102,14 @@ func (w FileWriter) WriteToFile(fileName string, fileContent string, filePermiss
 		}
 	}
 
-	if len(fileOwner) > 0 {
+	if len(file.Owner) > 0 {
 
 		//Fetch owner information
 		if u.Username == "root" {
 			//only root can do this
-			owner := strings.Split(fileOwner, ":")
+			owner := strings.Split(file.Owner, ":")
 			if len(owner) != 2 {
-				return errors.Wrap(err, fmt.Sprintf("Invalid owner format '%s'", fileOwner))
+				return errors.Wrap(err, fmt.Sprintf("Invalid owner format '%s'", file.Owner))
 			}
 
 			userInfo, err := user.Lookup(owner[0])
@@ -133,7 +133,7 @@ func (w FileWriter) WriteToFile(fileName string, fileContent string, filePermiss
 			}
 		} else {
 			//Make sure current user is sudoer, and there is "sudo" and "chown" command in system
-			cmd := fmt.Sprintf("sudo chown %s %s", fileOwner, fileName)
+			cmd := fmt.Sprintf("sudo chown %s %s", file.Owner, file.Path)
 			command := exec.Command("/bin/sh", "-c", cmd)
 			_, err := command.Output()
 			if err != nil {
