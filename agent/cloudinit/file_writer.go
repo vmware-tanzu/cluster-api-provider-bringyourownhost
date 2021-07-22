@@ -4,11 +4,9 @@ import (
 	"fmt"
 	"io/fs"
 	"os"
-	"os/exec"
 	"os/user"
 	"strconv"
 	"strings"
-	"syscall"
 
 	"github.com/pkg/errors"
 )
@@ -60,85 +58,43 @@ func (w FileWriter) WriteToFile(file Files) error {
 		return err
 	}
 
-	u, err := user.Current()
-	if err != nil {
-		return err
-	}
+
 	if len(file.Permissions) > 0 {
-		isRootOrFileOwner := false
-		if u.Username != "root" {
-			stats, err := os.Stat(file.Path)
-			if err != nil {
-				return err
-			}
-			stat := stats.Sys().(*syscall.Stat_t)
-			if u.Uid == strconv.FormatUint(uint64(stat.Uid), 10) && u.Gid == strconv.FormatUint(uint64(stat.Gid), 10) {
-				isRootOrFileOwner = true
-			}
-		} else {
-			isRootOrFileOwner = true
+		fileMode, err := strconv.ParseUint(file.Permissions, 8, 32)
+		if err != nil {
+			return errors.Wrap(err, fmt.Sprintf("Error parse the file permission %s", file.Permissions))
 		}
 
-		//Fetch permission information
-		if isRootOrFileOwner {
-			//Make sure agent run as root or file owner
-			fileMode, err := strconv.ParseUint(file.Permissions, 8, 32)
-			if err != nil {
-				return errors.Wrap(err, fmt.Sprintf("Error parse the file permission %s", file.Permissions))
-			}
-
-			err = f.Chmod(fs.FileMode(fileMode))
-			if err != nil {
-				return err
-			}
-		} else {
-			//Make sure current user is sudoer, and there is "sudo" and "chmod" command in system
-			cmd := fmt.Sprintf("sudo chmod %s %s", file.Permissions, file.Path)
-			command := exec.Command("/bin/sh", "-c", cmd)
-			_, err := command.Output()
-			if err != nil {
-				return err
-			}
+		err = f.Chmod(fs.FileMode(fileMode))
+		if err != nil {
+			return err
 		}
 	}
 
 	if len(file.Owner) > 0 {
+		owner := strings.Split(file.Owner, ":")
+		if len(owner) != 2 {
+			return errors.Wrap(err, fmt.Sprintf("Invalid owner format '%s'", file.Owner))
+		}
 
-		//Fetch owner information
-		if u.Username == "root" {
-			//only root can do this
-			owner := strings.Split(file.Owner, ":")
-			if len(owner) != 2 {
-				return errors.Wrap(err, fmt.Sprintf("Invalid owner format '%s'", file.Owner))
-			}
+		userInfo, err := user.Lookup(owner[0])
+		if err != nil {
+			return errors.Wrap(err, fmt.Sprintf("Error Lookup user %s", owner[0]))
+		}
 
-			userInfo, err := user.Lookup(owner[0])
-			if err != nil {
-				return errors.Wrap(err, fmt.Sprintf("Error Lookup user %s", owner[0]))
-			}
+		uid, err := strconv.ParseUint(userInfo.Uid, 10, 32)
+		if err != nil {
+			return errors.Wrap(err, fmt.Sprintf("Error convert uid %s", userInfo.Uid))
+		}
 
-			uid, err := strconv.ParseUint(userInfo.Uid, 10, 32)
-			if err != nil {
-				return errors.Wrap(err, fmt.Sprintf("Error convert uid %s", userInfo.Uid))
-			}
+		gid, err := strconv.ParseUint(userInfo.Gid, 10, 32)
+		if err != nil {
+			return errors.Wrap(err, fmt.Sprintf("Error convert gid %s", userInfo.Gid))
+		}
 
-			gid, err := strconv.ParseUint(userInfo.Gid, 10, 32)
-			if err != nil {
-				return errors.Wrap(err, fmt.Sprintf("Error convert gid %s", userInfo.Gid))
-			}
-
-			err = f.Chown(int(uid), int(gid))
-			if err != nil {
-				return err
-			}
-		} else {
-			//Make sure current user is sudoer, and there is "sudo" and "chown" command in system
-			cmd := fmt.Sprintf("sudo chown %s %s", file.Owner, file.Path)
-			command := exec.Command("/bin/sh", "-c", cmd)
-			_, err := command.Output()
-			if err != nil {
-				return err
-			}
+		err = f.Chown(int(uid), int(gid))
+		if err != nil {
+			return err
 		}
 	}
 

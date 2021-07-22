@@ -4,10 +4,8 @@ import (
 	"io/fs"
 	"io/ioutil"
 	"os"
-	"os/user"
 	"path"
 	"strconv"
-	"syscall"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -44,11 +42,12 @@ var _ = Describe("FileWriter", func() {
 	})
 
 	It("Should create and write to file", func() {
+		filePermission := 0777
 		file := Files{
 			Path:        path.Join(workDir, "file1.txt"),
 			Encoding:    "",
 			Owner:       "",
-			Permissions: "",
+			Permissions: strconv.FormatInt(int64(filePermission), 8),
 			Content:     "some-content",
 			Append:      false,
 		}
@@ -63,48 +62,14 @@ var _ = Describe("FileWriter", func() {
 		Expect(err).NotTo(HaveOccurred())
 		Expect(string(buffer)).To(Equal(file.Content))
 
-	})
-
-	It("Should create and write to file with correct attributes", func() {
-		userName := "root"
-		groupName := "root"
-		filePermission := 0777
-		file := Files{
-			Path:        path.Join(workDir, "file2.txt"),
-			Encoding:    "",
-			Owner:       userName + ":" + groupName,
-			Permissions: strconv.FormatInt(int64(filePermission), 8),
-			Content:     "some-content",
-			Append:      false,
-		}
-
-		err := FileWriter{}.MkdirIfNotExists(workDir)
-		Expect(err).ToNot(HaveOccurred())
-
-		err = FileWriter{}.WriteToFile(file)
-		Expect(err).NotTo(HaveOccurred())
-
 		stats, err := os.Stat(file.Path)
 		Expect(err).NotTo(HaveOccurred())
 		Expect(stats.Mode()).To(Equal(fs.FileMode(filePermission)))
 
-		userInfo, err := user.Lookup(userName)
-		Expect(err).NotTo(HaveOccurred())
-		uid, err := strconv.ParseUint(userInfo.Uid, 10, 32)
-		Expect(err).NotTo(HaveOccurred())
-		gid, err := strconv.ParseUint(userInfo.Gid, 10, 32)
-		Expect(err).NotTo(HaveOccurred())
-
-		stat := stats.Sys().(*syscall.Stat_t)
-		Expect(stat.Uid).To(Equal(uint32(uid)))
-		Expect(stat.Gid).To(Equal(uint32(gid)))
 	})
 
 	It("Should append content to file when append mode is enabled", func() {
-		//fileName := path.Join(workDir, "file3.txt")
 		fileOriginContent := "some-content-1"
-		//fileAppendContent := "some-content-2"
-
 		file := Files{
 			Path:        path.Join(workDir, "file3.txt"),
 			Encoding:    "",
