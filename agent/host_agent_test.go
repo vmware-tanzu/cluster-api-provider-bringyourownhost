@@ -60,14 +60,14 @@ var _ = Describe("Agent", func() {
 			command := exec.Command(pathToHostAgentBinary, "--kubeconfig", kubeconfigFile.Name(), "--namespace", ns.Name)
 			session, err = gexec.Start(command, GinkgoWriter, GinkgoWriter)
 			Expect(err).ToNot(HaveOccurred())
-			Eventually(session).Should(gexec.Exit(255))
+			Eventually(session).Should(gexec.Exit(0))
 		})
 
 		It("should return an error when invalid kubeconfig is passed in", func() {
 			command := exec.Command(pathToHostAgentBinary, "--kubeconfig", fakedKubeConfig)
 			session, err = gexec.Start(command, GinkgoWriter, GinkgoWriter)
 			Expect(err).ToNot(HaveOccurred())
-			Eventually(session).Should(gexec.Exit(255))
+			Eventually(session).Should(gexec.Exit(0))
 		})
 	})
 

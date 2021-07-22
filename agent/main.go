@@ -4,7 +4,6 @@ import (
 	"flag"
 	"os"
 
-	"github.com/pkg/errors"
 	"github.com/vmware-tanzu/cluster-api-provider-byoh/agent/reconciler"
 	"github.com/vmware-tanzu/cluster-api-provider-byoh/agent/registration"
 	infrastructurev1alpha4 "github.com/vmware-tanzu/cluster-api-provider-byoh/api/v1alpha4"
@@ -37,22 +36,26 @@ func main() {
 
 	config, err := ctrl.GetConfig()
 	if err != nil {
-		klog.Fatal(err)
+		klog.Errorf("ctrl.GetConfig return failed, err=%v", err)
+		return
 	}
 
 	k8sClient, err := client.New(config, client.Options{Scheme: scheme})
 	if err != nil {
-		klog.Fatal(err)
+		klog.Errorf("client.New return failed, err=%v", err)
+		return
 	}
 
 	hostName, err := os.Hostname()
 	if err != nil {
-		klog.Fatal(errors.Wrap(err, "couldn't determine hostname"))
+		klog.Errorf("couldn't determine hostname, err=%v", err)
+		return
 	}
 
 	err = registration.HostRegistrar{K8sClient: k8sClient}.Register(hostName, namespace)
 	if err != nil {
-		klog.Fatal(err)
+		klog.Errorf("Register(%s, %s) return failed, err=%v", hostName, namespace, err)
+		return
 	}
 
 	mgr, err := ctrl.NewManager(config, ctrl.Options{
@@ -60,7 +63,8 @@ func main() {
 		Namespace: namespace,
 	})
 	if err != nil {
-		klog.Fatal(errors.Wrap(err, "unable to start manager"))
+		klog.Errorf("unable to start manager, err=%v", err)
+		return
 	}
 
 	hostReconciler := reconciler.HostReconciler{Client: k8sClient}
@@ -69,6 +73,7 @@ func main() {
 		Complete(hostReconciler)
 
 	if err := mgr.Start(ctrl.SetupSignalHandler()); err != nil {
-		klog.Fatal(errors.Wrap(err, "problem running manager"))
+		klog.Errorf("problem running manager, err=%v", err)
+		return
 	}
 }
