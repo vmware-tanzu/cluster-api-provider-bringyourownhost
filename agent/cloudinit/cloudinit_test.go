@@ -7,7 +7,6 @@ import (
 	"io/ioutil"
 	"os"
 	"path"
-	"strings"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -61,8 +60,6 @@ runCmd:
 			fileName2 := path.Join(fileDir2, "file2.txt")
 			fileContent2 := "some-content-2"
 			fileBase64Content := base64.StdEncoding.EncodeToString([]byte(fileContent2))
-			user := "root"
-			group := "root"
 			permissions := "0777"
 			encoding := "base64"
 
@@ -71,10 +68,9 @@ runCmd:
   content: %s
 - path: %s
   content: %s
-  owner: %s:%s
   permissions: '%s'
   append: true
-  encoding: %s`, fileName1, fileContent1, fileName2, fileBase64Content, user, group, permissions, encoding)
+  encoding: %s`, fileName1, fileContent1, fileName2, fileBase64Content, permissions, encoding)
 
 			err = scriptExecutor.Execute(bootstrapSecretUnencoded)
 			Expect(err).ToNot(HaveOccurred())
@@ -94,7 +90,6 @@ runCmd:
 			Expect(secondFile.Path).To(Equal(fileName2))
 			Expect(secondFile.Content).To(Equal(fileContent2))
 			Expect(secondFile.Permissions).To(Equal(permissions))
-			Expect(secondFile.Owner).To(Equal(strings.Join([]string{user, group}, ":")))
 			Expect(secondFile.Append).To(BeTrue())
 
 		})

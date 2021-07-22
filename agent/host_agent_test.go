@@ -10,10 +10,8 @@ import (
 	"io/ioutil"
 	"os"
 	"os/exec"
-	"os/user"
 	"path"
 	"strconv"
-	"syscall"
 	"time"
 
 	. "github.com/onsi/ginkgo"
@@ -130,8 +128,6 @@ var _ = Describe("Agent", func() {
 			fileOriginContent2 := "some-content-2"
 			fileAppendContent2 := "some-content-append-2"
 			filePermission2 := 0777
-			userName2 := "root"
-			groupName2 := "root"
 			isAppend2 := true
 
 			fileName3 := path.Join(workDir, "file-3.txt")
@@ -159,7 +155,6 @@ var _ = Describe("Agent", func() {
 - path: %s
   content: %s
 - path: %s
-  owner: %s:%s
   permissions: '%s'
   content: %s
   append: %v
@@ -170,7 +165,7 @@ var _ = Describe("Agent", func() {
   encoding: gzip+base64
   content: %s
 runCmd:
-- echo -n '%s' >> %s`, fileName1, fileOriginContent1, fileName2, userName2, groupName2, strconv.FormatInt(int64(filePermission2), 8), fileAppendContent2, isAppend2, fileName3, fileBase64Content3, fileName4, fileGzipBase64Content4, fileNewContent1, fileName1)
+- echo -n '%s' >> %s`, fileName1, fileOriginContent1, fileName2, strconv.FormatInt(int64(filePermission2), 8), fileAppendContent2, isAppend2, fileName3, fileBase64Content3, fileName4, fileGzipBase64Content4, fileNewContent1, fileName1)
 
 			secret, err := createSecret(bootstrapSecretName, bootstrapSecretUnencoded, ns.Name)
 			Expect(err).ToNot(HaveOccurred())
@@ -233,36 +228,6 @@ runCmd:
 					return true
 				}
 				return false
-			}).Should(BeTrue())
-
-			//check second file's owner
-			Eventually(func() bool {
-				stats, err := os.Stat(fileName2)
-				if err != nil {
-					return false
-				}
-				stat := stats.Sys().(*syscall.Stat_t)
-
-				userInfo, err := user.Lookup(userName2)
-				if err != nil {
-					return false
-				}
-
-				uid, err := strconv.ParseUint(userInfo.Uid, 10, 32)
-				if err != nil {
-					return false
-				}
-
-				gid, err := strconv.ParseUint(userInfo.Gid, 10, 32)
-				if err != nil {
-					return false
-				}
-
-				if stat.Uid == uint32(uid) && stat.Gid == uint32(gid) {
-					return true
-				}
-				return false
-
 			}).Should(BeTrue())
 
 			//check if third files's content decoded in base64 way successfully
