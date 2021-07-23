@@ -51,7 +51,7 @@ func (r HostReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.R
 
 	helper, err := patch.NewHelper(byoHost, r.Client)
 	if err != nil {
-		klog.Errorf("patch.NewHelper return failed, err=%v", err)
+		klog.Errorf("error creating path helper, err=%v", err)
 		return ctrl.Result{}, err
 	}
 	conditions.MarkTrue(byoHost, infrastructurev1alpha4.K8sComponentsInstalledCondition)
