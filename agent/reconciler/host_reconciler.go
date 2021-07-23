@@ -26,7 +26,7 @@ func (r HostReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.R
 	byoHost := &infrastructurev1alpha4.ByoHost{}
 	err := r.Client.Get(ctx, req.NamespacedName, byoHost)
 	if err != nil {
-		klog.Errorf("Get byoHost(%s/%s) failed, err=%v", req.NamespacedName.Namespace, req.NamespacedName.Name, err)
+		klog.Errorf("error getting ByoHost %s in namespace %s, err=%v", req.NamespacedName.Namespace, req.NamespacedName.Name, err)
 		return ctrl.Result{}, err
 	}
 
