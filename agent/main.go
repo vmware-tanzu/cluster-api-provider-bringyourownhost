@@ -42,7 +42,7 @@ func main() {
 
 	k8sClient, err := client.New(config, client.Options{Scheme: scheme})
 	if err != nil {
-		klog.Errorf("client.New return failed, err=%v", err)
+		klog.Errorf("error creating a new k8s client, err=%v", err)
 		return
 	}
 
