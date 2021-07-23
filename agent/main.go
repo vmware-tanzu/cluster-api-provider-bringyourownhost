@@ -36,7 +36,7 @@ func main() {
 
 	config, err := ctrl.GetConfig()
 	if err != nil {
-		klog.Errorf("ctrl.GetConfig return failed, err=%v", err)
+		klog.Errorf("error getting kubeconfig, err=%v", err)
 		return
 	}
 
