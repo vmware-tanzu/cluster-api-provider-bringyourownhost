@@ -54,7 +54,7 @@ func main() {
 
 	err = registration.HostRegistrar{K8sClient: k8sClient}.Register(hostName, namespace)
 	if err != nil {
-		klog.Errorf("Register(%s, %s) return failed, err=%v", hostName, namespace, err)
+		klog.Errorf("error registering host %s registration in namespace %s, err=%v", hostName, namespace, err)
 		return
 	}
 
