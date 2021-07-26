@@ -2,20 +2,20 @@
 
 This doc provides instructions about how to test BYO Host provider on a local workstation using:
 
-- Kind for provisioning a management cluster
-- CAPD provider for creating a workload cluster with control plane nodes only
-- Docker run for creating hosts to be used as a capacity for BYO Host machines
-- BYO Host provider to add the above hosts to the aforemention workload cluster
+- [Kind](https://kind.sigs.k8s.io/docs/user/quick-start/#installation) for provisioning a management cluster
+- [CAPD](https://github.com/kubernetes-sigs/cluster-api/tree/master/test/infrastructure/docker) provider for creating a workload cluster with control plane nodes only
+- [Docker](https://docs.docker.com/engine/install/) run for creating hosts to be used as a capacity for BYO Host machines
+- [BYOH](https://github.com/vmware-tanzu/cluster-api-provider-byoh) provider to add the above hosts to the aforemention workload cluster
+- [Tilt](https://docs.tilt.dev/install.html) for faster iterative development
 
 ## Pre-requisites
 
 It is required to have a docker image to be used when doing docker run for creating hosts
 
-You can fetch a readyt to rool image with Kubernetes v1.19 with:
+You can fetch a ready to use image with Kubernetes v1.19 with:
 
 ```shell
 docker pull eu.gcr.io/capi-test-270117/byoh/test:v20210510
-docker tag eu.gcr.io/capi-test-270117/byoh/test:v20210510 kindest/node:test
 ```
 
 If instead you want to create your own image, you can use [kinder](https://github.com/kubernetes/kubeadm/tree/master/kinder), a tool used for kubeadm ci testing.
@@ -54,14 +54,19 @@ We are going using [tilt](https://tilt.dev/) in order to do so, so you can have 
 
 In order to do so you need to clone both https://github.com/kubernetes-sigs/cluster-api/ and https://github.com/vmware-tanzu/cluster-api-provider-byoh locally;
 
+__Clone CAPI and BYOH Repo__
 ```shell
 git clone git@github.com:vmware-tanzu/cluster-api-provider-byoh.git
 git clone git@github.com:kubernetes-sigs/cluster-api.git
-git checkout v0.4.0
+cd cluster-api
+#checkout tag v0.4.0 as it supports multiple infra providers
+git checkout v0.4.0 
 ```
 
-Then, from the folder where Cluster-API source code is cloned:
 
+__Create a tilt-settings.json file__
+
+Next, create a tilt-settings.json file and place it in your local copy of cluster-api:  
 
 ```shell
 cat > tilt-settings.json <<EOF
@@ -71,10 +76,16 @@ cat > tilt-settings.json <<EOF
   "provider_repos": ["../cluster-api-provider-byoh"]
 }
 EOF
-
-tilt up
 ```
 
+__Run Tilt__
+
+To launch your development environment, run below command and keep it running in the shell
+
+```shell
+tilt up
+```
+Wait for all the resources to come up, status can be viewed in Tilt UI.
 ## Creating the workload cluster
 
 Now that you have a management cluster with Cluster API, CAPD and the BYO Host provider installed, we can start to create a workload
@@ -84,6 +95,8 @@ cluster with:
 - BYOH based worker nodes
 
 ### Control plane nodes
+
+Open a new shell and change directory to `cluster-api-provider-byoh` repository. Run below commands
 
 ```shell
 export CLUSTER_NAME="test1"
@@ -95,7 +108,7 @@ export CONTROL_PLANE_MACHINE_COUNT=1
 cat test/e2e/data/infrastructure-provider-byoh/v1alpha4/cluster-with-kcp.yaml | envsubst | kubectl apply -f -
 ```
 
-Check if the control plane node is running.
+Check if the control plane node is running Phase, wait if its in provisioning phase.
 
 ```shell
 kubectl get machines 
@@ -110,7 +123,7 @@ Create an unmanaged host.
 ```shell
 export HOST_NAME=host1
 
-docker run --detach --tty --hostname $HOST_NAME --name $HOST_NAME --privileged --security-opt seccomp=unconfined --tmpfs /tmp --tmpfs /run --volume /var --volume /lib/modules:/lib/modules:ro --network kind kindest/node:test
+docker run --detach --tty --hostname $HOST_NAME --name $HOST_NAME --privileged --security-opt seccomp=unconfined --tmpfs /tmp --tmpfs /run --volume /var --volume /lib/modules:/lib/modules:ro --network kind eu.gcr.io/capi-test-270117/byoh/test:v20210510
 ```
 
 Build the agent binary and copy it into the host.
@@ -127,14 +140,13 @@ In order to provide some credentials for the agent to use when to connect to the
 ```shell	
 cp ~/.kube/config ~/.kube/management-cluster.conf
 
-# on mac OS only, replace host address with the docker internal address
 export KIND_IP=$(docker inspect -f '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' kind-control-plane)
-sed -i '' 's/    server\:.*/    server\: https\:\/\/'"$KIND_IP"'\:6443/g' ~/.kube/management-cluster.conf
+sed -i 's/    server\:.*/    server\: https\:\/\/'"$KIND_IP"'\:6443/g' ~/.kube/management-cluster.conf
 
 docker cp ~/.kube/management-cluster.conf $HOST_NAME:/management-cluster.conf
 ```
 
-Start the agent on the host
+Start the agent on the host and keep it running
 
 ```shell
 docker exec -it $HOST_NAME bin/bash
@@ -144,6 +156,7 @@ docker exec -it $HOST_NAME bin/bash
 
 Check if the host registered itself into the management cluster.
 
+Open another shell and run
 ```shell
 kubectl get byohosts 
 ```
@@ -155,7 +168,10 @@ You can now repeat the same steps for additional hosts by changing the `HOST_NAM
 Create a machine deployment with BYOHost
 
 ```shell
-
+export CLUSTER_NAME="test1"
+export NAMESPACE="default"
+export KUBERNETES_VERSION="v1.19.1"
+export CONTROL_PLANE_MACHINE_COUNT=1
 cat test/e2e/data/infrastructure-provider-byoh/v1alpha4/md.yaml | envsubst | kubectl apply -f -
 ```
 
@@ -175,8 +191,20 @@ kubectl get BYOmachines
 kubectl get BYOhost 
 ```
 
-Or peek at the agent logs.
+Deploy a CNI solution
 
+```shell
+kind export kubeconfig --name test1
+kubectl apply -f test/e2e/data/cni/kindnet/kindnet.yaml
+```
+After a short while, our nodes should be running and in Ready state.
+Check the workload cluster
+
+```shell
+kubectl get nodes
+```
+
+Or peek at the agent logs.
 ## Cleanup
 
 ```shell
