@@ -1,12 +1,17 @@
 package main
 
 import (
+	"bytes"
+	"compress/gzip"
 	"context"
+	"encoding/base64"
 	"fmt"
+	"io/fs"
 	"io/ioutil"
 	"os"
 	"os/exec"
 	"path"
+	"strconv"
 	"time"
 
 	. "github.com/onsi/ginkgo"
@@ -53,14 +58,14 @@ var _ = Describe("Agent", func() {
 			command := exec.Command(pathToHostAgentBinary, "--kubeconfig", kubeconfigFile.Name(), "--namespace", ns.Name)
 			session, err = gexec.Start(command, GinkgoWriter, GinkgoWriter)
 			Expect(err).ToNot(HaveOccurred())
-			Eventually(session).Should(gexec.Exit(255))
+			Eventually(session).Should(gexec.Exit(0))
 		})
 
 		It("should return an error when invalid kubeconfig is passed in", func() {
 			command := exec.Command(pathToHostAgentBinary, "--kubeconfig", fakedKubeConfig)
 			session, err = gexec.Start(command, GinkgoWriter, GinkgoWriter)
 			Expect(err).ToNot(HaveOccurred())
-			Eventually(session).Should(gexec.Exit(255))
+			Eventually(session).Should(gexec.Exit(0))
 		})
 	})
 
@@ -70,7 +75,7 @@ var _ = Describe("Agent", func() {
 			ns       *corev1.Namespace
 			session  *gexec.Session
 			err      error
-			dir      string
+			workDir  string
 			hostName string
 		)
 
@@ -86,14 +91,14 @@ var _ = Describe("Agent", func() {
 			session, err = gexec.Start(command, GinkgoWriter, GinkgoWriter)
 			Expect(err).ToNot(HaveOccurred())
 
-			dir, err = ioutil.TempDir("", "cloudinit")
+			workDir, err = ioutil.TempDir("", "host-agent-ut")
 			Expect(err).ToNot(HaveOccurred())
 		})
 
 		AfterEach(func() {
 			err = k8sClient.Delete(context.TODO(), ns)
 			Expect(err).ToNot(HaveOccurred())
-			os.RemoveAll(dir)
+			os.RemoveAll(workDir)
 			session.Terminate().Wait()
 		})
 
@@ -110,6 +115,35 @@ var _ = Describe("Agent", func() {
 		})
 
 		It("should bootstrap the node when MachineRef is set", func() {
+
+			bootstrapSecretName := "bootstrap-secret-1"
+			machineName := "test-machine-1"
+			byoMachineName := "test-byomachine-1"
+
+			fileName1 := path.Join(workDir, "file-1.txt")
+			fileOriginContent1 := "some-content-1"
+			fileNewContent1 := " run cmd"
+
+			fileName2 := path.Join(workDir, "file-2.txt")
+			fileOriginContent2 := "some-content-2"
+			fileAppendContent2 := "some-content-append-2"
+			filePermission2 := 0777
+			isAppend2 := true
+
+			fileName3 := path.Join(workDir, "file-3.txt")
+			fileContent3 := "some-content-3"
+			fileBase64Content3 := base64.StdEncoding.EncodeToString([]byte(fileContent3))
+
+			fileName4 := path.Join(workDir, "file-4.txt")
+			fileContent4 := "some-content-4"
+			fileGzipContent4, err := gZipData([]byte(fileContent4))
+			Expect(err).ToNot(HaveOccurred())
+			fileGzipBase64Content4 := base64.StdEncoding.EncodeToString(fileGzipContent4)
+
+			//Init second file
+			err = ioutil.WriteFile(fileName2, []byte(fileOriginContent2), 0644)
+			Expect(err).NotTo(HaveOccurred())
+
 			byoHost := &infrastructurev1alpha4.ByoHost{}
 			byoHostLookupKey := types.NamespacedName{Name: hostName, Namespace: ns.Name}
 			Eventually(func() bool {
@@ -117,21 +151,29 @@ var _ = Describe("Agent", func() {
 				return err == nil
 			}).ShouldNot(BeFalse())
 
-			fileToCreate := path.Join(dir, "test-directory", "test-file.txt")
-
 			bootstrapSecretUnencoded := fmt.Sprintf(`write_files:
 - path: %s
-  content: expected-content
+  content: %s
+- path: %s
+  permissions: '%s'
+  content: %s
+  append: %v
+- path: %s
+  content: %s
+  encoding: base64
+- path: %s
+  encoding: gzip+base64
+  content: %s
 runCmd:
-- echo -n ' run cmd' >> %s`, fileToCreate, fileToCreate)
+- echo -n '%s' >> %s`, fileName1, fileOriginContent1, fileName2, strconv.FormatInt(int64(filePermission2), 8), fileAppendContent2, isAppend2, fileName3, fileBase64Content3, fileName4, fileGzipBase64Content4, fileNewContent1, fileName1)
 
-			secret, err := createSecret("bootstrap-secret-1", bootstrapSecretUnencoded, ns.Name)
+			secret, err := createSecret(bootstrapSecretName, bootstrapSecretUnencoded, ns.Name)
 			Expect(err).ToNot(HaveOccurred())
 
-			machine, err := createMachine(&secret.Name, "test-machine", ns.Name)
+			machine, err := createMachine(&secret.Name, machineName, ns.Name)
 			Expect(err).ToNot(HaveOccurred())
 
-			byoMachine, err := createByoMachine("test-byomachine", ns.Name, machine)
+			byoMachine, err := createByoMachine(byoMachineName, ns.Name, machine)
 			Expect(err).ToNot(HaveOccurred())
 
 			helper, err := patch.NewHelper(byoHost, k8sClient)
@@ -161,18 +203,74 @@ runCmd:
 				return corev1.ConditionFalse
 			}).Should(Equal(corev1.ConditionTrue))
 
+			//check first file's content
 			Eventually(func() string {
-				buffer, err := ioutil.ReadFile(fileToCreate)
+				buffer, err := ioutil.ReadFile(fileName1)
 				if err != nil {
 					return ""
 				}
 				return string(buffer)
-			}).Should(Equal("expected-content run cmd"))
+			}).Should(Equal(fileOriginContent1 + fileNewContent1))
+
+			//check second file's content
+			Eventually(func() string {
+				buffer, err := ioutil.ReadFile(fileName2)
+				if err != nil {
+					return ""
+				}
+				return string(buffer)
+			}).Should(Equal(fileOriginContent2 + fileAppendContent2))
+
+			//check second file permission
+			Eventually(func() bool {
+				stats, err := os.Stat(fileName2)
+				if err == nil && stats.Mode() == fs.FileMode(filePermission2) {
+					return true
+				}
+				return false
+			}).Should(BeTrue())
+
+			//check if third files's content decoded in base64 way successfully
+			Eventually(func() string {
+				buffer, err := ioutil.ReadFile(fileName3)
+				if err != nil {
+					return ""
+				}
+				return string(buffer)
+			}).Should(Equal(fileContent3))
+
+			//check if fourth files's content decoded in gzip+base64 way successfully
+			Eventually(func() string {
+				buffer, err := ioutil.ReadFile(fileName4)
+				if err != nil {
+					return ""
+				}
+				return string(buffer)
+			}).Should(Equal(fileContent4))
 
 		})
 	})
 
 })
+
+func gZipData(data []byte) ([]byte, error) {
+	var b bytes.Buffer
+	gz := gzip.NewWriter(&b)
+
+	if _, err := gz.Write(data); err != nil {
+		return nil, err
+	}
+
+	if err := gz.Flush(); err != nil {
+		return nil, err
+	}
+
+	if err := gz.Close(); err != nil {
+		return nil, err
+	}
+
+	return b.Bytes(), nil
+}
 
 func RandStr(length int) string {
 	str := "0123456789abcdefghijklmnopqrstuvwxyz"

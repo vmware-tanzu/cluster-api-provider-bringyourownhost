@@ -26,7 +26,8 @@ func (r HostReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.R
 	byoHost := &infrastructurev1alpha4.ByoHost{}
 	err := r.Client.Get(ctx, req.NamespacedName, byoHost)
 	if err != nil {
-		klog.Fatal(err)
+		klog.Errorf("error getting ByoHost %s in namespace %s, err=%v", req.NamespacedName.Namespace, req.NamespacedName.Name, err)
+		return ctrl.Result{}, err
 	}
 
 	if byoHost.Status.MachineRef == nil {
@@ -36,6 +37,7 @@ func (r HostReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.R
 
 	bootstrapScript, err := r.getBootstrapScript(ctx, byoHost.Status.MachineRef.Name, byoHost.Status.MachineRef.Namespace)
 	if err != nil {
+		klog.Errorf("error getting bootstrap script for machine %s in namespace %s, err=%v", byoHost.Status.MachineRef.Name, byoHost.Status.MachineRef.Namespace, err)
 		return ctrl.Result{}, err
 	}
 
@@ -43,17 +45,20 @@ func (r HostReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.R
 		WriteFilesExecutor: cloudinit.FileWriter{},
 		RunCmdExecutor:     cloudinit.CmdRunner{}}.Execute(bootstrapScript)
 	if err != nil {
-		klog.Fatal(err)
+		klog.Errorf("cloudinit.ScriptExecutor return failed, err=%v", err)
+		return ctrl.Result{}, err
 	}
 
 	helper, err := patch.NewHelper(byoHost, r.Client)
 	if err != nil {
-		klog.Fatal(err)
+		klog.Errorf("error creating path helper, err=%v", err)
+		return ctrl.Result{}, err
 	}
 	conditions.MarkTrue(byoHost, infrastructurev1alpha4.K8sComponentsInstalledCondition)
 	err = helper.Patch(ctx, byoHost)
 	if err != nil {
-		klog.Fatal(err)
+		klog.Errorf("error in updating conditions on ByoHost, err=%v", err)
+		return ctrl.Result{}, err
 	}
 
 	return ctrl.Result{}, nil
