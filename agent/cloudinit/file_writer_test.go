@@ -1,53 +1,96 @@
 package cloudinit
 
 import (
+	"io/fs"
 	"io/ioutil"
 	"os"
 	"path"
+	"strconv"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 )
 
 var _ = Describe("FileWriter", func() {
+
 	var (
-		dir string
-		err error
+		workDir string
+		err     error
 	)
 
 	BeforeEach(func() {
-		dir, err = ioutil.TempDir("", "cloudinit")
+		workDir, err = ioutil.TempDir("", "file_writer_ut")
+		Expect(err).ToNot(HaveOccurred())
+	})
+
+	AfterEach(func() {
+		err := os.RemoveAll(workDir)
 		Expect(err).ToNot(HaveOccurred())
 	})
 
 	It("Should create a directory if it does not exists", func() {
-		err := FileWriter{}.MkdirIfNotExists(path.Join(dir, "test"))
-
+		err := FileWriter{}.MkdirIfNotExists(workDir)
 		Expect(err).ToNot(HaveOccurred())
 	})
 
 	It("Should not create a directory if it already exists", func() {
-		FileWriter{}.MkdirIfNotExists(path.Join(dir, "test"))
+		FileWriter{}.MkdirIfNotExists(workDir)
+		Expect(err).ToNot(HaveOccurred())
 
-		err = FileWriter{}.MkdirIfNotExists(path.Join(dir, "test"))
-
+		err = FileWriter{}.MkdirIfNotExists(workDir)
 		Expect(err).ToNot(HaveOccurred())
 	})
 
 	It("Should create and write to file", func() {
-		FileWriter{}.MkdirIfNotExists(path.Join(dir, "test"))
+		filePermission := 0777
+		file := Files{
+			Path:        path.Join(workDir, "file1.txt"),
+			Encoding:    "",
+			Owner:       "",
+			Permissions: strconv.FormatInt(int64(filePermission), 8),
+			Content:     "some-content",
+			Append:      false,
+		}
 
-		err := FileWriter{}.WriteToFile(path.Join(dir, "test", "file1.txt"), "some-content")
+		err := FileWriter{}.MkdirIfNotExists(workDir)
+		Expect(err).ToNot(HaveOccurred())
 
+		err = FileWriter{}.WriteToFile(file)
 		Expect(err).NotTo(HaveOccurred())
-		buffer, err := ioutil.ReadFile(path.Join(dir, "test", "file1.txt"))
+
+		buffer, err := ioutil.ReadFile(file.Path)
 		Expect(err).NotTo(HaveOccurred())
-		Expect(string(buffer)).To(Equal("some-content"))
+		Expect(string(buffer)).To(Equal(file.Content))
+
+		stats, err := os.Stat(file.Path)
+		Expect(err).NotTo(HaveOccurred())
+		Expect(stats.Mode()).To(Equal(fs.FileMode(filePermission)))
 
 	})
 
-	AfterEach(func() {
-		err := os.RemoveAll(dir)
-		Expect(err).ToNot(HaveOccurred())
+	It("Should append content to file when append mode is enabled", func() {
+		fileOriginContent := "some-content-1"
+		file := Files{
+			Path:        path.Join(workDir, "file3.txt"),
+			Encoding:    "",
+			Owner:       "",
+			Permissions: "",
+			Content:     "some-content-2",
+			Append:      true,
+		}
+
+		err := FileWriter{}.MkdirIfNotExists(workDir)
+		Expect(err).NotTo(HaveOccurred())
+
+		err = ioutil.WriteFile(file.Path, []byte(fileOriginContent), 0644)
+		Expect(err).NotTo(HaveOccurred())
+
+		err = FileWriter{}.WriteToFile(file)
+		Expect(err).NotTo(HaveOccurred())
+
+		buffer, err := ioutil.ReadFile(file.Path)
+		Expect(err).NotTo(HaveOccurred())
+		Expect(string(buffer)).To(Equal(fileOriginContent + file.Content))
+
 	})
 })
