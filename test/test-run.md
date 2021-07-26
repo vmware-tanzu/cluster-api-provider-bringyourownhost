@@ -16,7 +16,6 @@ You can fetch a ready to use image with Kubernetes v1.19 with:
 
 ```shell
 docker pull eu.gcr.io/capi-test-270117/byoh/test:v20210510
-docker tag eu.gcr.io/capi-test-270117/byoh/test:v20210510 kindest/node:test
 ```
 
 If instead you want to create your own image, you can use [kinder](https://github.com/kubernetes/kubeadm/tree/master/kinder), a tool used for kubeadm ci testing.
@@ -192,10 +191,16 @@ kubectl get BYOmachines
 kubectl get BYOhost 
 ```
 
-Check the workload cluster
+Deploy a CNI solution
 
 ```shell
 kind export kubeconfig --name test1
+kubectl apply -f test/e2e/data/cni/kindnet/kindnet.yaml
+```
+After a short while, our nodes should be running and in Ready state.
+Check the workload cluster
+
+```shell
 kubectl get nodes
 ```
 
