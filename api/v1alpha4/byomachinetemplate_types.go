@@ -1,4 +1,5 @@
 /*
+Copyright 2021.
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -27,7 +28,8 @@ type ByoMachineTemplateSpec struct {
 	// INSERT ADDITIONAL SPEC FIELDS - desired state of cluster
 	// Important: Run "make" to regenerate code after modifying this file
 
-	Template ByoMachineTemplateResource `json:"template"`
+	// Foo is an example field of ByoMachineTemplate. Edit byomachinetemplate_types.go to remove/update
+	Foo string `json:"foo,omitempty"`
 }
 
 // ByoMachineTemplateStatus defines the observed state of ByoMachineTemplate
@@ -55,11 +57,6 @@ type ByoMachineTemplateList struct {
 	metav1.TypeMeta `json:",inline"`
 	metav1.ListMeta `json:"metadata,omitempty"`
 	Items           []ByoMachineTemplate `json:"items"`
-}
-
-type ByoMachineTemplateResource struct {
-	// Spec is the specification of the desired behavior of the machine.
-	Spec ByoMachineSpec `json:"spec"`
 }
 
 func init() {
