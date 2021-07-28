@@ -1,16 +1,34 @@
 domain: cluster.x-k8s.io
+layout:
+- go.kubebuilder.io/v3
+projectName: byoh
 repo: github.com/vmware-tanzu/cluster-api-provider-byoh
 resources:
-- group: infrastructure
-  kind: ByohCluster
+- api:
+    crdVersion: v1
+    namespaced: true
+  controller: true
+  domain: cluster.x-k8s.io
+  group: infrastructure
+  kind: ByoMachine
+  path: github.com/vmware-tanzu/cluster-api-provider-byoh/api/v1alpha4
   version: v1alpha4
-- group: infrastructure
-  kind: ByohMachine
-  version: v1alpha4
-- group: infrastructure
+- api:
+    crdVersion: v1
+    namespaced: true
+  controller: true
+  domain: cluster.x-k8s.io
+  group: infrastructure
   kind: ByoHost
+  path: github.com/vmware-tanzu/cluster-api-provider-byoh/api/v1alpha4
   version: v1alpha4
-- group: infrastructure
+- api:
+    crdVersion: v1
+    namespaced: true
+  controller: true
+  domain: cluster.x-k8s.io
+  group: infrastructure
   kind: ByoMachineTemplate
+  path: github.com/vmware-tanzu/cluster-api-provider-byoh/api/v1alpha4
   version: v1alpha4
-version: "2"
+version: "3"

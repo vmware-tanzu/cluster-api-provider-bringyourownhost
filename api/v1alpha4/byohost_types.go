@@ -1,4 +1,5 @@
 /*
+Copyright 2021.
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -16,9 +17,7 @@ limitations under the License.
 package v1alpha4
 
 import (
-	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	clusterv1 "sigs.k8s.io/cluster-api/api/v1alpha4"
 )
 
 // EDIT THIS FILE!  THIS IS SCAFFOLDING FOR YOU TO OWN!
@@ -29,18 +28,14 @@ type ByoHostSpec struct {
 	// INSERT ADDITIONAL SPEC FIELDS - desired state of cluster
 	// Important: Run "make" to regenerate code after modifying this file
 
+	// Foo is an example field of ByoHost. Edit byohost_types.go to remove/update
+	Foo string `json:"foo,omitempty"`
 }
 
 // ByoHostStatus defines the observed state of ByoHost
 type ByoHostStatus struct {
-	// MachineRef is an optional reference to a Cluster API Machine
-	// using this host.
-	// +optional
-	MachineRef *corev1.ObjectReference `json:"machineRef,omitempty"`
-
-	// Conditions defines current service state of the BYOMachine.
-	// +optional
-	Conditions clusterv1.Conditions `json:"conditions,omitempty"`
+	// INSERT ADDITIONAL STATUS FIELD - define observed state of cluster
+	// Important: Run "make" to regenerate code after modifying this file
 }
 
 //+kubebuilder:object:root=true
@@ -66,12 +61,4 @@ type ByoHostList struct {
 
 func init() {
 	SchemeBuilder.Register(&ByoHost{}, &ByoHostList{})
-}
-
-func (h *ByoHost) GetConditions() clusterv1.Conditions {
-	return h.Status.Conditions
-}
-
-func (h *ByoHost) SetConditions(conditions clusterv1.Conditions) {
-	h.Status.Conditions = conditions
 }
