@@ -19,7 +19,7 @@ spec:
   - name: v1alpha4
     schema:
       openAPIV3Schema:
-        description: ByoMachine is the Schema for the Byomachines API
+        description: ByoMachine is the Schema for the byomachines API
         properties:
           apiVersion:
             description: 'APIVersion defines the versioned schema of this representation
@@ -87,9 +87,6 @@ spec:
                   type: object
                 type: array
               ready:
-                description: 'INSERT ADDITIONAL STATUS FIELD - define observed state
-                  of cluster Important: Run "make" to regenerate code after modifying
-                  this file'
                 type: boolean
             type: object
         type: object
