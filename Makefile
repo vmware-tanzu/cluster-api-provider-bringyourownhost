@@ -1,8 +1,37 @@
+# Ensure Make is run with bash shell as some syntax below is bash-specific
+SHELL:=/usr/bin/env bash
+
+# Define registries
+STAGING_REGISTRY ?= gcr.io/k8s-staging-cluster-api
+
+IMAGE_NAME ?= caph-manager
+TAG ?= dev
 
 # Image URL to use all building/pushing image targets
-IMG ?= controller:latest
+IMG ?= ${STAGING_REGISTRY}/${IMAGE_NAME}:${TAG}
 # Produce CRDs that work back to Kubernetes 1.11 (no version conversion)
 CRD_OPTIONS ?= "crd:trivialVersions=true,preserveUnknownFields=false"
+
+REPO_ROOT := $(shell pwd)
+GINKGO_FOCUS  ?=
+GINKGO_SKIP ?=
+GINKGO_NODES  ?= 1
+E2E_CONF_FILE  ?= ${REPO_ROOT}/test/e2e/config/provider.yaml
+ARTIFACTS ?= ${REPO_ROOT}/_artifacts
+SKIP_RESOURCE_CLEANUP ?= false
+USE_EXISTING_CLUSTER ?= false
+EXISTING_CLUSTER_KUBECONFIG_PATH ?=
+GINKGO_NOCOLOR ?= false
+
+TOOLS_DIR := $(REPO_ROOT)/hack/tools
+BIN_DIR := bin
+TOOLS_BIN_DIR := $(TOOLS_DIR)/$(BIN_DIR)
+GINKGO := $(TOOLS_BIN_DIR)/ginkgo
+
+BYOH_TEMPLATES := $(REPO_ROOT)/test/e2e/data/infrastructure-provider-byoh
+DOCKER_TEMPLATES := $(REPO_ROOT)/../cluster-api/test/e2e/data/infrastructure-docker
+
+
 
 # Get the currently used golang install path (in GOPATH/bin, unless GOBIN is set)
 ifeq (,$(shell go env GOBIN))
@@ -18,6 +47,15 @@ SHELL = /usr/bin/env bash -o pipefail
 .SHELLFLAGS = -ec
 
 all: build
+
+test: generate fmt vet manifests run-test
+
+# Run tests
+run-test: 
+	source ./scripts/fetch_ext_bins.sh; fetch_tools; setup_envs; go test `go list ./... | grep -v test/e2e` -coverprofile cover.out
+
+agent-test:
+	source ./scripts/fetch_ext_bins.sh; fetch_tools; setup_envs; ginkgo agent -coverprofile cover.out
 
 ##@ General
 
@@ -69,6 +107,21 @@ docker-build: test ## Build docker image with the manager.
 docker-push: ## Push docker image with the manager.
 	docker push ${IMG}
 
+test-e2e: $(GINKGO) cluster-templates ## Run the end-to-end tests
+	$(GINKGO) -v -trace -tags=e2e -focus="$(GINKGO_FOCUS)" $(_SKIP_ARGS) -nodes=$(GINKGO_NODES) --noColor=$(GINKGO_NOCOLOR) $(GINKGO_ARGS) test/e2e -- \
+	    -e2e.artifacts-folder="$(ARTIFACTS)" \
+	    -e2e.config="$(E2E_CONF_FILE)" \
+	    -e2e.skip-resource-cleanup=$(SKIP_RESOURCE_CLEANUP) -e2e.use-existing-cluster=$(USE_EXISTING_CLUSTER) \
+		-e2e.existing-cluster-kubeconfig-path=$(EXISTING_CLUSTER_KUBECONFIG_PATH)
+
+cluster-templates: kustomize cluster-templates-v1alpha4
+
+cluster-templates-v1alpha4: kustomize ## Generate cluster templates for v1alpha4
+	$(KUSTOMIZE) build $(BYOH_TEMPLATES)/v1alpha4 --load_restrictor none > $(BYOH_TEMPLATES)/v1alpha4/cluster-template.yaml
+
+$(GINKGO): # Build ginkgo from tools folder.
+	cd $(TOOLS_DIR) && go build -tags=tools -o $(BIN_DIR)/ginkgo github.com/onsi/ginkgo/ginkgo
+
 ##@ Deployment
 
 install: manifests kustomize ## Install CRDs into the K8s cluster specified in ~/.kube/config.
@@ -91,7 +144,27 @@ controller-gen: ## Download controller-gen locally if necessary.
 
 KUSTOMIZE = $(shell pwd)/bin/kustomize
 kustomize: ## Download kustomize locally if necessary.
-	$(call go-get-tool,$(KUSTOMIZE),sigs.k8s.io/kustomize/kustomize/v3@v3.8.7)
+	$(call go-get-tool,$(KUSTOMIZE),sigs.k8s.io/kustomize/kustomize/v3@v3.9.1)
+
+release-binaries: ## Builds the binaries to publish with a release
+	RELEASE_BINARY=./agent GOOS=linux GOARCH=amd64 $(MAKE) release-binary
+
+release-binary: $(RELEASE_DIR)
+	docker run \
+		--rm \
+		-e CGO_ENABLED=0 \
+		-e GOOS=$(GOOS) \
+		-e GOARCH=$(GOARCH) \
+		-e http_proxy=http://proxy.vmware.com:3128 \
+		-e https_proxy=http://proxy.vmware.com:3128 \
+		-e HTTP_PROXY=http://proxy.vmware.com:3128 \
+		-e HTTPS_PROXY=http://proxy.vmware.com:3128 \
+		-v "$$(pwd):/workspace$(DOCKER_VOL_OPTS)" \
+		-w /workspace \
+		golang:1.16.6 \
+		go build -a -ldflags "$(LDFLAGS) -extldflags '-static'" \
+		-o ./bin/$(notdir $(RELEASE_BINARY))-$(GOOS)-$(GOARCH) $(RELEASE_BINARY)
+
 
 # go-get-tool will 'go get' any package $2 and install it to $1.
 PROJECT_DIR := $(shell dirname $(abspath $(lastword $(MAKEFILE_LIST))))
