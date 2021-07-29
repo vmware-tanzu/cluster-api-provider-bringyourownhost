@@ -155,10 +155,6 @@ release-binary: $(RELEASE_DIR)
 		-e CGO_ENABLED=0 \
 		-e GOOS=$(GOOS) \
 		-e GOARCH=$(GOARCH) \
-		-e http_proxy=http://proxy.vmware.com:3128 \
-		-e https_proxy=http://proxy.vmware.com:3128 \
-		-e HTTP_PROXY=http://proxy.vmware.com:3128 \
-		-e HTTPS_PROXY=http://proxy.vmware.com:3128 \
 		-v "$$(pwd):/workspace$(DOCKER_VOL_OPTS)" \
 		-w /workspace \
 		golang:1.16.6 \
