@@ -100,8 +100,8 @@ func main() {
 	}
 
 	if err = (&controllers.ByoMachineReconciler{
-		Client: mgr.GetClient(),
-		Scheme: mgr.GetScheme(),
+		Client:  mgr.GetClient(),
+		Scheme:  mgr.GetScheme(),
 		Tracker: tracker,
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "ByoMachine")
@@ -142,4 +142,3 @@ func main() {
 func concurrency(c int) controller.Options {
 	return controller.Options{MaxConcurrentReconciles: c}
 }
-
