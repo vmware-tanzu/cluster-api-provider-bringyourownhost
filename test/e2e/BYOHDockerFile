@@ -1,0 +1,28 @@
+ARG BASE_IMAGE=ubuntu:20.04
+FROM $BASE_IMAGE as build
+
+ARG TARGETARCH
+# install containerd
+RUN apt-get update \
+    && DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
+       systemd conntrack iptables iproute2 ethtool socat util-linux mount \
+       ebtables kmod libseccomp2 pigz bash ca-certificates \
+       rsync nfs-common fuse-overlayfs containerd curl gnupg2\
+    && mkdir -p /etc/containerd \
+    && containerd config default | tee /etc/containerd/config.toml \
+    && ln -s "$(which systemd)" /sbin/init
+RUN  systemctl enable containerd
+COPY kubernetes.list /etc/apt/sources.list.d/kubernetes.list
+RUN echo "Installing kubectl kubeadm kubelet" \
+    && curl -s https://packages.cloud.google.com/apt/doc/apt-key.gpg | apt-key add - \
+    && apt-get update \
+    && apt-get install -y kubelet=1.19.1-00 kubeadm=1.19.1-00 kubectl=1.19.1-00 \
+    && apt-mark hold containerd kubelet kubeadm kubectl \
+    && apt-get clean \
+    && systemctl enable kubelet.service \
+    && systemctl enable containerd.service
+
+FROM scratch
+COPY --from=build / /
+
+ENTRYPOINT ["/sbin/init"]
