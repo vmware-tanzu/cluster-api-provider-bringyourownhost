@@ -1,4 +1,5 @@
 /*
+Copyright 2021.
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -35,6 +36,7 @@ type ByoMachineSpec struct {
 type ByoMachineStatus struct {
 	// INSERT ADDITIONAL STATUS FIELD - define observed state of cluster
 	// Important: Run "make" to regenerate code after modifying this file
+
 	// +optional
 	Ready bool `json:"ready"`
 
@@ -43,10 +45,10 @@ type ByoMachineStatus struct {
 	Conditions clusterv1.Conditions `json:"conditions,omitempty"`
 }
 
-// +kubebuilder:subresource:status
-// +kubebuilder:object:root=true
+//+kubebuilder:object:root=true
+//+kubebuilder:subresource:status
 
-// ByoMachine is the Schema for the Byomachines API
+// ByoMachine is the Schema for the byomachines API
 type ByoMachine struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
@@ -55,7 +57,7 @@ type ByoMachine struct {
 	Status ByoMachineStatus `json:"status,omitempty"`
 }
 
-// +kubebuilder:object:root=true
+//+kubebuilder:object:root=true
 
 // ByoMachineList contains a list of ByoMachine
 type ByoMachineList struct {

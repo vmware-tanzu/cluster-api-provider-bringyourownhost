@@ -58,7 +58,6 @@ func (w FileWriter) WriteToFile(file Files) error {
 		return err
 	}
 
-
 	if len(file.Permissions) > 0 {
 		fileMode, err := strconv.ParseUint(file.Permissions, 8, 32)
 		if err != nil {

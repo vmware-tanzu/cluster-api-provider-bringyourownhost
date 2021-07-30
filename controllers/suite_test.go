@@ -1,4 +1,5 @@
 /*
+Copyright 2021.
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -23,22 +24,25 @@ import (
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-	infrastructurev1alpha4 "github.com/vmware-tanzu/cluster-api-provider-byoh/api/v1alpha4"
-	corev1 "k8s.io/api/core/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes/scheme"
 	"k8s.io/client-go/rest"
-	clusterapi "sigs.k8s.io/cluster-api/api/v1alpha4"
-	bootstrapv1 "sigs.k8s.io/cluster-api/bootstrap/kubeadm/api/v1alpha3"
 	"sigs.k8s.io/cluster-api/controllers/remote"
-	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 	"sigs.k8s.io/controller-runtime/pkg/envtest"
+	"sigs.k8s.io/controller-runtime/pkg/envtest/printer"
 	"sigs.k8s.io/controller-runtime/pkg/log"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
-	// +kubebuilder:scaffold:imports
+
+	infrastructurev1alpha4 "github.com/vmware-tanzu/cluster-api-provider-byoh/api/v1alpha4"
+	//+kubebuilder:scaffold:imports
+
+	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	clusterapi "sigs.k8s.io/cluster-api/api/v1alpha4"
+	bootstrapv1 "sigs.k8s.io/cluster-api/bootstrap/kubeadm/api/v1alpha4"
+	ctrl "sigs.k8s.io/controller-runtime"
 )
 
 // These tests use Ginkgo (BDD-style Go testing framework). Refer to
@@ -60,7 +64,9 @@ var (
 func TestAPIs(t *testing.T) {
 	RegisterFailHandler(Fail)
 
-	RunSpecs(t, "Controller Suite")
+	RunSpecsWithDefaultAndCustomReporters(t,
+		"Controller Suite",
+		[]Reporter{printer.NewlineReporter{}})
 }
 
 var _ = BeforeSuite(func() {
@@ -76,10 +82,9 @@ var _ = BeforeSuite(func() {
 		ErrorIfCRDPathMissing: true,
 	}
 
-	var err error
-	cfg, err = testEnv.Start()
-	Expect(err).ToNot(HaveOccurred())
-	Expect(cfg).ToNot(BeNil())
+	cfg, err := testEnv.Start()
+	Expect(err).NotTo(HaveOccurred())
+	Expect(cfg).NotTo(BeNil())
 
 	err = infrastructurev1alpha4.AddToScheme(scheme.Scheme)
 	Expect(err).NotTo(HaveOccurred())
@@ -90,11 +95,11 @@ var _ = BeforeSuite(func() {
 	err = bootstrapv1.AddToScheme(scheme.Scheme)
 	Expect(err).NotTo(HaveOccurred())
 
-	// +kubebuilder:scaffold:scheme
+	//+kubebuilder:scaffold:scheme
 
 	k8sClient, err = client.New(cfg, client.Options{Scheme: scheme.Scheme})
-	Expect(err).ToNot(HaveOccurred())
-	Expect(k8sClient).ToNot(BeNil())
+	Expect(err).NotTo(HaveOccurred())
+	Expect(k8sClient).NotTo(BeNil())
 
 	k8sManager, err := ctrl.NewManager(cfg, ctrl.Options{
 		Scheme:             scheme.Scheme,
@@ -134,7 +139,6 @@ var _ = BeforeSuite(func() {
 
 	reconciler = &ByoMachineReconciler{
 		Client:  k8sClient,
-		Log:     ctrl.Log.WithName("controllers").WithName("ByoMachine"),
 		Tracker: remote.NewTestClusterCacheTracker(log.NullLogger{}, clientFake, scheme.Scheme, client.ObjectKey{Name: testCluster.Name, Namespace: testCluster.Namespace}),
 	}
 	err = reconciler.SetupWithManager(k8sManager)
@@ -144,11 +148,13 @@ var _ = BeforeSuite(func() {
 		err = k8sManager.Start(ctrl.SetupSignalHandler())
 		Expect(err).ToNot(HaveOccurred())
 	}()
-})
+
+}, 60)
 
 var _ = AfterSuite(func() {
+	By("tearing down the test environment")
 	err := testEnv.Stop()
-	Expect(err).ToNot(HaveOccurred())
+	Expect(err).NotTo(HaveOccurred())
 })
 
 func newByoMachine(byoMachineName string, byoMachineNamespace string, clusterName string) *infrastructurev1alpha4.ByoMachine {
