@@ -1,4 +1,5 @@
 /*
+Copyright 2021.
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -33,6 +34,9 @@ type ByoHostSpec struct {
 
 // ByoHostStatus defines the observed state of ByoHost
 type ByoHostStatus struct {
+	// INSERT ADDITIONAL STATUS FIELD - define observed state of cluster
+	// Important: Run "make" to regenerate code after modifying this file
+
 	// MachineRef is an optional reference to a Cluster API Machine
 	// using this host.
 	// +optional
