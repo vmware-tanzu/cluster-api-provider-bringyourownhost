@@ -6,8 +6,8 @@
       "main.go",
       "go.mod",
       "go.sum",
-      "api",
-      "controllers",
+      "apis/infrastructure",
+      "controllers/infrastructure",
       "pkg"
     ]
   }
