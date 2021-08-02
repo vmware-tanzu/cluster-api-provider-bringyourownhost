@@ -32,8 +32,8 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/healthz"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 
-	infrastructurev1alpha4 "github.com/vmware-tanzu/cluster-api-provider-byoh/api/v1alpha4"
-	"github.com/vmware-tanzu/cluster-api-provider-byoh/controllers"
+	infrastructurev1alpha4 "github.com/vmware-tanzu/cluster-api-provider-byoh/apis/infrastructure/v1alpha4"
+	byohcontrollers "github.com/vmware-tanzu/cluster-api-provider-byoh/controllers/infrastructure"
 
 	//+kubebuilder:scaffold:imports
 	clusterv1 "sigs.k8s.io/cluster-api/api/v1alpha4"
@@ -99,7 +99,7 @@ func main() {
 		os.Exit(1)
 	}
 
-	if err = (&controllers.ByoMachineReconciler{
+	if err = (&byohcontrollers.ByoMachineReconciler{
 		Client:  mgr.GetClient(),
 		Scheme:  mgr.GetScheme(),
 		Tracker: tracker,
@@ -107,14 +107,14 @@ func main() {
 		setupLog.Error(err, "unable to create controller", "controller", "ByoMachine")
 		os.Exit(1)
 	}
-	if err = (&controllers.ByoHostReconciler{
+	if err = (&byohcontrollers.ByoHostReconciler{
 		Client: mgr.GetClient(),
 		Scheme: mgr.GetScheme(),
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "ByoHost")
 		os.Exit(1)
 	}
-	if err = (&controllers.ByoMachineTemplateReconciler{
+	if err = (&byohcontrollers.ByoMachineTemplateReconciler{
 		Client: mgr.GetClient(),
 		Scheme: mgr.GetScheme(),
 	}).SetupWithManager(mgr); err != nil {
