@@ -20,25 +20,25 @@ var _ = Describe("FileWriter", func() {
 
 	BeforeEach(func() {
 		workDir, err = ioutil.TempDir("", "file_writer_ut")
-		Expect(err).ToNot(HaveOccurred())
+		Expect(err).NotTo(HaveOccurred())
 	})
 
 	AfterEach(func() {
 		err := os.RemoveAll(workDir)
-		Expect(err).ToNot(HaveOccurred())
+		Expect(err).NotTo(HaveOccurred())
 	})
 
 	It("Should create a directory if it does not exists", func() {
 		err := FileWriter{}.MkdirIfNotExists(workDir)
-		Expect(err).ToNot(HaveOccurred())
+		Expect(err).NotTo(HaveOccurred())
 	})
 
 	It("Should not create a directory if it already exists", func() {
 		FileWriter{}.MkdirIfNotExists(workDir)
-		Expect(err).ToNot(HaveOccurred())
+		Expect(err).NotTo(HaveOccurred())
 
 		err = FileWriter{}.MkdirIfNotExists(workDir)
-		Expect(err).ToNot(HaveOccurred())
+		Expect(err).NotTo(HaveOccurred())
 	})
 
 	It("Should create and write to file", func() {
@@ -53,7 +53,7 @@ var _ = Describe("FileWriter", func() {
 		}
 
 		err := FileWriter{}.MkdirIfNotExists(workDir)
-		Expect(err).ToNot(HaveOccurred())
+		Expect(err).NotTo(HaveOccurred())
 
 		err = FileWriter{}.WriteToFile(file)
 		Expect(err).NotTo(HaveOccurred())

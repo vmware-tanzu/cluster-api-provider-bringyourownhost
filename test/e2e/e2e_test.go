@@ -37,6 +37,7 @@ import (
 	. "github.com/onsi/gomega"
 	"github.com/onsi/gomega/gexec"
 	"github.com/pkg/errors"
+	"github.com/vmware-tanzu/cluster-api-provider-byoh/common"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/utils/pointer"
 	"sigs.k8s.io/cluster-api/test/framework/clusterctl"
@@ -50,6 +51,10 @@ const (
 	IPFamily           = "IP_FAMILY"
 	KindImage          = "byoh/node:v1.19.11"
 	TempKubeconfigPath = "/tmp/mgmt.conf"
+)
+
+var (
+	AgentLogFile string
 )
 
 type cpConfig struct {
@@ -174,9 +179,9 @@ var _ = Describe("When BYOH joins existing cluster", func() {
 		ctx = context.TODO()
 		Expect(ctx).NotTo(BeNil(), "ctx is required for %s spec", specName)
 
-		Expect(e2eConfig).ToNot(BeNil(), "Invalid argument. e2eConfig can't be nil when calling %s spec", specName)
+		Expect(e2eConfig).NotTo(BeNil(), "Invalid argument. e2eConfig can't be nil when calling %s spec", specName)
 		Expect(clusterctlConfigPath).To(BeAnExistingFile(), "Invalid argument. clusterctlConfigPath must be an existing file when calling %s spec", specName)
-		Expect(bootstrapClusterProxy).ToNot(BeNil(), "Invalid argument. bootstrapClusterProxy can't be nil when calling %s spec", specName)
+		Expect(bootstrapClusterProxy).NotTo(BeNil(), "Invalid argument. bootstrapClusterProxy can't be nil when calling %s spec", specName)
 		Expect(os.MkdirAll(artifactFolder, 0755)).To(Succeed(), "Invalid argument. artifactFolder can't be created for %s spec", specName)
 
 		Expect(e2eConfig.Variables).To(HaveKey(KubernetesVersion))
@@ -184,13 +189,14 @@ var _ = Describe("When BYOH joins existing cluster", func() {
 		// Setup a Namespace where to host objects for this spec and create a watcher for the namespace events.
 		namespace, cancelWatches = setupSpecNamespace(ctx, specName, bootstrapClusterProxy, artifactFolder)
 		clusterResources = new(clusterctl.ApplyClusterTemplateAndWaitResult)
+		AgentLogFile = common.RandStr("/tmp/agent", 5)+".log"
 	})
 
 	It("Should create a workload cluster with single BYOH host", func() {
 
 		clusterName := fmt.Sprintf("%s-%s", specName, util.RandomString(6))
 		dockerClient, err = client.NewClientWithOpts(client.FromEnv)
-		Expect(err).ToNot(HaveOccurred())
+		Expect(err).NotTo(HaveOccurred())
 
 		tmpfs := map[string]string{"/run": "", "/tmp": ""}
 
@@ -207,12 +213,12 @@ var _ = Describe("When BYOH joins existing cluster", func() {
 			&network.NetworkingConfig{EndpointsConfig: map[string]*network.EndpointSettings{"kind": {}}},
 			nil, "byohost")
 
-		Expect(err).ToNot(HaveOccurred())
+		Expect(err).NotTo(HaveOccurred())
 
-		Expect(dockerClient.ContainerStart(ctx, byohost.ID, types.ContainerStartOptions{})).ToNot(HaveOccurred())
+		Expect(dockerClient.ContainerStart(ctx, byohost.ID, types.ContainerStartOptions{})).NotTo(HaveOccurred())
 
 		pathToHostAgentBinary, err := gexec.Build("github.com/vmware-tanzu/cluster-api-provider-byoh/agent")
-		Expect(err).ToNot(HaveOccurred())
+		Expect(err).NotTo(HaveOccurred())
 
 		config := cpConfig{
 			sourcePath: pathToHostAgentBinary,
@@ -220,21 +226,21 @@ var _ = Describe("When BYOH joins existing cluster", func() {
 			container:  byohost.ID,
 		}
 
-		Expect(copyToContainer(ctx, dockerClient, config)).ToNot(HaveOccurred())
+		Expect(copyToContainer(ctx, dockerClient, config)).NotTo(HaveOccurred())
 
 		listopt := types.ContainerListOptions{}
 		listopt.Filters = filters.NewArgs()
 		listopt.Filters.Add("name", clusterConName+"-control-plane")
 
 		containers, err := dockerClient.ContainerList(ctx, listopt)
-		Expect(err).ToNot(HaveOccurred())
+		Expect(err).NotTo(HaveOccurred())
 		Expect(len(containers)).To(Equal(1))
 
 		profile, err := dockerClient.ContainerInspect(ctx, containers[0].ID)
-		Expect(err).ToNot(HaveOccurred())
+		Expect(err).NotTo(HaveOccurred())
 
 		kubeconfig, err := os.ReadFile(bootstrapClusterProxy.GetKubeconfigPath())
-		Expect(err).ToNot(HaveOccurred())
+		Expect(err).NotTo(HaveOccurred())
 
 		re := regexp.MustCompile("server:.*")
 		kubeconfig = re.ReplaceAll(kubeconfig, []byte("server: https://"+profile.NetworkSettings.Networks["kind"].IPAddress+":6443"))
@@ -243,7 +249,7 @@ var _ = Describe("When BYOH joins existing cluster", func() {
 
 		config.sourcePath = TempKubeconfigPath
 		config.destPath = "/mgmt.conf"
-		Expect(copyToContainer(ctx, dockerClient, config)).ToNot(HaveOccurred())
+		Expect(copyToContainer(ctx, dockerClient, config)).NotTo(HaveOccurred())
 
 		rconfig := types.ExecConfig{
 			AttachStdout: true,
@@ -252,16 +258,54 @@ var _ = Describe("When BYOH joins existing cluster", func() {
 		}
 
 		resp, err := dockerClient.ContainerExecCreate(ctx, byohost.ID, rconfig)
-		Expect(err).ToNot(HaveOccurred())
+		Expect(err).NotTo(HaveOccurred())
 
 		output, err := dockerClient.ContainerExecAttach(ctx, resp.ID, types.ExecStartCheck{})
-		Expect(err).ToNot(HaveOccurred())
+		Expect(err).NotTo(HaveOccurred())
 		defer output.Close()
 
-		buf := bufio.NewReader(output.Reader)
-		line, err := buf.ReadBytes('\n')
-		Expect(err).ToNot(HaveOccurred())
-		Byf("agent:output %s", string(line))
+		//write agent log for debug
+		if AgentLogFile != "" {
+			s := make(chan string)
+			e := make(chan error)
+			buf := bufio.NewReader(output.Reader)
+			f, err := os.OpenFile(AgentLogFile, os.O_CREATE|os.O_WRONLY, 0666)
+			Expect(err).NotTo(HaveOccurred())
+
+			defer func() {
+				f.Close()
+			}()
+
+			go func() {
+				for {
+					line, _, err := buf.ReadLine()
+					if err != nil {
+						//will be quit by this err: read unix @->/run/docker.sock: use of closed network connection
+						e <- err
+						break
+					} else {
+						s <- string(line)
+					}
+				}
+			}()
+
+			go func() {
+				for {
+					select {
+					case line := <-s:
+						_, err2 := f.WriteString(line+"\n")
+						if err2 != nil {
+							Byf("Write String to file failed, err2=%v", err2)
+						}
+					case err := <-e:
+						//Please ignore this error if you see it in output
+						Byf("Get err %v", err)
+						f.Sync()
+						return
+					}
+				}
+			}()
+		}
 
 		clusterctl.ApplyClusterTemplateAndWait(ctx, clusterctl.ApplyClusterTemplateAndWaitInput{
 			ClusterProxy: bootstrapClusterProxy,
@@ -281,12 +325,17 @@ var _ = Describe("When BYOH joins existing cluster", func() {
 			WaitForControlPlaneIntervals: e2eConfig.GetIntervals(specName, "wait-control-plane"),
 			WaitForMachineDeployments:    e2eConfig.GetIntervals(specName, "wait-worker-nodes"),
 		}, clusterResources)
+
 	})
 
 	AfterEach(func() {
 		if dockerClient != nil && byohost.ID != "" {
 			dockerClient.ContainerStop(ctx, byohost.ID, nil)
 			dockerClient.ContainerRemove(ctx, byohost.ID, types.ContainerRemoveOptions{})
+		}
+
+		if AgentLogFile != "" {
+			 os.Remove(AgentLogFile)
 		}
 
 		// Dumps all the resources in the spec namespace, then cleanups the cluster object and the spec namespace itself.

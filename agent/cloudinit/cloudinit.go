@@ -1,15 +1,13 @@
 package cloudinit
 
 import (
-	"bytes"
-	"compress/gzip"
 	"encoding/base64"
 	"fmt"
-	"io"
 	"path/filepath"
 	"strings"
 
 	"github.com/pkg/errors"
+	"github.com/vmware-tanzu/cluster-api-provider-byoh/common"
 	"sigs.k8s.io/yaml"
 )
 
@@ -89,7 +87,7 @@ func decodeContent(content string, encodings []string) (string, error) {
 			}
 			content = string(rByte)
 		case "application/x-gzip":
-			rByte, err := gUnzipData([]byte(content))
+			rByte, err := common.GunzipData([]byte(content))
 			if err != nil {
 				return content, err
 			}
@@ -103,20 +101,3 @@ func decodeContent(content string, encodings []string) (string, error) {
 	return content, nil
 }
 
-func gUnzipData(data []byte) ([]byte, error) {
-	var r io.Reader
-	var err error
-	b := bytes.NewBuffer(data)
-	r, err = gzip.NewReader(b)
-	if err != nil {
-		return nil, errors.WithStack(err)
-	}
-
-	var resB bytes.Buffer
-	_, err = resB.ReadFrom(r)
-	if err != nil {
-		return nil, errors.WithStack(err)
-	}
-
-	return resB.Bytes(), nil
-}
