@@ -33,6 +33,8 @@ import (
 	infrastructurev1alpha4 "github.com/vmware-tanzu/cluster-api-provider-byoh/apis/infrastructure/v1alpha4"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	clusterv1 "sigs.k8s.io/cluster-api/api/v1alpha4"
+	"sigs.k8s.io/cluster-api/util/annotations"
 )
 
 // ByoMachineReconciler reconciles a ByoMachine object
@@ -61,9 +63,12 @@ type ByoMachineReconciler struct {
 //
 // For more details, check Reconcile and its Result here:
 // - https://pkg.go.dev/sigs.k8s.io/controller-runtime@v0.8.3/pkg/reconcile
+
+// Reconcile handles ByoMachine events
 func (r *ByoMachineReconciler) Reconcile(ctx context.Context, req ctrl.Request) (_ ctrl.Result, reterr error) {
 	logger := log.FromContext(ctx)
 
+	//Fetch the ByoMachine instance.
 	byoMachine := &infrastructurev1alpha4.ByoMachine{}
 	err := r.Client.Get(ctx, req.NamespacedName, byoMachine)
 	if err != nil {
@@ -71,6 +76,24 @@ func (r *ByoMachineReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 			return ctrl.Result{}, nil
 		}
 		return ctrl.Result{}, err
+	}
+
+	// Fetch the Cluster.
+	cluster, err := util.GetClusterFromMetadata(ctx, r.Client, byoMachine.ObjectMeta)
+	if err != nil {
+		logger.Info(fmt.Sprintf("ByoMachine owner Machine is missing cluster label or cluster does not exist, err=%v", err))
+		return ctrl.Result{}, err
+	}
+
+	if cluster == nil {
+		logger.Info(fmt.Sprintf("Please associate this machine with a cluster using the label %s: <name of cluster>", clusterv1.ClusterLabelName))
+		return ctrl.Result{}, nil
+	}
+
+	// Return early if the object or Cluster is paused.
+	if annotations.IsPaused(cluster, byoMachine) {
+		logger.Info("byoMachine or linked Cluster is marked as paused. Won't reconcile")
+		return ctrl.Result{}, nil
 	}
 
 	hostsList := &infrastructurev1alpha4.ByoHostList{}
