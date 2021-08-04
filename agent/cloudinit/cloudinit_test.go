@@ -43,12 +43,12 @@ runCmd:
 - echo 'some run command'`, workDir)
 
 			workDir, err = ioutil.TempDir("", "cloudinit_ut")
-			Expect(err).ToNot(HaveOccurred())
+			Expect(err).NotTo(HaveOccurred())
 		})
 
 		AfterEach(func() {
 			err := os.RemoveAll(workDir)
-			Expect(err).ToNot(HaveOccurred())
+			Expect(err).NotTo(HaveOccurred())
 		})
 
 		It("should write files successfully", func() {
@@ -73,7 +73,7 @@ runCmd:
   encoding: %s`, fileName1, fileContent1, fileName2, fileBase64Content, permissions, encoding)
 
 			err = scriptExecutor.Execute(bootstrapSecretUnencoded)
-			Expect(err).ToNot(HaveOccurred())
+			Expect(err).NotTo(HaveOccurred())
 
 			Expect(fakeFileWriter.MkdirIfNotExistsCallCount()).To(Equal(2))
 			Expect(fakeFileWriter.WriteToFileCallCount()).To(Equal(2))
@@ -123,7 +123,7 @@ runCmd:
 
 		It("run the command given in the runCmd directive", func() {
 			err := scriptExecutor.Execute(defaultBootstrapSecret)
-			Expect(err).ToNot(HaveOccurred())
+			Expect(err).NotTo(HaveOccurred())
 
 			Expect(fakeCmdExecutor.RunCmdCallCount()).To(Equal(1))
 			cmd := fakeCmdExecutor.RunCmdArgsForCall(0)
@@ -133,7 +133,7 @@ runCmd:
 		It("should not invoke the runCmd or writeFiles directive when absent", func() {
 
 			err := scriptExecutor.Execute("")
-			Expect(err).ToNot(HaveOccurred())
+			Expect(err).NotTo(HaveOccurred())
 
 			Expect(fakeCmdExecutor.RunCmdCallCount()).To(Equal(0))
 			Expect(fakeFileWriter.MkdirIfNotExistsCallCount()).To(Equal(0))

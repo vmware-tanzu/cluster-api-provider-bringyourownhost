@@ -27,9 +27,10 @@ var (
 	cfg                   *rest.Config
 	k8sClient             client.Client
 	tmpFilePrefix         = "kubeconfigFile-"
-	clusterName           = "test-cluster"
-	testEnv               *envtest.Environment
-	defaultNamespace      string = "default"
+	//clusterName           = "test-cluster"
+	defaultClusterName = "default-test-cluster"
+	testEnv            *envtest.Environment
+	defaultNamespace   string = "default"
 )
 
 func TestHostAgent(t *testing.T) {
@@ -47,8 +48,8 @@ var _ = BeforeSuite(func() {
 	}
 
 	cfg, err = testEnv.Start()
-	Expect(err).ToNot(HaveOccurred())
-	Expect(cfg).ToNot(BeNil())
+	Expect(err).NotTo(HaveOccurred())
+	Expect(cfg).NotTo(BeNil())
 
 	scheme := runtime.NewScheme()
 
@@ -65,7 +66,7 @@ var _ = BeforeSuite(func() {
 	writeKubeConfig()
 
 	pathToHostAgentBinary, err = gexec.Build("github.com/vmware-tanzu/cluster-api-provider-byoh/agent")
-	Expect(err).ToNot(HaveOccurred())
+	Expect(err).NotTo(HaveOccurred())
 })
 
 var _ = AfterSuite(func() {
@@ -73,7 +74,7 @@ var _ = AfterSuite(func() {
 	os.Remove(kubeconfigFile.Name())
 	gexec.TerminateAndWait(time.Duration(10) * time.Second)
 	err := testEnv.Stop()
-	Expect(err).ToNot(HaveOccurred())
+	Expect(err).NotTo(HaveOccurred())
 })
 
 func writeKubeConfig() {

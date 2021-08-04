@@ -6,6 +6,7 @@ import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	infrastructurev1alpha4 "github.com/vmware-tanzu/cluster-api-provider-byoh/apis/infrastructure/v1alpha4"
+	"github.com/vmware-tanzu/cluster-api-provider-byoh/common"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/cluster-api/util/conditions"
@@ -21,12 +22,12 @@ var _ = Describe("Controllers/ByomachineController", func() {
 
 		BeforeEach(func() {
 			ctx = context.Background()
-			byoHost = newByoHost(defaultByoHostName, defaultNamespace)
+			byoHost = common.NewByoHost(defaultByoHostName, defaultNamespace, nil)
 			Expect(k8sClient.Create(ctx, byoHost)).Should(Succeed())
 		})
 
 		It("claims the first available host", func() {
-			byoMachine = newByoMachine(defaultByoMachineName, defaultNamespace, defaultClusterName)
+			byoMachine = common.NewByoMachine(defaultByoMachineName, defaultNamespace, defaultClusterName, nil)
 			Expect(k8sClient.Create(ctx, byoMachine)).Should(Succeed())
 
 			byoHostLookupKey := types.NamespacedName{Name: byoHost.Name, Namespace: byoHost.Namespace}
@@ -79,7 +80,7 @@ var _ = Describe("Controllers/ByomachineController", func() {
 
 			node := corev1.Node{}
 			err := clientFake.Get(ctx, types.NamespacedName{Name: defaultNodeName, Namespace: defaultNamespace}, &node)
-			Expect(err).ToNot(HaveOccurred())
+			Expect(err).NotTo(HaveOccurred())
 
 			Expect(node.Spec.ProviderID).To(ContainSubstring("byoh://"))
 		})
