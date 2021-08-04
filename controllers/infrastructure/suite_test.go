@@ -38,9 +38,8 @@ import (
 	infrastructurev1alpha4 "github.com/vmware-tanzu/cluster-api-provider-byoh/apis/infrastructure/v1alpha4"
 	//+kubebuilder:scaffold:imports
 
-	corev1 "k8s.io/api/core/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	clusterapi "sigs.k8s.io/cluster-api/api/v1alpha4"
+	"github.com/vmware-tanzu/cluster-api-provider-byoh/common"
+	clusterv1 "sigs.k8s.io/cluster-api/api/v1alpha4"
 	bootstrapv1 "sigs.k8s.io/cluster-api/bootstrap/kubeadm/api/v1alpha4"
 	ctrl "sigs.k8s.io/controller-runtime"
 )
@@ -57,7 +56,8 @@ var (
 	defaultClusterName    string = "my-cluster"
 	defaultNodeName       string = "my-host"
 	defaultByoHostName    string = "my-host"
-	defaultByoMachineName string = "my-machine"
+	defaultMachineName    string = "my-machine"
+	defaultByoMachineName string = "my-byo-machine"
 	defaultNamespace      string = "default"
 )
 
@@ -89,7 +89,7 @@ var _ = BeforeSuite(func() {
 	err = infrastructurev1alpha4.AddToScheme(scheme.Scheme)
 	Expect(err).NotTo(HaveOccurred())
 
-	err = clusterapi.AddToScheme(scheme.Scheme)
+	err = clusterv1.AddToScheme(scheme.Scheme)
 	Expect(err).NotTo(HaveOccurred())
 
 	err = bootstrapv1.AddToScheme(scheme.Scheme)
@@ -105,33 +105,12 @@ var _ = BeforeSuite(func() {
 		Scheme:             scheme.Scheme,
 		MetricsBindAddress: ":6080",
 	})
-	Expect(err).ToNot(HaveOccurred())
+	Expect(err).NotTo(HaveOccurred())
 
-	testCluster := &clusterapi.Cluster{
-		TypeMeta: metav1.TypeMeta{
-			Kind:       "Cluster",
-			APIVersion: "cluster.x-k8s.io/v1alpha4",
-		},
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      defaultClusterName,
-			Namespace: defaultNamespace,
-		},
-		Spec: clusterapi.ClusterSpec{},
-	}
+	testCluster := common.NewCluster(defaultClusterName, defaultNamespace)
 	Expect(k8sClient.Create(context.Background(), testCluster)).Should(Succeed())
 
-	node := &corev1.Node{
-		TypeMeta: metav1.TypeMeta{
-			Kind:       "Node",
-			APIVersion: "v1alpha4",
-		},
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      defaultNodeName,
-			Namespace: defaultNamespace,
-		},
-		Spec:   corev1.NodeSpec{},
-		Status: corev1.NodeStatus{},
-	}
+	node := common.NewNode(defaultNodeName, defaultNamespace)
 	clientFake = fake.NewClientBuilder().WithObjects(
 		testCluster,
 		node,
@@ -142,11 +121,11 @@ var _ = BeforeSuite(func() {
 		Tracker: remote.NewTestClusterCacheTracker(log.NullLogger{}, clientFake, scheme.Scheme, client.ObjectKey{Name: testCluster.Name, Namespace: testCluster.Namespace}),
 	}
 	err = reconciler.SetupWithManager(k8sManager)
-	Expect(err).ToNot(HaveOccurred())
+	Expect(err).NotTo(HaveOccurred())
 
 	go func() {
 		err = k8sManager.Start(ctrl.SetupSignalHandler())
-		Expect(err).ToNot(HaveOccurred())
+		Expect(err).NotTo(HaveOccurred())
 	}()
 
 }, 60)
@@ -156,36 +135,3 @@ var _ = AfterSuite(func() {
 	err := testEnv.Stop()
 	Expect(err).NotTo(HaveOccurred())
 })
-
-func newByoMachine(byoMachineName string, byoMachineNamespace string, clusterName string) *infrastructurev1alpha4.ByoMachine {
-	byoMachine := &infrastructurev1alpha4.ByoMachine{
-		TypeMeta: metav1.TypeMeta{
-			Kind:       "ByoMachine",
-			APIVersion: "infrastructure.cluster.x-k8s.io/v1alpha4",
-		},
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      byoMachineName,
-			Namespace: byoMachineNamespace,
-			Labels: map[string]string{
-				clusterapi.ClusterLabelName: clusterName,
-			},
-		},
-		Spec: infrastructurev1alpha4.ByoMachineSpec{},
-	}
-	return byoMachine
-}
-
-func newByoHost(byoHostName string, byoHostNamespace string) *infrastructurev1alpha4.ByoHost {
-	byoHost := &infrastructurev1alpha4.ByoHost{
-		TypeMeta: metav1.TypeMeta{
-			Kind:       "ByoHost",
-			APIVersion: "infrastructure.cluster.x-k8s.io/v1alpha4",
-		},
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      byoHostName,
-			Namespace: byoHostNamespace,
-		},
-		Spec: infrastructurev1alpha4.ByoHostSpec{},
-	}
-	return byoHost
-}
