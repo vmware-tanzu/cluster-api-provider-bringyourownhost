@@ -19,26 +19,44 @@ package v1alpha4
 import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	clusterv1 "sigs.k8s.io/cluster-api/api/v1alpha4"
+	"sigs.k8s.io/cluster-api/errors"
 )
 
-// EDIT THIS FILE!  THIS IS SCAFFOLDING FOR YOU TO OWN!
-// NOTE: json tags are required.  Any new fields you add must have json tags for the fields to be serialized.
+const (
+	// MachineFinalizer allows ReconcileByoMachine to clean up Byo
+	// resources associated with ByoMachine before removing it from the
+	// API Server.
+	MachineFinalizer = "byomachine.infrastructure.cluster.x-k8s.io"
+)
 
 // ByoMachineSpec defines the desired state of ByoMachine
 type ByoMachineSpec struct {
-	// INSERT ADDITIONAL SPEC FIELDS - desired state of cluster
-	// Important: Run "make" to regenerate code after modifying this file
+	ProviderID *string `json:"providerID,omitempty"`
 
-	ProviderID string `json:"providerID,omitempty"`
+	// FailureDomain is the failure domain unique identifier this Machine should be attached to, as defined in Cluster API.
+	// For this infrastructure provider, the name is equivalent to the name of the VSphereDeploymentZone.
+	FailureDomain *string `json:"failureDomain,omitempty"`
 }
 
 // ByoMachineStatus defines the observed state of ByoMachine
 type ByoMachineStatus struct {
-	// INSERT ADDITIONAL STATUS FIELD - define observed state of cluster
-	// Important: Run "make" to regenerate code after modifying this file
-
 	// +optional
 	Ready bool `json:"ready"`
+
+	// Addresses contains the VSphere instance associated addresses.
+	Addresses []clusterv1.MachineAddress `json:"addresses,omitempty"`
+
+	// Any transient errors that occur during the reconciliation of Machines
+	// can be added as events to the Machine object and/or logged in the
+	// controller's output.
+	// +optional
+	FailureReason *errors.MachineStatusError `json:"failureReason,omitempty"`
+
+	// Any transient errors that occur during the reconciliation of Machines
+	// can be added as events to the Machine object and/or logged in the
+	// controller's output.
+	// +optional
+	FailureMessage *string `json:"failureMessage,omitempty"`
 
 	// Conditions defines current service state of the BYOMachine.
 	// +optional
@@ -57,6 +75,14 @@ type ByoMachine struct {
 	Status ByoMachineStatus `json:"status,omitempty"`
 }
 
+func (m *ByoMachine) GetConditions() clusterv1.Conditions {
+	return m.Status.Conditions
+}
+
+func (m *ByoMachine) SetConditions(conditions clusterv1.Conditions) {
+	m.Status.Conditions = conditions
+}
+
 //+kubebuilder:object:root=true
 
 // ByoMachineList contains a list of ByoMachine
@@ -68,12 +94,4 @@ type ByoMachineList struct {
 
 func init() {
 	SchemeBuilder.Register(&ByoMachine{}, &ByoMachineList{})
-}
-
-func (m *ByoMachine) GetConditions() clusterv1.Conditions {
-	return m.Status.Conditions
-}
-
-func (m *ByoMachine) SetConditions(conditions clusterv1.Conditions) {
-	m.Status.Conditions = conditions
 }

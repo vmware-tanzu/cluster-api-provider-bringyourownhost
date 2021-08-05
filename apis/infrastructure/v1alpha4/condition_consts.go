@@ -10,4 +10,7 @@ const (
 	// by the nodecurrently being hosting a BYOHmachine or not.
 	K8sComponentsInstalledCondition clusterv1.ConditionType = "K8sComponentsInstalled"
 	HostReadyCondition              clusterv1.ConditionType = "HostReady"
+
+	// VMProvisionedCondition documents the status of the provisioning of a VSphereMachine and its underlying VSphereVM.
+	HostProvisionedCondition clusterv1.ConditionType = "HostProvisioned"
 )

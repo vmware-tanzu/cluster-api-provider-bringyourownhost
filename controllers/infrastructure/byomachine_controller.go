@@ -18,25 +18,38 @@ package controllers
 
 import (
 	"context"
-	"errors"
 	"fmt"
-	"strings"
+	"reflect"
+
+	"github.com/pkg/errors"
 
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/cluster-api/controllers/remote"
 	"sigs.k8s.io/cluster-api/util"
+	"sigs.k8s.io/cluster-api/util/annotations"
 	"sigs.k8s.io/cluster-api/util/conditions"
 	"sigs.k8s.io/cluster-api/util/patch"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/log"
+	"sigs.k8s.io/controller-runtime/pkg/reconcile"
+	"sigs.k8s.io/controller-runtime/pkg/source"
 
-	infrastructurev1alpha4 "github.com/vmware-tanzu/cluster-api-provider-byoh/apis/infrastructure/v1alpha4"
+	"github.com/docker/docker/daemon/logger"
+	infrav1 "github.com/vmware-tanzu/cluster-api-provider-byoh/apis/infrastructure/v1alpha4"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	clusterv1 "sigs.k8s.io/cluster-api/api/v1alpha4"
 	"sigs.k8s.io/cluster-api/util/annotations"
+	clusterutilv1 "sigs.k8s.io/cluster-api/util"
+)
+
+var (
+	controlledType     = &infrav1.ByoMachine{}
+	controlledTypeName = reflect.TypeOf(controlledType).Elem().Name()
+	controlledTypeGVK  = infrav1.GroupVersion.WithKind(controlledTypeName)
 )
 
 const (
@@ -74,10 +87,8 @@ type ByoMachineReconciler struct {
 func (r *ByoMachineReconciler) Reconcile(ctx context.Context, req ctrl.Request) (_ ctrl.Result, reterr error) {
 	logger := log.FromContext(ctx).WithValues("namespace", req.Namespace, "BYOMachine", req.Name)
 
-	//Fetch the ByoMachine instance.
-	byoMachine := &infrastructurev1alpha4.ByoMachine{}
-	err := r.Client.Get(ctx, req.NamespacedName, byoMachine)
-	if err != nil {
+	byoMachine := &infrav1.ByoMachine{}
+	if err := r.Client.Get(ctx, req.NamespacedName, byoMachine); err != nil {
 		if apierrors.IsNotFound(err) {
 			return ctrl.Result{}, nil
 		}
@@ -129,6 +140,123 @@ func (r *ByoMachineReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 	}
 
 	hostsList := &infrastructurev1alpha4.ByoHostList{}
+	// Fetch the CAPI Machine.
+	machine, err := clusterutilv1.GetOwnerMachine(ctx, r.Client, byoMachine.ObjectMeta)
+	if err != nil {
+		return reconcile.Result{}, err
+	}
+	if machine == nil {
+		logger.Info("Waiting for Machine Controller to set OwnerRef on ByoMachine")
+		return reconcile.Result{}, nil
+	}
+
+	// Fetch the CAPI Cluster.
+	cluster, err := clusterutilv1.GetClusterFromMetadata(ctx, r.Client, machine.ObjectMeta)
+	if err != nil {
+		logger.Info("Machine is missing cluster label or cluster does not exist")
+		return reconcile.Result{}, nil
+	}
+	if annotations.IsPaused(cluster, byoMachine) {
+		logger.V(4).Info("ByoMachine %s/%s linked to a cluster that is paused",
+			byoMachine.Namespace, byoMachine.Name)
+		return reconcile.Result{}, nil
+	}
+
+	// Fetch the ByoCluster
+	byoCluster := &infrav1.ByoCluster{}
+	byoClusterName := client.ObjectKey{
+		Namespace: byoMachine.Namespace,
+		Name:      cluster.Spec.InfrastructureRef.Name,
+	}
+	if err := r.Client.Get(ctx, byoClusterName, byoCluster); err != nil {
+		logger.Info("Waiting for VSphereCluster")
+		return reconcile.Result{}, nil
+	}
+
+	// Create the patch helper.
+	patchHelper, err := patch.NewHelper(byoMachine, r.Client)
+	if err != nil {
+		return reconcile.Result{}, errors.Wrapf(
+			err,
+			"failed to init patch helper for %s %s/%s",
+			byoMachine.GroupVersionKind(),
+			byoMachine.Namespace,
+			byoMachine.Name)
+	}
+
+	// Always issue a patch when exiting this function so changes to the
+	// resource are patched back to the API server.
+	defer func() {
+		// always update the readyCondition.
+		conditions.SetSummary(byoMachine,
+			conditions.WithConditions(infrav1.HostProvisionedCondition),
+		)
+
+		err := patchHelper.Patch(
+			ctx,
+			byoMachine,
+			patch.WithOwnedConditions{Conditions: []clusterv1.ConditionType{
+			clusterv1.ReadyCondition,}}
+		) 
+
+		// Patch the VSphereMachine resource.
+		if err != nil {
+			if reterr == nil {
+				reterr = err
+			}
+			logger.Error(err, "patch failed", "byomachine")
+		}
+	}()
+
+	// Handle deleted machines
+	if !byoMachine.ObjectMeta.DeletionTimestamp.IsZero() {
+		return r.reconcileDelete(ctx, byoMachine)
+	}
+
+	// Handle non-deleted machines
+	return r.reconcileNormal(ctx, byoMachine)
+
+}
+
+func (r *ByoMachineReconciler) setNodeProviderID(ctx context.Context, remoteClient client.Client, host infrastructurev1alpha4.ByoHost, providerID string) error {
+
+	node := &corev1.Node{}
+	key := client.ObjectKey{Name: host.Name, Namespace: host.Namespace}
+	err := remoteClient.Get(ctx, key, node)
+	if err != nil {
+		return err
+	}
+	helper, err := patch.NewHelper(node, remoteClient)
+	if err != nil {
+		return err
+	}
+
+	node.Spec.ProviderID = providerID
+	helper.Patch(ctx, node)
+
+	return nil
+}
+
+func (r *ByoMachineReconciler) getRemoteClient(ctx context.Context, byoMachine *infrastructurev1alpha4.ByoMachine) (client.Client, error) {
+	cluster, err := util.GetClusterFromMetadata(ctx, r.Client, byoMachine.ObjectMeta)
+	if err != nil {
+		return nil, err
+	}
+	remoteClient, err := r.Tracker.GetClient(ctx, util.ObjectKey(cluster))
+	if err != nil {
+		return nil, err
+	}
+
+	return remoteClient, nil
+}
+
+func (r ByoMachineReconciler) reconcileDelete(ctx context.Context, byoMachine *infrav1.ByoMachine) (reconcile.Result, error) {
+	return reconcile.Result{}, nil
+}
+
+func (r ByoMachineReconciler) reconcileNormal(ctx context.Context, byoMachine *infrav1.ByoMachine) (reconcile.Result, error) {
+
+	hostsList := &infrav1.ByoHostList{}
 	err = r.Client.List(ctx, hostsList)
 
 	if err != nil {
@@ -184,10 +312,11 @@ func (r *ByoMachineReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 	}
 
 	helper, _ = patch.NewHelper(byoMachine, r.Client)
-	byoMachine.Spec.ProviderID = providerID
+	byoMachine.Spec.ProviderID = &providerID
 	byoMachine.Status.Ready = true
 
-	conditions.MarkTrue(byoMachine, infrastructurev1alpha4.HostReadyCondition)
+	conditions.MarkTrue(byoMachine, infrav1.HostReadyCondition)
+
 	defer func() {
 		if err := helper.Patch(ctx, byoMachine); err != nil && reterr == nil {
 			logger.Error(err, "failed to patch byomachine")
@@ -200,7 +329,16 @@ func (r *ByoMachineReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 // SetupWithManager sets up the controller with the Manager.
 func (r *ByoMachineReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
-		For(&infrastructurev1alpha4.ByoMachine{}).
+		For(controlledType).
+		Watches(
+			&source.Kind{Type: &infrav1.ByoHost{}},
+			&handler.EnqueueRequestForOwner{OwnerType: controlledType, IsController: false},
+		).
+		// Watch the CAPI resource that owns this infrastructure resource.
+		Watches(
+			&source.Kind{Type: &clusterv1.Machine{}},
+			handler.EnqueueRequestsFromMapFunc(clusterutilv1.MachineToInfrastructureMapFunc(controlledTypeGVK)),
+		).
 		Complete(r)
 }
 
