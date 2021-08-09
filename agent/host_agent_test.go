@@ -184,6 +184,11 @@ runCmd:
 				UID:        byoMachine.UID,
 				APIVersion: byoHost.APIVersion,
 			}
+			byoHost.Spec.BootstrapSecret = &corev1.ObjectReference{
+				Kind:      "Secret",
+				Namespace: ns.Name,
+				Name:      bootstrapSecretName,
+			}
 			err = helper.Patch(context.TODO(), byoHost)
 			Expect(err).NotTo(HaveOccurred())
 

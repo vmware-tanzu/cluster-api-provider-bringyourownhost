@@ -46,14 +46,23 @@ var _ = Describe("Controllers/ByomachineController/Unitests", func() {
 	})
 
 	Context("When byohost is not available", func() {
+		const (
+			machineName = "machine-unit-test-1"
+		)
 		var (
 			ctx        context.Context
 			byoMachine *infrastructurev1alpha4.ByoMachine
+			machine    *clusterv1.Machine
 		)
 
 		BeforeEach(func() {
 			ctx = context.Background()
-			byoMachine = common.NewByoMachine(defaultByoMachineName, defaultNamespace, defaultClusterName, nil)
+
+			bootstrapSecret := "fakeBootstrapSecret"
+			machine = common.NewMachine(&bootstrapSecret, machineName, defaultNamespace, defaultClusterName)
+			Expect(k8sClient.Create(ctx, machine)).Should(Succeed())
+
+			byoMachine = common.NewByoMachine(defaultByoMachineName, defaultNamespace, defaultClusterName, machine)
 			Expect(k8sClient.Create(ctx, byoMachine)).Should(Succeed())
 		})
 
@@ -67,23 +76,32 @@ var _ = Describe("Controllers/ByomachineController/Unitests", func() {
 
 		AfterEach(func() {
 			Expect(k8sClient.Delete(ctx, byoMachine)).Should(Succeed())
+			Expect(k8sClient.Delete(ctx, machine)).Should(Succeed())
 		})
 	})
 
 	Context("When cluster does not exist", func() {
 		const (
 			clusterName = "fake-cluster-unit-test"
+			machineName = "machine-unit-test-2"
 		)
 		var (
 			ctx        context.Context
 			byoMachine *infrastructurev1alpha4.ByoMachine
 			byoHost    *infrastructurev1alpha4.ByoHost
+			machine    *clusterv1.Machine
 		)
 
 		BeforeEach(func() {
 			ctx = context.Background()
-			byoMachine = common.NewByoMachine(defaultByoMachineName, defaultNamespace, clusterName, nil)
+
+			bootstrapSecret := "fakeBootstrapSecret"
+			machine = common.NewMachine(&bootstrapSecret, machineName, defaultNamespace, defaultClusterName)
+			Expect(k8sClient.Create(ctx, machine)).Should(Succeed())
+
+			byoMachine = common.NewByoMachine(defaultByoMachineName, defaultNamespace, clusterName, machine)
 			Expect(k8sClient.Create(ctx, byoMachine)).Should(Succeed())
+
 			byoHost = common.NewByoHost(defaultByoHostName, defaultNamespace, nil)
 			Expect(k8sClient.Create(ctx, byoHost)).Should(Succeed())
 		})
@@ -99,6 +117,7 @@ var _ = Describe("Controllers/ByomachineController/Unitests", func() {
 		AfterEach(func() {
 			Expect(k8sClient.Delete(ctx, byoMachine)).Should(Succeed())
 			Expect(k8sClient.Delete(ctx, byoHost)).Should(Succeed())
+			Expect(k8sClient.Delete(ctx, machine)).Should(Succeed())
 		})
 	})
 
@@ -106,21 +125,28 @@ var _ = Describe("Controllers/ByomachineController/Unitests", func() {
 		//Reconcile assumes the node name equal to host name, or setNodeProviderID will be failed.
 		//We only have one node "host-unit-test" in testEnv, not "host-unit-test-2"
 		const (
-			hostname = "host-unit-test-2"
+			hostname    = "host-unit-test-3"
+			machineName = "machine-unit-test-3"
 		)
 
 		var (
 			ctx        context.Context
 			byoMachine *infrastructurev1alpha4.ByoMachine
 			byoHost    *infrastructurev1alpha4.ByoHost
+			machine    *clusterv1.Machine
 		)
 
 		BeforeEach(func() {
 			ctx = context.Background()
-			byoMachine = common.NewByoMachine(defaultByoMachineName, defaultNamespace, defaultClusterName, nil)
+			bootstrapSecret := "fakeBootstrapSecret"
+			machine = common.NewMachine(&bootstrapSecret, defaultMachineName, defaultNamespace, defaultClusterName)
+			Expect(k8sClient.Create(ctx, machine)).Should(Succeed())
+
+			byoMachine = common.NewByoMachine(defaultByoMachineName, defaultNamespace, defaultClusterName, machine)
 			Expect(k8sClient.Create(ctx, byoMachine)).Should(Succeed())
 			byoHost = common.NewByoHost(hostname, defaultNamespace, nil)
 			Expect(k8sClient.Create(ctx, byoHost)).Should(Succeed())
+
 		})
 
 		It("Should return error", func() {
@@ -133,13 +159,15 @@ var _ = Describe("Controllers/ByomachineController/Unitests", func() {
 		AfterEach(func() {
 			Expect(k8sClient.Delete(ctx, byoMachine)).Should(Succeed())
 			Expect(k8sClient.Delete(ctx, byoHost)).Should(Succeed())
+			Expect(k8sClient.Delete(ctx, machine)).Should(Succeed())
 		})
 	})
 
 	Context("When cluster is paused.", func() {
 		const (
-			hostname = "host-unit-test-3"
-			clusterName = "my-cluster-3"
+			hostname    = "host-unit-test-4"
+			clusterName = "cluster-unit-test-4"
+			machineName = "machine-unit-test-4"
 		)
 
 		var (
@@ -147,6 +175,7 @@ var _ = Describe("Controllers/ByomachineController/Unitests", func() {
 			byoMachine *infrastructurev1alpha4.ByoMachine
 			byoHost    *infrastructurev1alpha4.ByoHost
 			cluster    *clusterv1.Cluster
+			machine    *clusterv1.Machine
 		)
 
 		BeforeEach(func() {
@@ -154,7 +183,10 @@ var _ = Describe("Controllers/ByomachineController/Unitests", func() {
 			cluster = common.NewCluster(clusterName, defaultNamespace)
 			cluster.Spec.Paused = true
 			Expect(k8sClient.Create(ctx, cluster)).Should(Succeed())
-			byoMachine = common.NewByoMachine(defaultByoMachineName, defaultNamespace, clusterName, nil)
+			bootstrapSecret := "fakeBootstrapSecret"
+			machine = common.NewMachine(&bootstrapSecret, defaultMachineName, defaultNamespace, defaultClusterName)
+			Expect(k8sClient.Create(ctx, machine)).Should(Succeed())
+			byoMachine = common.NewByoMachine(defaultByoMachineName, defaultNamespace, clusterName, machine)
 			Expect(k8sClient.Create(ctx, byoMachine)).Should(Succeed())
 			byoHost = common.NewByoHost(hostname, defaultNamespace, nil)
 			Expect(k8sClient.Create(ctx, byoHost)).Should(Succeed())
@@ -179,13 +211,15 @@ var _ = Describe("Controllers/ByomachineController/Unitests", func() {
 			Expect(k8sClient.Delete(ctx, byoMachine)).Should(Succeed())
 			Expect(k8sClient.Delete(ctx, byoHost)).Should(Succeed())
 			Expect(k8sClient.Delete(ctx, cluster)).Should(Succeed())
+			Expect(k8sClient.Delete(ctx, machine)).Should(Succeed())
 		})
 	})
 
 	Context("When ByoMachine is paused.", func() {
 		const (
-			hostname = "host-unit-test-4"
-			clusterName = "my-cluster-4"
+			hostname    = "host-unit-test-5"
+			clusterName = "cluster-unit-test-5"
+			machineName = "machine-unit-test-4"
 		)
 
 		var (
@@ -193,12 +227,16 @@ var _ = Describe("Controllers/ByomachineController/Unitests", func() {
 			byoMachine *infrastructurev1alpha4.ByoMachine
 			byoHost    *infrastructurev1alpha4.ByoHost
 			cluster    *clusterv1.Cluster
+			machine    *clusterv1.Machine
 		)
 
 		BeforeEach(func() {
 			ctx = context.Background()
 			cluster = common.NewCluster(clusterName, defaultNamespace)
 			Expect(k8sClient.Create(ctx, cluster)).Should(Succeed())
+			bootstrapSecret := "fakeBootstrapSecret"
+			machine = common.NewMachine(&bootstrapSecret, defaultMachineName, defaultNamespace, defaultClusterName)
+			Expect(k8sClient.Create(ctx, machine)).Should(Succeed())
 			byoMachine = common.NewByoMachine(defaultByoMachineName, defaultNamespace, clusterName, nil)
 			byoMachine.ObjectMeta.Annotations = map[string]string{}
 			byoMachine.ObjectMeta.Annotations[clusterv1.PausedAnnotation] = "paused"
@@ -226,6 +264,7 @@ var _ = Describe("Controllers/ByomachineController/Unitests", func() {
 			Expect(k8sClient.Delete(ctx, byoMachine)).Should(Succeed())
 			Expect(k8sClient.Delete(ctx, byoHost)).Should(Succeed())
 			Expect(k8sClient.Delete(ctx, cluster)).Should(Succeed())
+			Expect(k8sClient.Delete(ctx, machine)).Should(Succeed())
 		})
 	})
 

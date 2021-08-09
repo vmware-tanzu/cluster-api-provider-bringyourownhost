@@ -100,4 +100,3 @@ func decodeContent(content string, encodings []string) (string, error) {
 	}
 	return content, nil
 }
-

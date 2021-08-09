@@ -189,7 +189,7 @@ var _ = Describe("When BYOH joins existing cluster", func() {
 		// Setup a Namespace where to host objects for this spec and create a watcher for the namespace events.
 		namespace, cancelWatches = setupSpecNamespace(ctx, specName, bootstrapClusterProxy, artifactFolder)
 		clusterResources = new(clusterctl.ApplyClusterTemplateAndWaitResult)
-		AgentLogFile = common.RandStr("/tmp/agent", 5)+".log"
+		AgentLogFile = common.RandStr("/tmp/agent", 5) + ".log"
 	})
 
 	It("Should create a workload cluster with single BYOH host", func() {
@@ -293,7 +293,7 @@ var _ = Describe("When BYOH joins existing cluster", func() {
 				for {
 					select {
 					case line := <-s:
-						_, err2 := f.WriteString(line+"\n")
+						_, err2 := f.WriteString(line + "\n")
 						if err2 != nil {
 							Byf("Write String to file failed, err2=%v", err2)
 						}
@@ -335,7 +335,7 @@ var _ = Describe("When BYOH joins existing cluster", func() {
 		}
 
 		if AgentLogFile != "" {
-			 os.Remove(AgentLogFile)
+			os.Remove(AgentLogFile)
 		}
 
 		// Dumps all the resources in the spec namespace, then cleanups the cluster object and the spec namespace itself.

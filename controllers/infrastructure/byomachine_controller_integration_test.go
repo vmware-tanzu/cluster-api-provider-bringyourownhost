@@ -9,6 +9,7 @@ import (
 	"github.com/vmware-tanzu/cluster-api-provider-byoh/common"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/types"
+	clusterv1 "sigs.k8s.io/cluster-api/api/v1alpha4"
 	"sigs.k8s.io/cluster-api/util/conditions"
 )
 
@@ -18,6 +19,7 @@ var _ = Describe("Controllers/ByomachineController", func() {
 			ctx        context.Context
 			byoHost    *infrastructurev1alpha4.ByoHost
 			byoMachine *infrastructurev1alpha4.ByoMachine
+			machine    *clusterv1.Machine
 		)
 
 		BeforeEach(func() {
@@ -27,9 +29,13 @@ var _ = Describe("Controllers/ByomachineController", func() {
 		})
 
 		It("claims the first available host", func() {
-			byoMachine = common.NewByoMachine(defaultByoMachineName, defaultNamespace, defaultClusterName, nil)
-			Expect(k8sClient.Create(ctx, byoMachine)).Should(Succeed())
 
+			bootstrapSecret := "fakeBootstrapSecret"
+			machine = common.NewMachine(&bootstrapSecret, defaultMachineName, defaultNamespace, defaultClusterName)
+			Expect(k8sClient.Create(ctx, machine)).Should(Succeed())
+
+			byoMachine = common.NewByoMachine(defaultByoMachineName, defaultNamespace, defaultClusterName, machine)
+			Expect(k8sClient.Create(ctx, byoMachine)).Should(Succeed())
 			byoHostLookupKey := types.NamespacedName{Name: byoHost.Name, Namespace: byoHost.Namespace}
 
 			Eventually(func() bool {
@@ -55,7 +61,7 @@ var _ = Describe("Controllers/ByomachineController", func() {
 					return ""
 				}
 				return createdByoMachine.Spec.ProviderID
-			}).Should(ContainSubstring("byoh://"))
+			}).Should(ContainSubstring(ProviderIDPrefix))
 
 			Eventually(func() bool {
 				err := k8sClient.Get(ctx, byoMachineLookupkey, createdByoMachine)
@@ -82,12 +88,13 @@ var _ = Describe("Controllers/ByomachineController", func() {
 			err := clientFake.Get(ctx, types.NamespacedName{Name: defaultNodeName, Namespace: defaultNamespace}, &node)
 			Expect(err).NotTo(HaveOccurred())
 
-			Expect(node.Spec.ProviderID).To(ContainSubstring("byoh://"))
+			Expect(node.Spec.ProviderID).To(ContainSubstring(ProviderIDPrefix))
 		})
 
 		AfterEach(func() {
 			Expect(k8sClient.Delete(ctx, byoMachine)).Should(Succeed())
 			Expect(k8sClient.Delete(ctx, byoHost)).Should(Succeed())
+			Expect(k8sClient.Delete(ctx, machine)).Should(Succeed())
 		})
 
 	})
