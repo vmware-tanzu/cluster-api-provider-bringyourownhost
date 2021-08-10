@@ -169,7 +169,7 @@ func (r *ByoMachineReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 
 	err = helper.Patch(ctx, &host)
 	if err != nil {
-		logger.Error(err, "patch byohost failed")
+		logger.Error(err, "failed to patch byohost")
 		return ctrl.Result{}, err
 	}
 
