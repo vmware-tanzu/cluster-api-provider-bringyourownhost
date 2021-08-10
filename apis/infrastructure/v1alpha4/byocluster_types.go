@@ -40,7 +40,7 @@ type ByoClusterStatus struct {
 	// +optional
 	Ready bool `json:"ready,omitempty"`
 
-	// Conditions defines current service state of the VSphereCluster.
+	// Conditions defines current service state of the ByoCluster.
 	// +optional
 	Conditions clusterv1.Conditions `json:"conditions,omitempty"`
 
