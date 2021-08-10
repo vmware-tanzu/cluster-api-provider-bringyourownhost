@@ -5,6 +5,7 @@ import (
 
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/klog"
+	"sigs.k8s.io/cluster-api/util/annotations"
 	"sigs.k8s.io/cluster-api/util/conditions"
 	"sigs.k8s.io/cluster-api/util/patch"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -30,7 +31,7 @@ func (r HostReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.R
 	}
 
 	// Return early if the object or Cluster is paused.
-	if r.isPaused(ctx, byoHost) {
+	if annotations.HasPausedAnnotation(byoHost) {
 		klog.Info("The related byoMachine or linked Cluster is marked as paused. Won't reconcile")
 		return ctrl.Result{}, nil
 	}
@@ -83,15 +84,4 @@ func (r HostReconciler) getBootstrapScript(ctx context.Context, dataSecretName, 
 
 func (r HostReconciler) SetupWithManager(mgr manager.Manager) error {
 	return nil
-}
-
-func (r HostReconciler) isPaused(ctx context.Context, byohost *infrastructurev1alpha4.ByoHost) bool {
-	for _, condition := range byohost.Status.Conditions {
-		if condition.Type == infrastructurev1alpha4.PausedCondition {
-			if condition.Status == corev1.ConditionTrue {
-				return true
-			}
-		}
-	}
-	return false
 }

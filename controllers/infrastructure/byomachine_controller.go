@@ -236,6 +236,7 @@ func (r *ByoMachineReconciler) getRemoteClient(ctx context.Context, byoMachine *
 }
 
 func (r *ByoMachineReconciler) setPausedConditionForByoHost(ctx context.Context, providerID string, nameSpace string, isPaused bool) error {
+
 	// The format of providerID is "byoh://<byoHostName>/<RandomString(6)>
 	if !strings.HasPrefix(providerID, ProviderIDPrefix) {
 		return errors.New("invalid providerID prefix")
@@ -261,15 +262,16 @@ func (r *ByoMachineReconciler) setPausedConditionForByoHost(ctx context.Context,
 	}
 
 	if isPaused {
-		conditions.MarkTrue(byoHost, infrastructurev1alpha4.PausedCondition)
+		desired := map[string]string{
+			clusterv1.PausedAnnotation: "paused",
+		}
+		annotations.AddAnnotations(byoHost, desired)
 	} else {
-		conditions.MarkFalse(byoHost, infrastructurev1alpha4.PausedCondition, "resume", clusterv1.ConditionSeverityInfo, "")
+		_, ok := byoHost.Annotations[clusterv1.PausedAnnotation]
+		if ok {
+			delete(byoHost.Annotations, clusterv1.PausedAnnotation)
+		}
 	}
 
-	err = helper.Patch(ctx, byoHost)
-	if err != nil {
-		return err
-	}
-
-	return nil
+	return helper.Patch(ctx, byoHost)
 }

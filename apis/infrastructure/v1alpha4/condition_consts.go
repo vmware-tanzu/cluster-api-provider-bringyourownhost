@@ -10,5 +10,4 @@ const (
 	// by the nodecurrently being hosting a BYOHmachine or not.
 	K8sComponentsInstalledCondition clusterv1.ConditionType = "K8sComponentsInstalled"
 	HostReadyCondition              clusterv1.ConditionType = "HostReady"
-	PausedCondition                 clusterv1.ConditionType = "Paused"
 )
