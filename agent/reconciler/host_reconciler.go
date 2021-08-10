@@ -30,8 +30,8 @@ func (r HostReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.R
 	}
 
 	// Return early if the object or Cluster is paused.
-	if r.IsPaused(ctx, byoHost) {
-		klog.Info("byoMachine or linked Cluster is marked as paused. Won't reconcile")
+	if r.isPaused(ctx, byoHost) {
+		klog.Info("The related byoMachine or linked Cluster is marked as paused. Won't reconcile")
 		return ctrl.Result{}, nil
 	}
 
@@ -85,7 +85,7 @@ func (r HostReconciler) SetupWithManager(mgr manager.Manager) error {
 	return nil
 }
 
-func (r HostReconciler) IsPaused(ctx context.Context, byohost *infrastructurev1alpha4.ByoHost) bool {
+func (r HostReconciler) isPaused(ctx context.Context, byohost *infrastructurev1alpha4.ByoHost) bool {
 	for _, condition := range byohost.Status.Conditions {
 		if condition.Type == infrastructurev1alpha4.PausedCondition {
 			if condition.Status == corev1.ConditionTrue {

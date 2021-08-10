@@ -113,7 +113,7 @@ func (r *ByoMachineReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 	if annotations.IsPaused(cluster, byoMachine) {
 		logger.Info("byoMachine or linked Cluster is marked as paused. Won't reconcile")
 		if byoMachine.Spec.ProviderID != "" {
-			if err := r.setResumeOrPaused(ctx, byoMachine.Spec.ProviderID, req.Namespace, true); err != nil {
+			if err := r.setPausedConditionForByoHost(ctx, byoMachine.Spec.ProviderID, req.Namespace, true); err != nil {
 				logger.Error(err, "Set Paused flag for byohost")
 				return ctrl.Result{}, nil
 			}
@@ -122,7 +122,7 @@ func (r *ByoMachineReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 	} else {
 		//if there is already byhost associated with it, make sure the paused status of byohost is false
 		if len(byoMachine.Spec.ProviderID) > 0 {
-			if err := r.setResumeOrPaused(ctx, byoMachine.Spec.ProviderID, req.Namespace, false); err != nil {
+			if err := r.setPausedConditionForByoHost(ctx, byoMachine.Spec.ProviderID, req.Namespace, false); err != nil {
 				logger.Error(err, "Set resume flag for byohost failed")
 				return ctrl.Result{}, err
 			}
@@ -242,7 +242,7 @@ func (r *ByoMachineReconciler) getRemoteClient(ctx context.Context, byoMachine *
 	return remoteClient, nil
 }
 
-func (r *ByoMachineReconciler) setResumeOrPaused(ctx context.Context, providerID string, nameSpace string, isPaused bool) error {
+func (r *ByoMachineReconciler) setPausedConditionForByoHost(ctx context.Context, providerID string, nameSpace string, isPaused bool) error {
 	if !strings.HasPrefix(providerID, ProviderIDPrefix) {
 		return errors.New("invalid providerID prefix")
 	}

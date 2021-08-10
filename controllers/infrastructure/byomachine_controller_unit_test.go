@@ -219,7 +219,7 @@ var _ = Describe("Controllers/ByomachineController/Unitests", func() {
 		const (
 			hostname    = "host-unit-test-5"
 			clusterName = "cluster-unit-test-5"
-			machineName = "machine-unit-test-4"
+			machineName = "machine-unit-test-5"
 		)
 
 		var (
