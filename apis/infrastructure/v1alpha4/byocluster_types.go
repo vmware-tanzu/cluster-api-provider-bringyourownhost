@@ -18,24 +18,43 @@ package v1alpha4
 
 import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	clusterv1 "sigs.k8s.io/cluster-api/api/v1alpha4"
 )
 
-// EDIT THIS FILE!  THIS IS SCAFFOLDING FOR YOU TO OWN!
-// NOTE: json tags are required.  Any new fields you add must have json tags for the fields to be serialized.
+const (
+	// ClusterFinalizer allows ReconcileByoCluster to clean up Byo
+	// resources associated with ByoCluster before removing it from the
+	// API server.
+	ClusterFinalizer = "byocluster.infrastructure.cluster.x-k8s.io"
+)
 
 // ByoClusterSpec defines the desired state of ByoCluster
 type ByoClusterSpec struct {
-	// INSERT ADDITIONAL SPEC FIELDS - desired state of cluster
-	// Important: Run "make" to regenerate code after modifying this file
-
-	// Foo is an example field of ByoCluster. Edit byocluster_types.go to remove/update
-	Foo string `json:"foo,omitempty"`
+	// ControlPlaneEndpoint represents the endpoint used to communicate with the control plane.
+	// +optional
+	ControlPlaneEndpoint APIEndpoint `json:"controlPlaneEndpoint"`
 }
 
 // ByoClusterStatus defines the observed state of ByoCluster
 type ByoClusterStatus struct {
-	// INSERT ADDITIONAL STATUS FIELD - define observed state of cluster
-	// Important: Run "make" to regenerate code after modifying this file
+	// +optional
+	Ready bool `json:"ready,omitempty"`
+
+	// Conditions defines current service state of the ByoCluster.
+	// +optional
+	Conditions clusterv1.Conditions `json:"conditions,omitempty"`
+
+	// FailureDomains is a list of failure domain objects synced from the infrastructure provider.
+	FailureDomains clusterv1.FailureDomains `json:"failureDomains,omitempty"`
+}
+
+// APIEndpoint represents a reachable Kubernetes API endpoint.
+type APIEndpoint struct {
+	// Host is the hostname on which the API server is serving.
+	Host string `json:"host"`
+
+	// Port is the port on which the API server is serving.
+	Port int32 `json:"port"`
 }
 
 //+kubebuilder:object:root=true
@@ -48,6 +67,14 @@ type ByoCluster struct {
 
 	Spec   ByoClusterSpec   `json:"spec,omitempty"`
 	Status ByoClusterStatus `json:"status,omitempty"`
+}
+
+func (c *ByoCluster) GetConditions() clusterv1.Conditions {
+	return c.Status.Conditions
+}
+
+func (c *ByoCluster) SetConditions(conditions clusterv1.Conditions) {
+	c.Status.Conditions = conditions
 }
 
 //+kubebuilder:object:root=true
