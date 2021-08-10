@@ -193,7 +193,7 @@ func (r *ByoMachineReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 	conditions.MarkTrue(byoMachine, infrastructurev1alpha4.HostReadyCondition)
 	defer func() {
 		if err := helper.Patch(ctx, byoMachine); err != nil && reterr == nil {
-			logger.Error(err, "Patch byomachine failed")
+			logger.Error(err, "failed to patch byomachine")
 			reterr = err
 		}
 	}()
