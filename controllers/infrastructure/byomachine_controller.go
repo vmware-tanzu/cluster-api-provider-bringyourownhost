@@ -18,7 +18,6 @@ package controllers
 
 import (
 	"context"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"strings"
@@ -156,7 +155,7 @@ func (r *ByoMachineReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 
 	if machine.Spec.Bootstrap.DataSecretName == nil {
 		logger.Info("Bootstrap secret not ready")
-		return ctrl.Result{}, errors.New("Bootstrap secret not ready")
+		return ctrl.Result{}, errors.New("bootstrap secret not ready")
 	} else {
 		host.Spec.BootstrapSecret = &corev1.ObjectReference{
 			Kind:      "Secret",
@@ -164,8 +163,6 @@ func (r *ByoMachineReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 			Name:      *machine.Spec.Bootstrap.DataSecretName,
 		}
 	}
-	hostStr, _ := json.Marshal(host)
-	logger.Error(errors.New(string(hostStr)), "huchen: host info")
 
 	err = helper.Patch(ctx, &host)
 	if err != nil {
@@ -239,6 +236,7 @@ func (r *ByoMachineReconciler) getRemoteClient(ctx context.Context, byoMachine *
 }
 
 func (r *ByoMachineReconciler) setPausedConditionForByoHost(ctx context.Context, providerID string, nameSpace string, isPaused bool) error {
+	// The format of providerID is "byoh://<byoHostName>/<RandomString(6)>
 	if !strings.HasPrefix(providerID, ProviderIDPrefix) {
 		return errors.New("invalid providerID prefix")
 	}
@@ -262,7 +260,7 @@ func (r *ByoMachineReconciler) setPausedConditionForByoHost(ctx context.Context,
 		return err
 	}
 
-	if isPaused == true {
+	if isPaused {
 		conditions.MarkTrue(byoHost, infrastructurev1alpha4.PausedCondition)
 	} else {
 		conditions.MarkFalse(byoHost, infrastructurev1alpha4.PausedCondition, "resume", clusterv1.ConditionSeverityInfo, "")
