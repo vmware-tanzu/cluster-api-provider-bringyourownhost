@@ -182,7 +182,7 @@ func (r *ByoMachineReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 
 	err = r.setNodeProviderID(ctx, remoteClient, host, providerID)
 	if err != nil {
-		logger.Error(err, "set node providerID failed")
+		logger.Error(err, "failed to set node providerID")
 		return ctrl.Result{}, err
 	}
 
