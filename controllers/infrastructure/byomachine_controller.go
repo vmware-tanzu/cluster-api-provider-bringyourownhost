@@ -221,12 +221,8 @@ func (r *ByoMachineReconciler) setNodeProviderID(ctx context.Context, remoteClie
 	}
 
 	node.Spec.ProviderID = providerID
-
-	if err := helper.Patch(ctx, node); err != nil {
-		return err
-	}
-
-	return nil
+	
+	return helper.Patch(ctx, node)
 }
 
 func (r *ByoMachineReconciler) getRemoteClient(ctx context.Context, byoMachine *infrastructurev1alpha4.ByoMachine) (client.Client, error) {
