@@ -88,7 +88,7 @@ func (r *ByoMachineReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 	// Fetch the Machine.
 	machine, err := util.GetOwnerMachine(ctx, r.Client, byoMachine.ObjectMeta)
 	if err != nil {
-		logger.Error(err, "Fetch machine failed")
+		logger.Error(err, "failed to get Owner Machine")
 		return ctrl.Result{}, err
 	}
 
