@@ -176,7 +176,7 @@ func (r *ByoMachineReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 	providerID := fmt.Sprintf("%s%s/%s", ProviderIDPrefix, host.Name, util.RandomString(6))
 	remoteClient, err := r.getRemoteClient(ctx, byoMachine)
 	if err != nil {
-		logger.Error(err, "get remote client failed")
+		logger.Error(err, "failed to get remote client")
 		return ctrl.Result{}, err
 	}
 
