@@ -133,7 +133,7 @@ func (r *ByoMachineReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 	err = r.Client.List(ctx, hostsList)
 
 	if err != nil {
-		logger.Error(err, "list byohost failed")
+		logger.Error(err, "failed to list byohosts")
 		return ctrl.Result{}, err
 	}
 
