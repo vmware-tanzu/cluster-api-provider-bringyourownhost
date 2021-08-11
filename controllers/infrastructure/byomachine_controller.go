@@ -156,12 +156,12 @@ func (r *ByoMachineReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 	if machine.Spec.Bootstrap.DataSecretName == nil {
 		logger.Info("Bootstrap secret not ready")
 		return ctrl.Result{}, errors.New("bootstrap secret not ready")
-	} else {
-		host.Spec.BootstrapSecret = &corev1.ObjectReference{
-			Kind:      "Secret",
-			Namespace: byoMachine.Namespace,
-			Name:      *machine.Spec.Bootstrap.DataSecretName,
-		}
+	}
+
+	host.Spec.BootstrapSecret = &corev1.ObjectReference{
+		Kind:      "Secret",
+		Namespace: byoMachine.Namespace,
+		Name:      *machine.Spec.Bootstrap.DataSecretName,
 	}
 
 	err = helper.Patch(ctx, &host)

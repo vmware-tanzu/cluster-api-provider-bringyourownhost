@@ -22,8 +22,8 @@ var _ = Describe("Controllers/ByomachineController/Unitests", func() {
 			ctx context.Context
 		)
 		const (
-			namespace      = "fake-name-space-unit-test"
-			byoMachineName = "fake-machine-unit-test"
+			namespace      = "fakeNameSpaceWithoutByomachine"
+			byoMachineName = "fakeMmachineWithoutByomachine"
 		)
 
 		BeforeEach(func() {
@@ -48,7 +48,7 @@ var _ = Describe("Controllers/ByomachineController/Unitests", func() {
 
 	Context("When byohost is not available", func() {
 		const (
-			machineName = "machine-unit-test-1"
+			machineName = "machineWhenByohostIsNotAvailable"
 		)
 		var (
 			ctx        context.Context
@@ -81,8 +81,8 @@ var _ = Describe("Controllers/ByomachineController/Unitests", func() {
 
 	Context("When cluster does not exist", func() {
 		const (
-			clusterName = "fake-cluster-unit-test"
-			machineName = "machine-unit-test-2"
+			clusterName = "fakeClusterWithoutCluster"
+			machineName = "machineWithoutCluster"
 		)
 		var (
 			ctx        context.Context
@@ -120,10 +120,10 @@ var _ = Describe("Controllers/ByomachineController/Unitests", func() {
 
 	Context("When node is not available", func() {
 		//Reconcile assumes the node name equal to host name, or setNodeProviderID will be failed.
-		//We only have one node "host-unit-test" in testEnv, not "host-unit-test-2"
+		//We only have one node "host-unit-test" in testEnv, not "hostWhenNodeIsNotAvailable"
 		const (
-			hostname    = "host-unit-test-3"
-			machineName = "machine-unit-test-3"
+			hostname    = "hostWhenNodeIsNotAvailable"
+			machineName = "machineWhenNodeIsNotAvailable"
 		)
 
 		var (
@@ -164,9 +164,9 @@ var _ = Describe("Controllers/ByomachineController/Unitests", func() {
 
 	Context("When cluster is paused.", func() {
 		const (
-			hostname    = "host-unit-test-4"
-			clusterName = "cluster-unit-test-4"
-			machineName = "machine-unit-test-4"
+			hostname    = "hostWhenClusterIsPaused"
+			clusterName = "clusterWhenClusterIsPaused"
+			machineName = "machineWhenClusterIsPaused"
 		)
 
 		var (
@@ -218,9 +218,9 @@ var _ = Describe("Controllers/ByomachineController/Unitests", func() {
 
 	Context("When ByoMachine is paused.", func() {
 		const (
-			hostname    = "host-unit-test-5"
-			clusterName = "cluster-unit-test-5"
-			machineName = "machine-unit-test-5"
+			hostname    = "hostWhenByoMachineIsPaused"
+			clusterName = "clusterWhenByoMachineIsPaused"
+			machineName = "machineWhenByoMachineIsPaused"
 		)
 
 		var (
