@@ -29,9 +29,10 @@ var _ = Describe("Controllers/ByomachineController", func() {
 		})
 
 		It("claims the first available host", func() {
-
-			bootstrapSecret := "fakeBootstrapSecret"
-			machine = common.NewMachine(&bootstrapSecret, defaultMachineName, defaultNamespace, defaultClusterName)
+			machine = common.NewMachine(defaultMachineName, defaultNamespace, defaultClusterName)
+			machine.Spec.Bootstrap = clusterv1.Bootstrap{
+				DataSecretName: &fakeBootstrapSecret,
+			}
 			Expect(k8sClient.Create(ctx, machine)).Should(Succeed())
 
 			byoMachine = common.NewByoMachine(defaultByoMachineName, defaultNamespace, defaultClusterName, machine)

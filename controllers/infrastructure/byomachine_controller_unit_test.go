@@ -10,6 +10,7 @@ import (
 	"github.com/vmware-tanzu/cluster-api-provider-byoh/common"
 	"k8s.io/apimachinery/pkg/types"
 	clusterv1 "sigs.k8s.io/cluster-api/api/v1alpha4"
+	"sigs.k8s.io/cluster-api/util/annotations"
 	"sigs.k8s.io/cluster-api/util/conditions"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 )
@@ -57,9 +58,7 @@ var _ = Describe("Controllers/ByomachineController/Unitests", func() {
 
 		BeforeEach(func() {
 			ctx = context.Background()
-
-			bootstrapSecret := "fakeBootstrapSecret"
-			machine = common.NewMachine(&bootstrapSecret, machineName, defaultNamespace, defaultClusterName)
+			machine = common.NewMachine(machineName, defaultNamespace, defaultClusterName)
 			Expect(k8sClient.Create(ctx, machine)).Should(Succeed())
 
 			byoMachine = common.NewByoMachine(defaultByoMachineName, defaultNamespace, defaultClusterName, machine)
@@ -94,9 +93,7 @@ var _ = Describe("Controllers/ByomachineController/Unitests", func() {
 
 		BeforeEach(func() {
 			ctx = context.Background()
-
-			bootstrapSecret := "fakeBootstrapSecret"
-			machine = common.NewMachine(&bootstrapSecret, machineName, defaultNamespace, defaultClusterName)
+			machine = common.NewMachine(machineName, defaultNamespace, defaultClusterName)
 			Expect(k8sClient.Create(ctx, machine)).Should(Succeed())
 
 			byoMachine = common.NewByoMachine(defaultByoMachineName, defaultNamespace, clusterName, machine)
@@ -138,8 +135,10 @@ var _ = Describe("Controllers/ByomachineController/Unitests", func() {
 
 		BeforeEach(func() {
 			ctx = context.Background()
-			bootstrapSecret := "fakeBootstrapSecret"
-			machine = common.NewMachine(&bootstrapSecret, defaultMachineName, defaultNamespace, defaultClusterName)
+			machine = common.NewMachine(defaultMachineName, defaultNamespace, defaultClusterName)
+			machine.Spec.Bootstrap = clusterv1.Bootstrap{
+				DataSecretName: &fakeBootstrapSecret,
+			}
 			Expect(k8sClient.Create(ctx, machine)).Should(Succeed())
 
 			byoMachine = common.NewByoMachine(defaultByoMachineName, defaultNamespace, defaultClusterName, machine)
@@ -183,11 +182,13 @@ var _ = Describe("Controllers/ByomachineController/Unitests", func() {
 			cluster = common.NewCluster(clusterName, defaultNamespace)
 			cluster.Spec.Paused = true
 			Expect(k8sClient.Create(ctx, cluster)).Should(Succeed())
-			bootstrapSecret := "fakeBootstrapSecret"
-			machine = common.NewMachine(&bootstrapSecret, defaultMachineName, defaultNamespace, defaultClusterName)
+
+			machine = common.NewMachine(defaultMachineName, defaultNamespace, defaultClusterName)
 			Expect(k8sClient.Create(ctx, machine)).Should(Succeed())
+
 			byoMachine = common.NewByoMachine(defaultByoMachineName, defaultNamespace, clusterName, machine)
 			Expect(k8sClient.Create(ctx, byoMachine)).Should(Succeed())
+
 			byoHost = common.NewByoHost(hostname, defaultNamespace, nil)
 			Expect(k8sClient.Create(ctx, byoHost)).Should(Succeed())
 		})
@@ -232,15 +233,20 @@ var _ = Describe("Controllers/ByomachineController/Unitests", func() {
 
 		BeforeEach(func() {
 			ctx = context.Background()
+
 			cluster = common.NewCluster(clusterName, defaultNamespace)
 			Expect(k8sClient.Create(ctx, cluster)).Should(Succeed())
-			bootstrapSecret := "fakeBootstrapSecret"
-			machine = common.NewMachine(&bootstrapSecret, defaultMachineName, defaultNamespace, defaultClusterName)
+
+			machine = common.NewMachine(defaultMachineName, defaultNamespace, defaultClusterName)
 			Expect(k8sClient.Create(ctx, machine)).Should(Succeed())
+
 			byoMachine = common.NewByoMachine(defaultByoMachineName, defaultNamespace, clusterName, nil)
-			byoMachine.ObjectMeta.Annotations = map[string]string{}
-			byoMachine.ObjectMeta.Annotations[clusterv1.PausedAnnotation] = "paused"
+			desired := map[string]string{
+				clusterv1.PausedAnnotation: "paused",
+			}
+			annotations.AddAnnotations(byoMachine, desired)
 			Expect(k8sClient.Create(ctx, byoMachine)).Should(Succeed())
+
 			byoHost = common.NewByoHost(hostname, defaultNamespace, nil)
 			Expect(k8sClient.Create(ctx, byoHost)).Should(Succeed())
 		})

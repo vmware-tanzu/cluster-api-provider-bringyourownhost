@@ -40,7 +40,7 @@ func NewByoMachine(byoMachineName string, byoMachineNamespace string, clusterNam
 	return byoMachine
 }
 
-func NewMachine(bootstrapSecret *string, machineName string, namespace string, clusterName string) *clusterv1.Machine {
+func NewMachine(machineName string, namespace string, clusterName string) *clusterv1.Machine {
 	machine := &clusterv1.Machine{
 		TypeMeta: metav1.TypeMeta{
 			Kind:       "Machine",
@@ -51,9 +51,6 @@ func NewMachine(bootstrapSecret *string, machineName string, namespace string, c
 			Namespace: namespace,
 		},
 		Spec: clusterv1.MachineSpec{
-			Bootstrap: clusterv1.Bootstrap{
-				DataSecretName: bootstrapSecret,
-			},
 			ClusterName: clusterName,
 		},
 	}

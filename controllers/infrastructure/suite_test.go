@@ -59,6 +59,7 @@ var (
 	defaultMachineName    string = "my-machine"
 	defaultByoMachineName string = "my-byo-machine"
 	defaultNamespace      string = "default"
+	fakeBootstrapSecret   string = "fakeBootstrapSecret"
 )
 
 func TestAPIs(t *testing.T) {

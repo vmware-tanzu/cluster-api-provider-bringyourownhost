@@ -43,7 +43,7 @@ func (r HostReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.R
 
 	bootstrapScript, err := r.getBootstrapScript(ctx, byoHost.Spec.BootstrapSecret.Name, byoHost.Spec.BootstrapSecret.Namespace)
 	if err != nil {
-		klog.Errorf("error getting bootstrap script for secret %s in namespace %s, err=%v", byoHost.Spec.BootstrapSecret.Name, byoHost.Spec.BootstrapSecret.Namespace, err)
+		klog.Errorf("error getting bootstrap script, err=%v", err)
 		return ctrl.Result{}, err
 	}
 
