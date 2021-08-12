@@ -2,11 +2,9 @@ package reconciler
 
 import (
 	"context"
-	"errors"
 
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/klog"
-	"sigs.k8s.io/cluster-api/util"
 	"sigs.k8s.io/cluster-api/util/annotations"
 	"sigs.k8s.io/cluster-api/util/conditions"
 	"sigs.k8s.io/cluster-api/util/patch"
@@ -16,7 +14,6 @@ import (
 	"github.com/vmware-tanzu/cluster-api-provider-byoh/agent/cloudinit"
 	infrastructurev1alpha4 "github.com/vmware-tanzu/cluster-api-provider-byoh/apis/infrastructure/v1alpha4"
 	corev1 "k8s.io/api/core/v1"
-	clusterv1 "sigs.k8s.io/cluster-api/api/v1alpha4"
 	ctrl "sigs.k8s.io/controller-runtime"
 )
 
@@ -38,47 +35,20 @@ func (r HostReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.R
 		return ctrl.Result{}, nil
 	}
 
-	//Fetch the ByoMachine instance.
-	byoMachine := &infrastructurev1alpha4.ByoMachine{}
-	err = r.Client.Get(ctx, types.NamespacedName{Name: byoHost.Status.MachineRef.Name, Namespace: byoHost.Status.MachineRef.Namespace}, byoMachine)
-	if err != nil {
-		klog.Errorf("ByoMachine owner Machine is missing cluster label or cluster does not exist, err=%v", err)
-		return ctrl.Result{}, err
-	}
-
-	// Fetch the Cluster.
-	cluster, err := util.GetClusterFromMetadata(ctx, r.Client, byoMachine.ObjectMeta)
-	if err != nil {
-		klog.Errorf("ByoMachine owner Machine is missing cluster label or cluster does not exist, err=%v", err)
-		return ctrl.Result{}, err
-	}
-
-	if cluster == nil {
-		klog.Infof("Please associate this machine with a cluster using the label %s: <name of cluster>", clusterv1.ClusterLabelName)
-		return ctrl.Result{}, nil
-	}
-
 	// Return early if the object or Cluster is paused.
-	if annotations.IsPaused(cluster, byoHost) {
-		klog.Info("byoMachine or linked Cluster is marked as paused. Won't reconcile")
+	if annotations.HasPausedAnnotation(byoHost) {
+		klog.Info("The related byoMachine or linked Cluster is marked as paused. Won't reconcile")
 		return ctrl.Result{}, nil
 	}
 
-	// Fetch the Machine.
-	machine, err := util.GetOwnerMachine(ctx, r.Client, byoMachine.ObjectMeta)
-	if err != nil {
-		klog.Errorf("ByoMachine is missing owner Machine, err=%v", err)
-		return ctrl.Result{}, err
-	}
-
-	if machine == nil {
-		klog.Info("Waiting for Machine Controller to set OwnerRef on ByoMachine")
+	if byoHost.Spec.BootstrapSecret == nil {
+		klog.Info("BootstrapDataSecret not ready")
 		return ctrl.Result{}, nil
 	}
 
-	bootstrapScript, err := r.getBootstrapScript(ctx, machine, byoHost.Status.MachineRef.Namespace)
+	bootstrapScript, err := r.getBootstrapScript(ctx, byoHost.Spec.BootstrapSecret.Name, byoHost.Spec.BootstrapSecret.Namespace)
 	if err != nil {
-		klog.Errorf("error getting bootstrap script for machine %s in namespace %s, err=%v", byoHost.Status.MachineRef.Name, byoHost.Status.MachineRef.Namespace, err)
+		klog.Errorf("error getting bootstrap script, err=%v", err)
 		return ctrl.Result{}, err
 	}
 
@@ -106,20 +76,14 @@ func (r HostReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.R
 	return ctrl.Result{}, nil
 }
 
-func (r HostReconciler) getBootstrapScript(ctx context.Context, machine *clusterv1.Machine, namespace string) (string, error) {
-	if machine.Spec.Bootstrap.DataSecretName == nil {
-		klog.Info("Bootstrap secret not ready")
-		return "", errors.New("bootstrap secret not ready")
-	}
-
+func (r HostReconciler) getBootstrapScript(ctx context.Context, dataSecretName, namespace string) (string, error) {
 	secret := &corev1.Secret{}
-	err := r.Client.Get(ctx, types.NamespacedName{Name: *machine.Spec.Bootstrap.DataSecretName, Namespace: namespace}, secret)
+	err := r.Client.Get(ctx, types.NamespacedName{Name: dataSecretName, Namespace: namespace}, secret)
 	if err != nil {
 		return "", err
 	}
 
 	bootstrapSecret := string(secret.Data["value"])
-
 	return string(bootstrapSecret), nil
 }
 

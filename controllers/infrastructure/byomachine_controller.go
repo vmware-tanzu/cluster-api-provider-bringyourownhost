@@ -20,8 +20,10 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"strings"
 
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/cluster-api/controllers/remote"
 	"sigs.k8s.io/cluster-api/util"
 	"sigs.k8s.io/cluster-api/util/conditions"
@@ -35,6 +37,10 @@ import (
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	clusterv1 "sigs.k8s.io/cluster-api/api/v1alpha4"
 	"sigs.k8s.io/cluster-api/util/annotations"
+)
+
+const (
+	ProviderIDPrefix = "byoh://"
 )
 
 // ByoMachineReconciler reconciles a ByoMachine object
@@ -66,7 +72,7 @@ type ByoMachineReconciler struct {
 
 // Reconcile handles ByoMachine events
 func (r *ByoMachineReconciler) Reconcile(ctx context.Context, req ctrl.Request) (_ ctrl.Result, reterr error) {
-	logger := log.FromContext(ctx)
+	logger := log.FromContext(ctx).WithValues("namespace", req.Namespace, "BYOMachine", req.Name)
 
 	//Fetch the ByoMachine instance.
 	byoMachine := &infrastructurev1alpha4.ByoMachine{}
@@ -78,10 +84,22 @@ func (r *ByoMachineReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 		return ctrl.Result{}, err
 	}
 
+	// Fetch the Machine.
+	machine, err := util.GetOwnerMachine(ctx, r.Client, byoMachine.ObjectMeta)
+	if err != nil {
+		logger.Error(err, "failed to get Owner Machine")
+		return ctrl.Result{}, err
+	}
+
+	if machine == nil {
+		logger.Info("Waiting for Machine Controller to set OwnerRef on ByoMachine")
+		return ctrl.Result{}, nil
+	}
+
 	// Fetch the Cluster.
 	cluster, err := util.GetClusterFromMetadata(ctx, r.Client, byoMachine.ObjectMeta)
 	if err != nil {
-		logger.Info(fmt.Sprintf("ByoMachine owner Machine is missing cluster label or cluster does not exist, err=%v", err))
+		logger.Error(err, "ByoMachine owner Machine is missing cluster label or cluster does not exist")
 		return ctrl.Result{}, err
 	}
 
@@ -93,13 +111,28 @@ func (r *ByoMachineReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 	// Return early if the object or Cluster is paused.
 	if annotations.IsPaused(cluster, byoMachine) {
 		logger.Info("byoMachine or linked Cluster is marked as paused. Won't reconcile")
+		if byoMachine.Spec.ProviderID != "" {
+			if err := r.setPausedConditionForByoHost(ctx, byoMachine.Spec.ProviderID, req.Namespace, true); err != nil {
+				logger.Error(err, "Set Paused flag for byohost")
+				return ctrl.Result{}, nil
+			}
+		}
 		return ctrl.Result{}, nil
+	} else {
+		//if there is already byhost associated with it, make sure the paused status of byohost is false
+		if len(byoMachine.Spec.ProviderID) > 0 {
+			if err := r.setPausedConditionForByoHost(ctx, byoMachine.Spec.ProviderID, req.Namespace, false); err != nil {
+				logger.Error(err, "Set resume flag for byohost failed")
+				return ctrl.Result{}, err
+			}
+		}
 	}
 
 	hostsList := &infrastructurev1alpha4.ByoHostList{}
 	err = r.Client.List(ctx, hostsList)
 
 	if err != nil {
+		logger.Error(err, "failed to list byohosts")
 		return ctrl.Result{}, err
 	}
 
@@ -120,19 +153,33 @@ func (r *ByoMachineReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 		UID:        byoMachine.UID,
 	}
 
+	if machine.Spec.Bootstrap.DataSecretName == nil {
+		logger.Info("Bootstrap secret not ready")
+		return ctrl.Result{}, errors.New("bootstrap secret not ready")
+	}
+
+	host.Spec.BootstrapSecret = &corev1.ObjectReference{
+		Kind:      "Secret",
+		Namespace: byoMachine.Namespace,
+		Name:      *machine.Spec.Bootstrap.DataSecretName,
+	}
+
 	err = helper.Patch(ctx, &host)
 	if err != nil {
+		logger.Error(err, "failed to patch byohost")
 		return ctrl.Result{}, err
 	}
 
-	providerID := fmt.Sprintf("byoh://%s/%s", host.Name, util.RandomString(6))
+	providerID := fmt.Sprintf("%s%s/%s", ProviderIDPrefix, host.Name, util.RandomString(6))
 	remoteClient, err := r.getRemoteClient(ctx, byoMachine)
 	if err != nil {
+		logger.Error(err, "failed to get remote client")
 		return ctrl.Result{}, err
 	}
 
 	err = r.setNodeProviderID(ctx, remoteClient, host, providerID)
 	if err != nil {
+		logger.Error(err, "failed to set node providerID")
 		return ctrl.Result{}, err
 	}
 
@@ -141,13 +188,12 @@ func (r *ByoMachineReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 	byoMachine.Status.Ready = true
 
 	conditions.MarkTrue(byoMachine, infrastructurev1alpha4.HostReadyCondition)
-
 	defer func() {
 		if err := helper.Patch(ctx, byoMachine); err != nil && reterr == nil {
+			logger.Error(err, "failed to patch byomachine")
 			reterr = err
 		}
 	}()
-
 	return ctrl.Result{}, nil
 }
 
@@ -172,9 +218,8 @@ func (r *ByoMachineReconciler) setNodeProviderID(ctx context.Context, remoteClie
 	}
 
 	node.Spec.ProviderID = providerID
-	helper.Patch(ctx, node)
-
-	return nil
+	
+	return helper.Patch(ctx, node)
 }
 
 func (r *ByoMachineReconciler) getRemoteClient(ctx context.Context, byoMachine *infrastructurev1alpha4.ByoMachine) (client.Client, error) {
@@ -188,4 +233,45 @@ func (r *ByoMachineReconciler) getRemoteClient(ctx context.Context, byoMachine *
 	}
 
 	return remoteClient, nil
+}
+
+func (r *ByoMachineReconciler) setPausedConditionForByoHost(ctx context.Context, providerID string, nameSpace string, isPaused bool) error {
+
+	// The format of providerID is "byoh://<byoHostName>/<RandomString(6)>
+	if !strings.HasPrefix(providerID, ProviderIDPrefix) {
+		return errors.New("invalid providerID prefix")
+	}
+
+	strs := strings.Split(providerID[len(ProviderIDPrefix):], "/")
+
+	if len(strs) == 0 {
+		return errors.New("invalid providerID format")
+	}
+
+	byoHostName := strs[0]
+
+	byoHost := &infrastructurev1alpha4.ByoHost{}
+	err := r.Client.Get(ctx, types.NamespacedName{Name: byoHostName, Namespace: nameSpace}, byoHost)
+	if err != nil {
+		return err
+	}
+
+	helper, err := patch.NewHelper(byoHost, r.Client)
+	if err != nil {
+		return err
+	}
+
+	if isPaused {
+		desired := map[string]string{
+			clusterv1.PausedAnnotation: "paused",
+		}
+		annotations.AddAnnotations(byoHost, desired)
+	} else {
+		_, ok := byoHost.Annotations[clusterv1.PausedAnnotation]
+		if ok {
+			delete(byoHost.Annotations, clusterv1.PausedAnnotation)
+		}
+	}
+
+	return helper.Patch(ctx, byoHost)
 }
