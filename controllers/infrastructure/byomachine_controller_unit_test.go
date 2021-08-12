@@ -48,7 +48,8 @@ var _ = Describe("Controllers/ByomachineController/Unitests", func() {
 
 	Context("When byohost is not available", func() {
 		const (
-			machineName = "machineWhenByohostIsNotAvailable"
+			//a DNS-1123 subdomain must consist of lower case alphanumeric characters, '-' or '.', and must start and end with an alphanumeric character (e.g. 'example.com', regex used for validation is '[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*')
+			machineName = "machine-when-byohost-is-not-available"
 		)
 		var (
 			ctx        context.Context
@@ -82,7 +83,8 @@ var _ = Describe("Controllers/ByomachineController/Unitests", func() {
 	Context("When cluster does not exist", func() {
 		const (
 			clusterName = "fakeClusterWithoutCluster"
-			machineName = "machineWithoutCluster"
+			//a DNS-1123 subdomain must consist of lower case alphanumeric characters, '-' or '.', and must start and end with an alphanumeric character (e.g. 'example.com', regex used for validation is '[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*')
+			machineName = "machine-without-cluster"
 		)
 		var (
 			ctx        context.Context
@@ -122,8 +124,9 @@ var _ = Describe("Controllers/ByomachineController/Unitests", func() {
 		//Reconcile assumes the node name equal to host name, or setNodeProviderID will be failed.
 		//We only have one node "host-unit-test" in testEnv, not "hostWhenNodeIsNotAvailable"
 		const (
-			hostname    = "hostWhenNodeIsNotAvailable"
-			machineName = "machineWhenNodeIsNotAvailable"
+			//a DNS-1123 subdomain must consist of lower case alphanumeric characters, '-' or '.', and must start and end with an alphanumeric character (e.g. 'example.com', regex used for validation is '[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*')",
+			hostname    = "host-when-node-is-not-available"
+			machineName = "machine-when-node-is-not-available"
 		)
 
 		var (
@@ -164,9 +167,10 @@ var _ = Describe("Controllers/ByomachineController/Unitests", func() {
 
 	Context("When cluster is paused.", func() {
 		const (
-			hostname    = "hostWhenClusterIsPaused"
-			clusterName = "clusterWhenClusterIsPaused"
-			machineName = "machineWhenClusterIsPaused"
+			//a DNS-1123 subdomain must consist of lower case alphanumeric characters, '-' or '.', and must start and end with an alphanumeric character (e.g. 'example.com', regex used for validation is '[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*')"
+			hostname    = "host-when-cluster-is-paused"
+			clusterName = "cluster-when-cluster-is-paused"
+			machineName = "machine-when-cluster-is-paused"
 		)
 
 		var (
@@ -218,9 +222,10 @@ var _ = Describe("Controllers/ByomachineController/Unitests", func() {
 
 	Context("When ByoMachine is paused.", func() {
 		const (
-			hostname    = "hostWhenByoMachineIsPaused"
-			clusterName = "clusterWhenByoMachineIsPaused"
-			machineName = "machineWhenByoMachineIsPaused"
+			//a DNS-1123 subdomain must consist of lower case alphanumeric characters, '-' or '.', and must start and end with an alphanumeric character (e.g. 'example.com', regex used for validation is '[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*')"
+			hostname    = "host-when-byomachine-is-paused"
+			clusterName = "cluster-when-byomachine-is-paused"
+			machineName = "machine-when-byomachine-is-Paused"
 		)
 
 		var (

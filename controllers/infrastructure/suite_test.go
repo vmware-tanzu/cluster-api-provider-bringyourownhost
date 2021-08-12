@@ -57,7 +57,7 @@ var (
 	defaultNodeName       string = "my-host"
 	defaultByoHostName    string = "my-host"
 	defaultMachineName    string = "my-machine"
-	defaultByoMachineName string = "my-byo-machine"
+	defaultByoMachineName string = "my-byomachine"
 	defaultNamespace      string = "default"
 	fakeBootstrapSecret   string = "fakeBootstrapSecret"
 )

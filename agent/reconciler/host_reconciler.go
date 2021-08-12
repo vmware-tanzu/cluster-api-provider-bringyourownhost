@@ -30,6 +30,11 @@ func (r HostReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.R
 		return ctrl.Result{}, err
 	}
 
+	if byoHost.Status.MachineRef == nil {
+		klog.Info("Machine ref not yet set")
+		return ctrl.Result{}, nil
+	}
+
 	// Return early if the object or Cluster is paused.
 	if annotations.HasPausedAnnotation(byoHost) {
 		klog.Info("The related byoMachine or linked Cluster is marked as paused. Won't reconcile")
