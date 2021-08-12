@@ -30,6 +30,10 @@ type ByoHostSpec struct {
 	// INSERT ADDITIONAL SPEC FIELDS - desired state of cluster
 	// Important: Run "make" to regenerate code after modifying this file
 
+	// BootstrapSecret is an optional reference to a Cluster API Secret
+	// for bootstrap purpose
+	// +optional
+	BootstrapSecret *corev1.ObjectReference `json:"bootstrapSecret,omitempty"`
 }
 
 // ByoHostStatus defines the observed state of ByoHost

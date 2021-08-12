@@ -40,7 +40,6 @@ func RandStr(prefix string, length int) string {
 	return prefix + string(result)
 }
 
-
 func GunzipData(data []byte) ([]byte, error) {
 	var r io.Reader
 	var err error
@@ -58,4 +57,3 @@ func GunzipData(data []byte) ([]byte, error) {
 
 	return resB.Bytes(), nil
 }
-
