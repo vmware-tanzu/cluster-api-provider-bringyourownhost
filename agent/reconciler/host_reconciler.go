@@ -55,6 +55,7 @@ func (r *HostReconciler) Reconcile(ctx context.Context, req ctrl.Request) (_ ctr
 
 	if byoHost.Spec.BootstrapSecret == nil {
 		klog.Info("BootstrapDataSecret not ready")
+		conditions.MarkFalse(byoHost, infrastructurev1alpha4.K8sNodeBootstrapSucceeded, infrastructurev1alpha4.BootstrapDataSecretUnavailableReason, v1alpha4.ConditionSeverityInfo, "")
 		return ctrl.Result{}, nil
 	}
 
