@@ -76,13 +76,6 @@ func (r HostReconciler) Reconcile(ctx context.Context, req ctrl.Request) (_ ctrl
 
 	conditions.MarkTrue(byoHost, infrastructurev1alpha4.K8sNodeBootstrapSucceeded)
 
-	defer func() {
-		if err := helper.Patch(ctx, byoHost); err != nil && reterr == nil {
-			klog.Errorf("failed to patch byohost, err=%v", err)
-			reterr = err
-		}
-	}()
-
 	return ctrl.Result{}, nil
 }
 
