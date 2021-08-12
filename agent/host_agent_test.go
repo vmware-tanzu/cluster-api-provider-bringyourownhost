@@ -203,7 +203,7 @@ runCmd:
 					return corev1.ConditionFalse
 				}
 				for _, condition := range createdByoHost.Status.Conditions {
-					if condition.Type == infrastructurev1alpha4.K8sComponentsInstalledCondition {
+					if condition.Type == infrastructurev1alpha4.K8sComponentsInstallationSucceeded {
 						return condition.Status
 					}
 				}

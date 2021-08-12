@@ -66,7 +66,7 @@ func (r HostReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.R
 		return ctrl.Result{}, err
 	}
 
-	conditions.MarkTrue(byoHost, infrastructurev1alpha4.K8sComponentsInstalledCondition)
+	conditions.MarkTrue(byoHost, infrastructurev1alpha4.K8sComponentsInstallationSucceeded)
 	err = helper.Patch(ctx, byoHost)
 	if err != nil {
 		klog.Errorf("error in updating conditions on ByoHost, err=%v", err)
