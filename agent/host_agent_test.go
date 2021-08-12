@@ -108,6 +108,7 @@ var _ = Describe("Agent", func() {
 				}
 				return createdByoHost
 			}).ShouldNot(BeNil())
+
 		})
 
 		It("should bootstrap the node when MachineRef is set", func() {
@@ -203,7 +204,7 @@ runCmd:
 					return corev1.ConditionFalse
 				}
 				for _, condition := range createdByoHost.Status.Conditions {
-					if condition.Type == infrastructurev1alpha4.K8sComponentsInstallationSucceeded {
+					if condition.Type == infrastructurev1alpha4.K8sNodeBootstrapSucceeded {
 						return condition.Status
 					}
 				}
