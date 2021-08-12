@@ -24,7 +24,7 @@ type HostReconciler struct {
 	Client client.Client
 }
 
-func (r *HostReconciler) Reconcile(ctx context.Context, req ctrl.Request) (_ ctrl.Result, reterr error) {
+func (r HostReconciler) Reconcile(ctx context.Context, req ctrl.Request) (_ ctrl.Result, reterr error) {
 	//Fetch the ByoHost instance.
 	byoHost := &infrastructurev1alpha4.ByoHost{}
 	err := r.Client.Get(ctx, req.NamespacedName, byoHost)
@@ -70,11 +70,7 @@ func (r *HostReconciler) Reconcile(ctx context.Context, req ctrl.Request) (_ ctr
 		RunCmdExecutor:     cloudinit.CmdRunner{}}.Execute(bootstrapScript)
 	if err != nil {
 		klog.Errorf("cloudinit.ScriptExecutor return failed, err=%v", err)
-		return ctrl.Result{}, err
-	}
-
-	if err != nil {
-		klog.Errorf("error creating path helper, err=%v", err)
+		conditions.MarkFalse(byoHost, infrastructurev1alpha4.K8sNodeBootstrapSucceeded, infrastructurev1alpha4.CloudInitExecutionFailedReason, v1alpha4.ConditionSeverityError, "")
 		return ctrl.Result{}, err
 	}
 
@@ -90,7 +86,7 @@ func (r *HostReconciler) Reconcile(ctx context.Context, req ctrl.Request) (_ ctr
 	return ctrl.Result{}, nil
 }
 
-func (r *HostReconciler) getBootstrapScript(ctx context.Context, dataSecretName, namespace string) (string, error) {
+func (r HostReconciler) getBootstrapScript(ctx context.Context, dataSecretName, namespace string) (string, error) {
 	secret := &corev1.Secret{}
 	err := r.Client.Get(ctx, types.NamespacedName{Name: dataSecretName, Namespace: namespace}, secret)
 	if err != nil {
@@ -101,7 +97,7 @@ func (r *HostReconciler) getBootstrapScript(ctx context.Context, dataSecretName,
 	return string(bootstrapSecret), nil
 }
 
-func (r *HostReconciler) SetupWithManager(mgr manager.Manager) error {
+func (r HostReconciler) SetupWithManager(mgr manager.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&infrastructurev1alpha4.ByoHost{}).
 		WithEventFilter(predicate.Funcs{
