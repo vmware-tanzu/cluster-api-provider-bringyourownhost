@@ -61,7 +61,7 @@ var _ = Describe("Controllers/ByomachineController", func() {
 				if err != nil {
 					return ""
 				}
-				return createdByoMachine.Spec.ProviderID
+				return *createdByoMachine.Spec.ProviderID
 			}).Should(ContainSubstring(ProviderIDPrefix))
 
 			Eventually(func() bool {

@@ -18,42 +18,67 @@ package controllers
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"reflect"
+	"regexp"
 
 	"github.com/pkg/errors"
 
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/apimachinery/pkg/types"
+	kerrors "k8s.io/apimachinery/pkg/util/errors"
 	"sigs.k8s.io/cluster-api/controllers/remote"
-	"sigs.k8s.io/cluster-api/util"
+
 	"sigs.k8s.io/cluster-api/util/annotations"
 	"sigs.k8s.io/cluster-api/util/conditions"
 	"sigs.k8s.io/cluster-api/util/patch"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 	"sigs.k8s.io/controller-runtime/pkg/source"
 
-	"github.com/docker/docker/daemon/logger"
 	infrav1 "github.com/vmware-tanzu/cluster-api-provider-byoh/apis/infrastructure/v1alpha4"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	clusterv1 "sigs.k8s.io/cluster-api/api/v1alpha4"
-	"sigs.k8s.io/cluster-api/util/annotations"
 	clusterutilv1 "sigs.k8s.io/cluster-api/util"
 )
+
+const (
+	// ProviderIDPrefix is the string data prefixed to a BIOS UUID in order
+	// to build a provider ID.
+	ProviderIDPrefix = "byph://"
+
+	// ProviderIDPattern is a regex pattern and is used by ConvertProviderIDToUUID
+	// to convert a providerID into a UUID string.
+	ProviderIDPattern = `(?i)^` + ProviderIDPrefix + `([a-f\d]{8}-[a-f\d]{4}-[a-f\d]{4}-[a-f\d]{4}-[a-f\d]{12})$`
+
+	// UUIDPattern is a regex pattern and is used by ConvertUUIDToProviderID
+	// to convert a UUID into a providerID string.
+	UUIDPattern = `(?i)^[a-f\d]{8}-[a-f\d]{4}-[a-f\d]{4}-[a-f\d]{4}-[a-f\d]{12}$`
+)
+
+func ConvertUUIDToProviderID(uuid string) string {
+	if uuid == "" {
+		return ""
+	}
+	pattern := regexp.MustCompile(UUIDPattern)
+	if !pattern.MatchString(uuid) {
+		return ""
+	}
+	return ProviderIDPrefix + uuid
+}
 
 var (
 	controlledType     = &infrav1.ByoMachine{}
 	controlledTypeName = reflect.TypeOf(controlledType).Elem().Name()
 	controlledTypeGVK  = infrav1.GroupVersion.WithKind(controlledTypeName)
-)
-
-const (
-	ProviderIDPrefix = "byoh://"
 )
 
 // ByoMachineReconciler reconciles a ByoMachine object
@@ -95,51 +120,6 @@ func (r *ByoMachineReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 		return ctrl.Result{}, err
 	}
 
-	// Fetch the Machine.
-	machine, err := util.GetOwnerMachine(ctx, r.Client, byoMachine.ObjectMeta)
-	if err != nil {
-		logger.Error(err, "failed to get Owner Machine")
-		return ctrl.Result{}, err
-	}
-
-	if machine == nil {
-		logger.Info("Waiting for Machine Controller to set OwnerRef on ByoMachine")
-		return ctrl.Result{}, nil
-	}
-
-	// Fetch the Cluster.
-	cluster, err := util.GetClusterFromMetadata(ctx, r.Client, byoMachine.ObjectMeta)
-	if err != nil {
-		logger.Error(err, "ByoMachine owner Machine is missing cluster label or cluster does not exist")
-		return ctrl.Result{}, err
-	}
-
-	if cluster == nil {
-		logger.Info(fmt.Sprintf("Please associate this machine with a cluster using the label %s: <name of cluster>", clusterv1.ClusterLabelName))
-		return ctrl.Result{}, nil
-	}
-
-	// Return early if the object or Cluster is paused.
-	if annotations.IsPaused(cluster, byoMachine) {
-		logger.Info("byoMachine or linked Cluster is marked as paused. Won't reconcile")
-		if byoMachine.Spec.ProviderID != "" {
-			if err := r.setPausedConditionForByoHost(ctx, byoMachine.Spec.ProviderID, req.Namespace, true); err != nil {
-				logger.Error(err, "Set Paused flag for byohost")
-				return ctrl.Result{}, nil
-			}
-		}
-		return ctrl.Result{}, nil
-	} else {
-		//if there is already byhost associated with it, make sure the paused status of byohost is false
-		if len(byoMachine.Spec.ProviderID) > 0 {
-			if err := r.setPausedConditionForByoHost(ctx, byoMachine.Spec.ProviderID, req.Namespace, false); err != nil {
-				logger.Error(err, "Set resume flag for byohost failed")
-				return ctrl.Result{}, err
-			}
-		}
-	}
-
-	hostsList := &infrastructurev1alpha4.ByoHostList{}
 	// Fetch the CAPI Machine.
 	machine, err := clusterutilv1.GetOwnerMachine(ctx, r.Client, byoMachine.ObjectMeta)
 	if err != nil {
@@ -157,8 +137,8 @@ func (r *ByoMachineReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 		return reconcile.Result{}, nil
 	}
 	if annotations.IsPaused(cluster, byoMachine) {
-		logger.V(4).Info("ByoMachine %s/%s linked to a cluster that is paused",
-			byoMachine.Namespace, byoMachine.Name)
+		logger.V(4).Info("ByoMachine %s linked to a cluster that is paused",
+			byoMachine)
 		return reconcile.Result{}, nil
 	}
 
@@ -169,7 +149,7 @@ func (r *ByoMachineReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 		Name:      cluster.Spec.InfrastructureRef.Name,
 	}
 	if err := r.Client.Get(ctx, byoClusterName, byoCluster); err != nil {
-		logger.Info("Waiting for VSphereCluster")
+		logger.Info("Waiting for ByoCluster")
 		return reconcile.Result{}, nil
 	}
 
@@ -178,10 +158,8 @@ func (r *ByoMachineReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 	if err != nil {
 		return reconcile.Result{}, errors.Wrapf(
 			err,
-			"failed to init patch helper for %s %s/%s",
-			byoMachine.GroupVersionKind(),
-			byoMachine.Namespace,
-			byoMachine.Name)
+			"failed to init patch helper for %s",
+			byoMachine)
 	}
 
 	// Always issue a patch when exiting this function so changes to the
@@ -195,16 +173,17 @@ func (r *ByoMachineReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 		err := patchHelper.Patch(
 			ctx,
 			byoMachine,
-			patch.WithOwnedConditions{Conditions: []clusterv1.ConditionType{
-			clusterv1.ReadyCondition,}}
-		) 
+			patch.WithOwnedConditions{
+				Conditions: []clusterv1.ConditionType{clusterv1.ReadyCondition},
+			},
+		)
 
 		// Patch the VSphereMachine resource.
 		if err != nil {
 			if reterr == nil {
 				reterr = err
 			}
-			logger.Error(err, "patch failed", "byomachine")
+			logger.Error(err, "patch failed", "byomachine", byoMachine.Namespace+"/"+byoMachine.Name)
 		}
 	}()
 
@@ -214,115 +193,276 @@ func (r *ByoMachineReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 	}
 
 	// Handle non-deleted machines
-	return r.reconcileNormal(ctx, byoMachine)
+	return r.reconcileNormal(ctx, byoMachine, cluster)
 
-}
-
-func (r *ByoMachineReconciler) setNodeProviderID(ctx context.Context, remoteClient client.Client, host infrastructurev1alpha4.ByoHost, providerID string) error {
-
-	node := &corev1.Node{}
-	key := client.ObjectKey{Name: host.Name, Namespace: host.Namespace}
-	err := remoteClient.Get(ctx, key, node)
-	if err != nil {
-		return err
-	}
-	helper, err := patch.NewHelper(node, remoteClient)
-	if err != nil {
-		return err
-	}
-
-	node.Spec.ProviderID = providerID
-	helper.Patch(ctx, node)
-
-	return nil
-}
-
-func (r *ByoMachineReconciler) getRemoteClient(ctx context.Context, byoMachine *infrastructurev1alpha4.ByoMachine) (client.Client, error) {
-	cluster, err := util.GetClusterFromMetadata(ctx, r.Client, byoMachine.ObjectMeta)
-	if err != nil {
-		return nil, err
-	}
-	remoteClient, err := r.Tracker.GetClient(ctx, util.ObjectKey(cluster))
-	if err != nil {
-		return nil, err
-	}
-
-	return remoteClient, nil
 }
 
 func (r ByoMachineReconciler) reconcileDelete(ctx context.Context, byoMachine *infrav1.ByoMachine) (reconcile.Result, error) {
+	hostsList := &infrav1.ByoHostList{}
+
+	err := r.Client.List(ctx, hostsList)
+	if err != nil {
+		return reconcile.Result{}, errors.Wrapf(err,
+			"unable to list ByoHost part of ByoMachine %s/%s", byoMachine.Namespace, byoMachine.Name)
+	}
+	for _, host := range hostsList.Items {
+		if host.Status.MachineRef.UID == byoMachine.UID {
+			host.Status.MachineRef = nil
+			host.Labels[infrav1.ByoHostProvisionLabel] = "false"
+			err := r.Client.Status().Update(ctx, &host)
+			if err != nil {
+				return reconcile.Result{}, errors.Wrapf(err,
+					"unable to update ByoHost status %s/%s", host.Namespace, host.Name)
+			}
+		}
+	}
+
+	controllerutil.RemoveFinalizer(byoMachine, infrav1.MachineFinalizer)
 	return reconcile.Result{}, nil
 }
 
-func (r ByoMachineReconciler) reconcileNormal(ctx context.Context, byoMachine *infrav1.ByoMachine) (reconcile.Result, error) {
-
+func (r *ByoMachineReconciler) reconcileByohost(ctx context.Context, byoMachine *infrav1.ByoMachine, computeObj *unstructured.Unstructured) (bool, error) {
+	selector, err := metav1.LabelSelectorAsSelector(byoMachine.Spec.Selector)
+	if err != nil {
+		return false, err
+	}
+	// Find the current byohost match the selector
 	hostsList := &infrav1.ByoHostList{}
-	err = r.Client.List(ctx, hostsList)
-
+	err = r.Client.List(ctx, hostsList, client.InNamespace(byoMachine.Namespace), client.MatchingLabels{infrav1.LabelByoMachineOwn: byoMachine.Name})
 	if err != nil {
-		logger.Error(err, "failed to list byohosts")
-		return ctrl.Result{}, err
+		return false, err
 	}
 
-	if len(hostsList.Items) == 0 {
-		logger.Info("No hosts found, waiting..")
-		return ctrl.Result{}, errors.New("no hosts found")
-	}
-	// TODO- Needs smarter logic
-	host := hostsList.Items[0]
-
-	helper, _ := patch.NewHelper(&host, r.Client)
-
-	host.Status.MachineRef = &corev1.ObjectReference{
-		APIVersion: byoMachine.APIVersion,
-		Kind:       byoMachine.Kind,
-		Namespace:  byoMachine.Namespace,
-		Name:       byoMachine.Name,
-		UID:        byoMachine.UID,
-	}
-
-	if machine.Spec.Bootstrap.DataSecretName == nil {
-		logger.Info("Bootstrap secret not ready")
-		return ctrl.Result{}, errors.New("bootstrap secret not ready")
-	}
-
-	host.Spec.BootstrapSecret = &corev1.ObjectReference{
-		Kind:      "Secret",
-		Namespace: byoMachine.Namespace,
-		Name:      *machine.Spec.Bootstrap.DataSecretName,
-	}
-
-	err = helper.Patch(ctx, &host)
-	if err != nil {
-		logger.Error(err, "failed to patch byohost")
-		return ctrl.Result{}, err
-	}
-
-	providerID := fmt.Sprintf("%s%s/%s", ProviderIDPrefix, host.Name, util.RandomString(6))
-	remoteClient, err := r.getRemoteClient(ctx, byoMachine)
-	if err != nil {
-		logger.Error(err, "failed to get remote client")
-		return ctrl.Result{}, err
-	}
-
-	err = r.setNodeProviderID(ctx, remoteClient, host, providerID)
-	if err != nil {
-		logger.Error(err, "failed to set node providerID")
-		return ctrl.Result{}, err
-	}
-
-	helper, _ = patch.NewHelper(byoMachine, r.Client)
-	byoMachine.Spec.ProviderID = &providerID
-	byoMachine.Status.Ready = true
-
-	conditions.MarkTrue(byoMachine, infrav1.HostReadyCondition)
-
-	defer func() {
-		if err := helper.Patch(ctx, byoMachine); err != nil && reterr == nil {
-			logger.Error(err, "failed to patch byomachine")
-			reterr = err
+	// The hostsList should have one at most. To handle corner case we should remove MachineRef
+	for _, host := range hostsList.Items {
+		if computeObj == nil {
+			Data, err := runtime.DefaultUnstructuredConverter.ToUnstructured(&host)
+			if selector.Matches(labels.Set(host.Labels)) && err == nil {
+				computeObj = &unstructured.Unstructured{Object: Data}
+				computeObj.SetGroupVersionKind(host.GetObjectKind().GroupVersionKind())
+				computeObj.SetAPIVersion(host.GetObjectKind().GroupVersionKind().GroupVersion().String())
+				computeObj.SetKind(host.GetObjectKind().GroupVersionKind().Kind)
+				continue
+			}
 		}
-	}()
+
+		if host.Status.MachineRef.UID == byoMachine.UID {
+			host.Status.MachineRef = nil
+			delete(host.Labels, infrav1.LabelByoMachineOwn)
+			r.Client.Update(ctx, &host)
+		}
+	}
+
+	if computeObj != nil {
+		return true, nil
+	}
+
+	err = r.Client.List(ctx, hostsList, client.InNamespace(byoMachine.Namespace), client.MatchingLabelsSelector{Selector: selector})
+	if err != nil {
+		return false, err
+	}
+	for _, host := range hostsList.Items {
+		host.Labels[infrav1.LabelByoMachineOwn] = byoMachine.Name
+		host.Status.MachineRef = &corev1.ObjectReference{
+			APIVersion: byoMachine.APIVersion,
+			Kind:       byoMachine.Kind,
+			Namespace:  byoMachine.Namespace,
+			Name:       byoMachine.Name,
+			UID:        byoMachine.UID,
+		}
+		Data, err := runtime.DefaultUnstructuredConverter.ToUnstructured(&host)
+		if err == nil && r.Client.Update(ctx, &host) == nil {
+			computeObj = &unstructured.Unstructured{Object: Data}
+			computeObj.SetGroupVersionKind(host.GetObjectKind().GroupVersionKind())
+			computeObj.SetAPIVersion(host.GetObjectKind().GroupVersionKind().GroupVersion().String())
+			computeObj.SetKind(host.GetObjectKind().GroupVersionKind().Kind)
+			return true, nil
+		}
+	}
+
+	return false, fmt.Errorf("no availabe compute resouce find for %s", byoMachine)
+}
+
+func (r ByoMachineReconciler) waitReadyState(ctx context.Context, byoMachine *infrav1.ByoMachine, computeObj *unstructured.Unstructured) (bool, error) {
+	logger := log.FromContext(ctx)
+
+	ready, ok, err := unstructured.NestedBool(computeObj.Object, "status", "ready")
+	if !ok {
+		if err != nil {
+			return false, errors.Wrapf(err,
+				"unexpected error when getting status.ready from %s %s/%s for %s",
+				computeObj.GroupVersionKind(),
+				computeObj.GetNamespace(),
+				computeObj.GetName(),
+				byoMachine)
+		}
+		logger.Info("status.ready not found",
+			"computeGVK", computeObj.GroupVersionKind().String(),
+			"computeNamespace", computeObj.GetNamespace(),
+			"computeName", computeObj.GetName())
+		return false, nil
+	}
+	if !ready {
+		logger.Info("status.ready is false",
+			"computeGVK", computeObj.GroupVersionKind().String(),
+			"computeNamespace", computeObj.GetNamespace(),
+			"computeName", computeObj.GetName())
+		return false, nil
+	}
+
+	return true, nil
+}
+
+func (r *ByoMachineReconciler) reconcileProviderID(ctx context.Context, byoMachine *infrav1.ByoMachine, computeObj *unstructured.Unstructured) (bool, error) {
+	logger := log.FromContext(ctx)
+
+	biosUUID, ok, err := unstructured.NestedString(computeObj.Object, "spec", "biosUUID")
+	if !ok {
+		if err != nil {
+			return false, errors.Wrapf(err,
+				"unexpected error when getting spec.biosUUID from %s %s/%s for %s",
+				computeObj.GroupVersionKind(),
+				computeObj.GetNamespace(),
+				computeObj.GetName(),
+				byoMachine)
+		}
+		logger.Info("spec.biosUUID not found",
+			"computeGVK", computeObj.GroupVersionKind().String(),
+			"computeNamespace", computeObj.GetNamespace(),
+			"computeName", computeObj.GetName())
+		return false, nil
+	}
+	if biosUUID == "" {
+		logger.Info("spec.biosUUID is empty",
+			"computeGVK", computeObj.GroupVersionKind().String(),
+			"computeNamespace", computeObj.GetNamespace(),
+			"computeName", computeObj.GetName())
+		return false, nil
+	}
+
+	providerID := ConvertUUIDToProviderID(biosUUID)
+	if providerID == "" {
+		return false, errors.Errorf("invalid BIOS UUID %s from %s %s/%s for %s",
+			biosUUID,
+			computeObj.GroupVersionKind(),
+			computeObj.GetNamespace(),
+			computeObj.GetName(),
+			byoMachine)
+	}
+	if byoMachine.Spec.ProviderID == nil || *byoMachine.Spec.ProviderID != providerID {
+		byoMachine.Spec.ProviderID = &providerID
+		logger.Info("updated provider ID", "provider-id", providerID)
+	}
+
+	return true, nil
+}
+
+func (r *ByoMachineReconciler) reconcileNetwork(ctx context.Context, byoMachine *infrav1.ByoMachine, computeObj *unstructured.Unstructured) (bool, error) {
+	logger := log.FromContext(ctx)
+
+	var errs []error
+	if networkStatusListOfIfaces, ok, _ := unstructured.NestedSlice(computeObj.Object, "status", "network"); ok {
+		networkStatusList := []infrav1.NetworkStatus{}
+		for i, networkStatusListMemberIface := range networkStatusListOfIfaces {
+			if buf, err := json.Marshal(networkStatusListMemberIface); err != nil {
+				logger.Error(err,
+					"unsupported data for member of status.network list",
+					"index", i)
+				errs = append(errs, err)
+			} else {
+				var networkStatus infrav1.NetworkStatus
+				err := json.Unmarshal(buf, &networkStatus)
+				if err == nil && networkStatus.MACAddr == "" {
+					err = errors.New("macAddr is required")
+					errs = append(errs, err)
+				}
+				if err != nil {
+					logger.Error(err,
+						"unsupported data for member of status.network list",
+						"index", i, "data", string(buf))
+					errs = append(errs, err)
+				} else {
+					networkStatusList = append(networkStatusList, networkStatus)
+				}
+			}
+		}
+		byoMachine.Status.Network = networkStatusList
+	}
+
+	if addresses, ok, _ := unstructured.NestedStringSlice(computeObj.Object, "status", "addresses"); ok {
+		var machineAddresses []clusterv1.MachineAddress
+		for _, addr := range addresses {
+			machineAddresses = append(machineAddresses, clusterv1.MachineAddress{
+				Type:    clusterv1.MachineExternalIP,
+				Address: addr,
+			})
+		}
+		byoMachine.Status.Addresses = machineAddresses
+	}
+
+	if len(byoMachine.Status.Addresses) == 0 {
+		logger.Info("waiting on IP addresses")
+		return false, kerrors.NewAggregate(errs)
+	}
+
+	return true, nil
+}
+
+func (r ByoMachineReconciler) reconcileNormal(ctx context.Context, byoMachine *infrav1.ByoMachine, cluster *clusterv1.Cluster) (reconcile.Result, error) {
+	logger := log.FromContext(ctx)
+	var computeObj *unstructured.Unstructured
+
+	controllerutil.AddFinalizer(byoMachine, infrav1.MachineFinalizer)
+
+	if !cluster.Status.InfrastructureReady {
+		logger.Info("Cluster infrastructure is not ready yet")
+		conditions.MarkFalse(byoMachine, infrav1.HostProvisionedCondition, infrav1.WaitingForClusterInfrastructureReason, clusterv1.ConditionSeverityInfo, "")
+		return reconcile.Result{}, nil
+	}
+
+	if ok, err := r.reconcileByohost(ctx, byoMachine, computeObj); !ok {
+		if err != nil {
+			return reconcile.Result{}, errors.Wrapf(err,
+				"unexpected error while reconciling compute resouse for %s", byoMachine)
+		}
+		logger.Info("No suitable compute resouse find")
+		return reconcile.Result{}, nil
+	}
+
+	if ok, err := r.waitReadyState(ctx, byoMachine, computeObj); !ok {
+		if err != nil {
+			return reconcile.Result{}, errors.Wrapf(err,
+				"unexpected error while reconciling ready state for %s", byoMachine)
+		}
+		logger.Info("waiting for ready state")
+		// ByoMachine wraps a compute(Baremetal or VM), so we are mirroring status from the underlying compute
+		// in order to provide evidences about machine provisioning while provisioning is actually happening.
+		conditions.SetMirror(byoMachine, infrav1.HostProvisionedCondition, conditions.UnstructuredGetter(computeObj))
+		return reconcile.Result{}, nil
+	}
+
+	if ok, err := r.reconcileProviderID(ctx, byoMachine, computeObj); !ok {
+		if err != nil {
+			return reconcile.Result{}, errors.Wrapf(err,
+				"unexpected error while reconciling provider ID for %s", byoMachine)
+		}
+		logger.Info("provider ID is not reconciled")
+		return reconcile.Result{}, nil
+	}
+
+	if ok, err := r.reconcileNetwork(ctx, byoMachine, computeObj); !ok {
+		if err != nil {
+			return reconcile.Result{}, errors.Wrapf(err,
+				"unexpected error while reconciling network for %s", byoMachine)
+		}
+		logger.Info("network is not reconciled")
+		conditions.MarkFalse(byoMachine, infrav1.HostProvisionedCondition, infrav1.WaitingForNetworkAddressesReason, clusterv1.ConditionSeverityInfo, "")
+		return reconcile.Result{}, nil
+	}
+
+	byoMachine.Status.Ready = true
+	conditions.MarkTrue(byoMachine, infrav1.HostProvisionedCondition)
+
 	return ctrl.Result{}, nil
 }
 
@@ -340,76 +480,4 @@ func (r *ByoMachineReconciler) SetupWithManager(mgr ctrl.Manager) error {
 			handler.EnqueueRequestsFromMapFunc(clusterutilv1.MachineToInfrastructureMapFunc(controlledTypeGVK)),
 		).
 		Complete(r)
-}
-
-func (r *ByoMachineReconciler) setNodeProviderID(ctx context.Context, remoteClient client.Client, host infrastructurev1alpha4.ByoHost, providerID string) error {
-
-	node := &corev1.Node{}
-	key := client.ObjectKey{Name: host.Name, Namespace: host.Namespace}
-	err := remoteClient.Get(ctx, key, node)
-	if err != nil {
-		return err
-	}
-	helper, err := patch.NewHelper(node, remoteClient)
-	if err != nil {
-		return err
-	}
-
-	node.Spec.ProviderID = providerID
-	
-	return helper.Patch(ctx, node)
-}
-
-func (r *ByoMachineReconciler) getRemoteClient(ctx context.Context, byoMachine *infrastructurev1alpha4.ByoMachine) (client.Client, error) {
-	cluster, err := util.GetClusterFromMetadata(ctx, r.Client, byoMachine.ObjectMeta)
-	if err != nil {
-		return nil, err
-	}
-	remoteClient, err := r.Tracker.GetClient(ctx, util.ObjectKey(cluster))
-	if err != nil {
-		return nil, err
-	}
-
-	return remoteClient, nil
-}
-
-func (r *ByoMachineReconciler) setPausedConditionForByoHost(ctx context.Context, providerID string, nameSpace string, isPaused bool) error {
-
-	// The format of providerID is "byoh://<byoHostName>/<RandomString(6)>
-	if !strings.HasPrefix(providerID, ProviderIDPrefix) {
-		return errors.New("invalid providerID prefix")
-	}
-
-	strs := strings.Split(providerID[len(ProviderIDPrefix):], "/")
-
-	if len(strs) == 0 {
-		return errors.New("invalid providerID format")
-	}
-
-	byoHostName := strs[0]
-
-	byoHost := &infrastructurev1alpha4.ByoHost{}
-	err := r.Client.Get(ctx, types.NamespacedName{Name: byoHostName, Namespace: nameSpace}, byoHost)
-	if err != nil {
-		return err
-	}
-
-	helper, err := patch.NewHelper(byoHost, r.Client)
-	if err != nil {
-		return err
-	}
-
-	if isPaused {
-		desired := map[string]string{
-			clusterv1.PausedAnnotation: "paused",
-		}
-		annotations.AddAnnotations(byoHost, desired)
-	} else {
-		_, ok := byoHost.Annotations[clusterv1.PausedAnnotation]
-		if ok {
-			delete(byoHost.Annotations, clusterv1.PausedAnnotation)
-		}
-	}
-
-	return helper.Patch(ctx, byoHost)
 }

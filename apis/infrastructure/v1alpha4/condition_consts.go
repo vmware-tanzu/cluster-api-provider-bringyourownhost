@@ -14,3 +14,11 @@ const (
 	// VMProvisionedCondition documents the status of the provisioning of a VSphereMachine and its underlying VSphereVM.
 	HostProvisionedCondition clusterv1.ConditionType = "HostProvisioned"
 )
+
+const (
+	// WaitingForClusterInfrastructureReason (Severity=Info) documents a ByoMachine waiting for the cluster
+	// infrastructure to be ready before starting the provisioning process.
+	WaitingForClusterInfrastructureReason = "WaitingForClusterInfrastructure"
+
+	WaitingForNetworkAddressesReason = "WaitingForNetworkAddresses"
+)

@@ -17,6 +17,8 @@ limitations under the License.
 package v1alpha4
 
 import (
+	"fmt"
+
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	clusterv1 "sigs.k8s.io/cluster-api/api/v1alpha4"
 	"sigs.k8s.io/cluster-api/errors"
@@ -27,15 +29,38 @@ const (
 	// resources associated with ByoMachine before removing it from the
 	// API Server.
 	MachineFinalizer = "byomachine.infrastructure.cluster.x-k8s.io"
+
+	LabelByoMachineOwn = "byoh.infrastructure.cluster.x-k8s.io/own"
 )
 
 // ByoMachineSpec defines the desired state of ByoMachine
 type ByoMachineSpec struct {
+	//Label Selector to choose the byohost
+	Selector *metav1.LabelSelector `json:"selector"`
+
 	ProviderID *string `json:"providerID,omitempty"`
 
 	// FailureDomain is the failure domain unique identifier this Machine should be attached to, as defined in Cluster API.
-	// For this infrastructure provider, the name is equivalent to the name of the VSphereDeploymentZone.
+	// For this infrastructure provider, the name is equivalent to the name of the .
 	FailureDomain *string `json:"failureDomain,omitempty"`
+}
+
+// NetworkStatus provides information about one of a VM's networks.
+type NetworkStatus struct {
+	// Connected is a flag that indicates whether this network is currently
+	// connected to the VM.
+	Connected bool `json:"connected,omitempty"`
+
+	// IPAddrs is one or more IP addresses reported by vm-tools.
+	// +optional
+	IPAddrs []string `json:"ipAddrs,omitempty"`
+
+	// MACAddr is the MAC address of the network device.
+	MACAddr string `json:"macAddr"`
+
+	// NetworkName is the name of the network.
+	// +optional
+	NetworkName string `json:"networkName,omitempty"`
 }
 
 // ByoMachineStatus defines the observed state of ByoMachine
@@ -45,6 +70,11 @@ type ByoMachineStatus struct {
 
 	// Addresses contains the VSphere instance associated addresses.
 	Addresses []clusterv1.MachineAddress `json:"addresses,omitempty"`
+
+	// Network returns the network status for each of the machine's configured
+	// network interfaces.
+	// +optional
+	Network []NetworkStatus `json:"network,omitempty"`
 
 	// Any transient errors that occur during the reconciliation of Machines
 	// can be added as events to the Machine object and/or logged in the
@@ -81,6 +111,10 @@ func (m *ByoMachine) GetConditions() clusterv1.Conditions {
 
 func (m *ByoMachine) SetConditions(conditions clusterv1.Conditions) {
 	m.Status.Conditions = conditions
+}
+
+func (m *ByoMachine) String() string {
+	return fmt.Sprintf("%s %s/%s", m.GroupVersionKind(), m.Namespace, m.Name)
 }
 
 //+kubebuilder:object:root=true
