@@ -219,7 +219,7 @@ func (r *ByoMachineReconciler) setNodeProviderID(ctx context.Context, remoteClie
 	}
 
 	node.Spec.ProviderID = providerID
-	
+
 	return helper.Patch(ctx, node)
 }
 
