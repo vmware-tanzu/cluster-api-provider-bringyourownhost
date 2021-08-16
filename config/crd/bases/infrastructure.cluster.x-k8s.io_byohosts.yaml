@@ -38,7 +38,7 @@ spec:
             properties:
               bootstrapSecret:
                 description: BootstrapSecret is an optional reference to a Cluster
-                  API Secert for bootstrap purpose
+                  API Secret for bootstrap purpose
                 properties:
                   apiVersion:
                     description: API version of the referent.
