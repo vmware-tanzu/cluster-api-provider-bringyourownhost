@@ -31,6 +31,7 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/log"
+	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	infrastructurev1alpha4 "github.com/vmware-tanzu/cluster-api-provider-byoh/apis/infrastructure/v1alpha4"
 	corev1 "k8s.io/api/core/v1"
@@ -108,6 +109,14 @@ func (r *ByoMachineReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 		return ctrl.Result{}, nil
 	}
 
+	helper, _ := patch.NewHelper(byoMachine, r.Client)
+	defer func() {
+		if err := helper.Patch(ctx, byoMachine); err != nil && reterr == nil {
+			logger.Error(err, "failed to patch byomachine")
+			reterr = err
+		}
+	}()
+
 	// Return early if the object or Cluster is paused.
 	if annotations.IsPaused(cluster, byoMachine) {
 		logger.Info("byoMachine or linked Cluster is marked as paused. Won't reconcile")
@@ -128,6 +137,12 @@ func (r *ByoMachineReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 		}
 	}
 
+	if !cluster.Status.InfrastructureReady {
+		logger.Info("Cluster infrastructure is not ready yet")
+		conditions.MarkFalse(byoMachine, infrastructurev1alpha4.BYOHostReady, infrastructurev1alpha4.WaitingForClusterInfrastructureReason, clusterv1.ConditionSeverityInfo, "")
+		return reconcile.Result{}, nil
+	}
+
 	hostsList := &infrastructurev1alpha4.ByoHostList{}
 	err = r.Client.List(ctx, hostsList)
 
@@ -143,7 +158,7 @@ func (r *ByoMachineReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 	// TODO- Needs smarter logic
 	host := hostsList.Items[0]
 
-	helper, _ := patch.NewHelper(&host, r.Client)
+	helper, _ = patch.NewHelper(&host, r.Client)
 
 	host.Status.MachineRef = &corev1.ObjectReference{
 		APIVersion: byoMachine.APIVersion,
@@ -183,18 +198,11 @@ func (r *ByoMachineReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 		return ctrl.Result{}, err
 	}
 
-	helper, _ = patch.NewHelper(byoMachine, r.Client)
 	byoMachine.Spec.ProviderID = providerID
 	byoMachine.Status.Ready = true
 
 	conditions.MarkTrue(byoMachine, infrastructurev1alpha4.BYOHostReady)
 
-	defer func() {
-		if err := helper.Patch(ctx, byoMachine); err != nil && reterr == nil {
-			logger.Error(err, "failed to patch byomachine")
-			reterr = err
-		}
-	}()
 	return ctrl.Result{}, nil
 }
 
