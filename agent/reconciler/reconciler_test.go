@@ -2,6 +2,7 @@ package reconciler
 
 import (
 	"context"
+	"errors"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -10,6 +11,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/types"
 	clusterv1 "sigs.k8s.io/cluster-api/api/v1alpha4"
+	"sigs.k8s.io/cluster-api/util/annotations"
 	"sigs.k8s.io/cluster-api/util/conditions"
 	"sigs.k8s.io/cluster-api/util/patch"
 )
@@ -39,6 +41,39 @@ var _ = Describe("Byohost Agent Tests", func() {
 			byoHost = common.NewByoHost(hostName, ns, nil)
 			Expect(k8sClient.Create(ctx, byoHost)).NotTo(HaveOccurred(), "failed to create byohost")
 
+		})
+		It("should set the Reason to ClusterOrHostPausedReason", func() {
+			expectedCondition.Reason = infrastructurev1alpha4.ClusterOrHostPausedReason
+			byoHostLookupKey := types.NamespacedName{Name: hostName, Namespace: ns}
+
+			By("adding paused annotation to ByoHost")
+			Eventually(func() error {
+				ph, err := patch.NewHelper(byoHost, k8sClient)
+				Expect(err).ShouldNot(HaveOccurred())
+				pauseAnnotations := make(map[string]string)
+				pauseAnnotations[clusterv1.PausedAnnotation] = "paused"
+				if changed := annotations.AddAnnotations(byoHost, pauseAnnotations); changed {
+					return ph.Patch(ctx, byoHost, patch.WithStatusObservedGeneration{})
+				}
+				return errors.New("ErrNotPatched")
+			}).Should(BeNil())
+
+			Eventually(func() *testConditions {
+				createdByoHost := &infrastructurev1alpha4.ByoHost{}
+				err := k8sClient.Get(ctx, byoHostLookupKey, createdByoHost)
+				if err != nil {
+					return &testConditions{}
+				}
+				actualCondition := conditions.Get(createdByoHost, infrastructurev1alpha4.K8sNodeBootstrapSucceeded)
+				if actualCondition != nil {
+					return &testConditions{
+						Type:   actualCondition.Type,
+						Status: actualCondition.Status,
+						Reason: actualCondition.Reason,
+					}
+				}
+				return &testConditions{}
+			}).Should(Equal(expectedCondition))
 		})
 
 		It("should set the Reason to WaitingForMachineRefReason", func() {

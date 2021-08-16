@@ -41,15 +41,16 @@ func (r HostReconciler) Reconcile(ctx context.Context, req ctrl.Request) (_ ctrl
 		}
 	}()
 
-	if byoHost.Status.MachineRef == nil {
-		klog.Info("Machine ref not yet set")
-		conditions.MarkFalse(byoHost, infrastructurev1alpha4.K8sNodeBootstrapSucceeded, infrastructurev1alpha4.WaitingForMachineRefReason, v1alpha4.ConditionSeverityInfo, "")
+	// Return early if the object is paused.
+	if annotations.HasPausedAnnotation(byoHost) {
+		klog.Info("The related byoMachine or linked Cluster is marked as paused. Won't reconcile")
+		conditions.MarkFalse(byoHost, infrastructurev1alpha4.K8sNodeBootstrapSucceeded, infrastructurev1alpha4.ClusterOrHostPausedReason, v1alpha4.ConditionSeverityInfo, "")
 		return ctrl.Result{}, nil
 	}
 
-	// Return early if the object or Cluster is paused.
-	if annotations.HasPausedAnnotation(byoHost) {
-		klog.Info("The related byoMachine or linked Cluster is marked as paused. Won't reconcile")
+	if byoHost.Status.MachineRef == nil {
+		klog.Info("Machine ref not yet set")
+		conditions.MarkFalse(byoHost, infrastructurev1alpha4.K8sNodeBootstrapSucceeded, infrastructurev1alpha4.WaitingForMachineRefReason, v1alpha4.ConditionSeverityInfo, "")
 		return ctrl.Result{}, nil
 	}
 

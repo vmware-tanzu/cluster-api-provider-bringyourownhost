@@ -162,7 +162,7 @@ var _ = Describe("Agent", func() {
   encoding: gzip+base64
   content: %s
 runCmd:
-- echo -n '%s' >> %s`, fileName1, fileOriginContent1, fileName2, strconv.FormatInt(int64(filePermission2), 8), fileAppendContent2, isAppend2, fileName3, fileBase64Content3, fileName4, fileGzipBase64Content4, fileNewContent1, fileName1)
+- echo -n '%s' > %s`, fileName1, fileOriginContent1, fileName2, strconv.FormatInt(int64(filePermission2), 8), fileAppendContent2, isAppend2, fileName3, fileBase64Content3, fileName4, fileGzipBase64Content4, fileNewContent1, fileName1)
 
 			secret := common.NewSecret(bootstrapSecretName, bootstrapSecretUnencoded, ns.Name)
 			Expect(k8sClient.Create(context.TODO(), secret)).NotTo(HaveOccurred())
@@ -218,7 +218,7 @@ runCmd:
 					return ""
 				}
 				return string(buffer)
-			}).Should(Equal(fileOriginContent1 + fileNewContent1))
+			}).Should(Equal(fileNewContent1))
 
 			//check second file's content
 			Eventually(func() string {
