@@ -148,7 +148,7 @@ var _ = SynchronizedAfterSuite(func() {
 func initScheme() *runtime.Scheme {
 	sc := runtime.NewScheme()
 	framework.TryAddDefaultSchemes(sc)
-	infraproviderv1.AddToScheme(sc)
+	Expect(infraproviderv1.AddToScheme(sc)).NotTo(HaveOccurred())
 	return sc
 }
 
