@@ -34,7 +34,7 @@ var _ = Describe("FileWriter", func() {
 	})
 
 	It("Should not create a directory if it already exists", func() {
-		FileWriter{}.MkdirIfNotExists(workDir)
+		err := FileWriter{}.MkdirIfNotExists(workDir)
 		Expect(err).NotTo(HaveOccurred())
 
 		err = FileWriter{}.MkdirIfNotExists(workDir)
