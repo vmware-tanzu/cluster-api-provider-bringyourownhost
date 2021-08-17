@@ -67,10 +67,12 @@ func main() {
 		return
 	}
 
-	hostReconciler := reconciler.HostReconciler{Client: k8sClient}
-	_ = ctrl.NewControllerManagedBy(mgr).
-		For(&infrastructurev1alpha4.ByoHost{}).
-		Complete(hostReconciler)
+	if err = (reconciler.HostReconciler{
+		Client: k8sClient,
+	}).SetupWithManager(mgr); err != nil {
+		klog.Errorf("unable to create controller, err=%v", err)
+		return
+	}
 
 	if err := mgr.Start(ctrl.SetupSignalHandler()); err != nil {
 		klog.Errorf("problem running manager, err=%v", err)
