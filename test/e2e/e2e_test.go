@@ -245,7 +245,7 @@ var _ = Describe("When BYOH joins existing cluster", func() {
 		re := regexp.MustCompile("server:.*")
 		kubeconfig = re.ReplaceAll(kubeconfig, []byte("server: https://"+profile.NetworkSettings.Networks["kind"].IPAddress+":6443"))
 
-		os.WriteFile(TempKubeconfigPath, kubeconfig, 0666)
+		Expect(os.WriteFile(TempKubeconfigPath, kubeconfig, 0666)).NotTo(HaveOccurred())
 
 		config.sourcePath = TempKubeconfigPath
 		config.destPath = "/mgmt.conf"
@@ -300,7 +300,7 @@ var _ = Describe("When BYOH joins existing cluster", func() {
 					case err := <-e:
 						//Please ignore this error if you see it in output
 						Byf("Get err %v", err)
-						f.Sync()
+						Expect(f.Sync()).NotTo(HaveOccurred())
 						return
 					}
 				}
@@ -330,8 +330,11 @@ var _ = Describe("When BYOH joins existing cluster", func() {
 
 	AfterEach(func() {
 		if dockerClient != nil && byohost.ID != "" {
-			dockerClient.ContainerStop(ctx, byohost.ID, nil)
-			dockerClient.ContainerRemove(ctx, byohost.ID, types.ContainerRemoveOptions{})
+			err := dockerClient.ContainerStop(ctx, byohost.ID, nil)
+			Expect(err).NotTo(HaveOccurred())
+
+			err = dockerClient.ContainerRemove(ctx, byohost.ID, types.ContainerRemoveOptions{})
+			Expect(err).NotTo(HaveOccurred())
 		}
 
 		if AgentLogFile != "" {
