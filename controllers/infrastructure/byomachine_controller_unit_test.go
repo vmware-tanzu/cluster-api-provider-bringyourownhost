@@ -207,7 +207,7 @@ var _ = Describe("Controllers/ByomachineController/Unitests", func() {
 			err = k8sClient.Get(context.TODO(), byoMachineLookupkey, createdByoMachine)
 			Expect(err).NotTo(HaveOccurred())
 
-			readyCondition := conditions.Get(createdByoMachine, infrastructurev1alpha4.HostReadyCondition)
+			readyCondition := conditions.Get(createdByoMachine, infrastructurev1alpha4.BYOHostReady)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(readyCondition).To(BeNil())
 		})
@@ -266,7 +266,7 @@ var _ = Describe("Controllers/ByomachineController/Unitests", func() {
 			err = k8sClient.Get(context.TODO(), byoMachineLookupkey, createdByoMachine)
 			Expect(err).NotTo(HaveOccurred())
 
-			readyCondition := conditions.Get(createdByoMachine, infrastructurev1alpha4.HostReadyCondition)
+			readyCondition := conditions.Get(createdByoMachine, infrastructurev1alpha4.BYOHostReady)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(readyCondition).To(BeNil())
 		})

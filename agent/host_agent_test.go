@@ -108,6 +108,7 @@ var _ = Describe("Agent", func() {
 				}
 				return createdByoHost
 			}).ShouldNot(BeNil())
+
 		})
 
 		It("should bootstrap the node when MachineRef is set", func() {
@@ -161,7 +162,7 @@ var _ = Describe("Agent", func() {
   encoding: gzip+base64
   content: %s
 runCmd:
-- echo -n '%s' >> %s`, fileName1, fileOriginContent1, fileName2, strconv.FormatInt(int64(filePermission2), 8), fileAppendContent2, isAppend2, fileName3, fileBase64Content3, fileName4, fileGzipBase64Content4, fileNewContent1, fileName1)
+- echo -n '%s' > %s`, fileName1, fileOriginContent1, fileName2, strconv.FormatInt(int64(filePermission2), 8), fileAppendContent2, isAppend2, fileName3, fileBase64Content3, fileName4, fileGzipBase64Content4, fileNewContent1, fileName1)
 
 			secret := common.NewSecret(bootstrapSecretName, bootstrapSecretUnencoded, ns.Name)
 			Expect(k8sClient.Create(context.TODO(), secret)).NotTo(HaveOccurred())
@@ -203,7 +204,7 @@ runCmd:
 					return corev1.ConditionFalse
 				}
 				for _, condition := range createdByoHost.Status.Conditions {
-					if condition.Type == infrastructurev1alpha4.K8sComponentsInstalledCondition {
+					if condition.Type == infrastructurev1alpha4.K8sNodeBootstrapSucceeded {
 						return condition.Status
 					}
 				}
@@ -217,7 +218,7 @@ runCmd:
 					return ""
 				}
 				return string(buffer)
-			}).Should(Equal(fileOriginContent1 + fileNewContent1))
+			}).Should(Equal(fileNewContent1))
 
 			//check second file's content
 			Eventually(func() string {

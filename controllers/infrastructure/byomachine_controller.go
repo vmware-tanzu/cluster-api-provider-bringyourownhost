@@ -187,7 +187,8 @@ func (r *ByoMachineReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 	byoMachine.Spec.ProviderID = providerID
 	byoMachine.Status.Ready = true
 
-	conditions.MarkTrue(byoMachine, infrastructurev1alpha4.HostReadyCondition)
+	conditions.MarkTrue(byoMachine, infrastructurev1alpha4.BYOHostReady)
+
 	defer func() {
 		if err := helper.Patch(ctx, byoMachine); err != nil && reterr == nil {
 			logger.Error(err, "failed to patch byomachine")
@@ -218,7 +219,7 @@ func (r *ByoMachineReconciler) setNodeProviderID(ctx context.Context, remoteClie
 	}
 
 	node.Spec.ProviderID = providerID
-	
+
 	return helper.Patch(ctx, node)
 }
 

@@ -5,11 +5,14 @@ import (
 
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/klog"
+	"sigs.k8s.io/cluster-api/api/v1alpha4"
 	"sigs.k8s.io/cluster-api/util/annotations"
 	"sigs.k8s.io/cluster-api/util/conditions"
 	"sigs.k8s.io/cluster-api/util/patch"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/event"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
+	"sigs.k8s.io/controller-runtime/pkg/predicate"
 
 	"github.com/vmware-tanzu/cluster-api-provider-byoh/agent/cloudinit"
 	infrastructurev1alpha4 "github.com/vmware-tanzu/cluster-api-provider-byoh/apis/infrastructure/v1alpha4"
@@ -21,7 +24,7 @@ type HostReconciler struct {
 	Client client.Client
 }
 
-func (r HostReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
+func (r HostReconciler) Reconcile(ctx context.Context, req ctrl.Request) (_ ctrl.Result, reterr error) {
 	//Fetch the ByoHost instance.
 	byoHost := &infrastructurev1alpha4.ByoHost{}
 	err := r.Client.Get(ctx, req.NamespacedName, byoHost)
@@ -30,19 +33,30 @@ func (r HostReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.R
 		return ctrl.Result{}, err
 	}
 
-	if byoHost.Status.MachineRef == nil {
-		klog.Info("Machine ref not yet set")
+	helper, _ := patch.NewHelper(byoHost, r.Client)
+	defer func() {
+		if err := helper.Patch(ctx, byoHost); err != nil && reterr == nil {
+			klog.Errorf("failed to patch byohost, err=%v", err)
+			reterr = err
+		}
+	}()
+
+	// Return early if the object is paused.
+	if annotations.HasPausedAnnotation(byoHost) {
+		klog.Info("The related byoMachine or linked Cluster is marked as paused. Won't reconcile")
+		conditions.MarkFalse(byoHost, infrastructurev1alpha4.K8sNodeBootstrapSucceeded, infrastructurev1alpha4.ClusterOrHostPausedReason, v1alpha4.ConditionSeverityInfo, "")
 		return ctrl.Result{}, nil
 	}
 
-	// Return early if the object or Cluster is paused.
-	if annotations.HasPausedAnnotation(byoHost) {
-		klog.Info("The related byoMachine or linked Cluster is marked as paused. Won't reconcile")
+	if byoHost.Status.MachineRef == nil {
+		klog.Info("Machine ref not yet set")
+		conditions.MarkFalse(byoHost, infrastructurev1alpha4.K8sNodeBootstrapSucceeded, infrastructurev1alpha4.WaitingForMachineRefReason, v1alpha4.ConditionSeverityInfo, "")
 		return ctrl.Result{}, nil
 	}
 
 	if byoHost.Spec.BootstrapSecret == nil {
 		klog.Info("BootstrapDataSecret not ready")
+		conditions.MarkFalse(byoHost, infrastructurev1alpha4.K8sNodeBootstrapSucceeded, infrastructurev1alpha4.BootstrapDataSecretUnavailableReason, v1alpha4.ConditionSeverityInfo, "")
 		return ctrl.Result{}, nil
 	}
 
@@ -57,21 +71,11 @@ func (r HostReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.R
 		RunCmdExecutor:     cloudinit.CmdRunner{}}.Execute(bootstrapScript)
 	if err != nil {
 		klog.Errorf("cloudinit.ScriptExecutor return failed, err=%v", err)
+		conditions.MarkFalse(byoHost, infrastructurev1alpha4.K8sNodeBootstrapSucceeded, infrastructurev1alpha4.CloudInitExecutionFailedReason, v1alpha4.ConditionSeverityError, "")
 		return ctrl.Result{}, err
 	}
 
-	helper, err := patch.NewHelper(byoHost, r.Client)
-	if err != nil {
-		klog.Errorf("error creating path helper, err=%v", err)
-		return ctrl.Result{}, err
-	}
-
-	conditions.MarkTrue(byoHost, infrastructurev1alpha4.K8sComponentsInstalledCondition)
-	err = helper.Patch(ctx, byoHost)
-	if err != nil {
-		klog.Errorf("error in updating conditions on ByoHost, err=%v", err)
-		return ctrl.Result{}, err
-	}
+	conditions.MarkTrue(byoHost, infrastructurev1alpha4.K8sNodeBootstrapSucceeded)
 
 	return ctrl.Result{}, nil
 }
@@ -88,5 +92,14 @@ func (r HostReconciler) getBootstrapScript(ctx context.Context, dataSecretName, 
 }
 
 func (r HostReconciler) SetupWithManager(mgr manager.Manager) error {
-	return nil
+	return ctrl.NewControllerManagedBy(mgr).
+		For(&infrastructurev1alpha4.ByoHost{}).
+		WithEventFilter(predicate.Funcs{
+			// TODO will need to remove this and
+			// will be handled with delete stories
+			DeleteFunc: func(e event.DeleteEvent) bool {
+				return false
+			},
+		}).
+		Complete(r)
 }

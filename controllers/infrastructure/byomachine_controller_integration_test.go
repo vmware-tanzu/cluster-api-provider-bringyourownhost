@@ -78,7 +78,7 @@ var _ = Describe("Controllers/ByomachineController", func() {
 				if err != nil {
 					return corev1.ConditionFalse
 				}
-				readyCondition := conditions.Get(createdByoMachine, infrastructurev1alpha4.HostReadyCondition)
+				readyCondition := conditions.Get(createdByoMachine, infrastructurev1alpha4.BYOHostReady)
 				if readyCondition != nil {
 					return readyCondition.Status
 				}
