@@ -22,9 +22,9 @@ var (
 
 func init() {
 	scheme = runtime.NewScheme()
-	infrastructurev1alpha4.AddToScheme(scheme)
-	corev1.AddToScheme(scheme)
-	clusterv1.AddToScheme(scheme)
+	_ = infrastructurev1alpha4.AddToScheme(scheme)
+	_ = corev1.AddToScheme(scheme)
+	_ = clusterv1.AddToScheme(scheme)
 
 	flag.StringVar(&namespace, "namespace", "default", "Namespace in the management cluster where you would like to register this host")
 }

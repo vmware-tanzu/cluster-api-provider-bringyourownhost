@@ -27,10 +27,8 @@ var (
 	cfg                   *rest.Config
 	k8sClient             client.Client
 	tmpFilePrefix         = "kubeconfigFile-"
-	//clusterName           = "test-cluster"
 	defaultClusterName = "default-test-cluster"
 	testEnv            *envtest.Environment
-	defaultNamespace   string = "default"
 )
 
 func TestHostAgent(t *testing.T) {
