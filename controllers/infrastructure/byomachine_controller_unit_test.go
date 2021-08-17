@@ -10,8 +10,7 @@ import (
 	"github.com/vmware-tanzu/cluster-api-provider-byoh/common"
 	"k8s.io/apimachinery/pkg/types"
 	clusterv1 "sigs.k8s.io/cluster-api/api/v1alpha4"
-	"sigs.k8s.io/cluster-api/util/annotations"
-	"sigs.k8s.io/cluster-api/util/conditions"
+	"sigs.k8s.io/cluster-api/util/patch"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 )
 
@@ -44,40 +43,6 @@ var _ = Describe("Controllers/ByomachineController/Unitests", func() {
 			Expect(err).NotTo(HaveOccurred())
 		})
 
-	})
-
-	Context("When byohost is not available", func() {
-		const (
-			//a DNS-1123 subdomain must consist of lower case alphanumeric characters, '-' or '.', and must start and end with an alphanumeric character (e.g. 'example.com', regex used for validation is '[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*')
-			machineName = "machine-when-byohost-is-not-available"
-		)
-		var (
-			ctx        context.Context
-			byoMachine *infrastructurev1alpha4.ByoMachine
-			machine    *clusterv1.Machine
-		)
-
-		BeforeEach(func() {
-			ctx = context.Background()
-			machine = common.NewMachine(machineName, defaultNamespace, defaultClusterName)
-			Expect(k8sClient.Create(ctx, machine)).Should(Succeed())
-
-			byoMachine = common.NewByoMachine(defaultByoMachineName, defaultNamespace, defaultClusterName, machine)
-			Expect(k8sClient.Create(ctx, byoMachine)).Should(Succeed())
-		})
-
-		It("Should return error", func() {
-			byoMachineLookupkey := types.NamespacedName{Name: defaultByoMachineName, Namespace: defaultNamespace}
-			request := reconcile.Request{NamespacedName: byoMachineLookupkey}
-			_, err := reconciler.Reconcile(ctx, request)
-			Expect(err).To(HaveOccurred())
-			Expect(err).To(MatchError("no hosts found"))
-		})
-
-		AfterEach(func() {
-			Expect(k8sClient.Delete(ctx, byoMachine)).Should(Succeed())
-			Expect(k8sClient.Delete(ctx, machine)).Should(Succeed())
-		})
 	})
 
 	Context("When cluster does not exist", func() {
@@ -143,6 +108,10 @@ var _ = Describe("Controllers/ByomachineController/Unitests", func() {
 				DataSecretName: &fakeBootstrapSecret,
 			}
 			Expect(k8sClient.Create(ctx, machine)).Should(Succeed())
+			ph, err := patch.NewHelper(capiCluster, k8sClient)
+			Expect(err).ShouldNot(HaveOccurred())
+			capiCluster.Status.InfrastructureReady = true
+			Expect(ph.Patch(ctx, capiCluster, patch.WithStatusObservedGeneration{})).Should(Succeed())
 
 			byoMachine = common.NewByoMachine(defaultByoMachineName, defaultNamespace, defaultClusterName, machine)
 			Expect(k8sClient.Create(ctx, byoMachine)).Should(Succeed())
@@ -161,120 +130,6 @@ var _ = Describe("Controllers/ByomachineController/Unitests", func() {
 		AfterEach(func() {
 			Expect(k8sClient.Delete(ctx, byoMachine)).Should(Succeed())
 			Expect(k8sClient.Delete(ctx, byoHost)).Should(Succeed())
-			Expect(k8sClient.Delete(ctx, machine)).Should(Succeed())
-		})
-	})
-
-	Context("When cluster is paused.", func() {
-		const (
-			//a DNS-1123 subdomain must consist of lower case alphanumeric characters, '-' or '.', and must start and end with an alphanumeric character (e.g. 'example.com', regex used for validation is '[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*')"
-			hostname    = "host-when-cluster-is-paused"
-			clusterName = "cluster-when-cluster-is-paused"
-			machineName = "machine-when-cluster-is-paused"
-		)
-
-		var (
-			ctx        context.Context
-			byoMachine *infrastructurev1alpha4.ByoMachine
-			byoHost    *infrastructurev1alpha4.ByoHost
-			cluster    *clusterv1.Cluster
-			machine    *clusterv1.Machine
-		)
-
-		BeforeEach(func() {
-			ctx = context.Background()
-			cluster = common.NewCluster(clusterName, defaultNamespace)
-			cluster.Spec.Paused = true
-			Expect(k8sClient.Create(ctx, cluster)).Should(Succeed())
-
-			machine = common.NewMachine(defaultMachineName, defaultNamespace, defaultClusterName)
-			Expect(k8sClient.Create(ctx, machine)).Should(Succeed())
-
-			byoMachine = common.NewByoMachine(defaultByoMachineName, defaultNamespace, clusterName, machine)
-			Expect(k8sClient.Create(ctx, byoMachine)).Should(Succeed())
-
-			byoHost = common.NewByoHost(hostname, defaultNamespace, nil)
-			Expect(k8sClient.Create(ctx, byoHost)).Should(Succeed())
-		})
-
-		It("Won't reconcile", func() {
-			byoMachineLookupkey := types.NamespacedName{Name: defaultByoMachineName, Namespace: defaultNamespace}
-			request := reconcile.Request{NamespacedName: byoMachineLookupkey}
-			_, err := reconciler.Reconcile(ctx, request)
-			Expect(err).NotTo(HaveOccurred())
-
-			createdByoMachine := &infrastructurev1alpha4.ByoMachine{}
-			err = k8sClient.Get(context.TODO(), byoMachineLookupkey, createdByoMachine)
-			Expect(err).NotTo(HaveOccurred())
-
-			readyCondition := conditions.Get(createdByoMachine, infrastructurev1alpha4.BYOHostReady)
-			Expect(err).NotTo(HaveOccurred())
-			Expect(readyCondition).To(BeNil())
-		})
-
-		AfterEach(func() {
-			Expect(k8sClient.Delete(ctx, byoMachine)).Should(Succeed())
-			Expect(k8sClient.Delete(ctx, byoHost)).Should(Succeed())
-			Expect(k8sClient.Delete(ctx, cluster)).Should(Succeed())
-			Expect(k8sClient.Delete(ctx, machine)).Should(Succeed())
-		})
-	})
-
-	Context("When ByoMachine is paused.", func() {
-		const (
-			//a DNS-1123 subdomain must consist of lower case alphanumeric characters, '-' or '.', and must start and end with an alphanumeric character (e.g. 'example.com', regex used for validation is '[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*')"
-			hostname    = "host-when-byomachine-is-paused"
-			clusterName = "cluster-when-byomachine-is-paused"
-			machineName = "machine-when-byomachine-is-Paused"
-		)
-
-		var (
-			ctx        context.Context
-			byoMachine *infrastructurev1alpha4.ByoMachine
-			byoHost    *infrastructurev1alpha4.ByoHost
-			cluster    *clusterv1.Cluster
-			machine    *clusterv1.Machine
-		)
-
-		BeforeEach(func() {
-			ctx = context.Background()
-
-			cluster = common.NewCluster(clusterName, defaultNamespace)
-			Expect(k8sClient.Create(ctx, cluster)).Should(Succeed())
-
-			machine = common.NewMachine(defaultMachineName, defaultNamespace, defaultClusterName)
-			Expect(k8sClient.Create(ctx, machine)).Should(Succeed())
-
-			byoMachine = common.NewByoMachine(defaultByoMachineName, defaultNamespace, clusterName, nil)
-			desired := map[string]string{
-				clusterv1.PausedAnnotation: "paused",
-			}
-			annotations.AddAnnotations(byoMachine, desired)
-			Expect(k8sClient.Create(ctx, byoMachine)).Should(Succeed())
-
-			byoHost = common.NewByoHost(hostname, defaultNamespace, nil)
-			Expect(k8sClient.Create(ctx, byoHost)).Should(Succeed())
-		})
-
-		It("Won't reconcile", func() {
-			byoMachineLookupkey := types.NamespacedName{Name: defaultByoMachineName, Namespace: defaultNamespace}
-			request := reconcile.Request{NamespacedName: byoMachineLookupkey}
-			_, err := reconciler.Reconcile(ctx, request)
-			Expect(err).NotTo(HaveOccurred())
-
-			createdByoMachine := &infrastructurev1alpha4.ByoMachine{}
-			err = k8sClient.Get(context.TODO(), byoMachineLookupkey, createdByoMachine)
-			Expect(err).NotTo(HaveOccurred())
-
-			readyCondition := conditions.Get(createdByoMachine, infrastructurev1alpha4.BYOHostReady)
-			Expect(err).NotTo(HaveOccurred())
-			Expect(readyCondition).To(BeNil())
-		})
-
-		AfterEach(func() {
-			Expect(k8sClient.Delete(ctx, byoMachine)).Should(Succeed())
-			Expect(k8sClient.Delete(ctx, byoHost)).Should(Succeed())
-			Expect(k8sClient.Delete(ctx, cluster)).Should(Succeed())
 			Expect(k8sClient.Delete(ctx, machine)).Should(Succeed())
 		})
 	})

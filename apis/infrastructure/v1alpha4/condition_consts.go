@@ -23,6 +23,7 @@ const (
 	BYOHostReady clusterv1.ConditionType = "BYOHostReady"
 
 	// BYOHostReady is False
+	ClusterOrByoMachinePausedReason       = "ClusterOrByoMachinePaused"
 	WaitingForClusterInfrastructureReason = "WaitingForClusterInfrastructure"
 	WaitingForBootstrapDataSecretReason   = "WaitingForBootstrapDataSecret"
 	BYOHostsUnavailableReason             = "BYOHostsUnavailable"
