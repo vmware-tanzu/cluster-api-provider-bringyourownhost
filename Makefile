@@ -58,6 +58,9 @@ run-test:
 agent-test:
 	source ./scripts/fetch_ext_bins.sh; fetch_tools; setup_envs; ginkgo agent -coverprofile cover.out
 
+controller-test:
+	source ./scripts/fetch_ext_bins.sh; fetch_tools; setup_envs; ginkgo controllers/infrastructure -coverprofile cover.out
+
 ##@ General
 
 # The help target prints out all targets with their descriptions organized

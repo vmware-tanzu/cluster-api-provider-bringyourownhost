@@ -35,7 +35,6 @@ import (
 	infrav1 "github.com/vmware-tanzu/cluster-api-provider-byoh/apis/infrastructure/v1alpha4"
 	clusterv1 "sigs.k8s.io/cluster-api/api/v1alpha4"
 
-	"sigs.k8s.io/cluster-api/util"
 	clusterutilv1 "sigs.k8s.io/cluster-api/util"
 	"sigs.k8s.io/cluster-api/util/annotations"
 	"sigs.k8s.io/cluster-api/util/conditions"
@@ -200,7 +199,7 @@ func (r *ByoClusterReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		// Watch the CAPI resource that owns this infrastructure resource.
 		Watches(
 			&source.Kind{Type: &clusterv1.Cluster{}},
-			handler.EnqueueRequestsFromMapFunc(util.ClusterToInfrastructureMapFunc(infrav1.GroupVersion.WithKind(clusterControlledTypeGVK.Kind))),
+			handler.EnqueueRequestsFromMapFunc(clusterutilv1.ClusterToInfrastructureMapFunc(infrav1.GroupVersion.WithKind(clusterControlledTypeGVK.Kind))),
 		).
 		Complete(r)
 }
