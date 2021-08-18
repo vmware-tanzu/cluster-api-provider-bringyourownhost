@@ -108,6 +108,18 @@ var _ = Describe("Agent", func() {
 				}
 				return createdByoHost
 			}).ShouldNot(BeNil())
+		})
+
+		It("should fetch networkstatus when register the BYOHost with the management cluster", func() {
+			byoHostLookupKey := types.NamespacedName{Name: hostName, Namespace: ns.Name}
+			Eventually(func() int {
+				createdByoHost := &infrastructurev1alpha4.ByoHost{}
+				err := k8sClient.Get(context.TODO(), byoHostLookupKey, createdByoHost)
+				if err != nil {
+					return 0
+				}
+				return len(createdByoHost.Spec.Network)
+			}).ShouldNot(BeZero())
 
 		})
 
