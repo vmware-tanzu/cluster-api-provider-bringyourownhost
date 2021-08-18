@@ -44,7 +44,7 @@ func (r HostReconciler) Reconcile(ctx context.Context, req ctrl.Request) (_ ctrl
 	// Return early if the object is paused.
 	if annotations.HasPausedAnnotation(byoHost) {
 		klog.Info("The related byoMachine or linked Cluster is marked as paused. Won't reconcile")
-		conditions.MarkFalse(byoHost, infrastructurev1alpha4.K8sNodeBootstrapSucceeded, infrastructurev1alpha4.ClusterOrHostPausedReason, v1alpha4.ConditionSeverityInfo, "")
+		conditions.MarkFalse(byoHost, infrastructurev1alpha4.K8sNodeBootstrapSucceeded, infrastructurev1alpha4.ClusterOrResourcePausedReason, v1alpha4.ConditionSeverityInfo, "")
 		return ctrl.Result{}, nil
 	}
 
