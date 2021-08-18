@@ -12,7 +12,6 @@ const (
 	K8sNodeBootstrapSucceeded clusterv1.ConditionType = "K8sNodeBootstrapSucceeded"
 
 	// K8sNodeBootstrapSucceeded is False
-	ClusterOrHostPausedReason            = "ClusterOrHostPaused"
 	WaitingForMachineRefReason           = "WaitingForMachineRefToBeAssigned"
 	BootstrapDataSecretUnavailableReason = "BootstrapDataSecretUnavailable"
 	CloudInitExecutionFailedReason       = "CloudInitExecutionFailed"
@@ -23,8 +22,12 @@ const (
 	BYOHostReady clusterv1.ConditionType = "BYOHostReady"
 
 	// BYOHostReady is False
-	ClusterOrByoMachinePausedReason       = "ClusterOrByoMachinePaused"
 	WaitingForClusterInfrastructureReason = "WaitingForClusterInfrastructure"
 	WaitingForBootstrapDataSecretReason   = "WaitingForBootstrapDataSecret"
 	BYOHostsUnavailableReason             = "BYOHostsUnavailable"
+)
+
+// Reasons common to all Byo Resources
+const (
+	ClusterOrResourcePausedReason = "ClusterOrResourcePaused"
 )

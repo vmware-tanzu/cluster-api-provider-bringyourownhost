@@ -127,7 +127,7 @@ func (r *ByoMachineReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 				logger.Error(err, "Set Paused flag for byohost")
 			}
 		}
-		conditions.MarkFalse(byoMachine, infrastructurev1alpha4.BYOHostReady, infrastructurev1alpha4.ClusterOrByoMachinePausedReason, clusterv1.ConditionSeverityInfo, "")
+		conditions.MarkFalse(byoMachine, infrastructurev1alpha4.BYOHostReady, infrastructurev1alpha4.ClusterOrResourcePausedReason, clusterv1.ConditionSeverityInfo, "")
 		return ctrl.Result{}, nil
 	} else {
 		//if there is already byhost associated with it, make sure the paused status of byohost is false
