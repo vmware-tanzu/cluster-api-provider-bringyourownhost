@@ -43,7 +43,8 @@ import (
 )
 
 const (
-	ProviderIDPrefix = "byoh://"
+	providerIDPrefix       = "byoh://"
+	providerIDSuffixLength = 6
 )
 
 // ByoMachineReconciler reconciles a ByoMachine object
@@ -77,7 +78,7 @@ type ByoMachineReconciler struct {
 func (r *ByoMachineReconciler) Reconcile(ctx context.Context, req ctrl.Request) (_ ctrl.Result, reterr error) {
 	logger := log.FromContext(ctx).WithValues("namespace", req.Namespace, "BYOMachine", req.Name)
 
-	//Fetch the ByoMachine instance.
+	// Fetch the ByoMachine instance.
 	byoMachine := &infrastructurev1alpha4.ByoMachine{}
 	err := r.Client.Get(ctx, req.NamespacedName, byoMachine)
 	if err != nil {
@@ -113,7 +114,7 @@ func (r *ByoMachineReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 
 	helper, _ := patch.NewHelper(byoMachine, r.Client)
 	defer func() {
-		if err := helper.Patch(ctx, byoMachine); err != nil && reterr == nil {
+		if err = helper.Patch(ctx, byoMachine); err != nil && reterr == nil {
 			logger.Error(err, "failed to patch byomachine")
 			reterr = err
 		}
@@ -123,19 +124,17 @@ func (r *ByoMachineReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 	if annotations.IsPaused(cluster, byoMachine) {
 		logger.Info("byoMachine or linked Cluster is marked as paused. Won't reconcile")
 		if byoMachine.Spec.ProviderID != "" {
-			if err := r.setPausedConditionForByoHost(ctx, byoMachine.Spec.ProviderID, req.Namespace, true); err != nil {
+			if err = r.setPausedConditionForByoHost(ctx, byoMachine.Spec.ProviderID, req.Namespace, true); err != nil {
 				logger.Error(err, "Set Paused flag for byohost")
 			}
 		}
 		conditions.MarkFalse(byoMachine, infrastructurev1alpha4.BYOHostReady, infrastructurev1alpha4.ClusterOrResourcePausedReason, clusterv1.ConditionSeverityInfo, "")
 		return ctrl.Result{}, nil
-	} else {
-		//if there is already byhost associated with it, make sure the paused status of byohost is false
-		if len(byoMachine.Spec.ProviderID) > 0 {
-			if err := r.setPausedConditionForByoHost(ctx, byoMachine.Spec.ProviderID, req.Namespace, false); err != nil {
-				logger.Error(err, "Set resume flag for byohost failed")
-				return ctrl.Result{}, err
-			}
+	} else if len(byoMachine.Spec.ProviderID) > 0 {
+		// if there is already byohost associated with it, make sure the paused status of byohost is false
+		if err = r.setPausedConditionForByoHost(ctx, byoMachine.Spec.ProviderID, req.Namespace, false); err != nil {
+			logger.Error(err, "Set resume flag for byohost failed")
+			return ctrl.Result{}, err
 		}
 	}
 
@@ -193,14 +192,14 @@ func (r *ByoMachineReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 		return ctrl.Result{}, err
 	}
 
-	providerID := fmt.Sprintf("%s%s/%s", ProviderIDPrefix, host.Name, util.RandomString(6))
+	providerID := fmt.Sprintf("%s%s/%s", providerIDPrefix, host.Name, util.RandomString(providerIDSuffixLength))
 	remoteClient, err := r.getRemoteClient(ctx, byoMachine)
 	if err != nil {
 		logger.Error(err, "failed to get remote client")
 		return ctrl.Result{}, err
 	}
 
-	err = r.setNodeProviderID(ctx, remoteClient, host, providerID)
+	err = r.setNodeProviderID(ctx, remoteClient, &host, providerID)
 	if err != nil {
 		logger.Error(err, "failed to set node providerID")
 		return ctrl.Result{}, err
@@ -230,8 +229,7 @@ func (r *ByoMachineReconciler) SetupWithManager(mgr ctrl.Manager) error {
 
 // setNodeProviderID patches the provider id to the node using
 // client pointing to workload cluster
-func (r *ByoMachineReconciler) setNodeProviderID(ctx context.Context, remoteClient client.Client, host infrastructurev1alpha4.ByoHost, providerID string) error {
-
+func (r *ByoMachineReconciler) setNodeProviderID(ctx context.Context, remoteClient client.Client, host *infrastructurev1alpha4.ByoHost, providerID string) error {
 	node := &corev1.Node{}
 	key := client.ObjectKey{Name: host.Name, Namespace: host.Namespace}
 	err := remoteClient.Get(ctx, key, node)
@@ -261,14 +259,13 @@ func (r *ByoMachineReconciler) getRemoteClient(ctx context.Context, byoMachine *
 	return remoteClient, nil
 }
 
-func (r *ByoMachineReconciler) setPausedConditionForByoHost(ctx context.Context, providerID string, nameSpace string, isPaused bool) error {
-
+func (r *ByoMachineReconciler) setPausedConditionForByoHost(ctx context.Context, providerID, nameSpace string, isPaused bool) error {
 	// The format of providerID is "byoh://<byoHostName>/<RandomString(6)>
-	if !strings.HasPrefix(providerID, ProviderIDPrefix) {
+	if !strings.HasPrefix(providerID, providerIDPrefix) {
 		return errors.New("invalid providerID prefix")
 	}
 
-	strs := strings.Split(providerID[len(ProviderIDPrefix):], "/")
+	strs := strings.Split(providerID[len(providerIDPrefix):], "/")
 
 	if len(strs) == 0 {
 		return errors.New("invalid providerID format")

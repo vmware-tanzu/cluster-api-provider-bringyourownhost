@@ -7,8 +7,7 @@ import (
 	clusterv1 "sigs.k8s.io/cluster-api/api/v1alpha4"
 )
 
-func NewByoMachine(byoMachineName string, byoMachineNamespace string, clusterName string, machine *clusterv1.Machine) *infrastructurev1alpha4.ByoMachine {
-
+func NewByoMachine(byoMachineName, byoMachineNamespace, clusterName string, machine *clusterv1.Machine) *infrastructurev1alpha4.ByoMachine {
 	byoMachine := &infrastructurev1alpha4.ByoMachine{
 		TypeMeta: metav1.TypeMeta{
 			Kind:       "ByoMachine",
@@ -40,7 +39,7 @@ func NewByoMachine(byoMachineName string, byoMachineNamespace string, clusterNam
 	return byoMachine
 }
 
-func NewMachine(machineName string, namespace string, clusterName string) *clusterv1.Machine {
+func NewMachine(machineName, namespace, clusterName string) *clusterv1.Machine {
 	machine := &clusterv1.Machine{
 		TypeMeta: metav1.TypeMeta{
 			Kind:       "Machine",
@@ -57,7 +56,7 @@ func NewMachine(machineName string, namespace string, clusterName string) *clust
 	return machine
 }
 
-func NewByoHost(byoHostName string, byoHostNamespace string, byoMachine *infrastructurev1alpha4.ByoMachine) *infrastructurev1alpha4.ByoHost {
+func NewByoHost(byoHostName, byoHostNamespace string, byoMachine *infrastructurev1alpha4.ByoMachine) *infrastructurev1alpha4.ByoHost {
 	byoHost := &infrastructurev1alpha4.ByoHost{
 		TypeMeta: metav1.TypeMeta{
 			Kind:       "ByoHost",
@@ -82,7 +81,7 @@ func NewByoHost(byoHostName string, byoHostNamespace string, byoMachine *infrast
 	return byoHost
 }
 
-func NewNode(nodeName string, namespace string) *corev1.Node {
+func NewNode(nodeName, namespace string) *corev1.Node {
 	node := &corev1.Node{
 		TypeMeta: metav1.TypeMeta{
 			Kind:       "Node",
@@ -98,7 +97,7 @@ func NewNode(nodeName string, namespace string) *corev1.Node {
 	return node
 }
 
-func NewCluster(clusterName string, namespace string) *clusterv1.Cluster {
+func NewCluster(clusterName, namespace string) *clusterv1.Cluster {
 	cluster := &clusterv1.Cluster{
 		TypeMeta: metav1.TypeMeta{
 			Kind:       "Cluster",

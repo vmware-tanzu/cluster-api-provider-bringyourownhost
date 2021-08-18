@@ -53,12 +53,12 @@ linters:
     - dogsled
     - dupl
     - errcheck
-    - funlen
+#    - funlen
     - goconst
     - gocritic
-    - gocyclo
+#    - gocyclo
     - goheader
-    - goimports
+#    - goimports
     - gomnd
     - goprintffuncname
     - gosec
@@ -75,7 +75,7 @@ linters:
     - stylecheck
     - typecheck
     - unconvert
-    - unparam
+#    - unparam
     - unused
     - varcheck
     - whitespace

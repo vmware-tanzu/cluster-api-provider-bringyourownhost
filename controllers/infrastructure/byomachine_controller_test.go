@@ -136,7 +136,7 @@ var _ = Describe("Controllers/ByomachineController", func() {
 					return ""
 				}
 				return createdByoMachine.Spec.ProviderID
-			}).Should(ContainSubstring(ProviderIDPrefix))
+			}).Should(ContainSubstring(providerIDPrefix))
 
 			Eventually(func() bool {
 				err := k8sClient.Get(ctx, byoMachineLookupkey, createdByoMachine)
@@ -163,7 +163,7 @@ var _ = Describe("Controllers/ByomachineController", func() {
 			err = clientFake.Get(ctx, types.NamespacedName{Name: defaultNodeName, Namespace: defaultNamespace}, &node)
 			Expect(err).NotTo(HaveOccurred())
 
-			Expect(node.Spec.ProviderID).To(ContainSubstring(ProviderIDPrefix))
+			Expect(node.Spec.ProviderID).To(ContainSubstring(providerIDPrefix))
 		})
 
 		AfterEach(func() {
