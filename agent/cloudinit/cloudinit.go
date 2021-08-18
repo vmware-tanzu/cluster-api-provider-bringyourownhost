@@ -36,7 +36,7 @@ func (se ScriptExecutor) Execute(bootstrapScript string) error {
 		return errors.Wrapf(err, "error parsing write_files action: %s", bootstrapScript)
 	}
 
-	for _, file := range cloudInitData.FilesToWrite {
+	for i, file := range cloudInitData.FilesToWrite {
 		directoryToCreate := filepath.Dir(file.Path)
 		err := se.WriteFilesExecutor.MkdirIfNotExists(directoryToCreate)
 		if err != nil {
@@ -48,7 +48,7 @@ func (se ScriptExecutor) Execute(bootstrapScript string) error {
 		if err != nil {
 			return errors.Wrap(err, fmt.Sprintf("error decoding content for %s", file.Path))
 		}
-		err = se.WriteFilesExecutor.WriteToFile(file)
+		err = se.WriteFilesExecutor.WriteToFile(&cloudInitData.FilesToWrite[i])
 		if err != nil {
 			return errors.Wrap(err, fmt.Sprintf("Error writing the file %s", file.Path))
 		}

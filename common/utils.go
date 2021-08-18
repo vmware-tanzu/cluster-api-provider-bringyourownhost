@@ -31,11 +31,14 @@ func GzipData(data []byte) ([]byte, error) {
 
 func RandStr(prefix string, length int) string {
 	str := "0123456789abcdefghijklmnopqrstuvwxyz"
-	bytes := []byte(str)
+	randomSeed := 100
+	byteArr := []byte(str)
 	result := []byte{}
-	rand.Seed(time.Now().UnixNano() + int64(rand.Intn(100)))
+	/* #nosec */
+	rand.Seed(time.Now().UnixNano() + int64(rand.Intn(randomSeed)))
 	for i := 0; i < length; i++ {
-		result = append(result, bytes[rand.Intn(len(bytes))])
+		/* #nosec */
+		result = append(result, byteArr[rand.Intn(len(byteArr))])
 	}
 	return prefix + string(result)
 }
