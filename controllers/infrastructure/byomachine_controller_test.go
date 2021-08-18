@@ -41,7 +41,7 @@ var _ = Describe("Controllers/ByomachineController", func() {
 			}
 			Expect(k8sClient.Create(ctx, machine)).Should(Succeed())
 
-			byoMachine = common.NewByoMachine("test-byo-machine", defaultNamespace, defaultClusterName, machine)
+			byoMachine = common.NewByoMachine(defaultByoMachineName, defaultNamespace, defaultClusterName, machine)
 			Expect(k8sClient.Create(ctx, byoMachine)).Should(Succeed())
 
 			byoMachineLookupKey := types.NamespacedName{Name: byoMachine.Name, Namespace: byoMachine.Namespace}
@@ -192,32 +192,30 @@ var _ = Describe("Controllers/ByomachineController", func() {
 			machine = common.NewMachine(defaultMachineName, defaultNamespace, defaultClusterName)
 			Expect(k8sClient.Create(ctx, machine)).Should(Succeed())
 
-			byoMachine = common.NewByoMachine("test-byo-machine", defaultNamespace, defaultClusterName, machine)
+			byoMachine = common.NewByoMachine(defaultByoMachineName, defaultNamespace, defaultClusterName, machine)
 			Expect(k8sClient.Create(ctx, byoMachine)).Should(Succeed())
 			byoMachineLookupKey = types.NamespacedName{Name: byoMachine.Name, Namespace: byoMachine.Namespace}
 
 		})
 
-		It("should mark BYOHostReady as False when cluster or byomachine is paused", func() {
-			cluster := common.NewCluster("paused-cluster", defaultNamespace)
-			Expect(k8sClient.Create(ctx, cluster)).Should(Succeed())
-			machine := common.NewMachine("paused-machine", defaultNamespace, cluster.Name)
-			Expect(k8sClient.Create(ctx, machine)).Should(Succeed())
-			byoMachine := common.NewByoMachine("paused-byo-machine", defaultNamespace, cluster.Name, machine)
+		It("should mark BYOHostReady as False when byomachine is paused", func() {
+			byoMachine := common.NewByoMachine(defaultByoMachineName, defaultNamespace, defaultClusterName, machine)
+			ph, err := patch.NewHelper(byoMachine, k8sClient)
+			Expect(err).ShouldNot(HaveOccurred())
+
 			pauseAnnotations := map[string]string{
 				clusterv1.PausedAnnotation: "paused",
 			}
 			annotations.AddAnnotations(byoMachine, pauseAnnotations)
-			Expect(k8sClient.Create(ctx, byoMachine)).Should(Succeed())
-			byoMachineLookupKey := types.NamespacedName{Name: byoMachine.Name, Namespace: byoMachine.Namespace}
+
+			Expect(ph.Patch(ctx, byoMachine, patch.WithStatusObservedGeneration{})).Should(Succeed())
 
 			expectedCondition = &testConditions{
 				Type:   infrastructurev1alpha4.BYOHostReady,
 				Status: corev1.ConditionFalse,
-				Reason: infrastructurev1alpha4.ClusterOrByoMachinePausedReason,
+				Reason: infrastructurev1alpha4.ClusterOrResourcePausedReason,
 			}
 
-			// Test for Paused annotation on byomachine
 			Eventually(func() *testConditions {
 				createdByoMachine := &infrastructurev1alpha4.ByoMachine{}
 				err := k8sClient.Get(ctx, byoMachineLookupKey, createdByoMachine)
@@ -235,19 +233,25 @@ var _ = Describe("Controllers/ByomachineController", func() {
 				}
 				return &testConditions{}
 			}).Should(Equal(expectedCondition))
-			ph, err := patch.NewHelper(byoMachine, k8sClient)
-			Expect(err).ShouldNot(HaveOccurred())
-			// Remove paused annotation to byomachine
-			delete(byoMachine.Annotations, clusterv1.PausedAnnotation)
-			Expect(ph.Patch(ctx, byoMachine, patch.WithStatusObservedGeneration{})).Should(Succeed())
+		})
 
-			// Add Paused to cluster
-			ph, err = patch.NewHelper(cluster, k8sClient)
-			Expect(err).ShouldNot(HaveOccurred())
+		It("should mark BYOHostReady as False when cluster is paused", func() {
+			cluster := common.NewCluster("paused-cluster", defaultNamespace)
 			cluster.Spec.Paused = true
-			Expect(ph.Patch(ctx, cluster, patch.WithStatusObservedGeneration{})).Should(Succeed())
+			Expect(k8sClient.Create(ctx, cluster)).Should(Succeed())
+			machine := common.NewMachine("paused-machine", defaultNamespace, cluster.Name)
+			Expect(k8sClient.Create(ctx, machine)).Should(Succeed())
+			byoMachine := common.NewByoMachine("paused-byo-machine", defaultNamespace, cluster.Name, machine)
+			Expect(k8sClient.Create(ctx, byoMachine)).Should(Succeed())
 
-			// Test for Paused spec on capi cluster
+			byoMachineLookupKey := types.NamespacedName{Name: byoMachine.Name, Namespace: byoMachine.Namespace}
+
+			expectedCondition = &testConditions{
+				Type:   infrastructurev1alpha4.BYOHostReady,
+				Status: corev1.ConditionFalse,
+				Reason: infrastructurev1alpha4.ClusterOrResourcePausedReason,
+			}
+
 			Eventually(func() *testConditions {
 				createdByoMachine := &infrastructurev1alpha4.ByoMachine{}
 				err := k8sClient.Get(ctx, byoMachineLookupKey, createdByoMachine)
@@ -267,6 +271,8 @@ var _ = Describe("Controllers/ByomachineController", func() {
 			}).Should(Equal(expectedCondition))
 
 			Expect(k8sClient.Delete(ctx, cluster)).Should(Succeed())
+			Expect(k8sClient.Delete(ctx, machine)).Should(Succeed())
+			Expect(k8sClient.Delete(ctx, byoMachine)).Should(Succeed())
 
 		})
 

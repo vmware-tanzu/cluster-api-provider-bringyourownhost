@@ -42,8 +42,8 @@ var _ = Describe("Byohost Agent Tests", func() {
 			Expect(k8sClient.Create(ctx, byoHost)).NotTo(HaveOccurred(), "failed to create byohost")
 
 		})
-		It("should set the Reason to ClusterOrHostPausedReason", func() {
-			expectedCondition.Reason = infrastructurev1alpha4.ClusterOrHostPausedReason
+		It("should set the Reason to ClusterOrResourcePausedReason", func() {
+			expectedCondition.Reason = infrastructurev1alpha4.ClusterOrResourcePausedReason
 			byoHostLookupKey := types.NamespacedName{Name: hostName, Namespace: ns}
 
 			By("adding paused annotation to ByoHost")
