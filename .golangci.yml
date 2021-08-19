@@ -1,3 +1,67 @@
+# golangci.com configuration
+# https://github.com/golangci/golangci/wiki/Configuration
+service:
+  golangci-lint-version: 1.42.0 # use the fixed version to not introduce new linters unexpectedly
+
+  run:
+  skip-dirs:
+    - ".*fakes/"
+  timeout: 10m
+
+  linters:
+  disable-all: true
+  enable:
+    - bodyclose
+    - deadcode
+    - depguard
+    - dogsled
+    - dupl
+    - errcheck
+    - funlen
+    - goconst
+    - gocritic
+    - gocyclo
+    - goheader
+    - goimports
+    - gomnd
+    - goprintffuncname
+    - gosec
+    - gosimple
+    - govet
+    - ineffassign
+    - misspell
+    - nakedret
+    - noctx
+    - nolintlint
+    - rowserrcheck
+    - staticcheck
+    - structcheck
+    - stylecheck
+    - typecheck
+    - unconvert
+    - unparam
+    - unused
+    - varcheck
+    - whitespace
+
+  # don't enable:
+  # - asciicheck
+  # - exhaustive
+  # - gochecknoinits
+  # - gochecknoglobals
+  # - gocognit
+  # - godot
+  # - godox
+  # - goerr113
+  # - interfacer
+  # - lll
+  # - nestif
+  # - prealloc
+  # - testpackage
+  # - revive
+  # - scopelint
+  # - wsl
+
 linters-settings:
   dupl:
     threshold: 100
@@ -32,6 +96,8 @@ linters-settings:
         - case
         - condition
         - return
+        ignored-functions:
+        - log.*
   govet:
     check-shadowing: true
   misspell:
@@ -43,70 +109,3 @@ linters-settings:
     require-specific: false # don't require nolint directives to be specific about which linter is being skipped
   whitespace:
     multi-func: true
-
-linters:
-  disable-all: true
-  enable:
-    - bodyclose
-    - deadcode
-    - depguard
-    - dogsled
-    - dupl
-    - errcheck
-#    - funlen
-    - goconst
-    - gocritic
-#    - gocyclo
-    - goheader
-#    - goimports
-    - gomnd
-    - goprintffuncname
-    - gosec
-    - gosimple
-    - govet
-    - ineffassign
-    - misspell
-    - nakedret
-    - noctx
-    - nolintlint
-    - rowserrcheck
-    - staticcheck
-    - structcheck
-    - stylecheck
-    - typecheck
-    - unconvert
-#    - unparam
-    - unused
-    - varcheck
-    - whitespace
-
-  # don't enable:
-  # - asciicheck
-  # - exhaustive
-  # - gochecknoinits
-  # - gochecknoglobals
-  # - gocognit
-  # - godot
-  # - godox
-  # - goerr113
-  # - interfacer
-  # - lll
-  # - nestif
-  # - prealloc
-  # - testpackage
-  # - revive
-  # - scopelint
-  # - wsl
-
-run:
-  skip-dirs:
-    - test/
-    - ".*fakes/"
-  skip-files:
-    - ".*_test.go$"
-  timeout: 10m
-
-# golangci.com configuration
-# https://github.com/golangci/golangci/wiki/Configuration
-service:
-  golangci-lint-version: 1.42.0 # use the fixed version to not introduce new linters unexpectedly

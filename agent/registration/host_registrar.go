@@ -15,7 +15,6 @@ type HostRegistrar struct {
 	K8sClient client.Client
 }
 
-
 func (hr HostRegistrar) Register(hostName, namespace string) error {
 	ctx := context.TODO()
 	byoHost := &infrastructurev1alpha4.ByoHost{
@@ -27,7 +26,7 @@ func (hr HostRegistrar) Register(hostName, namespace string) error {
 			Name:      hostName,
 			Namespace: namespace,
 		},
-		Spec: infrastructurev1alpha4.ByoHostSpec{},
+		Spec:   infrastructurev1alpha4.ByoHostSpec{},
 		Status: infrastructurev1alpha4.ByoHostStatus{},
 	}
 
@@ -36,20 +35,19 @@ func (hr HostRegistrar) Register(hostName, namespace string) error {
 		return err
 	}
 
-	//detect the network status every 30 Minutes
-	//TODO: only trigger it when network is changed
+	// detect the network status every 30 Minutes
+	// TODO: only trigger it when network is changed
 	go func() {
 		c := cron.New()
-		c.AddFunc("@every 30m", func() {
-			hr.UpdateNetwork(ctx, byoHost)
+		_ = c.AddFunc("@every 30m", func() {
+			_ = hr.UpdateNetwork(ctx, byoHost)
 		})
 		c.Start()
 	}()
 
-	//run it at startup
+	// run it at startup
 	return hr.UpdateNetwork(ctx, byoHost)
 }
-
 
 func (hr HostRegistrar) UpdateNetwork(ctx context.Context, byoHost *infrastructurev1alpha4.ByoHost) error {
 	helper, err := patch.NewHelper(byoHost, hr.K8sClient)
@@ -66,33 +64,33 @@ func (hr HostRegistrar) UpdateNetwork(ctx context.Context, byoHost *infrastructu
 	return helper.Patch(ctx, byoHost)
 }
 
-func (hr HostRegistrar) GetNetworkStatus() []infrastructurev1alpha4.NetworkStatus{
-    Network := []infrastructurev1alpha4.NetworkStatus{}
-    ifaces, err := net.Interfaces()
-    if err != nil {
-        return Network
-    }
+func (hr HostRegistrar) GetNetworkStatus() []infrastructurev1alpha4.NetworkStatus {
+	Network := []infrastructurev1alpha4.NetworkStatus{}
+	ifaces, err := net.Interfaces()
+	if err != nil {
+		return Network
+	}
 
-    for _, iface := range ifaces {
-        netStatus := infrastructurev1alpha4.NetworkStatus{}
+	for _, iface := range ifaces {
+		netStatus := infrastructurev1alpha4.NetworkStatus{}
 
-        if iface.Flags & net.FlagUp > 0 {
-            netStatus.Connected = true
-        }
+		if iface.Flags&net.FlagUp > 0 {
+			netStatus.Connected = true
+		}
 
-        netStatus.MACAddr = iface.HardwareAddr.String()
-        addrs, err := iface.Addrs()
-        if err != nil {
-            continue
-        }
+		netStatus.MACAddr = iface.HardwareAddr.String()
+		addrs, err := iface.Addrs()
+		if err != nil {
+			continue
+		}
 
-        netStatus.NetworkName = iface.Name
-        for _, addr := range addrs {
-            netStatus.IPAddrs = append(netStatus.IPAddrs, addr.String())
-        }
+		netStatus.NetworkName = iface.Name
+		for _, addr := range addrs {
+			netStatus.IPAddrs = append(netStatus.IPAddrs, addr.String())
+		}
 
-        Network = append(Network, netStatus)
-    }
+		Network = append(Network, netStatus)
+	}
 
-    return Network
+	return Network
 }

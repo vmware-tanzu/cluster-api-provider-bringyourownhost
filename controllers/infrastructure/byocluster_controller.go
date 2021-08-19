@@ -59,10 +59,6 @@ type ByoClusterReconciler struct {
 //+kubebuilder:rbac:groups=infrastructure.cluster.x-k8s.io,resources=byoclusters/finalizers,verbs=update
 // +kubebuilder:rbac:groups=cluster.x-k8s.io,resources=clusters;clusters/status,verbs=get;list;watch
 
-const (
-	verbosityLevel = 4
-)
-
 func (r *ByoClusterReconciler) Reconcile(ctx context.Context, req ctrl.Request) (_ ctrl.Result, reterr error) {
 	logger := log.FromContext(ctx)
 
@@ -70,7 +66,7 @@ func (r *ByoClusterReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 	byoCluster := &infrav1.ByoCluster{}
 	if err := r.Client.Get(ctx, req.NamespacedName, byoCluster); err != nil {
 		if apierrors.IsNotFound(err) {
-			logger.V(verbosityLevel).Info("ByoCluster not found, won't reconcile", "key", req.NamespacedName)
+			logger.V(4).Info("ByoCluster not found, won't reconcile", "key", req.NamespacedName)
 			return reconcile.Result{}, nil
 		}
 		return reconcile.Result{}, err
@@ -86,7 +82,7 @@ func (r *ByoClusterReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 		return reconcile.Result{}, nil
 	}
 	if annotations.IsPaused(cluster, byoCluster) {
-		logger.V(verbosityLevel).Info("ByoCluster %s/%s linked to a cluster that is paused",
+		logger.V(4).Info("ByoCluster %s/%s linked to a cluster that is paused",
 			byoCluster.Namespace, byoCluster.Name)
 		return reconcile.Result{}, nil
 	}

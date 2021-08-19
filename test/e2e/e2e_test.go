@@ -99,7 +99,7 @@ func copyToContainer(ctx context.Context, cli *client.Client, copyConfig cpConfi
 	}
 
 	// Validate the destination path
-	if err := command.ValidateOutputPathFileMode(dstStat.Mode); err != nil {
+	if err = command.ValidateOutputPathFileMode(dstStat.Mode); err != nil {
 		return errors.Wrapf(err, `destination "%s:%s" must be a directory or a regular file`, copyConfig.container, dstPath)
 	}
 
@@ -298,7 +298,7 @@ var _ = Describe("When BYOH joins existing cluster", func() {
 						if err2 != nil {
 							Byf("Write String to file failed, err2=%v", err2)
 						}
-						f.Sync()
+						_ = f.Sync()
 					case err := <-e:
 						//Please ignore this error if you see it in output
 						Byf("Get err %v", err)
