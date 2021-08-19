@@ -298,7 +298,7 @@ var _ = Describe("When BYOH joins existing cluster", func() {
 						if err2 != nil {
 							Byf("Write String to file failed, err2=%v", err2)
 						}
-						Expect(f.Sync()).NotTo(HaveOccurred())
+						f.Sync()
 					case err := <-e:
 						//Please ignore this error if you see it in output
 						Byf("Get err %v", err)

@@ -2,8 +2,6 @@ package reconciler
 
 import (
 	"context"
-	"net"
-	"time"
 
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/klog"
@@ -77,14 +75,6 @@ func (r HostReconciler) Reconcile(ctx context.Context, req ctrl.Request) (_ ctrl
 		return ctrl.Result{}, err
 	}
 
-	// Update the ByoHost's network status.
-	r.reconcileNetwork(byoHost)
-
-	// we didn't get any addresses, requeue
-	if len(byoHost.Status.Addresses) == 0 {
-		return ctrl.Result{RequeueAfter: 10 * time.Second}, nil
-	}
-
 	conditions.MarkTrue(byoHost, infrastructurev1alpha4.K8sNodeBootstrapSucceeded)
 
 	return ctrl.Result{}, nil
@@ -112,42 +102,4 @@ func (r HostReconciler) SetupWithManager(mgr manager.Manager) error {
 			},
 		}).
 		Complete(r)
-}
-
-func (r HostReconciler) reconcileNetwork(byoHost *infrastructurev1alpha4.ByoHost) {
-	byoHost.Status.Network = r.GetNetworkStatus()
-	for _, netStatus := range byoHost.Status.Network {
-		byoHost.Status.Addresses = append(byoHost.Status.Addresses, netStatus.IPAddrs...)
-	}
-}
-
-func (r HostReconciler) GetNetworkStatus() []infrastructurev1alpha4.NetworkStatus{
-    Network := []infrastructurev1alpha4.NetworkStatus{}
-    ifaces, err := net.Interfaces()
-    if err != nil {
-        return Network
-    }
-
-    for _, iface := range ifaces {
-        netStatus := infrastructurev1alpha4.NetworkStatus{}
-
-        if iface.Flags & net.FlagUp > 0 {
-            netStatus.Connected = true
-        }
-
-        netStatus.MACAddr = iface.HardwareAddr.String()
-        addrs, err := iface.Addrs()
-        if err != nil {
-            continue
-        }
-
-        netStatus.NetworkName = iface.Name
-        for _, addr := range addrs {
-            netStatus.IPAddrs = append(netStatus.IPAddrs, addr.String())
-        }
-
-        Network = append(Network, netStatus)
-    }
-
-    return Network
 }
