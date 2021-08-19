@@ -110,19 +110,6 @@ var _ = Describe("Agent", func() {
 			}).ShouldNot(BeNil())
 		})
 
-		It("should fetch networkstatus when register the BYOHost with the management cluster", func() {
-			byoHostLookupKey := types.NamespacedName{Name: hostName, Namespace: ns.Name}
-			Eventually(func() int {
-				createdByoHost := &infrastructurev1alpha4.ByoHost{}
-				err := k8sClient.Get(context.TODO(), byoHostLookupKey, createdByoHost)
-				if err != nil {
-					return 0
-				}
-				return len(createdByoHost.Spec.Network)
-			}).ShouldNot(BeZero())
-
-		})
-
 		It("should bootstrap the node when MachineRef is set", func() {
 
 			bootstrapSecretName := "bootstrap-secret-1"
@@ -267,6 +254,19 @@ runCmd:
 				}
 				return string(buffer)
 			}).Should(Equal(fileContent4))
+
+			//check if network is ready
+			Eventually(func() bool {
+				createdByoHost := &infrastructurev1alpha4.ByoHost{}
+				err := k8sClient.Get(context.TODO(), byoHostLookupKey, createdByoHost)
+				if err != nil {
+					return false
+				}
+				if len(createdByoHost.Status.Network) != 0 && len(createdByoHost.Status.Addresses) != 0 {
+					return true
+				}
+				return false
+			}).ShouldNot(BeZero())
 
 		})
 	})
