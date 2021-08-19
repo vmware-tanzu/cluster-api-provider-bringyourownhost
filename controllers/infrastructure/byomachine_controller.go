@@ -30,7 +30,6 @@ import (
 	"sigs.k8s.io/cluster-api/util/patch"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"sigs.k8s.io/controller-runtime/pkg/event"
 	"sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
@@ -79,7 +78,7 @@ type ByoMachineReconciler struct {
 func (r *ByoMachineReconciler) Reconcile(ctx context.Context, req ctrl.Request) (_ ctrl.Result, reterr error) {
 	logger := log.FromContext(ctx).WithValues("namespace", req.Namespace, "BYOMachine", req.Name)
 
-	//Fetch the ByoMachine instance.
+	// Fetch the ByoMachine instance.
 	byoMachine := &infrav1.ByoMachine{}
 	err := r.Client.Get(ctx, req.NamespacedName, byoMachine)
 	if err != nil {
@@ -150,14 +149,15 @@ func (r *ByoMachineReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 
 func (r ByoMachineReconciler) reconcileDelete(ctx context.Context, byoMachine *infrav1.ByoMachine) (reconcile.Result, error) {
 	//TODO: de-link the byohost
-	controllerutil.RemoveFinalizer(byoMachine, infrav1.MachineFinalizer)
+	//	controllerutil.RemoveFinalizer(byoMachine, infrav1.MachineFinalizer)
 	return reconcile.Result{}, nil
 }
 
 func (r ByoMachineReconciler) reconcileNormal(ctx context.Context, byoMachine *infrav1.ByoMachine, cluster *clusterv1.Cluster, machine *clusterv1.Machine) (reconcile.Result, error) {
 	logger := log.FromContext(ctx).WithValues("namespace", byoMachine.Namespace, "BYOMachine", byoMachine.Name)
 
-	controllerutil.AddFinalizer(byoMachine, infrav1.MachineFinalizer)
+	// TODO: Uncomment the below line when we have test for delete byomachine
+	//	controllerutil.AddFinalizer(byoMachine, infrav1.MachineFinalizer)
 
 	if !cluster.Status.InfrastructureReady {
 		logger.Info("Cluster infrastructure is not ready yet")

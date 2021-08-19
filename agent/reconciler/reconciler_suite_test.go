@@ -12,9 +12,11 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/rest"
 	clusterv1 "sigs.k8s.io/cluster-api/api/v1alpha4"
+	"sigs.k8s.io/cluster-api/util/patch"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/envtest"
+	"sigs.k8s.io/controller-runtime/pkg/manager"
 )
 
 func TestReconciler(t *testing.T) {
@@ -23,13 +25,13 @@ func TestReconciler(t *testing.T) {
 }
 
 var (
-	err        error
-	cfg        *rest.Config
-	k8sClient  client.Client
-	reconciler *HostReconciler
-	// clusterName           = "test-cluster"
-	testEnv *envtest.Environment
-	// defaultNamespace string = "default"
+	err         error
+	cfg         *rest.Config
+	k8sClient   client.Client
+	k8sManager  manager.Manager
+	patchHelper *patch.Helper
+	reconciler  *HostReconciler
+	testEnv     *envtest.Environment
 )
 
 var _ = BeforeSuite(func() {
@@ -60,7 +62,7 @@ var _ = BeforeSuite(func() {
 	Expect(err).ToNot(HaveOccurred())
 	Expect(k8sClient).ToNot(BeNil())
 
-	k8sManager, err := ctrl.NewManager(cfg, ctrl.Options{
+	k8sManager, err = ctrl.NewManager(cfg, ctrl.Options{
 		Scheme:             scheme,
 		MetricsBindAddress: ":6090",
 	})
@@ -79,6 +81,6 @@ var _ = BeforeSuite(func() {
 })
 
 var _ = AfterSuite(func() {
-	err := testEnv.Stop()
+	err = testEnv.Stop()
 	Expect(err).ToNot(HaveOccurred())
 })
