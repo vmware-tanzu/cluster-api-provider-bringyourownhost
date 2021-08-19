@@ -290,6 +290,7 @@ var _ = Describe("When BYOH joins existing cluster", func() {
 			}()
 
 			go func() {
+				defer GinkgoRecover()
 				for {
 					select {
 					case line := <-s:
@@ -297,10 +298,10 @@ var _ = Describe("When BYOH joins existing cluster", func() {
 						if err2 != nil {
 							Byf("Write String to file failed, err2=%v", err2)
 						}
+						f.Sync()
 					case err := <-e:
 						//Please ignore this error if you see it in output
 						Byf("Get err %v", err)
-						Expect(f.Sync()).NotTo(HaveOccurred())
 						return
 					}
 				}

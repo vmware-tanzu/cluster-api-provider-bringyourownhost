@@ -49,6 +49,17 @@ type ByoHostStatus struct {
 	// Conditions defines current service state of the BYOMachine.
 	// +optional
 	Conditions clusterv1.Conditions `json:"conditions,omitempty"`
+
+	// Network returns the network status for each of the host's configured
+	// network interfaces.
+	// +optional
+	Network []NetworkStatus `json:"network,omitempty"`
+
+	// Addresses is a list of the host's IP addresses.
+	// This field is required at runtime for other controllers that read
+	// this CRD as unstructured data.
+	// +optional
+	Addresses []string `json:"addresses,omitempty"`
 }
 
 //+kubebuilder:object:root=true
