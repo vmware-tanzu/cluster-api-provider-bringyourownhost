@@ -58,6 +58,7 @@ func (hr HostRegistrar) UpdateNetwork(ctx context.Context, byoHost *infrastructu
 	}
 
 	byoHost.Status.Network = hr.GetNetworkStatus()
+	byoHost.Status.Addresses = []string{}
 	for _, netStatus := range byoHost.Status.Network {
 		byoHost.Status.Addresses = append(byoHost.Status.Addresses, netStatus.IPAddrs...)
 	}
