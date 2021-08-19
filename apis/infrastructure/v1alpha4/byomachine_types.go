@@ -21,8 +21,12 @@ import (
 	clusterv1 "sigs.k8s.io/cluster-api/api/v1alpha4"
 )
 
-// EDIT THIS FILE!  THIS IS SCAFFOLDING FOR YOU TO OWN!
-// NOTE: json tags are required.  Any new fields you add must have json tags for the fields to be serialized.
+const (
+	// MachineFinalizer allows ReconcileByoMachine to clean up Byo
+	// resources associated with ByoMachine before removing it from the
+	// API Server.
+	MachineFinalizer = "byomachine.infrastructure.cluster.x-k8s.io"
+)
 
 // ByoMachineSpec defines the desired state of ByoMachine
 type ByoMachineSpec struct {
@@ -31,6 +35,25 @@ type ByoMachineSpec struct {
 
 	ProviderID string `json:"providerID,omitempty"`
 }
+
+// NetworkStatus provides information about one of a VM's networks.
+type NetworkStatus struct {
+	// Connected is a flag that indicates whether this network is currently
+	// connected to the VM.
+	Connected bool `json:"connected,omitempty"`
+
+	// IPAddrs is one or more IP addresses reported by vm-tools.
+	// +optional
+	IPAddrs []string `json:"ipAddrs,omitempty"`
+
+	// MACAddr is the MAC address of the network device.
+	MACAddr string `json:"macAddr"`
+
+	// NetworkName is the name of the network.
+	// +optional
+	NetworkName string `json:"networkName,omitempty"`
+}
+
 
 // ByoMachineStatus defines the observed state of ByoMachine
 type ByoMachineStatus struct {
