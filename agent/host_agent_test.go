@@ -10,6 +10,7 @@ import (
 	"os/exec"
 	"path"
 	"strconv"
+	"time"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -108,8 +109,24 @@ var _ = Describe("Agent", func() {
 				}
 				return createdByoHost
 			}).ShouldNot(BeNil())
+		})
+
+		It("should fetch networkstatus when register the BYOHost with the management cluster", func() {
+			byoHostLookupKey := types.NamespacedName{Name: hostName, Namespace: ns.Name}
+			Eventually(func() bool {
+				createdByoHost := &infrastructurev1alpha4.ByoHost{}
+				err := k8sClient.Get(context.TODO(), byoHostLookupKey, createdByoHost)
+				if err != nil {
+					return false
+				}
+				if len(createdByoHost.Status.Network) != 0 && len(createdByoHost.Status.Addresses) != 0 {
+					return true
+				}
+				return false
+			}, 20*time.Second).Should(BeTrue())
 
 		})
+
 
 		It("should bootstrap the node when MachineRef is set", func() {
 
@@ -255,7 +272,6 @@ runCmd:
 				}
 				return string(buffer)
 			}).Should(Equal(fileContent4))
-
 		})
 	})
 

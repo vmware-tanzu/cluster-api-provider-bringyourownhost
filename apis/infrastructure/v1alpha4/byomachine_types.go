@@ -36,6 +36,25 @@ type ByoMachineSpec struct {
 	ProviderID string `json:"providerID,omitempty"`
 }
 
+// NetworkStatus provides information about one of a VM's networks.
+type NetworkStatus struct {
+	// Connected is a flag that indicates whether this network is currently
+	// connected to the VM.
+	Connected bool `json:"connected,omitempty"`
+
+	// IPAddrs is one or more IP addresses reported by vm-tools.
+	// +optional
+	IPAddrs []string `json:"ipAddrs,omitempty"`
+
+	// MACAddr is the MAC address of the network device.
+	MACAddr string `json:"macAddr"`
+
+	// NetworkName is the name of the network.
+	// +optional
+	NetworkName string `json:"networkName,omitempty"`
+}
+
+
 // ByoMachineStatus defines the observed state of ByoMachine
 type ByoMachineStatus struct {
 	// INSERT ADDITIONAL STATUS FIELD - define observed state of cluster
