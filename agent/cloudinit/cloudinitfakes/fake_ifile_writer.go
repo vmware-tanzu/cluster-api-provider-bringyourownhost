@@ -19,10 +19,10 @@ type FakeIFileWriter struct {
 	mkdirIfNotExistsReturnsOnCall map[int]struct {
 		result1 error
 	}
-	WriteToFileStub        func(cloudinit.Files) error
+	WriteToFileStub        func(*cloudinit.Files) error
 	writeToFileMutex       sync.RWMutex
 	writeToFileArgsForCall []struct {
-		arg1 cloudinit.Files
+		arg1 *cloudinit.Files
 	}
 	writeToFileReturns struct {
 		result1 error
@@ -95,11 +95,11 @@ func (fake *FakeIFileWriter) MkdirIfNotExistsReturnsOnCall(i int, result1 error)
 	}{result1}
 }
 
-func (fake *FakeIFileWriter) WriteToFile(arg1 cloudinit.Files) error {
+func (fake *FakeIFileWriter) WriteToFile(arg1 *cloudinit.Files) error {
 	fake.writeToFileMutex.Lock()
 	ret, specificReturn := fake.writeToFileReturnsOnCall[len(fake.writeToFileArgsForCall)]
 	fake.writeToFileArgsForCall = append(fake.writeToFileArgsForCall, struct {
-		arg1 cloudinit.Files
+		arg1 *cloudinit.Files
 	}{arg1})
 	stub := fake.WriteToFileStub
 	fakeReturns := fake.writeToFileReturns
@@ -120,13 +120,13 @@ func (fake *FakeIFileWriter) WriteToFileCallCount() int {
 	return len(fake.writeToFileArgsForCall)
 }
 
-func (fake *FakeIFileWriter) WriteToFileCalls(stub func(cloudinit.Files) error) {
+func (fake *FakeIFileWriter) WriteToFileCalls(stub func(*cloudinit.Files) error) {
 	fake.writeToFileMutex.Lock()
 	defer fake.writeToFileMutex.Unlock()
 	fake.WriteToFileStub = stub
 }
 
-func (fake *FakeIFileWriter) WriteToFileArgsForCall(i int) cloudinit.Files {
+func (fake *FakeIFileWriter) WriteToFileArgsForCall(i int) *cloudinit.Files {
 	fake.writeToFileMutex.RLock()
 	defer fake.writeToFileMutex.RUnlock()
 	argsForCall := fake.writeToFileArgsForCall[i]

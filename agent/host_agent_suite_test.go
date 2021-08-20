@@ -27,8 +27,8 @@ var (
 	cfg                   *rest.Config
 	k8sClient             client.Client
 	tmpFilePrefix         = "kubeconfigFile-"
-	defaultClusterName = "default-test-cluster"
-	testEnv            *envtest.Environment
+	defaultClusterName    = "default-test-cluster"
+	testEnv               *envtest.Environment
 )
 
 func TestHostAgent(t *testing.T) {
@@ -71,7 +71,7 @@ var _ = AfterSuite(func() {
 	gexec.CleanupBuildArtifacts()
 	os.Remove(kubeconfigFile.Name())
 	gexec.TerminateAndWait(time.Duration(10) * time.Second)
-	err := testEnv.Stop()
+	err = testEnv.Stop()
 	Expect(err).NotTo(HaveOccurred())
 })
 

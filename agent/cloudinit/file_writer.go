@@ -11,12 +11,17 @@ import (
 	"github.com/pkg/errors"
 )
 
+const (
+	filePermission = 0644
+	dirPermission  = 0744
+)
+
 //go:generate go run github.com/maxbrunsfeld/counterfeiter/v6 -generate
 
 //counterfeiter:generate . IFileWriter
 type IFileWriter interface {
 	MkdirIfNotExists(string) error
-	WriteToFile(Files) error
+	WriteToFile(*Files) error
 }
 
 type FileWriter struct {
@@ -26,18 +31,17 @@ func (w FileWriter) MkdirIfNotExists(dirName string) error {
 	_, err := os.Stat(dirName)
 
 	if os.IsNotExist(err) {
-		return os.MkdirAll(dirName, 0744)
+		return os.MkdirAll(dirName, dirPermission)
 	}
 
 	if err != nil {
 		return err
 	}
 	return nil
-
 }
 
-func (w FileWriter) WriteToFile(file Files) error {
-	initPermission := fs.FileMode(0644)
+func (w FileWriter) WriteToFile(file *Files) error {
+	initPermission := fs.FileMode(filePermission)
 	if stats, err := os.Stat(file.Path); os.IsExist(err) {
 		initPermission = stats.Mode()
 	}
@@ -59,7 +63,10 @@ func (w FileWriter) WriteToFile(file Files) error {
 	}
 
 	if len(file.Permissions) > 0 {
-		fileMode, err := strconv.ParseUint(file.Permissions, 8, 32)
+		var fileMode uint64
+		base := 8
+		bitSize := 32
+		fileMode, err = strconv.ParseUint(file.Permissions, base, bitSize)
 		if err != nil {
 			return errors.Wrap(err, fmt.Sprintf("Error parse the file permission %s", file.Permissions))
 		}
@@ -72,7 +79,11 @@ func (w FileWriter) WriteToFile(file Files) error {
 
 	if len(file.Owner) > 0 {
 		owner := strings.Split(file.Owner, ":")
-		if len(owner) != 2 {
+		base := 10
+		bitSize := 32
+		ownerFormatLen := 2
+
+		if len(owner) != ownerFormatLen {
 			return errors.Wrap(err, fmt.Sprintf("Invalid owner format '%s'", file.Owner))
 		}
 
@@ -81,12 +92,12 @@ func (w FileWriter) WriteToFile(file Files) error {
 			return errors.Wrap(err, fmt.Sprintf("Error Lookup user %s", owner[0]))
 		}
 
-		uid, err := strconv.ParseUint(userInfo.Uid, 10, 32)
+		uid, err := strconv.ParseUint(userInfo.Uid, base, bitSize)
 		if err != nil {
 			return errors.Wrap(err, fmt.Sprintf("Error convert uid %s", userInfo.Uid))
 		}
 
-		gid, err := strconv.ParseUint(userInfo.Gid, 10, 32)
+		gid, err := strconv.ParseUint(userInfo.Gid, base, bitSize)
 		if err != nil {
 			return errors.Wrap(err, fmt.Sprintf("Error convert gid %s", userInfo.Gid))
 		}
@@ -98,5 +109,4 @@ func (w FileWriter) WriteToFile(file Files) error {
 	}
 
 	return nil
-
 }

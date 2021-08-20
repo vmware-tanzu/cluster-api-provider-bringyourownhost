@@ -90,7 +90,7 @@ func main() {
 		setupLog.Error(err, "unable to create cluster cache tracker")
 		os.Exit(1)
 	}
-	if err := (&remote.ClusterCacheReconciler{
+	if err = (&remote.ClusterCacheReconciler{
 		Client:  mgr.GetClient(),
 		Log:     ctrl.Log.WithName("remote").WithName("ClusterCacheReconciler"),
 		Tracker: tracker,

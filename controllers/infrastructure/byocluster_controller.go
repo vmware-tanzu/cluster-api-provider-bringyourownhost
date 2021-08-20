@@ -42,7 +42,7 @@ import (
 )
 
 var (
-	defaultAPIEndpointPort    = int32(6443)
+	defaultAPIEndpointPort    = 6443
 	clusterControlledType     = &infrav1.ByoCluster{}
 	clusterControlledTypeName = reflect.TypeOf(clusterControlledType).Elem().Name()
 	clusterControlledTypeGVK  = infrav1.GroupVersion.WithKind(clusterControlledTypeName)
@@ -183,7 +183,7 @@ func (r ByoClusterReconciler) reconcileNormal(ctx context.Context, byoCluster *i
 	controllerutil.AddFinalizer(byoCluster, infrav1.ClusterFinalizer)
 
 	if byoCluster.Spec.ControlPlaneEndpoint.Port == 0 {
-		byoCluster.Spec.ControlPlaneEndpoint.Port = defaultAPIEndpointPort
+		byoCluster.Spec.ControlPlaneEndpoint.Port = int32(defaultAPIEndpointPort)
 	}
 
 	byoCluster.Status.Ready = true
