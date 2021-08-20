@@ -78,6 +78,7 @@ var _ = AfterSuite(func() {
 func writeKubeConfig() {
 	kubeconfigFile, err = ioutil.TempFile("", tmpFilePrefix)
 	Expect(err).NotTo(HaveOccurred())
+	defer kubeconfigFile.Close()
 
 	user, err := testEnv.ControlPlane.AddUser(envtest.User{
 		Name:   "envtest-admin",
@@ -90,5 +91,4 @@ func writeKubeConfig() {
 
 	_, err = kubeconfigFile.Write(kubeConfig)
 	Expect(err).NotTo(HaveOccurred())
-	defer kubeconfigFile.Close()
 }
