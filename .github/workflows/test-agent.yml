@@ -2,6 +2,7 @@ name: Host Agent tests
 
 on:
   push:
+    branches: [ main ]
   pull_request:
     branches: [ main ]
 
@@ -10,7 +11,8 @@ jobs:
   build-agent:
       runs-on: ubuntu-latest
       steps:
-      - uses: actions/checkout@v2
+      - name: Checkout code
+        uses: actions/checkout@v2
 
       - name: Set up Go
         uses: actions/setup-go@v2
@@ -23,7 +25,8 @@ jobs:
   test-agent:
       runs-on: ubuntu-latest
       steps:
-      - uses: actions/checkout@v2
+      - name: Checkout code
+        uses: actions/checkout@v2
 
       - name: Set up Go
         uses: actions/setup-go@v2

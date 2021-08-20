@@ -2,6 +2,7 @@ name: Byoh controller tests
 
 on:
   push:
+    branches: [ main ]
   pull_request:
     branches: [ main ]
 
@@ -10,7 +11,8 @@ jobs:
   test-byoh-controller:
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v2
+    - name: Checkout code
+      uses: actions/checkout@v2
 
     - name: Set up Go
       uses: actions/setup-go@v2
