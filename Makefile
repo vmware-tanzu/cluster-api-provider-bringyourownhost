@@ -147,10 +147,10 @@ KUSTOMIZE = $(shell pwd)/bin/kustomize
 kustomize: ## Download kustomize locally if necessary.
 	$(call go-get-tool,$(KUSTOMIZE),sigs.k8s.io/kustomize/kustomize/v3@v3.9.1)
 
-release-binaries: ## Builds the binaries to publish with a release
-	RELEASE_BINARY=./agent GOOS=linux GOARCH=amd64 $(MAKE) release-binary
+host-agent-binaries: ## Builds the binaries for the host-agent
+	RELEASE_BINARY=./agent GOOS=linux GOARCH=amd64 $(MAKE) host-agent-binary
 
-release-binary: $(RELEASE_DIR)
+host-agent-binary: $(RELEASE_DIR)
 	docker run \
 		--rm \
 		-e CGO_ENABLED=0 \

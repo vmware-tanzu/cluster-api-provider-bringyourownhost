@@ -48,7 +48,7 @@ var _ = Describe("Controllers/ByomachineController/Unitests", func() {
 	Context("When cluster does not exist", func() {
 		const (
 			clusterName = "fakeClusterWithoutCluster"
-			//a DNS-1123 subdomain must consist of lower case alphanumeric characters, '-' or '.', and must start and end with an alphanumeric character (e.g. 'example.com', regex used for validation is '[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*')
+			// a DNS-1123 subdomain must consist of lower case alphanumeric characters, '-' or '.', and must start and end with an alphanumeric character (e.g. 'example.com', regex used for validation is '[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*')
 			machineName = "machine-without-cluster"
 		)
 		var (
@@ -86,10 +86,10 @@ var _ = Describe("Controllers/ByomachineController/Unitests", func() {
 	})
 
 	Context("When node is not available", func() {
-		//Reconcile assumes the node name equal to host name, or setNodeProviderID will be failed.
-		//We only have one node "host-unit-test" in testEnv, not "hostWhenNodeIsNotAvailable"
+		// Reconcile assumes the node name equal to host name, or setNodeProviderID will be failed.
+		// We only have one node "host-unit-test" in testEnv, not "hostWhenNodeIsNotAvailable"
 		const (
-			//a DNS-1123 subdomain must consist of lower case alphanumeric characters, '-' or '.', and must start and end with an alphanumeric character (e.g. 'example.com', regex used for validation is '[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*')",
+			// a DNS-1123 subdomain must consist of lower case alphanumeric characters, '-' or '.', and must start and end with an alphanumeric character (e.g. 'example.com', regex used for validation is '[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*')",
 			hostname    = "host-when-node-is-not-available"
 			machineName = "machine-when-node-is-not-available"
 		)
