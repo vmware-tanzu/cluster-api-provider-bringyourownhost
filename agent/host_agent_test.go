@@ -30,7 +30,7 @@ var _ = Describe("Agent", func() {
 			ns              *corev1.Namespace
 			err             error
 			hostName        string
-			fakedKubeConfig string = "fake-kubeconfig-path"
+			fakedKubeConfig = "fake-kubeconfig-path"
 			session         *gexec.Session
 		)
 
@@ -127,7 +127,6 @@ var _ = Describe("Agent", func() {
 
 		})
 
-
 		It("should bootstrap the node when MachineRef is set", func() {
 
 			bootstrapSecretName := "bootstrap-secret-1"
@@ -154,7 +153,7 @@ var _ = Describe("Agent", func() {
 			Expect(err).NotTo(HaveOccurred())
 			fileGzipBase64Content4 := base64.StdEncoding.EncodeToString(fileGzipContent4)
 
-			//Init second file
+			// Init second file
 			err = ioutil.WriteFile(fileName2, []byte(fileOriginContent2), 0644)
 			Expect(err).NotTo(HaveOccurred())
 
@@ -228,7 +227,7 @@ runCmd:
 				return corev1.ConditionFalse
 			}).Should(Equal(corev1.ConditionTrue))
 
-			//check first file's content
+			// check first file's content
 			Eventually(func() string {
 				buffer, err := ioutil.ReadFile(fileName1)
 				if err != nil {
@@ -237,7 +236,7 @@ runCmd:
 				return string(buffer)
 			}).Should(Equal(fileNewContent1))
 
-			//check second file's content
+			// check second file's content
 			Eventually(func() string {
 				buffer, err := ioutil.ReadFile(fileName2)
 				if err != nil {
@@ -246,7 +245,7 @@ runCmd:
 				return string(buffer)
 			}).Should(Equal(fileOriginContent2 + fileAppendContent2))
 
-			//check second file permission
+			// check second file permission
 			Eventually(func() bool {
 				stats, err := os.Stat(fileName2)
 				if err == nil && stats.Mode() == fs.FileMode(filePermission2) {
@@ -255,7 +254,7 @@ runCmd:
 				return false
 			}).Should(BeTrue())
 
-			//check if third files's content decoded in base64 way successfully
+			// check if third files's content decoded in base64 way successfully
 			Eventually(func() string {
 				buffer, err := ioutil.ReadFile(fileName3)
 				if err != nil {
@@ -264,7 +263,7 @@ runCmd:
 				return string(buffer)
 			}).Should(Equal(fileContent3))
 
-			//check if fourth files's content decoded in gzip+base64 way successfully
+			// check if fourth files's content decoded in gzip+base64 way successfully
 			Eventually(func() string {
 				buffer, err := ioutil.ReadFile(fileName4)
 				if err != nil {

@@ -14,7 +14,7 @@ require (
 	github.com/onsi/ginkgo v1.16.4
 	github.com/onsi/gomega v1.13.0
 	github.com/pkg/errors v0.9.1
-	github.com/robfig/cron v1.2.0 // indirect
+	github.com/robfig/cron v1.2.0
 	github.com/theupdateframework/notary v0.7.0 // indirect
 	k8s.io/api v0.21.3
 	k8s.io/apimachinery v0.21.3

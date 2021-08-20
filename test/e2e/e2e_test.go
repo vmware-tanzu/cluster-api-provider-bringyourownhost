@@ -245,7 +245,7 @@ var _ = Describe("When BYOH joins existing cluster", func() {
 		re := regexp.MustCompile("server:.*")
 		kubeconfig = re.ReplaceAll(kubeconfig, []byte("server: https://"+profile.NetworkSettings.Networks["kind"].IPAddress+":6443"))
 
-		Expect(os.WriteFile(TempKubeconfigPath, kubeconfig, 0666)).NotTo(HaveOccurred())
+		Expect(os.WriteFile(TempKubeconfigPath, kubeconfig, 0644)).NotTo(HaveOccurred())
 
 		config.sourcePath = TempKubeconfigPath
 		config.destPath = "/mgmt.conf"
@@ -264,7 +264,7 @@ var _ = Describe("When BYOH joins existing cluster", func() {
 		Expect(err).NotTo(HaveOccurred())
 		defer output.Close()
 
-		//write agent log for debug
+		// write agent log for debug
 		if AgentLogFile != "" {
 			s := make(chan string)
 			e := make(chan error)
@@ -280,7 +280,7 @@ var _ = Describe("When BYOH joins existing cluster", func() {
 				for {
 					line, _, err := buf.ReadLine()
 					if err != nil {
-						//will be quit by this err: read unix @->/run/docker.sock: use of closed network connection
+						// will be quit by this err: read unix @->/run/docker.sock: use of closed network connection
 						e <- err
 						break
 					} else {
@@ -300,7 +300,7 @@ var _ = Describe("When BYOH joins existing cluster", func() {
 						}
 						_ = f.Sync()
 					case err := <-e:
-						//Please ignore this error if you see it in output
+						// Please ignore this error if you see it in output
 						Byf("Get err %v", err)
 						return
 					}
