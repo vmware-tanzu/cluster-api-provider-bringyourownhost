@@ -1,0 +1,24 @@
+name: e2e-suite
+
+on:
+  pull_request:
+    branches: [ main ]
+
+jobs:
+
+  test:
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v2
+
+    - name: Set up Go
+      uses: actions/setup-go@v2
+      with:
+        go-version: 1.16
+
+    - name: Install ginkgo
+      run: sudo apt-get install golang-ginkgo-dev
+
+    # - name: run e2e test
+    #   run: make test-e2e
