@@ -48,19 +48,19 @@ var _ = Describe("Byohost Agent Tests", func() {
 
 			By("adding paused annotation to ByoHost")
 			Eventually(func() error {
-				ph, err := patch.NewHelper(byoHost, k8sClient)
+				patchHelper, err = patch.NewHelper(byoHost, k8sClient)
 				Expect(err).ShouldNot(HaveOccurred())
 				pauseAnnotations := make(map[string]string)
 				pauseAnnotations[clusterv1.PausedAnnotation] = "paused"
 				if changed := annotations.AddAnnotations(byoHost, pauseAnnotations); changed {
-					return ph.Patch(ctx, byoHost, patch.WithStatusObservedGeneration{})
+					return patchHelper.Patch(ctx, byoHost, patch.WithStatusObservedGeneration{})
 				}
 				return errors.New("ErrNotPatched")
 			}).Should(BeNil())
 
 			Eventually(func() *testConditions {
 				createdByoHost := &infrastructurev1alpha4.ByoHost{}
-				err := k8sClient.Get(ctx, byoHostLookupKey, createdByoHost)
+				err = k8sClient.Get(ctx, byoHostLookupKey, createdByoHost)
 				if err != nil {
 					return &testConditions{}
 				}
@@ -81,7 +81,7 @@ var _ = Describe("Byohost Agent Tests", func() {
 			byoHostLookupKey := types.NamespacedName{Name: hostName, Namespace: ns}
 			Eventually(func() *testConditions {
 				createdByoHost := &infrastructurev1alpha4.ByoHost{}
-				err := k8sClient.Get(ctx, byoHostLookupKey, createdByoHost)
+				err = k8sClient.Get(ctx, byoHostLookupKey, createdByoHost)
 				if err != nil {
 					return &testConditions{}
 				}
@@ -105,7 +105,7 @@ var _ = Describe("Byohost Agent Tests", func() {
 
 			By("patching machineRef to ByoHost")
 			Eventually(func() error {
-				ph, err := patch.NewHelper(byoHost, k8sClient)
+				patchHelper, err = patch.NewHelper(byoHost, k8sClient)
 				Expect(err).ShouldNot(HaveOccurred())
 				byoHost.Status.MachineRef = &corev1.ObjectReference{
 					Kind:       "ByoMachine",
@@ -114,7 +114,7 @@ var _ = Describe("Byohost Agent Tests", func() {
 					UID:        byoMachine.UID,
 					APIVersion: byoHost.APIVersion,
 				}
-				return ph.Patch(ctx, byoHost, patch.WithStatusObservedGeneration{})
+				return patchHelper.Patch(ctx, byoHost, patch.WithStatusObservedGeneration{})
 			}).Should(BeNil())
 
 			Eventually(func() *testConditions {
@@ -147,7 +147,7 @@ var _ = Describe("Byohost Agent Tests", func() {
 
 			By("patching the machineref and bootstrap secret")
 			Eventually(func() error {
-				ph, err := patch.NewHelper(byoHost, k8sClient)
+				patchHelper, err = patch.NewHelper(byoHost, k8sClient)
 				Expect(err).ShouldNot(HaveOccurred())
 				byoHost.Status.MachineRef = &corev1.ObjectReference{
 					Kind:       "ByoMachine",
@@ -161,7 +161,7 @@ var _ = Describe("Byohost Agent Tests", func() {
 					Namespace: secret.Namespace,
 					Name:      secret.Name,
 				}
-				return ph.Patch(ctx, byoHost, patch.WithStatusObservedGeneration{})
+				return patchHelper.Patch(ctx, byoHost, patch.WithStatusObservedGeneration{})
 			}).Should(BeNil())
 
 			Eventually(func() *testConditions {

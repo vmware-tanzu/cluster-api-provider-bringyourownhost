@@ -47,7 +47,7 @@ runCmd:
 		})
 
 		AfterEach(func() {
-			err := os.RemoveAll(workDir)
+			err = os.RemoveAll(workDir)
 			Expect(err).NotTo(HaveOccurred())
 		})
 

@@ -55,7 +55,7 @@ var _ = Describe("FileWriter", func() {
 		err := FileWriter{}.MkdirIfNotExists(workDir)
 		Expect(err).NotTo(HaveOccurred())
 
-		err = FileWriter{}.WriteToFile(file)
+		err = FileWriter{}.WriteToFile(&file)
 		Expect(err).NotTo(HaveOccurred())
 
 		buffer, err := ioutil.ReadFile(file.Path)
@@ -85,7 +85,7 @@ var _ = Describe("FileWriter", func() {
 		err = ioutil.WriteFile(file.Path, []byte(fileOriginContent), 0644)
 		Expect(err).NotTo(HaveOccurred())
 
-		err = FileWriter{}.WriteToFile(file)
+		err = FileWriter{}.WriteToFile(&file)
 		Expect(err).NotTo(HaveOccurred())
 
 		buffer, err := ioutil.ReadFile(file.Path)

@@ -25,7 +25,7 @@ type HostReconciler struct {
 }
 
 func (r HostReconciler) Reconcile(ctx context.Context, req ctrl.Request) (_ ctrl.Result, reterr error) {
-	//Fetch the ByoHost instance.
+	// Fetch the ByoHost instance.
 	byoHost := &infrastructurev1alpha4.ByoHost{}
 	err := r.Client.Get(ctx, req.NamespacedName, byoHost)
 	if err != nil {
@@ -35,7 +35,7 @@ func (r HostReconciler) Reconcile(ctx context.Context, req ctrl.Request) (_ ctrl
 
 	helper, _ := patch.NewHelper(byoHost, r.Client)
 	defer func() {
-		if err := helper.Patch(ctx, byoHost); err != nil && reterr == nil {
+		if err = helper.Patch(ctx, byoHost); err != nil && reterr == nil {
 			klog.Errorf("failed to patch byohost, err=%v", err)
 			reterr = err
 		}
@@ -88,7 +88,7 @@ func (r HostReconciler) getBootstrapScript(ctx context.Context, dataSecretName, 
 	}
 
 	bootstrapSecret := string(secret.Data["value"])
-	return string(bootstrapSecret), nil
+	return bootstrapSecret, nil
 }
 
 func (r HostReconciler) SetupWithManager(mgr manager.Manager) error {
