@@ -36,5 +36,5 @@ jobs:
       - name: Install ginkgo
         run: sudo apt-get install golang-ginkgo-dev
 
-      # - name: test agent
-      #   run: make agent-test
+      - name: test agent
+        run: make agent-test

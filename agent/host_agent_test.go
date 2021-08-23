@@ -10,7 +10,6 @@ import (
 	"os/exec"
 	"path"
 	"strconv"
-	"time"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -123,7 +122,7 @@ var _ = Describe("Agent", func() {
 					return true
 				}
 				return false
-			}, 20*time.Second).Should(BeTrue())
+			}).Should(BeTrue())
 
 		})
 
