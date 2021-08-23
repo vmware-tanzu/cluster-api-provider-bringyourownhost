@@ -20,5 +20,5 @@ jobs:
     - name: Install ginkgo
       run: sudo apt-get install golang-ginkgo-dev
 
-    # - name: run e2e test
-    #   run: make test-e2e
+    - name: run e2e test
+      run: make test-e2e
