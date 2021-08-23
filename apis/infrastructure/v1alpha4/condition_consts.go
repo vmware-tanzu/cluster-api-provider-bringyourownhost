@@ -19,12 +19,17 @@ const (
 
 // Conditions and Reasons defined on BYOMachine
 const (
-	BYOHostReady clusterv1.ConditionType = "BYOHostReady"
+	HostAttachedCondition clusterv1.ConditionType = "HostAttachedCondition"
 
-	// BYOHostReady is False
+	ClusterOrByoMachinePausedReason = "ClusterOrByoMachinePaused"
+
 	WaitingForClusterInfrastructureReason = "WaitingForClusterInfrastructure"
-	WaitingForBootstrapDataSecretReason   = "WaitingForBootstrapDataSecret"
-	BYOHostsUnavailableReason             = "BYOHostsUnavailable"
+
+	WaitingForBootstrapDataSecretReason = "WaitingForBootstrapData"
+
+	ByoHostUnavailableReason = "ByoHostUnavailable"
+
+	WaitingForNetworkAddressesReason = "WaitingForNetworkAddresses"
 )
 
 // Reasons common to all Byo Resources

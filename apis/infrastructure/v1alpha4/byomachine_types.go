@@ -17,6 +17,8 @@ limitations under the License.
 package v1alpha4
 
 import (
+	"fmt"
+
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	clusterv1 "sigs.k8s.io/cluster-api/api/v1alpha4"
 )
@@ -26,12 +28,14 @@ const (
 	// resources associated with ByoMachine before removing it from the
 	// API Server.
 	MachineFinalizer = "byomachine.infrastructure.cluster.x-k8s.io"
+
+	LabelByoMachineOwner = "byoh.infrastructure.cluster.x-k8s.io/owner"
 )
 
 // ByoMachineSpec defines the desired state of ByoMachine
 type ByoMachineSpec struct {
-	// INSERT ADDITIONAL SPEC FIELDS - desired state of cluster
-	// Important: Run "make" to regenerate code after modifying this file
+	// Label Selector to choose the byohost
+	Selector *metav1.LabelSelector `json:"selector"`
 
 	ProviderID string `json:"providerID,omitempty"`
 }
@@ -53,7 +57,6 @@ type NetworkStatus struct {
 	// +optional
 	NetworkName string `json:"networkName,omitempty"`
 }
-
 
 // ByoMachineStatus defines the observed state of ByoMachine
 type ByoMachineStatus struct {
@@ -80,6 +83,18 @@ type ByoMachine struct {
 	Status ByoMachineStatus `json:"status,omitempty"`
 }
 
+func (m *ByoMachine) GetConditions() clusterv1.Conditions {
+	return m.Status.Conditions
+}
+
+func (m *ByoMachine) SetConditions(conditions clusterv1.Conditions) {
+	m.Status.Conditions = conditions
+}
+
+func (m *ByoMachine) String() string {
+	return fmt.Sprintf("%s %s/%s", m.GroupVersionKind(), m.Namespace, m.Name)
+}
+
 //+kubebuilder:object:root=true
 
 // ByoMachineList contains a list of ByoMachine
@@ -91,12 +106,4 @@ type ByoMachineList struct {
 
 func init() {
 	SchemeBuilder.Register(&ByoMachine{}, &ByoMachineList{})
-}
-
-func (m *ByoMachine) GetConditions() clusterv1.Conditions {
-	return m.Status.Conditions
-}
-
-func (m *ByoMachine) SetConditions(conditions clusterv1.Conditions) {
-	m.Status.Conditions = conditions
 }

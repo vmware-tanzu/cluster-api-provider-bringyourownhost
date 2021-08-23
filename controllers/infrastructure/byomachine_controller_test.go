@@ -34,7 +34,7 @@ var _ = Describe("Controllers/ByomachineController", func() {
 			ctx = context.Background()
 		})
 
-		It("should mark BYOHostReady as False when BYOHosts are not available", func() {
+		It("should mark HostAttachedCondition as False when BYOHosts are not available", func() {
 			machine = common.NewMachine(defaultMachineName, defaultNamespace, defaultClusterName)
 			machine.Spec.Bootstrap = clusterv1.Bootstrap{
 				DataSecretName: &fakeBootstrapSecret,
@@ -47,9 +47,9 @@ var _ = Describe("Controllers/ByomachineController", func() {
 			byoMachineLookupKey := types.NamespacedName{Name: byoMachine.Name, Namespace: byoMachine.Namespace}
 
 			expectedCondition = &testConditions{
-				Type:   infrastructurev1alpha4.BYOHostReady,
+				Type:   infrastructurev1alpha4.HostAttachedCondition,
 				Status: corev1.ConditionFalse,
-				Reason: infrastructurev1alpha4.BYOHostsUnavailableReason,
+				Reason: infrastructurev1alpha4.ByoHostUnavailableReason,
 			}
 
 			By("setting cluster.Status.InfrastructureReady to True")
@@ -65,7 +65,7 @@ var _ = Describe("Controllers/ByomachineController", func() {
 					return &testConditions{}
 				}
 
-				actualCondition := conditions.Get(createdByoMachine, infrastructurev1alpha4.BYOHostReady)
+				actualCondition := conditions.Get(createdByoMachine, infrastructurev1alpha4.HostAttachedCondition)
 				if actualCondition != nil {
 					return &testConditions{
 						Type:   actualCondition.Type,
@@ -152,7 +152,7 @@ var _ = Describe("Controllers/ByomachineController", func() {
 				if err != nil {
 					return corev1.ConditionFalse
 				}
-				readyCondition := conditions.Get(createdByoMachine, infrastructurev1alpha4.BYOHostReady)
+				readyCondition := conditions.Get(createdByoMachine, infrastructurev1alpha4.HostAttachedCondition)
 				if readyCondition != nil {
 					return readyCondition.Status
 				}
@@ -198,7 +198,7 @@ var _ = Describe("Controllers/ByomachineController", func() {
 
 		})
 
-		It("should mark BYOHostReady as False when byomachine is paused", func() {
+		It("should mark HostAttachedCondition as False when byomachine is paused", func() {
 			byoMachine = common.NewByoMachine(defaultByoMachineName, defaultNamespace, defaultClusterName, machine)
 			ph, err := patch.NewHelper(byoMachine, k8sClient)
 			Expect(err).ShouldNot(HaveOccurred())
@@ -211,7 +211,7 @@ var _ = Describe("Controllers/ByomachineController", func() {
 			Expect(ph.Patch(ctx, byoMachine, patch.WithStatusObservedGeneration{})).Should(Succeed())
 
 			expectedCondition = &testConditions{
-				Type:   infrastructurev1alpha4.BYOHostReady,
+				Type:   infrastructurev1alpha4.HostAttachedCondition,
 				Status: corev1.ConditionFalse,
 				Reason: infrastructurev1alpha4.ClusterOrResourcePausedReason,
 			}
@@ -223,7 +223,7 @@ var _ = Describe("Controllers/ByomachineController", func() {
 					return &testConditions{}
 				}
 
-				actualCondition := conditions.Get(createdByoMachine, infrastructurev1alpha4.BYOHostReady)
+				actualCondition := conditions.Get(createdByoMachine, infrastructurev1alpha4.HostAttachedCondition)
 				if actualCondition != nil {
 					return &testConditions{
 						Type:   actualCondition.Type,
@@ -235,7 +235,7 @@ var _ = Describe("Controllers/ByomachineController", func() {
 			}).Should(Equal(expectedCondition))
 		})
 
-		It("should mark BYOHostReady as False when cluster is paused", func() {
+		It("should mark HostAttachedCondition as False when cluster is paused", func() {
 			pausedCluster := common.NewCluster("paused-cluster", defaultNamespace)
 			pausedCluster.Spec.Paused = true
 			Expect(k8sClient.Create(ctx, pausedCluster)).Should(Succeed())
@@ -247,7 +247,7 @@ var _ = Describe("Controllers/ByomachineController", func() {
 			pausedByoMachineLookupKey := types.NamespacedName{Name: pausedByoMachine.Name, Namespace: pausedByoMachine.Namespace}
 
 			expectedCondition = &testConditions{
-				Type:   infrastructurev1alpha4.BYOHostReady,
+				Type:   infrastructurev1alpha4.HostAttachedCondition,
 				Status: corev1.ConditionFalse,
 				Reason: infrastructurev1alpha4.ClusterOrResourcePausedReason,
 			}
@@ -259,7 +259,7 @@ var _ = Describe("Controllers/ByomachineController", func() {
 					return &testConditions{}
 				}
 
-				actualCondition := conditions.Get(createdByoMachine, infrastructurev1alpha4.BYOHostReady)
+				actualCondition := conditions.Get(createdByoMachine, infrastructurev1alpha4.HostAttachedCondition)
 				if actualCondition != nil {
 					return &testConditions{
 						Type:   actualCondition.Type,
@@ -276,10 +276,10 @@ var _ = Describe("Controllers/ByomachineController", func() {
 
 		})
 
-		It("should mark BYOHostReady as False when cluster.Status.InfrastructureReady is false", func() {
+		It("should mark HostAttachedCondition as False when cluster.Status.InfrastructureReady is false", func() {
 
 			expectedCondition = &testConditions{
-				Type:   infrastructurev1alpha4.BYOHostReady,
+				Type:   infrastructurev1alpha4.HostAttachedCondition,
 				Status: corev1.ConditionFalse,
 				Reason: infrastructurev1alpha4.WaitingForClusterInfrastructureReason,
 			}
@@ -299,7 +299,7 @@ var _ = Describe("Controllers/ByomachineController", func() {
 					return &testConditions{}
 				}
 
-				actualCondition := conditions.Get(createdByoMachine, infrastructurev1alpha4.BYOHostReady)
+				actualCondition := conditions.Get(createdByoMachine, infrastructurev1alpha4.HostAttachedCondition)
 				if actualCondition != nil {
 					return &testConditions{
 						Type:   actualCondition.Type,
@@ -312,9 +312,9 @@ var _ = Describe("Controllers/ByomachineController", func() {
 
 		})
 
-		It("should mark BYOHostReady as False when machine.Spec.Bootstrap.DataSecretName is not set", func() {
+		It("should mark HostAttachedCondition as False when machine.Spec.Bootstrap.DataSecretName is not set", func() {
 			expectedCondition = &testConditions{
-				Type:   infrastructurev1alpha4.BYOHostReady,
+				Type:   infrastructurev1alpha4.HostAttachedCondition,
 				Status: corev1.ConditionFalse,
 				Reason: infrastructurev1alpha4.WaitingForBootstrapDataSecretReason,
 			}
@@ -334,7 +334,7 @@ var _ = Describe("Controllers/ByomachineController", func() {
 					return &testConditions{}
 				}
 
-				actualCondition := conditions.Get(createdByoMachine, infrastructurev1alpha4.BYOHostReady)
+				actualCondition := conditions.Get(createdByoMachine, infrastructurev1alpha4.HostAttachedCondition)
 				if actualCondition != nil {
 					return &testConditions{
 						Type:   actualCondition.Type,
