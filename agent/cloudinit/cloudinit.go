@@ -36,21 +36,22 @@ func (se ScriptExecutor) Execute(bootstrapScript string) error {
 		return errors.Wrapf(err, "error parsing write_files action: %s", bootstrapScript)
 	}
 
-	for i, file := range cloudInitData.FilesToWrite {
-		directoryToCreate := filepath.Dir(file.Path)
+	for i := range cloudInitData.FilesToWrite {
+		directoryToCreate := filepath.Dir(cloudInitData.FilesToWrite[i].Path)
 		err := se.WriteFilesExecutor.MkdirIfNotExists(directoryToCreate)
 		if err != nil {
 			return errors.Wrap(err, fmt.Sprintf("Error creating the directory %s", directoryToCreate))
 		}
 
-		encodings := parseEncodingScheme(file.Encoding)
-		file.Content, err = decodeContent(file.Content, encodings)
+		encodings := parseEncodingScheme(cloudInitData.FilesToWrite[i].Encoding)
+		cloudInitData.FilesToWrite[i].Content, err = decodeContent(cloudInitData.FilesToWrite[i].Content, encodings)
 		if err != nil {
-			return errors.Wrap(err, fmt.Sprintf("error decoding content for %s", file.Path))
+			return errors.Wrap(err, fmt.Sprintf("error decoding content for %s", cloudInitData.FilesToWrite[i].Path))
 		}
+
 		err = se.WriteFilesExecutor.WriteToFile(&cloudInitData.FilesToWrite[i])
 		if err != nil {
-			return errors.Wrap(err, fmt.Sprintf("Error writing the file %s", file.Path))
+			return errors.Wrap(err, fmt.Sprintf("Error writing the file %s", cloudInitData.FilesToWrite[i].Path))
 		}
 	}
 
