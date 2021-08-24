@@ -108,7 +108,10 @@ docker-push: ## Push docker image with the manager.
 prepare-byoh-image:
 	docker build test/e2e -f test/e2e/BYOHDockerFile -t ${BYOH_BASE_IMG}
 
-test-e2e: docker-build prepare-byoh-image $(GINKGO) cluster-templates ## Run the end-to-end tests
+clean-useless-image:
+	docker image prune -f
+
+test-e2e: clean-useless-image docker-build prepare-byoh-image $(GINKGO) cluster-templates ## Run the end-to-end tests
 	$(GINKGO) -v -trace -tags=e2e -focus="$(GINKGO_FOCUS)" $(_SKIP_ARGS) -nodes=$(GINKGO_NODES) --noColor=$(GINKGO_NOCOLOR) $(GINKGO_ARGS) test/e2e -- \
 	    -e2e.artifacts-folder="$(ARTIFACTS)" \
 	    -e2e.config="$(E2E_CONF_FILE)" \
