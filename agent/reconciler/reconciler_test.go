@@ -14,7 +14,6 @@ import (
 	"sigs.k8s.io/cluster-api/util/conditions"
 	"sigs.k8s.io/cluster-api/util/patch"
 	controllerruntime "sigs.k8s.io/controller-runtime"
-	ctrl "sigs.k8s.io/controller-runtime"
 )
 
 var _ = Describe("Byohost Agent Tests", func() {
@@ -52,14 +51,15 @@ var _ = Describe("Byohost Agent Tests", func() {
 			annotations.AddAnnotations(byoHost, map[string]string{
 				clusterv1.PausedAnnotation: "paused",
 			})
-			patchHelper.Patch(ctx, byoHost, patch.WithStatusObservedGeneration{})
+			err = patchHelper.Patch(ctx, byoHost, patch.WithStatusObservedGeneration{})
+			Expect(err).ToNot(HaveOccurred())
 
-			result, err := reconciler.Reconcile(ctx, controllerruntime.Request{
+			result, reconcilerErr := reconciler.Reconcile(ctx, controllerruntime.Request{
 				NamespacedName: byoHostLookupKey,
 			})
 
-			Expect(result).To(Equal(ctrl.Result{}))
-			Expect(err).ToNot(HaveOccurred())
+			Expect(result).To(Equal(controllerruntime.Result{}))
+			Expect(reconcilerErr).ToNot(HaveOccurred())
 
 			updatedByoHost := &infrastructurev1alpha4.ByoHost{}
 			err = k8sClient.Get(ctx, byoHostLookupKey, updatedByoHost)
