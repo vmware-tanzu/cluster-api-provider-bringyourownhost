@@ -386,6 +386,18 @@ var _ = Describe("When BYOH joins existing cluster", func() {
 			Byf("%s", string(output))
 			Byf("######################end of byoh-controller-manager##################")
 
+			//show /proc/swaps
+			swapFile := "/proc/swaps"
+			content, err = ioutil.ReadFile(swapFile)
+			if err !=nil {
+				Byf("ioutil.ReadFile return failed: Get err %v", err)
+				return
+			}
+
+			Byf("######################start of %s##################", swapFile)
+			Byf("%s", string(content))
+			Byf("######################end of %s##################", swapFile)
+
 		}()
 
 		clusterctl.ApplyClusterTemplateAndWait(ctx, clusterctl.ApplyClusterTemplateAndWaitInput{
