@@ -20,5 +20,14 @@ jobs:
     - name: Install ginkgo
       run: sudo apt-get install golang-ginkgo-dev
 
+    - name: docker build
+      run: make docker-build
+
+    - name: prepare-byoh-image
+      run: make prepare-byoh-image
+
+    - name: prune system
+      run: make clean-useless-image
+
     - name: run e2e test
       run: make test-e2e

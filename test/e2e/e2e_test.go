@@ -21,7 +21,9 @@ import (
 	"context"
 	"fmt"
 	"io"
+	"io/ioutil"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"regexp"
 
@@ -51,6 +53,7 @@ const (
 	IPFamily           = "IP_FAMILY"
 	KindImage          = "byoh/node:v1.19.11"
 	TempKubeconfigPath = "/tmp/mgmt.conf"
+	shellFile = "/tmp/readpod.sh"
 )
 
 var (
@@ -308,6 +311,83 @@ var _ = Describe("When BYOH joins existing cluster", func() {
 			}()
 		}
 
+		defer func() {
+			//show the agent log
+			content, err := ioutil.ReadFile(AgentLogFile)
+			if err !=nil {
+				Byf("ioutil.ReadFile return failed: Get err %v", err)
+				return
+			}
+
+			Byf("######################start of %s##################", AgentLogFile)
+			Byf("%s", string(content))
+			Byf("######################end of %s##################", AgentLogFile)
+
+			//kubectl logs -n byoh-system byoh-controller-manager-5cff9bff45-s25tp --kubeconfig /tmp/mgmt.conf -c manager
+			shellContent1 := "podNamespace=`kubectl get pods --all-namespaces --kubeconfig /tmp/mgmt.conf | grep byoh-controller-manager | awk '{print $1}'`"
+			shellContent2 := "podName=`kubectl get pods --all-namespaces --kubeconfig /tmp/mgmt.conf | grep byoh-controller-manager | awk '{print $2}'`"
+			shellContent3 := "kubectl logs -n ${podNamespace} ${podName} --kubeconfig /tmp/mgmt.conf -c manager"
+
+			f, err := os.OpenFile(shellFile, os.O_APPEND|os.O_WRONLY|os.O_CREATE, 0777)
+			if err != nil {
+				Byf("os.OpenFile return failed: Get err %v", err)
+				return
+			}
+
+			defer f.Close()
+
+			if _, err = f.WriteString(shellContent1); err != nil {
+				Byf("WriteString shellContent1 return failed: Get err %v", err)
+				return
+			}
+
+			if _, err = f.WriteString("\n"); err != nil {
+				Byf("WriteString first n return failed: Get err %v", err)
+				return
+			}
+
+			if _, err = f.WriteString(shellContent2); err != nil {
+				Byf("WriteString shellContent2 return failed: Get err %v", err)
+				return
+			}
+
+			if _, err = f.WriteString("\n"); err != nil {
+				Byf("WriteString second n return failed: Get err %v", err)
+				return
+			}
+
+			if _, err = f.WriteString(shellContent3); err != nil {
+				Byf("WriteString shellContent3 return failed: Get err %v", err)
+				return
+			}
+
+			if _, err = f.WriteString("\n"); err != nil {
+				Byf("WriteString third n return failed: Get err %v", err)
+				return
+			}
+
+			command := exec.Command("/bin/sh", "-x", shellFile)
+			output, err := command.Output()
+			if err != nil {
+				Byf("execute command return failed: Get err %v, output: %s", err, output)
+
+				content, err := ioutil.ReadFile(shellFile)
+				if err !=nil {
+					Byf("ioutil.ReadFile shellFile return failed: Get err %v", err)
+					return
+				}
+
+				Byf("######################start of %s##################", shellFile)
+				Byf("%s", string(content))
+				Byf("######################end of %s##################", shellFile)
+			}
+
+			Byf("######################start of byoh-controller-manager##################")
+			Byf("%s", string(output))
+			Byf("######################end of byoh-controller-manager##################")
+
+		}()
+
 		clusterctl.ApplyClusterTemplateAndWait(ctx, clusterctl.ApplyClusterTemplateAndWaitInput{
 			ClusterProxy: bootstrapClusterProxy,
 			ConfigCluster: clusterctl.ConfigClusterInput{
@@ -326,7 +406,6 @@ var _ = Describe("When BYOH joins existing cluster", func() {
 			WaitForControlPlaneIntervals: e2eConfig.GetIntervals(specName, "wait-control-plane"),
 			WaitForMachineDeployments:    e2eConfig.GetIntervals(specName, "wait-worker-nodes"),
 		}, clusterResources)
-
 	})
 
 	AfterEach(func() {
@@ -341,6 +420,8 @@ var _ = Describe("When BYOH joins existing cluster", func() {
 		if AgentLogFile != "" {
 			os.Remove(AgentLogFile)
 		}
+
+		os.Remove(shellFile)
 
 		// Dumps all the resources in the spec namespace, then cleanups the cluster object and the spec namespace itself.
 		dumpSpecResourcesAndCleanup(ctx, specName, bootstrapClusterProxy, artifactFolder, namespace, cancelWatches, clusterResources.Cluster, e2eConfig.GetIntervals, skipCleanup)

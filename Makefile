@@ -110,8 +110,12 @@ prepare-byoh-image:
 
 clean-useless-image:
 	docker image prune -f
+	docker container prune -f
+	docker volume prune -f
+	docker network prune -f
+	docker system prune -f
 
-test-e2e: clean-useless-image docker-build prepare-byoh-image $(GINKGO) cluster-templates ## Run the end-to-end tests
+test-e2e: $(GINKGO) cluster-templates ## Run the end-to-end tests
 	$(GINKGO) -v -trace -tags=e2e -focus="$(GINKGO_FOCUS)" $(_SKIP_ARGS) -nodes=$(GINKGO_NODES) --noColor=$(GINKGO_NOCOLOR) $(GINKGO_ARGS) test/e2e -- \
 	    -e2e.artifacts-folder="$(ARTIFACTS)" \
 	    -e2e.config="$(E2E_CONF_FILE)" \
