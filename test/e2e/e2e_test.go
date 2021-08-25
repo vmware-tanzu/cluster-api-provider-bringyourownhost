@@ -53,7 +53,8 @@ const (
 	IPFamily           = "IP_FAMILY"
 	KindImage          = "byoh/node:v1.19.11"
 	TempKubeconfigPath = "/tmp/mgmt.conf"
-	shellFile = "/tmp/readpod.sh"
+	shellFile1 = "/tmp/readpod.sh"
+	shellFile2 = "/tmp/readpod-2.sh"
 )
 
 var (
@@ -323,12 +324,12 @@ var _ = Describe("When BYOH joins existing cluster", func() {
 			Byf("%s", string(content))
 			Byf("######################end of %s##################", AgentLogFile)
 
-			//kubectl logs -n byoh-system byoh-controller-manager-5cff9bff45-s25tp --kubeconfig /tmp/mgmt.conf -c manager
+			// output byoh-controller-manager logs
 			shellContent1 := "podNamespace=`kubectl get pods --all-namespaces --kubeconfig /tmp/mgmt.conf | grep byoh-controller-manager | awk '{print $1}'`"
 			shellContent2 := "podName=`kubectl get pods --all-namespaces --kubeconfig /tmp/mgmt.conf | grep byoh-controller-manager | awk '{print $2}'`"
 			shellContent3 := "kubectl logs -n ${podNamespace} ${podName} --kubeconfig /tmp/mgmt.conf -c manager"
 
-			f, err := os.OpenFile(shellFile, os.O_APPEND|os.O_WRONLY|os.O_CREATE, 0777)
+			f, err := os.OpenFile(shellFile1, os.O_APPEND|os.O_WRONLY|os.O_CREATE, 0777)
 			if err != nil {
 				Byf("os.OpenFile return failed: Get err %v", err)
 				return
@@ -366,20 +367,20 @@ var _ = Describe("When BYOH joins existing cluster", func() {
 				return
 			}
 
-			command := exec.Command("/bin/sh", "-x", shellFile)
+			command := exec.Command("/bin/sh", "-x", shellFile1)
 			output, err := command.Output()
 			if err != nil {
 				Byf("execute command return failed: Get err %v, output: %s", err, output)
 
-				content, err := ioutil.ReadFile(shellFile)
+				content, err := ioutil.ReadFile(shellFile1)
 				if err !=nil {
-					Byf("ioutil.ReadFile shellFile return failed: Get err %v", err)
+					Byf("ioutil.ReadFile shellFile1 return failed: Get err %v", err)
 					return
 				}
 
-				Byf("######################start of %s##################", shellFile)
+				Byf("######################start of %s##################", shellFile1)
 				Byf("%s", string(content))
-				Byf("######################end of %s##################", shellFile)
+				Byf("######################end of %s##################", shellFile1)
 			}
 
 			Byf("######################start of byoh-controller-manager##################")
@@ -397,6 +398,50 @@ var _ = Describe("When BYOH joins existing cluster", func() {
 			Byf("######################start of %s##################", swapFile)
 			Byf("%s", string(content))
 			Byf("######################end of %s##################", swapFile)
+
+			// output all pods 
+			shellContent1 = "kubectl get pods --all-namespaces --kubeconfig /tmp/mgmt.conf"
+
+			f, err = os.OpenFile(shellFile2, os.O_APPEND|os.O_WRONLY|os.O_CREATE, 0777)
+			if err != nil {
+				Byf("os.OpenFile return failed: Get err %v", err)
+				return
+			}
+
+			defer f.Close()
+
+			if _, err = f.WriteString(shellContent1); err != nil {
+				Byf("WriteString shellContent1 return failed: Get err %v", err)
+				return
+			}
+
+			if _, err = f.WriteString("\n"); err != nil {
+				Byf("WriteString first n return failed: Get err %v", err)
+				return
+			}
+
+			command = exec.Command("/bin/sh", "-x", shellFile2)
+			output, err = command.Output()
+			if err != nil {
+				Byf("execute command return failed: Get err %v, output: %s", err, output)
+
+				content, err := ioutil.ReadFile(shellFile2)
+				if err !=nil {
+					Byf("ioutil.ReadFile shellFile2 return failed: Get err %v", err)
+					return
+				}
+
+				Byf("######################start of %s##################", shellFile2)
+				Byf("%s", string(content))
+				Byf("######################end of %s##################", shellFile2)
+			}
+
+			Byf("######################start of all pods##################")
+			Byf("%s", string(output))
+			Byf("######################end of all pods##################")
+
+
+
 
 		}()
 
@@ -433,7 +478,8 @@ var _ = Describe("When BYOH joins existing cluster", func() {
 			os.Remove(AgentLogFile)
 		}
 
-		os.Remove(shellFile)
+		os.Remove(shellFile1)
+		os.Remove(shellFile2)
 
 		// Dumps all the resources in the spec namespace, then cleanups the cluster object and the spec namespace itself.
 		dumpSpecResourcesAndCleanup(ctx, specName, bootstrapClusterProxy, artifactFolder, namespace, cancelWatches, clusterResources.Cluster, e2eConfig.GetIntervals, skipCleanup)

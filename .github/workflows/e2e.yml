@@ -30,7 +30,7 @@ jobs:
       run: make clean-useless-image
 
     - name: turn off swap
-      run: swapoff -a
+      run: sudo swapoff -a
 
     - name: run e2e test
       run: make test-e2e
