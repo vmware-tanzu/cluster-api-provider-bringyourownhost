@@ -163,13 +163,13 @@ func (r ByoMachineReconciler) reconcileNormal(ctx context.Context, byoMachine *i
 	if !cluster.Status.InfrastructureReady {
 		logger.Info("Cluster infrastructure is not ready yet")
 		conditions.MarkFalse(byoMachine, infrav1.BYOHostReady, infrav1.WaitingForClusterInfrastructureReason, clusterv1.ConditionSeverityInfo, "")
-		return reconcile.Result{}, nil
+		return reconcile.Result{}, errors.New("cluster infrastructure is not ready yet")
 	}
 
 	if machine.Spec.Bootstrap.DataSecretName == nil {
 		logger.Info("Bootstrap Data Secret not available yet")
 		conditions.MarkFalse(byoMachine, infrav1.BYOHostReady, infrav1.WaitingForBootstrapDataSecretReason, clusterv1.ConditionSeverityInfo, "")
-		return reconcile.Result{}, nil
+		return reconcile.Result{}, errors.New("bootstrap data secret not available yet")
 	}
 
 	hostsList := &infrav1.ByoHostList{}
