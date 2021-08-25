@@ -4,6 +4,7 @@ import (
 	"context"
 	"net"
 
+	"github.com/jackpal/gateway"
 	"github.com/robfig/cron"
 	infrastructurev1alpha4 "github.com/vmware-tanzu/cluster-api-provider-byoh/apis/infrastructure/v1alpha4"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -66,6 +67,12 @@ func (hr HostRegistrar) UpdateNetwork(ctx context.Context, byoHost *infrastructu
 
 func (hr HostRegistrar) GetNetworkStatus() []infrastructurev1alpha4.NetworkStatus {
 	Network := []infrastructurev1alpha4.NetworkStatus{}
+
+	defaultIP, err := gateway.DiscoverInterface()
+	if err != nil {
+		return Network
+	}
+
 	ifaces, err := net.Interfaces()
 	if err != nil {
 		return Network
@@ -86,11 +93,19 @@ func (hr HostRegistrar) GetNetworkStatus() []infrastructurev1alpha4.NetworkStatu
 
 		netStatus.NetworkName = iface.Name
 		for _, addr := range addrs {
+			var ip net.IP
+			switch v := addr.(type) {
+			case *net.IPNet:
+					ip = v.IP
+			case *net.IPAddr:
+					ip = v.IP
+			}
+			if ip.String() == defaultIP.String() {
+				netStatus.IsDefault = true
+			}
 			netStatus.IPAddrs = append(netStatus.IPAddrs, addr.String())
 		}
-
 		Network = append(Network, netStatus)
 	}
-
 	return Network
 }

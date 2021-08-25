@@ -9,6 +9,7 @@ require (
 	github.com/docker/cli v20.10.7+incompatible
 	github.com/docker/docker v20.10.7+incompatible
 	github.com/docker/docker-credential-helpers v0.6.4 // indirect
+	github.com/jackpal/gateway v1.0.7 // indirect
 	github.com/maxbrunsfeld/counterfeiter/v6 v6.4.1
 	github.com/moby/sys/mount v0.2.0 // indirect
 	github.com/onsi/ginkgo v1.16.4

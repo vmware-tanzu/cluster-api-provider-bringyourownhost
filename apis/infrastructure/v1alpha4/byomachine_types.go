@@ -52,6 +52,10 @@ type NetworkStatus struct {
 	// NetworkName is the name of the network.
 	// +optional
 	NetworkName string `json:"networkName,omitempty"`
+
+	// IsDefault is a flag that indicates whether this interface name is where
+	// the default gateway sit on.
+	IsDefault bool `json:"isDefault,omitempty"`
 }
 
 
