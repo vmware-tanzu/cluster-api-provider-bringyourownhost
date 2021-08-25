@@ -5,7 +5,6 @@ import (
 	"net"
 
 	"github.com/jackpal/gateway"
-	"github.com/robfig/cron"
 	infrastructurev1alpha4 "github.com/vmware-tanzu/cluster-api-provider-byoh/apis/infrastructure/v1alpha4"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/cluster-api/util/patch"
@@ -36,16 +35,6 @@ func (hr HostRegistrar) Register(hostName, namespace string) error {
 		return err
 	}
 
-	// detect the network status every 30 Minutes
-	// TODO: only trigger it when network is changed
-	go func() {
-		c := cron.New()
-		_ = c.AddFunc("@every 30m", func() {
-			_ = hr.UpdateNetwork(ctx, byoHost)
-		})
-		c.Start()
-	}()
-
 	// run it at startup
 	return hr.UpdateNetwork(ctx, byoHost)
 }
@@ -57,10 +46,6 @@ func (hr HostRegistrar) UpdateNetwork(ctx context.Context, byoHost *infrastructu
 	}
 
 	byoHost.Status.Network = hr.GetNetworkStatus()
-	byoHost.Status.Addresses = []string{}
-	for _, netStatus := range byoHost.Status.Network {
-		byoHost.Status.Addresses = append(byoHost.Status.Addresses, netStatus.IPAddrs...)
-	}
 
 	return helper.Patch(ctx, byoHost)
 }
