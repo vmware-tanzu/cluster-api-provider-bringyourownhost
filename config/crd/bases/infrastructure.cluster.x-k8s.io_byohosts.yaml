@@ -77,13 +77,6 @@ spec:
           status:
             description: ByoHostStatus defines the observed state of ByoHost
             properties:
-              addresses:
-                description: Addresses is a list of the host's IP addresses. This
-                  field is required at runtime for other controllers that read this
-                  CRD as unstructured data.
-                items:
-                  type: string
-                type: array
               conditions:
                 description: Conditions defines current service state of the BYOMachine.
                 items:

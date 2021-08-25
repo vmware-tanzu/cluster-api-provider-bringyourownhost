@@ -118,7 +118,7 @@ var _ = Describe("Agent", func() {
 				if err != nil {
 					return false
 				}
-				if len(createdByoHost.Status.Network) != 0 && len(createdByoHost.Status.Addresses) != 0 {
+				if len(createdByoHost.Status.Network) != 0 {
 					return true
 				}
 				return false
