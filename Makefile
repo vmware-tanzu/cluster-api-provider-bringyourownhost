@@ -18,6 +18,7 @@ GINKGO_FOCUS  ?=
 GINKGO_SKIP ?=
 GINKGO_NODES  ?= 1
 E2E_CONF_FILE  ?= ${REPO_ROOT}/test/e2e/config/provider.yaml
+E2E_CONF_FILE_NEW  ?= ${REPO_ROOT}/test/e2enew/config/provider.yaml
 ARTIFACTS ?= ${REPO_ROOT}/_artifacts
 SKIP_RESOURCE_CLEANUP ?= false
 USE_EXISTING_CLUSTER ?= false
@@ -30,6 +31,7 @@ TOOLS_BIN_DIR := $(TOOLS_DIR)/$(BIN_DIR)
 GINKGO := $(TOOLS_BIN_DIR)/ginkgo
 
 BYOH_TEMPLATES := $(REPO_ROOT)/test/e2e/data/infrastructure-provider-byoh
+BYOH_TEMPLATES_NEW := $(REPO_ROOT)/test/e2enew/data/infrastructure-provider-byoh
 DOCKER_TEMPLATES := $(REPO_ROOT)/../cluster-api/test/e2e/data/infrastructure-docker
 
 
@@ -115,7 +117,18 @@ test-e2e: docker-build prepare-byoh-image $(GINKGO) cluster-templates ## Run the
 	    -e2e.skip-resource-cleanup=$(SKIP_RESOURCE_CLEANUP) -e2e.use-existing-cluster=$(USE_EXISTING_CLUSTER) \
 		-e2e.existing-cluster-kubeconfig-path=$(EXISTING_CLUSTER_KUBECONFIG_PATH)
 
+test-e2e-new: docker-build prepare-byoh-image $(GINKGO) cluster-templates-new ## Run the end-to-end tests
+	$(GINKGO) -v -trace -tags=e2e -focus="$(GINKGO_FOCUS)" $(_SKIP_ARGS) -nodes=$(GINKGO_NODES) --noColor=$(GINKGO_NOCOLOR) $(GINKGO_ARGS) test/e2enew -- \
+	    -e2e.artifacts-folder="$(ARTIFACTS)" \
+	    -e2e.config="$(E2E_CONF_FILE_NEW)" \
+	    -e2e.skip-resource-cleanup=$(SKIP_RESOURCE_CLEANUP) -e2e.use-existing-cluster=$(USE_EXISTING_CLUSTER) \
+		-e2e.existing-cluster-kubeconfig-path=$(EXISTING_CLUSTER_KUBECONFIG_PATH)
+
+cluster-templates-new: kustomize
+	$(KUSTOMIZE) build $(BYOH_TEMPLATES_NEW)/v1beta1 --load_restrictor none > $(BYOH_TEMPLATES_NEW)/v1beta1/cluster-template.yaml
+
 cluster-templates: kustomize cluster-templates-v1beta1
+
 
 cluster-templates-v1beta1: kustomize ## Generate cluster templates for v1beta1
 	$(KUSTOMIZE) build $(BYOH_TEMPLATES)/v1beta1 --load_restrictor none > $(BYOH_TEMPLATES)/v1beta1/cluster-template.yaml

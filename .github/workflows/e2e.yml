@@ -1,6 +1,7 @@
 name: e2e-suite
 
 on:
+  push:
   pull_request:
     branches: [ main ]
 
@@ -23,5 +24,9 @@ jobs:
     - name: turn off swap
       run: sudo swapoff -a
 
+    - name: run e2e test new
+      run: make test-e2e-new
+
     - name: run e2e test
       run: make test-e2e
+

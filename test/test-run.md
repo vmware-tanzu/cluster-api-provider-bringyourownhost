@@ -181,3 +181,5 @@ kubectl delete cluster $CLUSTER_NAME
 docker rm -f $HOST_NAME
 kind delete cluster
 ```
+
+SKIP_RESOURCE_CLEANUP=true USE_EXISTING_CLUSTER=true EXISTING_CLUSTER_KUBECONFIG_PATH=~/e2ekubeconfig make test-e2e-new
