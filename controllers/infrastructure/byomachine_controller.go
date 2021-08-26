@@ -22,7 +22,9 @@ import (
 	"fmt"
 	"strings"
 
+	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/selection"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/cluster-api/controllers/remote"
 	"sigs.k8s.io/cluster-api/util"
@@ -46,6 +48,7 @@ import (
 const (
 	providerIDPrefix       = "byoh://"
 	providerIDSuffixLength = 6
+	hostMachineRefIndex    = "status.machineref"
 )
 
 // ByoMachineReconciler reconciles a ByoMachine object
@@ -173,7 +176,10 @@ func (r ByoMachineReconciler) reconcileNormal(ctx context.Context, byoMachine *i
 	}
 
 	hostsList := &infrav1.ByoHostList{}
-	err := r.Client.List(ctx, hostsList)
+	// LabelSelector filter for byohosts
+	byohostLabels, _ := labels.NewRequirement(clusterv1.ClusterLabelName, selection.DoesNotExist, nil)
+	selector := labels.NewSelector().Add(*byohostLabels)
+	err := r.Client.List(ctx, hostsList, &client.ListOptions{LabelSelector: selector})
 	if err != nil {
 		logger.Error(err, "failed to list byohosts")
 		return ctrl.Result{}, err
