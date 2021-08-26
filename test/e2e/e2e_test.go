@@ -21,7 +21,9 @@ import (
 	"context"
 	"fmt"
 	"io"
+	"io/ioutil"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"regexp"
 
@@ -37,7 +39,6 @@ import (
 	. "github.com/onsi/gomega"
 	"github.com/onsi/gomega/gexec"
 	"github.com/pkg/errors"
-	"github.com/vmware-tanzu/cluster-api-provider-byoh/common"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/utils/pointer"
 	"sigs.k8s.io/cluster-api/test/framework/clusterctl"
@@ -45,16 +46,15 @@ import (
 )
 
 const (
-	KubernetesVersion  = "KUBERNETES_VERSION"
-	CNIPath            = "CNI"
-	CNIResources       = "CNI_RESOURCES"
-	IPFamily           = "IP_FAMILY"
-	KindImage          = "byoh/node:v1.19.11"
-	TempKubeconfigPath = "/tmp/mgmt.conf"
-)
-
-var (
-	AgentLogFile string
+	KubernetesVersion                     = "KUBERNETES_VERSION"
+	CNIPath                               = "CNI"
+	CNIResources                          = "CNI_RESOURCES"
+	IPFamily                              = "IP_FAMILY"
+	KindImage                             = "byoh/node:v1.19.11"
+	TempKubeconfigPath                    = "/tmp/mgmt.conf"
+	ReadByohControllerManagerLogShellFile = "/tmp/read-byoh-controller-manager-log.sh"
+	ReadAllPodsShellFile                  = "/tmp/read-all-pods.sh"
+	AgentLogFile                          = "/tmp/host-agent.log"
 )
 
 type cpConfig struct {
@@ -189,7 +189,6 @@ var _ = Describe("When BYOH joins existing cluster", func() {
 		// Setup a Namespace where to host objects for this spec and create a watcher for the namespace events.
 		namespace, cancelWatches = setupSpecNamespace(ctx, specName, bootstrapClusterProxy, artifactFolder)
 		clusterResources = new(clusterctl.ApplyClusterTemplateAndWaitResult)
-		AgentLogFile = common.RandStr("/tmp/agent", 5) + ".log"
 	})
 
 	It("Should create a workload cluster with single BYOH host", func() {
@@ -264,49 +263,12 @@ var _ = Describe("When BYOH joins existing cluster", func() {
 		Expect(err).NotTo(HaveOccurred())
 		defer output.Close()
 
-		// write agent log for debug
-		if AgentLogFile != "" {
-			s := make(chan string)
-			e := make(chan error)
-			buf := bufio.NewReader(output.Reader)
-			f, err := os.OpenFile(AgentLogFile, os.O_CREATE|os.O_WRONLY, 0666)
-			Expect(err).NotTo(HaveOccurred())
+		// read the log of host agent container in backend, and write it
+		f := writeAgentLog(output)
+		defer f.Close()
 
-			defer func() {
-				f.Close()
-			}()
-
-			go func() {
-				for {
-					line, _, err := buf.ReadLine()
-					if err != nil {
-						// will be quit by this err: read unix @->/run/docker.sock: use of closed network connection
-						e <- err
-						break
-					} else {
-						s <- string(line)
-					}
-				}
-			}()
-
-			go func() {
-				defer GinkgoRecover()
-				for {
-					select {
-					case line := <-s:
-						_, err2 := f.WriteString(line + "\n")
-						if err2 != nil {
-							Byf("Write String to file failed, err2=%v", err2)
-						}
-						_ = f.Sync()
-					case err := <-e:
-						// Please ignore this error if you see it in output
-						Byf("Get err %v", err)
-						return
-					}
-				}
-			}()
-		}
+		// output some debug info before quit this function
+		defer showInfo()
 
 		clusterctl.ApplyClusterTemplateAndWait(ctx, clusterctl.ApplyClusterTemplateAndWaitInput{
 			ClusterProxy: bootstrapClusterProxy,
@@ -338,11 +300,124 @@ var _ = Describe("When BYOH joins existing cluster", func() {
 			Expect(err).NotTo(HaveOccurred())
 		}
 
-		if AgentLogFile != "" {
-			os.Remove(AgentLogFile)
-		}
+		os.Remove(AgentLogFile)
+		os.Remove(ReadByohControllerManagerLogShellFile)
+		os.Remove(ReadAllPodsShellFile)
 
 		// Dumps all the resources in the spec namespace, then cleanups the cluster object and the spec namespace itself.
 		dumpSpecResourcesAndCleanup(ctx, specName, bootstrapClusterProxy, artifactFolder, namespace, cancelWatches, clusterResources.Cluster, e2eConfig.GetIntervals, skipCleanup)
 	})
 })
+
+func writeAgentLog(output types.HijackedResponse) *os.File {
+	s := make(chan string)
+	e := make(chan error)
+	buf := bufio.NewReader(output.Reader)
+	f, err := os.OpenFile(AgentLogFile, os.O_CREATE|os.O_WRONLY, 0666)
+	Expect(err).NotTo(HaveOccurred())
+
+	go func() {
+		for {
+			line, _, err := buf.ReadLine()
+			if err != nil {
+				// will be quit by this err: read unix @->/run/docker.sock: use of closed network connection
+				e <- err
+				break
+			} else {
+				s <- string(line)
+			}
+		}
+	}()
+
+	go func() {
+		defer GinkgoRecover()
+		for {
+			select {
+			case line := <-s:
+				_, err2 := f.WriteString(line + "\n")
+				if err2 != nil {
+					Byf("Write String to file failed, err2=%v", err2)
+				}
+				_ = f.Sync()
+			case err := <-e:
+				// Please ignore this error if you see it in output
+				Byf("Get err %v", err)
+				return
+			}
+		}
+	}()
+
+	return f
+}
+
+func showFileContent(fileName string) {
+	content, err := ioutil.ReadFile(fileName)
+	if err != nil {
+		Byf("ioutil.ReadFile %s return failed: Get err %v", fileName, err)
+		return
+	}
+
+	Byf("######################Start: Content of %s##################", fileName)
+	Byf("%s", string(content))
+	Byf("######################End: Content of %s##################", fileName)
+}
+
+func executeShellScript(shellFileName string) {
+	cmd := exec.Command("/bin/sh", "-x", shellFileName)
+	output, err := cmd.Output()
+	if err != nil {
+		Byf("execute %s return failed: Get err %v, output: %s", shellFileName, err, output)
+		return
+	}
+	Byf("#######################Start: execute result of %s##################", shellFileName)
+	Byf("%s", string(output))
+	Byf("######################End: execute result of %s##################", shellFileName)
+}
+
+func writeShellScript(shellFileName string, shellFileContent []string) {
+	f, err := os.OpenFile(shellFileName, os.O_APPEND|os.O_WRONLY|os.O_CREATE, 0777)
+	if err != nil {
+		Byf("Open %s return failed: Get err %v", shellFileName, err)
+		return
+	}
+
+	defer f.Close()
+
+	for _, line := range shellFileContent {
+		if _, err = f.WriteString(line); err != nil {
+			Byf("Write content %s return failed: Get err %v", line, err)
+			return
+		}
+		if _, err = f.WriteString("\n"); err != nil {
+			Byf("Write LF return failed: Get err %v", err)
+			return
+		}
+	}
+}
+
+func showInfo() {
+	// show swap status
+	// showFileContent("/proc/swaps")
+
+	// show the status of  all pods
+	shellContent := []string{
+		"kubectl get pods --all-namespaces --kubeconfig /tmp/mgmt.conf",
+	}
+	writeShellScript(ReadAllPodsShellFile, shellContent)
+	showFileContent(ReadAllPodsShellFile)
+	executeShellScript(ReadAllPodsShellFile)
+
+	// show the agent log
+	showFileContent(AgentLogFile)
+
+	// show byoh-controller-manager logs
+	shellContent = []string{
+		"podNamespace=`kubectl get pods --all-namespaces --kubeconfig /tmp/mgmt.conf | grep byoh-controller-manager | awk '{print $1}'`",
+		"podName=`kubectl get pods --all-namespaces --kubeconfig /tmp/mgmt.conf | grep byoh-controller-manager | awk '{print $2}'`",
+		"kubectl logs -n ${podNamespace} ${podName} --kubeconfig /tmp/mgmt.conf -c manager",
+	}
+
+	writeShellScript(ReadByohControllerManagerLogShellFile, shellContent)
+	showFileContent(ReadByohControllerManagerLogShellFile)
+	executeShellScript(ReadByohControllerManagerLogShellFile)
+}
