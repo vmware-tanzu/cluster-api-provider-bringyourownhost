@@ -54,7 +54,7 @@ spec:
     name: ${CLUSTER_NAME}-control-plane
   infrastructureRef:
     apiVersion: infrastructure.cluster.x-k8s.io/v1beta1
-    kind: DockerCluster
+    kind: ByoCluster
     name: ${CLUSTER_NAME}
 ---
 apiVersion: cluster.x-k8s.io/v1beta1
@@ -101,9 +101,59 @@ spec:
       controllerManager:
         extraArgs:
           enable-hostpath-provisioner: "true"
+    files:
+    - content: |
+        apiVersion: v1
+        kind: Pod
+        metadata:
+          creationTimestamp: null
+          name: kube-vip
+          namespace: kube-system
+        spec:
+          containers:
+          - args:
+            - start
+            env:
+            - name: vip_arp
+              value: "true"
+            - name: vip_leaderelection
+              value: "true"
+            - name: vip_address
+              value: 172.18.10.10
+            - name: vip_interface
+              value: {{ .DefaultNetworkInterfaceName }}
+            - name: vip_leaseduration
+              value: "15"
+            - name: vip_renewdeadline
+              value: "10"
+            - name: vip_retryperiod
+              value: "2"
+            image: projects.registry.vmware.com/tkg/kube-vip:v0.3.3_vmware.1
+            imagePullPolicy: IfNotPresent
+            name: kube-vip
+            resources: {}
+            securityContext:
+              capabilities:
+                add:
+                - NET_ADMIN
+                - SYS_TIME
+            volumeMounts:
+            - mountPath: /etc/kubernetes/admin.conf
+              name: kubeconfig
+          hostNetwork: true
+          volumes:
+          - hostPath:
+              path: /etc/kubernetes/admin.conf
+              type: FileOrCreate
+            name: kubeconfig
+        status: {}
+      owner: root:root
+      path: /etc/kubernetes/manifests/kube-vip.yaml
     initConfiguration:
       nodeRegistration:
         criSocket: /var/run/containerd/containerd.sock
+        ignorePreflightErrors:
+        - Swap
         kubeletExtraArgs:
           cgroup-driver: cgroupfs
           eviction-hard: nodefs.available<0%,nodefs.inodesFree<0%,imagefs.available<0%
@@ -116,11 +166,20 @@ spec:
   machineTemplate:
     infrastructureRef:
       apiVersion: infrastructure.cluster.x-k8s.io/v1beta1
-      kind: DockerMachineTemplate
+      kind: ByoMachineTemplate
       name: ${CLUSTER_NAME}-control-plane
       namespace: ${NAMESPACE}
   replicas: ${CONTROL_PLANE_MACHINE_COUNT}
   version: ${KUBERNETES_VERSION}
+---
+apiVersion: infrastructure.cluster.x-k8s.io/v1beta1
+kind: ByoCluster
+metadata:
+  name: ${CLUSTER_NAME}
+spec:
+  controlPlaneEndpoint:
+    host: 172.18.10.10
+    port: 6443
 ---
 apiVersion: infrastructure.cluster.x-k8s.io/v1beta1
 kind: ByoMachineTemplate
@@ -132,17 +191,9 @@ spec:
     spec: {}
 ---
 apiVersion: infrastructure.cluster.x-k8s.io/v1beta1
-kind: DockerCluster
-metadata:
-  name: ${CLUSTER_NAME}
----
-apiVersion: infrastructure.cluster.x-k8s.io/v1beta1
-kind: DockerMachineTemplate
+kind: ByoMachineTemplate
 metadata:
   name: ${CLUSTER_NAME}-control-plane
 spec:
   template:
-    spec:
-      extraMounts:
-      - containerPath: /var/run/docker.sock
-        hostPath: /var/run/docker.sock
+    spec: {}

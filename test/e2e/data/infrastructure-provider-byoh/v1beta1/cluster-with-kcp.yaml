@@ -15,7 +15,7 @@ spec:
     serviceDomain: "cluster.local"
   infrastructureRef:
     apiVersion: infrastructure.cluster.x-k8s.io/v1beta1
-    kind: DockerCluster
+    kind: ByoCluster
     name: ${CLUSTER_NAME}
   controlPlaneRef:
     kind: KubeadmControlPlane
@@ -23,20 +23,21 @@ spec:
     name: "${CLUSTER_NAME}-control-plane"
 ---
 apiVersion: infrastructure.cluster.x-k8s.io/v1beta1
-kind: DockerCluster
+kind: ByoCluster
 metadata:
   name: ${CLUSTER_NAME}
+spec:
+  controlPlaneEndpoint:
+    host: 172.18.10.10
+    port: 6443
 ---
 apiVersion: infrastructure.cluster.x-k8s.io/v1beta1
-kind: DockerMachineTemplate
+kind: ByoMachineTemplate
 metadata:
   name: "${CLUSTER_NAME}-control-plane"
 spec:
   template:
-    spec:
-      extraMounts:
-        - containerPath: "/var/run/docker.sock"
-          hostPath: "/var/run/docker.sock"
+    spec: {}
 ---
 kind: KubeadmControlPlane
 apiVersion: controlplane.cluster.x-k8s.io/v1beta1
@@ -48,7 +49,7 @@ spec:
   replicas: ${CONTROL_PLANE_MACHINE_COUNT}
   machineTemplate:
     infrastructureRef:
-      kind: DockerMachineTemplate
+      kind: ByoMachineTemplate
       apiVersion: infrastructure.cluster.x-k8s.io/v1beta1
       name: "${CLUSTER_NAME}-control-plane"
       namespace: "${NAMESPACE}"
@@ -58,8 +59,58 @@ spec:
         extraArgs: {enable-hostpath-provisioner: 'true'}
       apiServer:
         certSANs: [localhost, 127.0.0.1, 0.0.0.0, host.docker.internal]
+    files:
+    - content: |
+        apiVersion: v1
+        kind: Pod
+        metadata:
+          creationTimestamp: null
+          name: kube-vip
+          namespace: kube-system
+        spec:
+          containers:
+          - args:
+            - start
+            env:
+            - name: vip_arp
+              value: "true"
+            - name: vip_leaderelection
+              value: "true"
+            - name: vip_address
+              value: 172.18.10.10
+            - name: vip_interface
+              value: {{ .DefaultNetworkInterfaceName }}
+            - name: vip_leaseduration
+              value: "15"
+            - name: vip_renewdeadline
+              value: "10"
+            - name: vip_retryperiod
+              value: "2"
+            image: projects.registry.vmware.com/tkg/kube-vip:v0.3.3_vmware.1
+            imagePullPolicy: IfNotPresent
+            name: kube-vip
+            resources: {}
+            securityContext:
+              capabilities:
+                add:
+                - NET_ADMIN
+                - SYS_TIME
+            volumeMounts:
+            - mountPath: /etc/kubernetes/admin.conf
+              name: kubeconfig
+          hostNetwork: true
+          volumes:
+          - hostPath:
+              path: /etc/kubernetes/admin.conf
+              type: FileOrCreate
+            name: kubeconfig
+        status: {}
+      owner: root:root
+      path: /etc/kubernetes/manifests/kube-vip.yaml
     initConfiguration:
       nodeRegistration:
+        ignorePreflightErrors:
+        - Swap
         criSocket: /var/run/containerd/containerd.sock
         kubeletExtraArgs:
           cgroup-driver: cgroupfs
