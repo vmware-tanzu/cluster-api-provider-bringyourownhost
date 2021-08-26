@@ -1,0 +1,112 @@
+---
+# CI E2E test test configuration scenario using locally build images and manifests for:
+# - cluster-api
+# - bootstrap kubeadm
+# - control-plane kubeadm
+# - docker
+#ManagementClusterName:
+#  test-ttvbya
+images:
+  # Use local dev images built source tree;
+  - name: gcr.io/k8s-staging-cluster-api/cluster-api-controller-amd64:dev
+    loadBehavior: tryLoad
+  - name: gcr.io/k8s-staging-cluster-api/kubeadm-bootstrap-controller-amd64:dev
+    loadBehavior: tryLoad
+  - name: gcr.io/k8s-staging-cluster-api/kubeadm-control-plane-controller-amd64:dev
+    loadBehavior: tryLoad
+  - name: gcr.io/k8s-staging-cluster-api/caph-manager:dev
+    loadBehavior: tryLoad
+  - name: quay.io/jetstack/cert-manager-cainjector:v1.1.0
+    loadBehavior: tryLoad
+  - name: quay.io/jetstack/cert-manager-webhook:v1.1.0
+    loadBehavior: tryLoad
+  - name: quay.io/jetstack/cert-manager-controller:v1.1.0
+    loadBehavior: tryLoad
+
+providers:
+
+  - name: cluster-api
+    type: CoreProvider
+    versions:
+      - name: v1.0.0 # next; use manifest from source files
+        value: "https://github.com/kubernetes-sigs/cluster-api/releases/download/v1.0.0/core-components.yaml"
+        type: "url"
+        replacements:
+          - old: --metrics-bind-addr=127.0.0.1:8080
+            new: --metrics-bind-addr=:8080
+        files:
+          - sourcePath: "../data/shared/metadata.yaml"
+
+  - name: kubeadm
+    type: BootstrapProvider
+    versions:
+      - name: v1.0.0 # next; use manifest from source files
+        value: "https://github.com/kubernetes-sigs/cluster-api/releases/download/v1.0.0/bootstrap-components.yaml"
+        type: "url"
+        replacements:
+          - old: --metrics-bind-addr=127.0.0.1:8080
+            new: --metrics-bind-addr=:8080
+        files:
+          - sourcePath: "../data/shared/metadata.yaml"
+
+  - name: kubeadm
+    type: ControlPlaneProvider
+    versions:
+      - name: v1.0.0 # next; use manifest from source files
+        value: "https://github.com/kubernetes-sigs/cluster-api/releases/download/v1.0.0/control-plane-components.yaml"
+        type: "url"
+        replacements:
+          - old: --metrics-bind-addr=127.0.0.1:8080
+            new: --metrics-bind-addr=:8080
+        files:
+          - sourcePath: "../data/shared/metadata.yaml"
+
+  - name: byoh
+    type: InfrastructureProvider
+    versions:
+      - name: v0.1.0
+        # Use manifest from source files
+        value: ../../../config/default
+        type: kustomize
+        replacements:
+          - old: gcr.io/k8s-staging-cluster-api/caph-manager:latest
+            new: gcr.io/k8s-staging-cluster-api/caph-manager:dev
+          - old: "imagePullPolicy: Always"
+            new: "imagePullPolicy: IfNotPresent"
+        files:
+          # Add a cluster template
+          - sourcePath: "../data/infrastructure-provider-byoh/v1beta1/cluster-template.yaml"
+          - sourcePath: "../../../metadata.yaml"
+variables:
+  # default variables for the e2e test; those values could be overridden via env variables, thus
+  # allowing the same e2e config file to be re-used in different prow jobs e.g. each one with a K8s version permutation
+  KUBERNETES_VERSION: "v1.22.0"
+  ETCD_VERSION_UPGRADE_TO: "3.4.9-0"
+  COREDNS_VERSION_UPGRADE_TO: "1.7.0"
+  KUBERNETES_VERSION_UPGRADE_TO: "v1.22.0"
+  KUBERNETES_VERSION_UPGRADE_FROM: "v1.18.2"
+  DOCKER_SERVICE_DOMAIN: "cluster.local"
+  IP_FAMILY: "IPv4"
+  DOCKER_SERVICE_CIDRS: "10.128.0.0/12"
+  DOCKER_POD_CIDRS: "192.168.0.0/16"
+  CNI: "./data/cni/kindnet/kindnet.yaml"
+  EXP_CLUSTER_RESOURCE_SET: "true"
+  EXP_MACHINE_POOL: "true"
+  KUBETEST_CONFIGURATION: "./data/kubetest/conformance.yaml"
+  NODE_DRAIN_TIMEOUT: "60s"
+  # NOTE: INIT_WITH_BINARY is used only by the clusterctl upgrade test to initialize the management cluster to be upgraded
+  INIT_WITH_BINARY: "https://github.com/kubernetes-sigs/cluster-api/releases/download/v1.0.0/clusterctl-{OS}-{ARCH}"
+
+intervals:
+  default/wait-controllers: ["3m", "10s"]
+  default/wait-cluster: ["5m", "10s"]
+  default/wait-control-plane: ["10m", "10s"]
+  default/wait-worker-nodes: ["10m", "10s"]
+  default/wait-machine-pool-nodes: ["5m", "10s"]
+  default/wait-delete-cluster: ["15m", "10s"]
+  default/wait-machine-upgrade: ["20m", "10s"]
+  default/wait-machine-pool-upgrade: ["5m", "10s"]
+  default/wait-nodes-ready: ["10m", "10s"]
+  default/wait-machine-remediation: ["5m", "10s"]
+  node-drain/wait-deployment-available: ["3m", "10s"]
+  node-drain/wait-control-plane: ["15m", "10s"]

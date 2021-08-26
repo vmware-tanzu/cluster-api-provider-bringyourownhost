@@ -1,0 +1,4 @@
+bases:
+  - cluster-with-kcp.yaml
+  - crs.yaml
+  - md.yaml
