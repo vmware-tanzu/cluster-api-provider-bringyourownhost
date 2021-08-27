@@ -2,7 +2,6 @@ package reconciler
 
 import (
 	"context"
-	"errors"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -14,6 +13,7 @@ import (
 	"sigs.k8s.io/cluster-api/util/annotations"
 	"sigs.k8s.io/cluster-api/util/conditions"
 	"sigs.k8s.io/cluster-api/util/patch"
+	controllerruntime "sigs.k8s.io/controller-runtime"
 )
 
 var _ = Describe("Byohost Agent Tests", func() {
@@ -30,6 +30,7 @@ var _ = Describe("Byohost Agent Tests", func() {
 			hostName          = "test-host"
 			byoHost           *infrastructurev1alpha4.ByoHost
 			expectedCondition *testConditions
+			byoHostLookupKey  types.NamespacedName
 		)
 
 		BeforeEach(func() {
@@ -40,40 +41,37 @@ var _ = Describe("Byohost Agent Tests", func() {
 
 			byoHost = common.NewByoHost(hostName, ns, nil)
 			Expect(k8sClient.Create(ctx, byoHost)).NotTo(HaveOccurred(), "failed to create byohost")
+			patchHelper, err = patch.NewHelper(byoHost, k8sClient)
+			Expect(err).ShouldNot(HaveOccurred())
 
+			byoHostLookupKey = types.NamespacedName{Name: hostName, Namespace: ns}
 		})
+
 		It("should set the Reason to ClusterOrResourcePausedReason", func() {
-			expectedCondition.Reason = infrastructurev1alpha4.ClusterOrResourcePausedReason
-			byoHostLookupKey := types.NamespacedName{Name: hostName, Namespace: ns}
+			annotations.AddAnnotations(byoHost, map[string]string{
+				clusterv1.PausedAnnotation: "paused",
+			})
+			err = patchHelper.Patch(ctx, byoHost, patch.WithStatusObservedGeneration{})
+			Expect(err).ToNot(HaveOccurred())
 
-			By("adding paused annotation to ByoHost")
-			Eventually(func() error {
-				patchHelper, err = patch.NewHelper(byoHost, k8sClient)
-				Expect(err).ShouldNot(HaveOccurred())
-				pauseAnnotations := make(map[string]string)
-				pauseAnnotations[clusterv1.PausedAnnotation] = "paused"
-				if changed := annotations.AddAnnotations(byoHost, pauseAnnotations); changed {
-					return patchHelper.Patch(ctx, byoHost, patch.WithStatusObservedGeneration{})
-				}
-				return errors.New("ErrNotPatched")
-			}).Should(BeNil())
+			result, reconcilerErr := reconciler.Reconcile(ctx, controllerruntime.Request{
+				NamespacedName: byoHostLookupKey,
+			})
 
-			Eventually(func() *testConditions {
-				createdByoHost := &infrastructurev1alpha4.ByoHost{}
-				err = k8sClient.Get(ctx, byoHostLookupKey, createdByoHost)
-				if err != nil {
-					return &testConditions{}
-				}
-				actualCondition := conditions.Get(createdByoHost, infrastructurev1alpha4.K8sNodeBootstrapSucceeded)
-				if actualCondition != nil {
-					return &testConditions{
-						Type:   actualCondition.Type,
-						Status: actualCondition.Status,
-						Reason: actualCondition.Reason,
-					}
-				}
-				return &testConditions{}
-			}).Should(Equal(expectedCondition))
+			Expect(result).To(Equal(controllerruntime.Result{}))
+			Expect(reconcilerErr).ToNot(HaveOccurred())
+
+			updatedByoHost := &infrastructurev1alpha4.ByoHost{}
+			err = k8sClient.Get(ctx, byoHostLookupKey, updatedByoHost)
+			Expect(err).ToNot(HaveOccurred())
+			bootstrapSucceededCondition := conditions.Get(updatedByoHost, infrastructurev1alpha4.K8sNodeBootstrapSucceeded)
+
+			Expect(*bootstrapSucceededCondition).To(conditions.MatchCondition(clusterv1.Condition{
+				Type:     infrastructurev1alpha4.K8sNodeBootstrapSucceeded,
+				Status:   corev1.ConditionFalse,
+				Reason:   infrastructurev1alpha4.ClusterOrResourcePausedReason,
+				Severity: clusterv1.ConditionSeverityInfo,
+			}))
 		})
 
 		It("should set the Reason to WaitingForMachineRefReason", func() {
