@@ -27,7 +27,6 @@ var (
 	cfg                   *rest.Config
 	k8sClient             client.Client
 	tmpFilePrefix         = "kubeconfigFile-"
-	defaultClusterName    = "default-test-cluster"
 	testEnv               *envtest.Environment
 )
 
