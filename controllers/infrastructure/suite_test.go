@@ -17,7 +17,6 @@ limitations under the License.
 package controllers
 
 import (
-	"context"
 	"go/build"
 	"path/filepath"
 	"testing"
@@ -34,6 +33,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 
 	infrastructurev1alpha4 "github.com/vmware-tanzu/cluster-api-provider-byoh/apis/infrastructure/v1alpha4"
+
 	//+kubebuilder:scaffold:imports
 
 	"github.com/vmware-tanzu/cluster-api-provider-byoh/common"
@@ -81,6 +81,8 @@ var _ = BeforeSuite(func() {
 		ErrorIfCRDPathMissing: true,
 	}
 
+	ctx := ctrl.SetupSignalHandler()
+
 	cfg, err := testEnv.Start()
 	Expect(err).NotTo(HaveOccurred())
 	Expect(cfg).NotTo(BeNil())
@@ -110,7 +112,7 @@ var _ = BeforeSuite(func() {
 	Expect(err).NotTo(HaveOccurred())
 
 	capiCluster = common.NewCluster(defaultClusterName, defaultNamespace)
-	Expect(k8sClient.Create(context.Background(), capiCluster)).Should(Succeed())
+	Expect(k8sClient.Create(ctx, capiCluster)).Should(Succeed())
 
 	node := common.NewNode(defaultNodeName, defaultNamespace)
 	clientFake = fake.NewClientBuilder().WithObjects(
@@ -122,14 +124,13 @@ var _ = BeforeSuite(func() {
 		Client:  k8sClient,
 		Tracker: remote.NewTestClusterCacheTracker(logf.NullLogger{}, clientFake, scheme.Scheme, client.ObjectKey{Name: capiCluster.Name, Namespace: capiCluster.Namespace}),
 	}
-	err = reconciler.SetupWithManager(k8sManager)
+	err = reconciler.SetupWithManager(ctx, k8sManager)
 	Expect(err).NotTo(HaveOccurred())
 
 	go func() {
-		err = k8sManager.Start(ctrl.SetupSignalHandler())
+		err = k8sManager.Start(ctx)
 		Expect(err).NotTo(HaveOccurred())
 	}()
-
 }, 60)
 
 var _ = AfterSuite(func() {

@@ -32,10 +32,13 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"sigs.k8s.io/controller-runtime/pkg/event"
+	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
+	"sigs.k8s.io/controller-runtime/pkg/source"
 
+	"github.com/go-logr/logr"
 	infrav1 "github.com/vmware-tanzu/cluster-api-provider-byoh/apis/infrastructure/v1alpha4"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -46,11 +49,13 @@ import (
 const (
 	providerIDPrefix       = "byoh://"
 	providerIDSuffixLength = 6
+	hostMachineRefIndex    = "status.machineref"
 )
 
 // ByoMachineReconciler reconciles a ByoMachine object
 type ByoMachineReconciler struct {
 	client.Client
+	Log     logr.Logger
 	Scheme  *runtime.Scheme
 	Tracker *remote.ClusterCacheTracker
 }
@@ -89,7 +94,22 @@ func (r *ByoMachineReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 		return ctrl.Result{}, err
 	}
 
-	// Fetch the Machine.
+	// Fetch the ByoHost which is referencing this ByoMachine, if any
+	hostsList := &infrav1.ByoHostList{}
+	if err := r.Client.List(
+		ctx,
+		hostsList,
+		client.MatchingFields{hostMachineRefIndex: fmt.Sprintf("%s/%s", byoMachine.Namespace, byoMachine.Name)},
+	); err != nil {
+		return ctrl.Result{}, err
+	}
+	var byoHost *infrav1.ByoHost
+	if len(hostsList.Items) == 1 {
+		byoHost = &hostsList.Items[0]
+		logger = logger.WithValues("ByoHost", byoHost.Name)
+	}
+
+	// Fetch Owner Machine
 	machine, err := util.GetOwnerMachine(ctx, r.Client, byoMachine.ObjectMeta)
 	if err != nil {
 		logger.Error(err, "failed to get Owner Machine")
@@ -236,7 +256,20 @@ func (r ByoMachineReconciler) reconcileNormal(ctx context.Context, byoMachine *i
 }
 
 // SetupWithManager sets up the controller with the Manager.
-func (r *ByoMachineReconciler) SetupWithManager(mgr ctrl.Manager) error {
+func (r *ByoMachineReconciler) SetupWithManager(ctx context.Context, mgr ctrl.Manager) error {
+	var (
+		controlledType = &infrav1.ByoMachine{}
+	)
+
+	// Add index to ByoHost for listing by Machine reference.
+	fmt.Println("adding index")
+	if err := mgr.GetFieldIndexer().IndexField(ctx, &infrav1.ByoHost{},
+		hostMachineRefIndex,
+		r.indexByoHostByMachineRef,
+	); err != nil {
+		return errors.New("cannot index ByoHost by MachineRef")
+	}
+
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&infrav1.ByoMachine{}).
 		WithEventFilter(predicate.Funcs{
@@ -246,6 +279,10 @@ func (r *ByoMachineReconciler) SetupWithManager(mgr ctrl.Manager) error {
 				return false
 			},
 		}).
+		Watches(
+			&source.Kind{Type: &infrav1.ByoHost{}},
+			&handler.EnqueueRequestForOwner{OwnerType: controlledType, IsController: false},
+		).
 		Complete(r)
 }
 
@@ -319,4 +356,17 @@ func (r *ByoMachineReconciler) setPausedConditionForByoHost(ctx context.Context,
 	}
 
 	return helper.Patch(ctx, byoHost)
+}
+
+func (r *ByoMachineReconciler) indexByoHostByMachineRef(o client.Object) []string {
+	byoHost, ok := o.(*infrav1.ByoHost)
+	if !ok {
+		r.Log.Error(errors.New("incorrect type"), "expected a ByoHost", "type", fmt.Sprintf("%T", o))
+		return nil
+	}
+
+	if byoHost.Status.MachineRef != nil {
+		return []string{fmt.Sprintf("%s/%s", byoHost.Status.MachineRef.Namespace, byoHost.Status.MachineRef.Name)}
+	}
+	return nil
 }

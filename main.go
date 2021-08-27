@@ -17,7 +17,6 @@ limitations under the License.
 package main
 
 import (
-	"context"
 	"flag"
 	"os"
 
@@ -69,6 +68,7 @@ func main() {
 	opts.BindFlags(flag.CommandLine)
 	flag.Parse()
 
+	ctx := ctrl.SetupSignalHandler()
 	ctrl.SetLogger(zap.New(zap.UseFlagOptions(&opts)))
 
 	mgr, err := ctrl.NewManager(ctrl.GetConfigOrDie(), ctrl.Options{
@@ -94,7 +94,7 @@ func main() {
 		Client:  mgr.GetClient(),
 		Log:     ctrl.Log.WithName("remote").WithName("ClusterCacheReconciler"),
 		Tracker: tracker,
-	}).SetupWithManager(context.TODO(), mgr, concurrency(0)); err != nil {
+	}).SetupWithManager(ctx, mgr, concurrency(0)); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "ClusterCacheReconciler")
 		os.Exit(1)
 	}
@@ -103,7 +103,7 @@ func main() {
 		Client:  mgr.GetClient(),
 		Scheme:  mgr.GetScheme(),
 		Tracker: tracker,
-	}).SetupWithManager(mgr); err != nil {
+	}).SetupWithManager(ctx, mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "ByoMachine")
 		os.Exit(1)
 	}
@@ -140,7 +140,7 @@ func main() {
 	}
 
 	setupLog.Info("starting manager")
-	if err := mgr.Start(ctrl.SetupSignalHandler()); err != nil {
+	if err := mgr.Start(ctx); err != nil {
 		setupLog.Error(err, "problem running manager")
 		os.Exit(1)
 	}
