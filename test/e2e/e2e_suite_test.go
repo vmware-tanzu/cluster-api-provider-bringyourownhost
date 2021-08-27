@@ -266,3 +266,8 @@ func dumpSpecResourcesAndCleanup(ctx context.Context, specName string, clusterPr
 func Byf(format string, a ...interface{}) {
 	By(fmt.Sprintf(format, a...))
 }
+
+func Showf(format string, a ...interface{}) {
+	fmt.Fprintf(GinkgoWriter, format, a...)
+	fmt.Fprintf(GinkgoWriter, "\n")
+}

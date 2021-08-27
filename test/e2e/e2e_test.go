@@ -172,10 +172,11 @@ var _ = Describe("When BYOH joins existing cluster", func() {
 		dockerClient     *client.Client
 		byohost          container.ContainerCreateCreatedBody
 		err              error
+		passed           = false
 	)
 
 	BeforeEach(func() {
-
+		passed = false
 		ctx = context.TODO()
 		Expect(ctx).NotTo(BeNil(), "ctx is required for %s spec", specName)
 
@@ -268,7 +269,7 @@ var _ = Describe("When BYOH joins existing cluster", func() {
 		defer f.Close()
 
 		// output some debug info before quit this function
-		defer showInfo()
+		// defer showInfo()
 
 		clusterctl.ApplyClusterTemplateAndWait(ctx, clusterctl.ApplyClusterTemplateAndWaitInput{
 			ClusterProxy: bootstrapClusterProxy,
@@ -289,9 +290,16 @@ var _ = Describe("When BYOH joins existing cluster", func() {
 			WaitForMachineDeployments:    e2eConfig.GetIntervals(specName, "wait-worker-nodes"),
 		}, clusterResources)
 
+		// Any failure won't go to this
+		passed = true
 	})
 
 	AfterEach(func() {
+
+		if !passed {
+			showInfo()
+		}
+
 		if dockerClient != nil && byohost.ID != "" {
 			err := dockerClient.ContainerStop(ctx, byohost.ID, nil)
 			Expect(err).NotTo(HaveOccurred())
@@ -336,12 +344,12 @@ func writeAgentLog(output types.HijackedResponse) *os.File {
 			case line := <-s:
 				_, err2 := f.WriteString(line + "\n")
 				if err2 != nil {
-					Byf("Write String to file failed, err2=%v", err2)
+					Showf("Write String to file failed, err2=%v", err2)
 				}
 				_ = f.Sync()
 			case err := <-e:
 				// Please ignore this error if you see it in output
-				Byf("Get err %v", err)
+				Showf("Get err %v", err)
 				return
 			}
 		}
@@ -353,31 +361,31 @@ func writeAgentLog(output types.HijackedResponse) *os.File {
 func showFileContent(fileName string) {
 	content, err := ioutil.ReadFile(fileName)
 	if err != nil {
-		Byf("ioutil.ReadFile %s return failed: Get err %v", fileName, err)
+		Showf("ioutil.ReadFile %s return failed: Get err %v", fileName, err)
 		return
 	}
 
-	Byf("######################Start: Content of %s##################", fileName)
-	Byf("%s", string(content))
-	Byf("######################End: Content of %s##################", fileName)
+	Showf("######################Start: Content of %s##################", fileName)
+	Showf("%s", string(content))
+	Showf("######################End: Content of %s##################", fileName)
 }
 
 func executeShellScript(shellFileName string) {
 	cmd := exec.Command("/bin/sh", "-x", shellFileName)
 	output, err := cmd.Output()
 	if err != nil {
-		Byf("execute %s return failed: Get err %v, output: %s", shellFileName, err, output)
+		Showf("execute %s return failed: Get err %v, output: %s", shellFileName, err, output)
 		return
 	}
-	Byf("#######################Start: execute result of %s##################", shellFileName)
-	Byf("%s", string(output))
-	Byf("######################End: execute result of %s##################", shellFileName)
+	Showf("#######################Start: execute result of %s##################", shellFileName)
+	Showf("%s", string(output))
+	Showf("######################End: execute result of %s##################", shellFileName)
 }
 
 func writeShellScript(shellFileName string, shellFileContent []string) {
 	f, err := os.OpenFile(shellFileName, os.O_APPEND|os.O_WRONLY|os.O_CREATE, 0777)
 	if err != nil {
-		Byf("Open %s return failed: Get err %v", shellFileName, err)
+		Showf("Open %s return failed: Get err %v", shellFileName, err)
 		return
 	}
 
@@ -385,11 +393,11 @@ func writeShellScript(shellFileName string, shellFileContent []string) {
 
 	for _, line := range shellFileContent {
 		if _, err = f.WriteString(line); err != nil {
-			Byf("Write content %s return failed: Get err %v", line, err)
+			Showf("Write content %s return failed: Get err %v", line, err)
 			return
 		}
 		if _, err = f.WriteString("\n"); err != nil {
-			Byf("Write LF return failed: Get err %v", err)
+			Showf("Write LF return failed: Get err %v", err)
 			return
 		}
 	}
