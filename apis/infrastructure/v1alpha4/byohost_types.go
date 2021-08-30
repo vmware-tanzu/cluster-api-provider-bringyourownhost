@@ -54,12 +54,6 @@ type ByoHostStatus struct {
 	// network interfaces.
 	// +optional
 	Network []NetworkStatus `json:"network,omitempty"`
-
-	// Addresses is a list of the host's IP addresses.
-	// This field is required at runtime for other controllers that read
-	// this CRD as unstructured data.
-	// +optional
-	Addresses []string `json:"addresses,omitempty"`
 }
 
 //+kubebuilder:object:root=true

@@ -4,7 +4,7 @@ import (
 	"context"
 	"net"
 
-	"github.com/robfig/cron"
+	"github.com/jackpal/gateway"
 	infrastructurev1alpha4 "github.com/vmware-tanzu/cluster-api-provider-byoh/apis/infrastructure/v1alpha4"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/cluster-api/util/patch"
@@ -35,16 +35,6 @@ func (hr HostRegistrar) Register(hostName, namespace string) error {
 		return err
 	}
 
-	// detect the network status every 30 Minutes
-	// TODO: only trigger it when network is changed
-	go func() {
-		c := cron.New()
-		_ = c.AddFunc("@every 30m", func() {
-			_ = hr.UpdateNetwork(ctx, byoHost)
-		})
-		c.Start()
-	}()
-
 	// run it at startup
 	return hr.UpdateNetwork(ctx, byoHost)
 }
@@ -56,16 +46,18 @@ func (hr HostRegistrar) UpdateNetwork(ctx context.Context, byoHost *infrastructu
 	}
 
 	byoHost.Status.Network = hr.GetNetworkStatus()
-	byoHost.Status.Addresses = []string{}
-	for _, netStatus := range byoHost.Status.Network {
-		byoHost.Status.Addresses = append(byoHost.Status.Addresses, netStatus.IPAddrs...)
-	}
 
 	return helper.Patch(ctx, byoHost)
 }
 
 func (hr HostRegistrar) GetNetworkStatus() []infrastructurev1alpha4.NetworkStatus {
 	Network := []infrastructurev1alpha4.NetworkStatus{}
+
+	defaultIP, err := gateway.DiscoverInterface()
+	if err != nil {
+		return Network
+	}
+
 	ifaces, err := net.Interfaces()
 	if err != nil {
 		return Network
@@ -86,11 +78,19 @@ func (hr HostRegistrar) GetNetworkStatus() []infrastructurev1alpha4.NetworkStatu
 
 		netStatus.NetworkName = iface.Name
 		for _, addr := range addrs {
+			var ip net.IP
+			switch v := addr.(type) {
+			case *net.IPNet:
+					ip = v.IP
+			case *net.IPAddr:
+					ip = v.IP
+			}
+			if ip.String() == defaultIP.String() {
+				netStatus.IsDefault = true
+			}
 			netStatus.IPAddrs = append(netStatus.IPAddrs, addr.String())
 		}
-
 		Network = append(Network, netStatus)
 	}
-
 	return Network
 }
