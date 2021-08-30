@@ -115,4 +115,9 @@ runCmd:
 		Expect(err).ToNot(HaveOccurred())
 		Expect(string(fileContents)).To(Equal(fileContent))
 	})
+
+	AfterEach(func() {
+		err := os.RemoveAll(workDir)
+		Expect(err).ToNot(HaveOccurred())
+	})
 })
