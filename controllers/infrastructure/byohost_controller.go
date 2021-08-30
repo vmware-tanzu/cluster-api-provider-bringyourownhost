@@ -21,7 +21,6 @@ import (
 
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
-	"sigs.k8s.io/cluster-api/api/v1alpha4"
 	clusterv1 "sigs.k8s.io/cluster-api/api/v1alpha4"
 	"sigs.k8s.io/cluster-api/util/annotations"
 	"sigs.k8s.io/cluster-api/util/conditions"
@@ -75,14 +74,14 @@ func (r *ByoHostReconciler) Reconcile(ctx context.Context, req ctrl.Request) (_ 
 	if annotations.HasPausedAnnotation(byoHost) {
 		logger.Info("The related byoMachine or linked Cluster is marked as paused. Won't reconcile")
 		// TODO: conditions are handled both here and in agent reconciler
-		conditions.MarkFalse(byoHost, infrastructurev1alpha4.K8sNodeBootstrapSucceeded, infrastructurev1alpha4.ClusterOrResourcePausedReason, v1alpha4.ConditionSeverityInfo, "")
+		conditions.MarkFalse(byoHost, infrastructurev1alpha4.K8sNodeBootstrapSucceeded, infrastructurev1alpha4.ClusterOrResourcePausedReason, clusterv1.ConditionSeverityInfo, "")
 		return ctrl.Result{}, nil
 	}
 
 	if byoHost.Status.MachineRef == nil {
 		logger.Info("Machine ref not yet set")
 		// TODO: conditions are handled both here and in agent reconciler
-		conditions.MarkFalse(byoHost, infrastructurev1alpha4.K8sNodeBootstrapSucceeded, infrastructurev1alpha4.WaitingForMachineRefReason, v1alpha4.ConditionSeverityInfo, "")
+		conditions.MarkFalse(byoHost, infrastructurev1alpha4.K8sNodeBootstrapSucceeded, infrastructurev1alpha4.WaitingForMachineRefReason, clusterv1.ConditionSeverityInfo, "")
 		return ctrl.Result{}, nil
 	}
 

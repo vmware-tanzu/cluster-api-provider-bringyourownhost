@@ -48,7 +48,6 @@ import (
 const (
 	providerIDPrefix       = "byoh://"
 	providerIDSuffixLength = 6
-	hostMachineRefIndex    = "status.machineref"
 )
 
 // ByoMachineReconciler reconciles a ByoMachine object
