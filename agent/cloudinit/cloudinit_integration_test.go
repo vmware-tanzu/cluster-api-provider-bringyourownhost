@@ -33,7 +33,7 @@ var _ = Describe("CloudinitIntegration", func() {
 
 	It("should be able to write files and execute commands", func() {
 		fileName := path.Join(workDir, "file-1.txt")
-		const fileOriginContent = "some-content-1"
+		fileOriginContent := "some-content-1"
 		fileNewContent := " run cmd"
 
 		cloudInitScript := fmt.Sprintf(`write_files:
@@ -52,7 +52,7 @@ runCmd:
 
 	It("should be able to write files with the correct permissions and in append mode", func() {
 		fileName := path.Join(workDir, "file-2.txt")
-		const fileOriginContent = "some-content-2"
+		fileOriginContent := "some-content-2"
 		fileAppendContent := "some-content-append-2"
 		filePermission := 0777
 		isAppend := true
