@@ -2,7 +2,7 @@
 SHELL:=/usr/bin/env bash
 
 # Define registries
-STAGING_REGISTRY ?= gcr.io/k8s-staging-cluster-api
+STAGING_REGISTRY ?= projects.registry.vmware.com/cluster_api_provider_byoh
 
 IMAGE_NAME ?= caph-manager
 TAG ?= dev
