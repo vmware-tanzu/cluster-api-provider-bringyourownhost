@@ -20,11 +20,6 @@ import (
 	"context"
 
 	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/apimachinery/pkg/types"
-	clusterv1 "sigs.k8s.io/cluster-api/api/v1alpha4"
-	"sigs.k8s.io/cluster-api/util/annotations"
-	"sigs.k8s.io/cluster-api/util/conditions"
-	"sigs.k8s.io/cluster-api/util/patch"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/log"
@@ -52,54 +47,7 @@ type ByoHostReconciler struct {
 // For more details, check Reconcile and its Result here:
 // - https://pkg.go.dev/sigs.k8s.io/controller-runtime@v0.8.3/pkg/reconcile
 func (r *ByoHostReconciler) Reconcile(ctx context.Context, req ctrl.Request) (_ ctrl.Result, reterr error) {
-	logger := log.FromContext(ctx)
-
-	// Fetch the ByoHost instance.
-	byoHost := &infrastructurev1alpha4.ByoHost{}
-	err := r.Client.Get(ctx, req.NamespacedName, byoHost)
-	if err != nil {
-		logger.Error(err, "error getting ByoHost %s in namespace %s", req.NamespacedName.Namespace, req.NamespacedName.Name)
-		return ctrl.Result{}, err
-	}
-
-	helper, _ := patch.NewHelper(byoHost, r.Client)
-	defer func() {
-		if err = helper.Patch(ctx, byoHost); err != nil && reterr == nil {
-			logger.Error(err, "failed to patch byohost")
-			reterr = err
-		}
-	}()
-
-	// Return early if the object is paused.
-	if annotations.HasPausedAnnotation(byoHost) {
-		logger.Info("The related byoMachine or linked Cluster is marked as paused. Won't reconcile")
-		// TODO: conditions are handled both here and in agent reconciler
-		conditions.MarkFalse(byoHost, infrastructurev1alpha4.K8sNodeBootstrapSucceeded, infrastructurev1alpha4.ClusterOrResourcePausedReason, clusterv1.ConditionSeverityInfo, "")
-		return ctrl.Result{}, nil
-	}
-
-	if byoHost.Status.MachineRef == nil {
-		logger.Info("Machine ref not yet set")
-		// TODO: conditions are handled both here and in agent reconciler
-		conditions.MarkFalse(byoHost, infrastructurev1alpha4.K8sNodeBootstrapSucceeded, infrastructurev1alpha4.WaitingForMachineRefReason, clusterv1.ConditionSeverityInfo, "")
-		return ctrl.Result{}, nil
-	}
-
-	byoMachine := infrastructurev1alpha4.ByoMachine{}
-	err = r.Client.Get(ctx,
-		types.NamespacedName{Namespace: byoHost.Status.MachineRef.Namespace, Name: byoHost.Status.MachineRef.Name},
-		&byoMachine)
-	if err != nil {
-		// TODO: ByoMachine could get deleted
-		logger.Error(err, "Byomachine does not exist Namespace:%s Name:%s", byoHost.Status.MachineRef.Namespace, byoHost.Status.MachineRef.Name)
-	}
-	// Set the cluster Label
-	labels := byoHost.Labels
-	if labels == nil {
-		labels = make(map[string]string)
-	}
-	labels[clusterv1.ClusterLabelName] = byoMachine.Labels[clusterv1.ClusterLabelName]
-	byoHost.Labels = labels
+	_ = log.FromContext(ctx)
 	return ctrl.Result{}, nil
 }
 

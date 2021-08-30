@@ -204,6 +204,13 @@ func (r ByoMachineReconciler) reconcileNormal(ctx context.Context, byoMachine *i
 		Name:       byoMachine.Name,
 		UID:        byoMachine.UID,
 	}
+	// Set the cluster Label
+	labels := host.Labels
+	if labels == nil {
+		labels = make(map[string]string)
+	}
+	labels[clusterv1.ClusterLabelName] = byoMachine.Labels[clusterv1.ClusterLabelName]
+	host.Labels = labels
 
 	if machine.Spec.Bootstrap.DataSecretName == nil {
 		logger.Info("Bootstrap secret not ready")
