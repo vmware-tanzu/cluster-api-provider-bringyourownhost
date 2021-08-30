@@ -56,7 +56,7 @@ run-test:
 	source ./scripts/fetch_ext_bins.sh; fetch_tools; setup_envs; go test `go list ./... | grep -v test/e2e` -coverprofile cover.out
 
 agent-test:
-	source ./scripts/fetch_ext_bins.sh; fetch_tools; setup_envs; ginkgo agent -coverprofile cover.out
+	source ./scripts/fetch_ext_bins.sh; fetch_tools; setup_envs; ginkgo -r agent -coverprofile cover.out
 
 controller-test:
 	source ./scripts/fetch_ext_bins.sh; fetch_tools; setup_envs; ginkgo controllers/infrastructure -coverprofile cover.out
