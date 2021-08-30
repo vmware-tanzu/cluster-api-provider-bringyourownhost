@@ -10,9 +10,7 @@ import (
 	"sigs.k8s.io/cluster-api/util/conditions"
 	"sigs.k8s.io/cluster-api/util/patch"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	"sigs.k8s.io/controller-runtime/pkg/event"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
-	"sigs.k8s.io/controller-runtime/pkg/predicate"
 
 	"github.com/vmware-tanzu/cluster-api-provider-byoh/agent/cloudinit"
 	infrastructurev1alpha4 "github.com/vmware-tanzu/cluster-api-provider-byoh/apis/infrastructure/v1alpha4"
@@ -48,6 +46,14 @@ func (r HostReconciler) Reconcile(ctx context.Context, req ctrl.Request) (_ ctrl
 		return ctrl.Result{}, nil
 	}
 
+	// Handle deleted machines
+	if !byoHost.ObjectMeta.DeletionTimestamp.IsZero() {
+		return r.reconcileDelete(ctx, byoHost)
+	}
+	return r.reconcileNormal(ctx, byoHost)
+}
+
+func (r *HostReconciler) reconcileNormal(ctx context.Context, byoHost *infrastructurev1alpha4.ByoHost) (ctrl.Result, error) {
 	if byoHost.Status.MachineRef == nil {
 		klog.Info("Machine ref not yet set")
 		conditions.MarkFalse(byoHost, infrastructurev1alpha4.K8sNodeBootstrapSucceeded, infrastructurev1alpha4.WaitingForMachineRefReason, v1alpha4.ConditionSeverityInfo, "")
@@ -80,6 +86,12 @@ func (r HostReconciler) Reconcile(ctx context.Context, req ctrl.Request) (_ ctrl
 	return ctrl.Result{}, nil
 }
 
+func (r *HostReconciler) reconcileDelete(ctx context.Context, byoHost *infrastructurev1alpha4.ByoHost) (ctrl.Result, error) {
+	// TODO: add logic when this host has MachineRef assigned
+
+	return ctrl.Result{}, nil
+}
+
 func (r HostReconciler) getBootstrapScript(ctx context.Context, dataSecretName, namespace string) (string, error) {
 	secret := &corev1.Secret{}
 	err := r.Client.Get(ctx, types.NamespacedName{Name: dataSecretName, Namespace: namespace}, secret)
@@ -94,12 +106,5 @@ func (r HostReconciler) getBootstrapScript(ctx context.Context, dataSecretName, 
 func (r HostReconciler) SetupWithManager(mgr manager.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&infrastructurev1alpha4.ByoHost{}).
-		WithEventFilter(predicate.Funcs{
-			// TODO will need to remove this and
-			// will be handled with delete stories
-			DeleteFunc: func(e event.DeleteEvent) bool {
-				return false
-			},
-		}).
 		Complete(r)
 }
