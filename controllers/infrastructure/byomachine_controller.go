@@ -131,12 +131,6 @@ func (r *ByoMachineReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 		}
 		conditions.MarkFalse(byoMachine, infrav1.BYOHostReady, infrav1.ClusterOrResourcePausedReason, clusterv1.ConditionSeverityInfo, "")
 		return ctrl.Result{}, nil
-	} else if len(byoMachine.Spec.ProviderID) > 0 {
-		// if there is already byohost associated with it, make sure the paused status of byohost is false
-		if err = r.setPausedConditionForByoHost(ctx, byoMachine.Spec.ProviderID, req.Namespace, false); err != nil {
-			logger.Error(err, "Set resume flag for byohost failed")
-			return ctrl.Result{}, err
-		}
 	}
 
 	// Handle deleted machines
@@ -159,6 +153,15 @@ func (r ByoMachineReconciler) reconcileNormal(ctx context.Context, byoMachine *i
 
 	// TODO: Uncomment below line when we have tests for byomachine delete
 	//	controllerutil.AddFinalizer(byoMachine, infrav1.MachineFinalizer)
+
+	// TODO: Remove the below check after refactoring setting of Pause annotation on byoHost
+	if len(byoMachine.Spec.ProviderID) > 0 {
+		// if there is already byohost associated with it, make sure the paused status of byohost is false
+		if err := r.setPausedConditionForByoHost(ctx, byoMachine.Spec.ProviderID, byoMachine.Namespace, false); err != nil {
+			logger.Error(err, "Set resume flag for byohost failed")
+			return ctrl.Result{}, err
+		}
+	}
 
 	if !cluster.Status.InfrastructureReady {
 		logger.Info("Cluster infrastructure is not ready yet")
