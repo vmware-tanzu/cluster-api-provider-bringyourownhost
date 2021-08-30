@@ -77,13 +77,6 @@ spec:
           status:
             description: ByoHostStatus defines the observed state of ByoHost
             properties:
-              addresses:
-                description: Addresses is a list of the host's IP addresses. This
-                  field is required at runtime for other controllers that read this
-                  CRD as unstructured data.
-                items:
-                  type: string
-                type: array
               conditions:
                 description: Conditions defines current service state of the BYOMachine.
                 items:
@@ -182,6 +175,10 @@ spec:
                       items:
                         type: string
                       type: array
+                    isDefault:
+                      description: IsDefault is a flag that indicates whether this
+                        interface name is where the default gateway sit on.
+                      type: boolean
                     macAddr:
                       description: MACAddr is the MAC address of the network device.
                       type: string

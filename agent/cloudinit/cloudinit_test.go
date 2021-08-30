@@ -54,11 +54,11 @@ runCmd:
 		It("should write files successfully", func() {
 			fileDir1 := path.Join(workDir, "dir1")
 			fileName1 := path.Join(fileDir1, "file1.txt")
-			fileContent1 := "some-content-1"
+			fileContent1 := "some-unique-content-1"
 
 			fileDir2 := path.Join(workDir, "dir2")
 			fileName2 := path.Join(fileDir2, "file2.txt")
-			fileContent2 := "some-content-2"
+			fileContent2 := "some-uniqie-content-2"
 			fileBase64Content := base64.StdEncoding.EncodeToString([]byte(fileContent2))
 			permissions := "0777"
 			encoding := "base64"

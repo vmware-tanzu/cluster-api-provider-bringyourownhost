@@ -69,7 +69,7 @@ var _ = Describe("FileWriter", func() {
 	})
 
 	It("Should append content to file when append mode is enabled", func() {
-		fileOriginContent := "some-content-1"
+		fileOriginContent := "some-file-content-1"
 		file := Files{
 			Path:        path.Join(workDir, "file3.txt"),
 			Encoding:    "",
