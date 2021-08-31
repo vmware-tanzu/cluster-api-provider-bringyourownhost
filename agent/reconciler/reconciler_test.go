@@ -38,7 +38,6 @@ var _ = Describe("Byohost Agent Tests", func() {
 		})
 
 		It("should set the Reason to ClusterOrResourcePausedReason", func() {
-			byoHost := byoHost.DeepCopy()
 			annotations.AddAnnotations(byoHost, map[string]string{
 				clusterv1.PausedAnnotation: "paused",
 			})
@@ -66,8 +65,6 @@ var _ = Describe("Byohost Agent Tests", func() {
 		})
 
 		It("should set the Reason to WaitingForMachineRefReason", func() {
-			byoHostLookupKey := types.NamespacedName{Name: hostName, Namespace: ns}
-
 			result, reconcilerErr := reconciler.Reconcile(ctx, controllerruntime.Request{
 				NamespacedName: byoHostLookupKey,
 			})
@@ -89,7 +86,6 @@ var _ = Describe("Byohost Agent Tests", func() {
 		})
 
 		It("should set the Reason to BootstrapDataSecretUnavailableReason", func() {
-			byoHost := byoHost.DeepCopy()
 			byoMachine := common.NewByoMachine("test-byomachine", ns, "", nil)
 			Expect(k8sClient.Create(ctx, byoMachine)).NotTo(HaveOccurred(), "failed to create byomachine")
 
@@ -103,8 +99,6 @@ var _ = Describe("Byohost Agent Tests", func() {
 				APIVersion: byoHost.APIVersion,
 			}
 			Expect(patchHelper.Patch(ctx, byoHost, patch.WithStatusObservedGeneration{})).NotTo(HaveOccurred())
-
-			byoHostLookupKey := types.NamespacedName{Name: hostName, Namespace: ns}
 
 			result, reconcilerErr := reconciler.Reconcile(ctx, controllerruntime.Request{
 				NamespacedName: byoHostLookupKey,
@@ -129,7 +123,7 @@ var _ = Describe("Byohost Agent Tests", func() {
 		})
 
 		It("should set the Reason to CloudInitExecutionFailedReason", func() {
-			byoHost := byoHost.DeepCopy()
+			//	byoHost := byoHost.DeepCopy()
 
 			byoMachine := common.NewByoMachine("test-byomachine", ns, "", nil)
 			Expect(k8sClient.Create(ctx, byoMachine)).NotTo(HaveOccurred(), "failed to create byomachine")

@@ -119,4 +119,3 @@ issues:
       linters:
         - dupl
         - gosec
-        - govet
