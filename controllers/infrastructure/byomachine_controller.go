@@ -34,10 +34,8 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
-	"sigs.k8s.io/controller-runtime/pkg/event"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/log"
-	"sigs.k8s.io/controller-runtime/pkg/predicate"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 	"sigs.k8s.io/controller-runtime/pkg/source"
 
@@ -155,9 +153,8 @@ func (r ByoMachineReconciler) reconcileDelete(ctx context.Context, byoMachine *i
 
 func (r ByoMachineReconciler) reconcileNormal(ctx context.Context, byoMachine *infrav1.ByoMachine, cluster *clusterv1.Cluster, machine *clusterv1.Machine) (reconcile.Result, error) {
 	logger := log.FromContext(ctx).WithValues("namespace", byoMachine.Namespace, "BYOMachine", byoMachine.Name)
-
 	// TODO: Uncomment below line when we have tests for byomachine delete
-	//	controllerutil.AddFinalizer(byoMachine, infrav1.MachineFinalizer)
+	controllerutil.AddFinalizer(byoMachine, infrav1.MachineFinalizer)
 
 	// TODO: Remove the below check after refactoring setting of Pause annotation on byoHost
 	if len(byoMachine.Spec.ProviderID) > 0 {
@@ -262,13 +259,6 @@ func (r *ByoMachineReconciler) SetupWithManager(mgr ctrl.Manager) error {
 			&source.Kind{Type: &clusterv1.Machine{}},
 			handler.EnqueueRequestsFromMapFunc(util.MachineToInfrastructureMapFunc(controlledTypeGVK)),
 		).
-		WithEventFilter(predicate.Funcs{
-			// TODO will need to remove this and
-			// will be handled with delete stories
-			DeleteFunc: func(e event.DeleteEvent) bool {
-				return false
-			},
-		}).
 		Complete(r)
 }
 
@@ -278,6 +268,7 @@ func (r *ByoMachineReconciler) setNodeProviderID(ctx context.Context, remoteClie
 	node := &corev1.Node{}
 	key := client.ObjectKey{Name: host.Name, Namespace: host.Namespace}
 	err := remoteClient.Get(ctx, key, node)
+
 	if err != nil {
 		return err
 	}
