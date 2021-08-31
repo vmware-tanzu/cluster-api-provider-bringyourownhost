@@ -20,10 +20,12 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"reflect"
 	"strings"
 
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/selection"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/cluster-api/controllers/remote"
@@ -34,9 +36,11 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"sigs.k8s.io/controller-runtime/pkg/event"
+	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
+	"sigs.k8s.io/controller-runtime/pkg/source"
 
 	"github.com/go-logr/logr"
 	infrav1 "github.com/vmware-tanzu/cluster-api-provider-byoh/apis/infrastructure/v1alpha4"
@@ -192,8 +196,23 @@ func (r ByoMachineReconciler) reconcileNormal(ctx context.Context, byoMachine *i
 
 // SetupWithManager sets up the controller with the Manager.
 func (r *ByoMachineReconciler) SetupWithManager(mgr ctrl.Manager) error {
+	var (
+		controlledType     = &infrav1.ByoMachine{}
+		controlledTypeName = reflect.TypeOf(controlledType).Elem().Name()
+		controlledTypeGVK  = infrav1.GroupVersion.WithKind(controlledTypeName)
+	)
+
 	return ctrl.NewControllerManagedBy(mgr).
-		For(&infrav1.ByoMachine{}).
+		For(controlledType).
+		Watches(
+			&source.Kind{Type: &infrav1.ByoHost{}},
+			handler.EnqueueRequestsFromMapFunc(ByoHostToByoMachineMapFunc(controlledTypeGVK)),
+		).
+		// Watch the CAPI resource that owns this infrastructure resource.
+		Watches(
+			&source.Kind{Type: &clusterv1.Machine{}},
+			handler.EnqueueRequestsFromMapFunc(util.MachineToInfrastructureMapFunc(controlledTypeGVK)),
+		).
 		WithEventFilter(predicate.Funcs{
 			// TODO will need to remove this and
 			// will be handled with delete stories
@@ -348,4 +367,35 @@ func (r *ByoMachineReconciler) attachByoHost(ctx context.Context, logger logr.Lo
 
 	conditions.MarkTrue(byoMachine, infrav1.BYOHostReady)
 	return ctrl.Result{}, err
+}
+
+// MachineToInfrastructureMapFunc returns a handler.ToRequestsFunc that watches for
+// Machine events and returns reconciliation requests for an infrastructure provider object.
+func ByoHostToByoMachineMapFunc(gvk schema.GroupVersionKind) handler.MapFunc {
+	return func(o client.Object) []reconcile.Request {
+		h, ok := o.(*infrav1.ByoHost)
+		if !ok {
+			return nil
+		}
+		if h.Status.MachineRef == nil {
+			// TODO, we can enqueue byomachine which provideID is nil to get better performance than requeue
+			return nil
+		}
+
+		gk := gvk.GroupKind()
+		// Return early if the GroupKind doesn't match what we expect.
+		byomachineGK := h.Status.MachineRef.GroupVersionKind().GroupKind()
+		if gk != byomachineGK {
+			return nil
+		}
+
+		return []reconcile.Request{
+			{
+				NamespacedName: client.ObjectKey{
+					Namespace: h.Status.MachineRef.Namespace,
+					Name:      h.Status.MachineRef.Name,
+				},
+			},
+		}
+	}
 }
