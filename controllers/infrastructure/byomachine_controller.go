@@ -38,6 +38,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
+	"github.com/go-logr/logr"
 	infrav1 "github.com/vmware-tanzu/cluster-api-provider-byoh/apis/infrastructure/v1alpha4"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -177,75 +178,14 @@ func (r ByoMachineReconciler) reconcileNormal(ctx context.Context, byoMachine *i
 		return reconcile.Result{}, errors.New("bootstrap data secret not available yet")
 	}
 
-	hostsList := &infrav1.ByoHostList{}
-	// LabelSelector filter for byohosts
-	byohostLabels, _ := labels.NewRequirement(clusterv1.ClusterLabelName, selection.DoesNotExist, nil)
-	selector := labels.NewSelector().Add(*byohostLabels)
-	err := r.Client.List(ctx, hostsList, &client.ListOptions{LabelSelector: selector})
-	if err != nil {
-		logger.Error(err, "failed to list byohosts")
-		return ctrl.Result{}, err
+	// If there is not yet an byoHost for this byoMachine,
+	// then pick one from the host capacity pool.
+	if byoMachine.Spec.ProviderID == "" {
+		logger.Info("Attempting host reservation")
+		if res, err := r.attachByoHost(ctx, logger, machine, byoMachine); err != nil || !res.IsZero() {
+			return res, err
+		}
 	}
-
-	if len(hostsList.Items) == 0 {
-		logger.Info("No hosts found, waiting..")
-		conditions.MarkFalse(byoMachine, infrav1.BYOHostReady, infrav1.BYOHostsUnavailableReason, clusterv1.ConditionSeverityInfo, "")
-		return ctrl.Result{}, errors.New("no hosts found")
-	}
-	// TODO- Needs smarter logic
-	host := hostsList.Items[0]
-
-	byohostHelper, _ := patch.NewHelper(&host, r.Client)
-
-	host.Status.MachineRef = &corev1.ObjectReference{
-		APIVersion: byoMachine.APIVersion,
-		Kind:       byoMachine.Kind,
-		Namespace:  byoMachine.Namespace,
-		Name:       byoMachine.Name,
-		UID:        byoMachine.UID,
-	}
-	// Set the cluster Label
-	labels := host.Labels
-	if labels == nil {
-		labels = make(map[string]string)
-	}
-	labels[clusterv1.ClusterLabelName] = byoMachine.Labels[clusterv1.ClusterLabelName]
-	host.Labels = labels
-
-	if machine.Spec.Bootstrap.DataSecretName == nil {
-		logger.Info("Bootstrap secret not ready")
-		return ctrl.Result{}, errors.New("bootstrap secret not ready")
-	}
-
-	host.Spec.BootstrapSecret = &corev1.ObjectReference{
-		Kind:      "Secret",
-		Namespace: byoMachine.Namespace,
-		Name:      *machine.Spec.Bootstrap.DataSecretName,
-	}
-
-	err = byohostHelper.Patch(ctx, &host)
-	if err != nil {
-		logger.Error(err, "failed to patch byohost")
-		return ctrl.Result{}, err
-	}
-
-	providerID := fmt.Sprintf("%s%s/%s", providerIDPrefix, host.Name, util.RandomString(providerIDSuffixLength))
-	remoteClient, err := r.getRemoteClient(ctx, byoMachine)
-	if err != nil {
-		logger.Error(err, "failed to get remote client")
-		return ctrl.Result{}, err
-	}
-
-	err = r.setNodeProviderID(ctx, remoteClient, &host, providerID)
-	if err != nil {
-		logger.Error(err, "failed to set node providerID")
-		return ctrl.Result{}, err
-	}
-
-	byoMachine.Spec.ProviderID = providerID
-	byoMachine.Status.Ready = true
-
-	conditions.MarkTrue(byoMachine, infrav1.BYOHostReady)
 
 	return ctrl.Result{}, nil
 }
@@ -334,4 +274,78 @@ func (r *ByoMachineReconciler) setPausedConditionForByoHost(ctx context.Context,
 	}
 
 	return helper.Patch(ctx, byoHost)
+}
+
+func (r *ByoMachineReconciler) attachByoHost(ctx context.Context, logger logr.Logger, machine *clusterv1.Machine, byoMachine *infrav1.ByoMachine) (ctrl.Result, error) {
+	hostsList := &infrav1.ByoHostList{}
+	// LabelSelector filter for byohosts
+	byohostLabels, _ := labels.NewRequirement(clusterv1.ClusterLabelName, selection.DoesNotExist, nil)
+	selector := labels.NewSelector().Add(*byohostLabels)
+	err := r.Client.List(ctx, hostsList, &client.ListOptions{LabelSelector: selector})
+	if err != nil {
+		logger.Error(err, "failed to list byohosts")
+		return ctrl.Result{}, err
+	}
+	if len(hostsList.Items) == 0 {
+		logger.Info("No hosts found, waiting..")
+		conditions.MarkFalse(byoMachine, infrav1.BYOHostReady, infrav1.BYOHostsUnavailableReason, clusterv1.ConditionSeverityInfo, "")
+		return ctrl.Result{}, errors.New("no hosts found")
+	}
+	// TODO- Needs smarter logic
+	host := hostsList.Items[0]
+
+	byohostHelper, err := patch.NewHelper(&host, r.Client)
+	if err != nil {
+		logger.Error(err, "Creating patch helper failed")
+	}
+
+	host.Status.MachineRef = &corev1.ObjectReference{
+		APIVersion: byoMachine.APIVersion,
+		Kind:       byoMachine.Kind,
+		Namespace:  byoMachine.Namespace,
+		Name:       byoMachine.Name,
+		UID:        byoMachine.UID,
+	}
+	// Set the cluster Label
+	labels := host.Labels
+	if labels == nil {
+		labels = make(map[string]string)
+	}
+	labels[clusterv1.ClusterLabelName] = byoMachine.Labels[clusterv1.ClusterLabelName]
+	host.Labels = labels
+
+	if machine.Spec.Bootstrap.DataSecretName == nil {
+		logger.Info("Bootstrap secret not ready")
+		return ctrl.Result{}, errors.New("bootstrap secret not ready")
+	}
+
+	host.Spec.BootstrapSecret = &corev1.ObjectReference{
+		Kind:      "Secret",
+		Namespace: byoMachine.Namespace,
+		Name:      *machine.Spec.Bootstrap.DataSecretName,
+	}
+
+	err = byohostHelper.Patch(ctx, &host)
+	if err != nil {
+		logger.Error(err, "failed to patch byohost")
+		return ctrl.Result{}, err
+	}
+	providerID := fmt.Sprintf("%s%s/%s", providerIDPrefix, host.Name, util.RandomString(providerIDSuffixLength))
+	remoteClient, err := r.getRemoteClient(ctx, byoMachine)
+	if err != nil {
+		logger.Error(err, "failed to get remote client")
+		return ctrl.Result{}, err
+	}
+
+	err = r.setNodeProviderID(ctx, remoteClient, &host, providerID)
+	if err != nil {
+		logger.Error(err, "failed to set node providerID")
+		return ctrl.Result{}, err
+	}
+
+	byoMachine.Spec.ProviderID = providerID
+	byoMachine.Status.Ready = true
+
+	conditions.MarkTrue(byoMachine, infrav1.BYOHostReady)
+	return ctrl.Result{}, err
 }
