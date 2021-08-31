@@ -310,12 +310,9 @@ var _ = Describe("Controllers/ByomachineController", func() {
 			byoHost2.Labels = map[string]string{clusterv1.ClusterLabelName: capiCluster.Name}
 			Expect(ph.Patch(ctx, byoHost2, patch.WithStatusObservedGeneration{})).Should(Succeed())
 
-			createdByoHost2 := &infrastructurev1alpha4.ByoHost{}
-			err = k8sClient.Get(ctx, types.NamespacedName{Namespace: defaultNamespace, Name: defaultByoHostName + "-1"}, createdByoHost2)
-
 			byoMachineLookupKey := types.NamespacedName{Name: byoMachine.Name, Namespace: byoMachine.Namespace}
 			createdByoMachine := &infrastructurev1alpha4.ByoMachine{}
-			byoHostLookupKey := types.NamespacedName{Name: defaultByoHostName, Namespace: defaultNamespace}
+			byoHostLookupKey := types.NamespacedName{Name: byoHost1.Name, Namespace: defaultNamespace}
 
 			Eventually(func() bool {
 				createdByoHost := &infrastructurev1alpha4.ByoHost{}
