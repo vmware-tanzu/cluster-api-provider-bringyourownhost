@@ -157,7 +157,7 @@ var _ = Describe("Controllers/ByomachineController/Unitests", func() {
 			})
 			Expect(err).NotTo(HaveOccurred(), "failed creating machineScope")
 
-			reconciler := &ByoMachineReconciler{
+			reconciler = &ByoMachineReconciler{
 				Client:  k8sClient,
 				Scheme:  &runtime.Scheme{},
 				Tracker: &remote.ClusterCacheTracker{},
