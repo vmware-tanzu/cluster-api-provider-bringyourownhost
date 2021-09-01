@@ -22,6 +22,7 @@ import (
 	"fmt"
 	"reflect"
 	"strings"
+	"time"
 
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -146,7 +147,7 @@ func (r *ByoMachineReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 		return ctrl.Result{}, err
 	}
 
-	refByoHost := &infrav1.ByoHost{}
+	var refByoHost *infrav1.ByoHost
 	for _, byoHost := range allHosts.Items {
 		if byoHost.Status.MachineRef != nil && (byoHost.Status.MachineRef.Name == byoMachine.Name && byoHost.Status.MachineRef.Namespace == byoMachine.Namespace) {
 			refByoHost = &byoHost
@@ -391,7 +392,7 @@ func (r *ByoMachineReconciler) attachByoHost(ctx context.Context, logger logr.Lo
 	err = r.setNodeProviderID(ctx, remoteClient, &host, providerID)
 	if err != nil {
 		logger.Error(err, "failed to set node providerID")
-		return ctrl.Result{}, err
+		return ctrl.Result{RequeueAfter: time.Second * 10}, err
 	}
 
 	byoMachine.Spec.ProviderID = providerID
@@ -449,6 +450,8 @@ func (r *ByoMachineReconciler) removeHostReservation(ctx context.Context, machin
 
 	// Remove host reservation.
 	machineScope.ByoHost.Status.MachineRef = nil
+
+	// TODO: Remove cluster-label on byohost
 
 	// Remove the cleanup annotation
 	delete(machineScope.ByoHost.Annotations, hostCleanupAnnotation)

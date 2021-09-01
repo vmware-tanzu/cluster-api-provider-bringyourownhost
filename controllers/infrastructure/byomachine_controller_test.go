@@ -322,7 +322,7 @@ var _ = Describe("Controllers/ByomachineController", func() {
 					return false
 				}
 				if createdByoHost.Status.MachineRef != nil {
-					if createdByoHost.Status.MachineRef.Namespace == defaultNamespace && createdByoHost.Status.MachineRef.Name == defaultByoMachineName {
+					if createdByoHost.Status.MachineRef.Namespace == defaultNamespace && createdByoHost.Status.MachineRef.Name == byoMachine.Name {
 						return true
 					}
 				}
