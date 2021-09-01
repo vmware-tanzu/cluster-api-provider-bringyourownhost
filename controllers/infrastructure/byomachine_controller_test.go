@@ -13,6 +13,7 @@ import (
 	"sigs.k8s.io/cluster-api/util/annotations"
 	"sigs.k8s.io/cluster-api/util/conditions"
 	"sigs.k8s.io/cluster-api/util/patch"
+	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 )
 
 var _ = Describe("Controllers/ByomachineController", func() {
@@ -32,9 +33,6 @@ var _ = Describe("Controllers/ByomachineController", func() {
 
 		BeforeEach(func() {
 			ctx = context.Background()
-		})
-
-		It("should mark BYOHostReady as False when BYOHosts are not available", func() {
 			machine = common.NewMachine(defaultMachineName, defaultNamespace, defaultClusterName)
 			machine.Spec.Bootstrap = clusterv1.Bootstrap{
 				DataSecretName: &fakeBootstrapSecret,
@@ -43,7 +41,9 @@ var _ = Describe("Controllers/ByomachineController", func() {
 
 			byoMachine = common.NewByoMachine(defaultByoMachineName, defaultNamespace, defaultClusterName, machine)
 			Expect(k8sClient.Create(ctx, byoMachine)).Should(Succeed())
+		})
 
+		It("should mark BYOHostReady as False when BYOHosts are not available", func() {
 			byoMachineLookupKey := types.NamespacedName{Name: byoMachine.Name, Namespace: byoMachine.Namespace}
 
 			expectedCondition = &testConditions{
@@ -92,19 +92,20 @@ var _ = Describe("Controllers/ByomachineController", func() {
 
 		BeforeEach(func() {
 			ctx = context.Background()
+			machine = common.NewMachine(defaultMachineName, defaultNamespace, defaultClusterName)
+			machine.Spec.Bootstrap = clusterv1.Bootstrap{
+				DataSecretName: &fakeBootstrapSecret,
+			}
+			Expect(k8sClient.Create(ctx, machine)).Should(Succeed())
+
+			byoMachine = common.NewByoMachine(defaultByoMachineName, defaultNamespace, defaultClusterName, machine)
+			Expect(k8sClient.Create(ctx, byoMachine)).Should(Succeed())
+
 			byoHost = common.NewByoHost(defaultByoHostName, defaultNamespace, nil)
 			Expect(k8sClient.Create(ctx, byoHost)).Should(Succeed())
 		})
 
 		It("claims the first available host", func() {
-			machine = common.NewMachine(defaultMachineName, defaultNamespace, defaultClusterName)
-			machine.Spec.Bootstrap = clusterv1.Bootstrap{
-				DataSecretName: &fakeBootstrapSecret,
-			}
-
-			Expect(k8sClient.Create(ctx, machine)).Should(Succeed())
-			byoMachine = common.NewByoMachine(defaultByoMachineName, defaultNamespace, defaultClusterName, machine)
-			Expect(k8sClient.Create(ctx, byoMachine)).Should(Succeed())
 			byoHostLookupKey := types.NamespacedName{Name: byoHost.Name, Namespace: byoHost.Namespace}
 
 			By("setting cluster.Status.InfrastructureReady to True")
@@ -120,14 +121,14 @@ var _ = Describe("Controllers/ByomachineController", func() {
 					return false
 				}
 				if createdByoHost.Status.MachineRef != nil {
-					if createdByoHost.Status.MachineRef.Namespace == defaultNamespace && createdByoHost.Status.MachineRef.Name == defaultByoMachineName {
+					if createdByoHost.Status.MachineRef.Namespace == defaultNamespace && createdByoHost.Status.MachineRef.Name == byoMachine.Name {
 						return true
 					}
 				}
 				return false
 			}).Should(BeTrue())
 
-			byoMachineLookupkey := types.NamespacedName{Name: defaultByoMachineName, Namespace: defaultNamespace}
+			byoMachineLookupkey := types.NamespacedName{Name: byoMachine.Name, Namespace: defaultNamespace}
 			createdByoMachine := &infrastructurev1alpha4.ByoMachine{}
 
 			Eventually(func() string {
@@ -189,6 +190,7 @@ var _ = Describe("Controllers/ByomachineController", func() {
 		)
 		BeforeEach(func() {
 			ctx = context.Background()
+
 			machine = common.NewMachine(defaultMachineName, defaultNamespace, defaultClusterName)
 			Expect(k8sClient.Create(ctx, machine)).Should(Succeed())
 
@@ -198,8 +200,18 @@ var _ = Describe("Controllers/ByomachineController", func() {
 
 		})
 
+		It("should add MachineFinalizer on ByoMachine", func() {
+			createdByoMachine := &infrastructurev1alpha4.ByoMachine{}
+			Eventually(func() bool {
+				err := k8sClient.Get(ctx, byoMachineLookupKey, createdByoMachine)
+				if err != nil {
+					return false
+				}
+				return controllerutil.ContainsFinalizer(createdByoMachine, infrastructurev1alpha4.MachineFinalizer)
+			}).Should(BeTrue())
+		})
+
 		It("should mark BYOHostReady as False when byomachine is paused", func() {
-			byoMachine = common.NewByoMachine(defaultByoMachineName, defaultNamespace, defaultClusterName, machine)
 			ph, err := patch.NewHelper(byoMachine, k8sClient)
 			Expect(err).ShouldNot(HaveOccurred())
 
@@ -350,6 +362,7 @@ var _ = Describe("Controllers/ByomachineController", func() {
 		AfterEach(func() {
 			Expect(k8sClient.Delete(ctx, byoMachine)).Should(Succeed())
 			Expect(k8sClient.Delete(ctx, machine)).Should(Succeed())
+
 		})
 	})
 
