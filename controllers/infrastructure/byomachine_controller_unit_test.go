@@ -137,18 +137,30 @@ var _ = Describe("Controllers/ByomachineController/Unitests", func() {
 	})
 
 	Context("ByoMachine delete preconditions", func() {
-		ctx := context.Background()
-		It("should add cleanup annotation on byohost", func() {
-			machine := common.NewMachine("test-machine", defaultNamespace, defaultClusterName)
+		var (
+			ctx              context.Context
+			machineScope     *byoMachineScope
+			machine          *clusterv1.Machine
+			byoMachine       *infrastructurev1alpha4.ByoMachine
+			byoHost          *infrastructurev1alpha4.ByoHost
+			byoHostLookupKey types.NamespacedName
+			err              error
+		)
+		BeforeEach(func() {
+			ctx = context.Background()
+
+			machine = common.NewMachine("test-machine", defaultNamespace, defaultClusterName)
 			Expect(k8sClient.Create(ctx, machine)).NotTo(HaveOccurred(), "machine creation failed")
 
-			byoMachine := common.NewByoMachine("test-byomachine", defaultNamespace, defaultClusterName, machine)
+			byoMachine = common.NewByoMachine("test-byomachine", defaultNamespace, defaultClusterName, machine)
 			Expect(k8sClient.Create(ctx, byoMachine)).NotTo(HaveOccurred(), "byoMachine creation failed")
 
-			byoHost := common.NewByoHost("test-host", defaultNamespace, byoMachine)
+			byoHost = common.NewByoHost("test-host", defaultNamespace, byoMachine)
 			Expect(k8sClient.Create(ctx, byoHost)).NotTo(HaveOccurred(), "byoHost creation failed")
 
-			machineScope, err := newByoMachineScope(byoMachineScopeParams{
+			byoHostLookupKey = types.NamespacedName{Name: byoHost.Name, Namespace: byoHost.Namespace}
+
+			machineScope, err = newByoMachineScope(byoMachineScopeParams{
 				Client:     k8sClient,
 				Cluster:    capiCluster,
 				Machine:    machine,
@@ -162,17 +174,37 @@ var _ = Describe("Controllers/ByomachineController/Unitests", func() {
 				Scheme:  &runtime.Scheme{},
 				Tracker: &remote.ClusterCacheTracker{},
 			}
+		})
+
+		It("should add cleanup annotation on byohost", func() {
 
 			Expect(reconciler.markHostForCleanup(ctx, machineScope)).NotTo(HaveOccurred(), "markHostForCleanup failed")
 
-			// verify if host has annotations
-			byoHostLookupKey := types.NamespacedName{Name: byoHost.Name, Namespace: byoHost.Namespace}
 			createdByoHost := &infrastructurev1alpha4.ByoHost{}
 			Expect(k8sClient.Get(ctx, byoHostLookupKey, createdByoHost)).NotTo(HaveOccurred())
 
 			byoHostAnnotations := createdByoHost.GetAnnotations()
 			_, ok := byoHostAnnotations[hostCleanupAnnotation]
 			Expect(ok).To(BeTrue())
+		})
+
+		It("should remove host reservation", func() {
+			Expect(reconciler.removeHostReservation(ctx, machineScope)).NotTo(HaveOccurred(), "host reservation removal failed")
+
+			createdByoHost := &infrastructurev1alpha4.ByoHost{}
+			Expect(k8sClient.Get(ctx, byoHostLookupKey, createdByoHost)).NotTo(HaveOccurred())
+
+			Expect(createdByoHost.Status.MachineRef).To(BeNil())
+
+			byoHostAnnotations := createdByoHost.GetAnnotations()
+			_, ok := byoHostAnnotations[hostCleanupAnnotation]
+			Expect(ok).To(BeFalse())
+		})
+
+		AfterEach(func() {
+			Expect(k8sClient.Delete(ctx, byoMachine)).Should(Succeed())
+			Expect(k8sClient.Delete(ctx, byoHost)).Should(Succeed())
+			Expect(k8sClient.Delete(ctx, machine)).Should(Succeed())
 		})
 	})
 })
