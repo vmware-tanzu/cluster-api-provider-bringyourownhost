@@ -157,7 +157,6 @@ var _ = Describe("Byohost Agent Tests", func() {
 			Expect(result).To(Equal(controllerruntime.Result{}))
 			Expect(reconcilerErr).To(HaveOccurred())
 
-			byoHostLookupKey := types.NamespacedName{Name: hostName, Namespace: ns}
 			updatedByoHost := &infrastructurev1alpha4.ByoHost{}
 			err = k8sClient.Get(ctx, byoHostLookupKey, updatedByoHost)
 			Expect(err).ToNot(HaveOccurred())
@@ -172,6 +171,37 @@ var _ = Describe("Byohost Agent Tests", func() {
 
 			Expect(k8sClient.Delete(ctx, secret)).NotTo(HaveOccurred())
 			Expect(k8sClient.Delete(ctx, byoMachine)).NotTo(HaveOccurred())
+		})
+
+		It("should set the Reason to K8sNodeAbsentReason", func() {
+			patchHelper, err = patch.NewHelper(byoHost, k8sClient)
+			Expect(err).ShouldNot(HaveOccurred())
+
+			if byoHost.Annotations == nil {
+				byoHost.Annotations = map[string]string{}
+			}
+			byoHost.Annotations[hostCleanupAnnotation] = ""
+			Expect(patchHelper.Patch(ctx, byoHost, patch.WithStatusObservedGeneration{})).NotTo(HaveOccurred())
+
+			result, reconcilerErr := reconciler.Reconcile(ctx, controllerruntime.Request{
+				NamespacedName: byoHostLookupKey,
+			})
+
+			Expect(result).To(Equal(controllerruntime.Result{}))
+			Expect(reconcilerErr).ToNot(HaveOccurred())
+
+			updatedByoHost := &infrastructurev1alpha4.ByoHost{}
+			err = k8sClient.Get(ctx, byoHostLookupKey, updatedByoHost)
+			Expect(err).ToNot(HaveOccurred())
+
+			k8sNodeBootstrapSucceeded := conditions.Get(updatedByoHost, infrastructurev1alpha4.K8sNodeBootstrapSucceeded)
+			Expect(*k8sNodeBootstrapSucceeded).To(conditions.MatchCondition(clusterv1.Condition{
+				Type:     infrastructurev1alpha4.K8sNodeBootstrapSucceeded,
+				Status:   corev1.ConditionFalse,
+				Reason:   infrastructurev1alpha4.K8sNodeAbsentReason,
+				Severity: clusterv1.ConditionSeverityInfo,
+			}))
+
 		})
 		AfterEach(func() {
 			Expect(k8sClient.Delete(ctx, byoHost)).NotTo(HaveOccurred())
