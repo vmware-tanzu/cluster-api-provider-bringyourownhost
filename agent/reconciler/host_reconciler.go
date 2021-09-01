@@ -52,7 +52,11 @@ func (r HostReconciler) Reconcile(ctx context.Context, req ctrl.Request) (_ ctrl
 	hostAnnotations := byoHost.GetAnnotations()
 	_, ok := hostAnnotations[hostCleanupAnnotation]
 	if ok {
-		r.hostCleanUp(ctx, byoHost)
+		err = r.hostCleanUp(ctx, byoHost)
+		if err != nil {
+			return ctrl.Result{}, err
+		}
+		return ctrl.Result{}, nil
 	}
 
 	// Handle deleted machines
@@ -118,7 +122,9 @@ func (r HostReconciler) SetupWithManager(mgr manager.Manager) error {
 		Complete(r)
 }
 
-func (r HostReconciler) hostCleanUp(ctx context.Context, byoHost *infrastructurev1alpha4.ByoHost) {
-	// run kubeadm reset
+func (r HostReconciler) hostCleanUp(ctx context.Context, byoHost *infrastructurev1alpha4.ByoHost) error {
+	// TODO: run kubeadm reset on the node
+
 	conditions.MarkFalse(byoHost, infrastructurev1alpha4.K8sNodeBootstrapSucceeded, infrastructurev1alpha4.K8sNodeAbsentReason, v1alpha4.ConditionSeverityInfo, "")
+	return nil
 }
