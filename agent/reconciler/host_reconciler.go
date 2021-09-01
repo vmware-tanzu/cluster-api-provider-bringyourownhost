@@ -22,6 +22,8 @@ type HostReconciler struct {
 	Client client.Client
 }
 
+const hostCleanupAnnotation = "byoh.infrastructure.cluster.x-k8s.io/unregistering"
+
 func (r HostReconciler) Reconcile(ctx context.Context, req ctrl.Request) (_ ctrl.Result, reterr error) {
 	// Fetch the ByoHost instance.
 	byoHost := &infrastructurev1alpha4.ByoHost{}
@@ -43,6 +45,17 @@ func (r HostReconciler) Reconcile(ctx context.Context, req ctrl.Request) (_ ctrl
 	if annotations.HasPausedAnnotation(byoHost) {
 		klog.Info("The related byoMachine or linked Cluster is marked as paused. Won't reconcile")
 		conditions.MarkFalse(byoHost, infrastructurev1alpha4.K8sNodeBootstrapSucceeded, infrastructurev1alpha4.ClusterOrResourcePausedReason, v1alpha4.ConditionSeverityInfo, "")
+		return ctrl.Result{}, nil
+	}
+
+	// Check for host cleanup annotation
+	hostAnnotations := byoHost.GetAnnotations()
+	_, ok := hostAnnotations[hostCleanupAnnotation]
+	if ok {
+		err = r.hostCleanUp(ctx, byoHost)
+		if err != nil {
+			return ctrl.Result{}, err
+		}
 		return ctrl.Result{}, nil
 	}
 
@@ -107,4 +120,11 @@ func (r HostReconciler) SetupWithManager(mgr manager.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&infrastructurev1alpha4.ByoHost{}).
 		Complete(r)
+}
+
+func (r HostReconciler) hostCleanUp(ctx context.Context, byoHost *infrastructurev1alpha4.ByoHost) error {
+	// TODO: run kubeadm reset on the node
+
+	conditions.MarkFalse(byoHost, infrastructurev1alpha4.K8sNodeBootstrapSucceeded, infrastructurev1alpha4.K8sNodeAbsentReason, v1alpha4.ConditionSeverityInfo, "")
+	return nil
 }

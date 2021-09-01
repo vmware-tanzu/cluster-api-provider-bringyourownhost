@@ -35,10 +35,8 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
-	"sigs.k8s.io/controller-runtime/pkg/event"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/log"
-	"sigs.k8s.io/controller-runtime/pkg/predicate"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 	"sigs.k8s.io/controller-runtime/pkg/source"
 
@@ -53,6 +51,7 @@ import (
 const (
 	providerIDPrefix       = "byoh://"
 	providerIDSuffixLength = 6
+	hostCleanupAnnotation  = "byoh.infrastructure.cluster.x-k8s.io/unregistering"
 )
 
 // ByoMachineReconciler reconciles a ByoMachine object
@@ -140,26 +139,53 @@ func (r *ByoMachineReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 		return ctrl.Result{}, nil
 	}
 
+	// Create the machine scope
+	machineScope, err := newByoMachineScope(byoMachineScopeParams{
+		Client:     r.Client,
+		Cluster:    cluster,
+		Machine:    machine,
+		ByoMachine: byoMachine,
+		// TODO: add byohost to scope
+		// should be able to get / filter the byohost that has this byomachine as its MachineRef
+		ByoHost: nil,
+	})
+	if err != nil {
+		return ctrl.Result{}, err
+	}
+
 	// Handle deleted machines
 	if !byoMachine.ObjectMeta.DeletionTimestamp.IsZero() {
-		return r.reconcileDelete(ctx, byoMachine)
+		return r.reconcileDelete(ctx, machineScope)
 	}
 
 	// Handle non-deleted machines
 	return r.reconcileNormal(ctx, byoMachine, cluster, machine)
 }
 
-func (r ByoMachineReconciler) reconcileDelete(ctx context.Context, byoMachine *infrav1.ByoMachine) (reconcile.Result, error) {
-	//TODO: de-link the byohost
-	controllerutil.RemoveFinalizer(byoMachine, infrav1.MachineFinalizer)
+func (r *ByoMachineReconciler) reconcileDelete(ctx context.Context, machineScope *byoMachineScope) (reconcile.Result, error) {
+	if machineScope.ByoHost != nil {
+		// Add annotation to trigger host cleanup
+		if err := r.markHostForCleanup(ctx, machineScope); err != nil {
+			return ctrl.Result{}, err
+		}
+
+		if !(conditions.IsFalse(machineScope.ByoHost, infrav1.K8sNodeBootstrapSucceeded) && conditions.GetReason(machineScope.ByoHost, infrav1.K8sNodeBootstrapSucceeded) == infrav1.K8sNodeAbsentReason) {
+			conditions.MarkFalse(machineScope.ByoMachine, infrav1.BYOHostReady, clusterv1.DeletingReason, clusterv1.ConditionSeverityInfo, "Removing the Kubernetes node...")
+			return ctrl.Result{}, nil
+		}
+
+		if err := r.removeHostReservation(ctx, machineScope); err != nil {
+			return ctrl.Result{}, err
+		}
+	}
+	controllerutil.RemoveFinalizer(machineScope.ByoMachine, infrav1.MachineFinalizer)
 	return reconcile.Result{}, nil
 }
 
-func (r ByoMachineReconciler) reconcileNormal(ctx context.Context, byoMachine *infrav1.ByoMachine, cluster *clusterv1.Cluster, machine *clusterv1.Machine) (reconcile.Result, error) {
+func (r *ByoMachineReconciler) reconcileNormal(ctx context.Context, byoMachine *infrav1.ByoMachine, cluster *clusterv1.Cluster, machine *clusterv1.Machine) (reconcile.Result, error) {
 	logger := log.FromContext(ctx).WithValues("namespace", byoMachine.Namespace, "BYOMachine", byoMachine.Name)
-
 	// TODO: Uncomment below line when we have tests for byomachine delete
-	//	controllerutil.AddFinalizer(byoMachine, infrav1.MachineFinalizer)
+	controllerutil.AddFinalizer(byoMachine, infrav1.MachineFinalizer)
 
 	// TODO: Remove the below check after refactoring setting of Pause annotation on byoHost
 	if len(byoMachine.Spec.ProviderID) > 0 {
@@ -213,13 +239,6 @@ func (r *ByoMachineReconciler) SetupWithManager(mgr ctrl.Manager) error {
 			&source.Kind{Type: &clusterv1.Machine{}},
 			handler.EnqueueRequestsFromMapFunc(util.MachineToInfrastructureMapFunc(controlledTypeGVK)),
 		).
-		WithEventFilter(predicate.Funcs{
-			// TODO will need to remove this and
-			// will be handled with delete stories
-			DeleteFunc: func(e event.DeleteEvent) bool {
-				return false
-			},
-		}).
 		Complete(r)
 }
 
@@ -229,6 +248,7 @@ func (r *ByoMachineReconciler) setNodeProviderID(ctx context.Context, remoteClie
 	node := &corev1.Node{}
 	key := client.ObjectKey{Name: host.Name, Namespace: host.Namespace}
 	err := remoteClient.Get(ctx, key, node)
+
 	if err != nil {
 		return err
 	}
@@ -398,4 +418,29 @@ func ByoHostToByoMachineMapFunc(gvk schema.GroupVersionKind) handler.MapFunc {
 			},
 		}
 	}
+}
+
+func (r *ByoMachineReconciler) markHostForCleanup(ctx context.Context, machineScope *byoMachineScope) error {
+	helper, _ := patch.NewHelper(machineScope.ByoHost, r.Client)
+
+	if machineScope.ByoHost.Annotations == nil {
+		machineScope.ByoHost.Annotations = map[string]string{}
+	}
+	machineScope.ByoHost.Annotations[hostCleanupAnnotation] = ""
+
+	// Issue the patch.
+	return helper.Patch(ctx, machineScope.ByoHost)
+}
+
+func (r *ByoMachineReconciler) removeHostReservation(ctx context.Context, machineScope *byoMachineScope) error {
+	helper, _ := patch.NewHelper(machineScope.ByoHost, r.Client)
+
+	// Remove host reservation.
+	machineScope.ByoHost.Status.MachineRef = nil
+
+	// Remove the cleanup annotation
+	delete(machineScope.ByoHost.Annotations, hostCleanupAnnotation)
+
+	// Issue the patch.
+	return helper.Patch(ctx, machineScope.ByoHost)
 }

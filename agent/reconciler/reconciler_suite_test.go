@@ -74,10 +74,13 @@ var _ = BeforeSuite(func() {
 	err = reconciler.SetupWithManager(k8sManager)
 	Expect(err).ToNot(HaveOccurred())
 
-	go func() {
-		err = k8sManager.Start(ctrl.SetupSignalHandler())
-		Expect(err).NotTo(HaveOccurred())
-	}()
+	// TODO: Either delete the below goroutine
+	// or move to individual test contexts where controller-runtime is required
+
+	// go func() {
+	// 	err = k8sManager.Start(ctrl.SetupSignalHandler())
+	// 	Expect(err).NotTo(HaveOccurred())
+	// }()
 })
 
 var _ = AfterSuite(func() {

@@ -14,8 +14,8 @@ func NewByoMachine(byoMachineName, byoMachineNamespace, clusterName string, mach
 			APIVersion: "infrastructure.cluster.x-k8s.io/v1alpha4",
 		},
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      byoMachineName,
-			Namespace: byoMachineNamespace,
+			GenerateName: byoMachineName,
+			Namespace:    byoMachineNamespace,
 		},
 		Spec: infrastructurev1alpha4.ByoMachineSpec{},
 	}
@@ -46,8 +46,8 @@ func NewMachine(machineName, namespace, clusterName string) *clusterv1.Machine {
 			APIVersion: "cluster.x-k8s.io/v1",
 		},
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      machineName,
-			Namespace: namespace,
+			GenerateName: machineName,
+			Namespace:    namespace,
 		},
 		Spec: clusterv1.MachineSpec{
 			ClusterName: clusterName,
