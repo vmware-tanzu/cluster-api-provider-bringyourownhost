@@ -51,6 +51,7 @@ import (
 const (
 	providerIDPrefix       = "byoh://"
 	providerIDSuffixLength = 6
+	hostCleanupAnnotation  = "byoh.infrastructure.cluster.x-k8s.io/unregistering"
 )
 
 // ByoMachineReconciler reconciles a ByoMachine object
@@ -138,22 +139,41 @@ func (r *ByoMachineReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 		return ctrl.Result{}, nil
 	}
 
+	// Create the machine scope
+	machineScope, err := newByoMachineScope(byoMachineScopeParams{
+		Client:     r.Client,
+		Cluster:    cluster,
+		Machine:    machine,
+		ByoMachine: byoMachine,
+		// TODO: add byohost to scope
+		// should be able to get / filter the byohost that has this byomachine as its MachineRef
+		ByoHost: nil,
+	})
+	if err != nil {
+		return ctrl.Result{}, err
+	}
+
 	// Handle deleted machines
 	if !byoMachine.ObjectMeta.DeletionTimestamp.IsZero() {
-		return r.reconcileDelete(ctx, byoMachine)
+		return r.reconcileDelete(ctx, machineScope)
 	}
 
 	// Handle non-deleted machines
 	return r.reconcileNormal(ctx, byoMachine, cluster, machine)
 }
 
-func (r ByoMachineReconciler) reconcileDelete(ctx context.Context, byoMachine *infrav1.ByoMachine) (reconcile.Result, error) {
-	//TODO: de-link the byohost
-	controllerutil.RemoveFinalizer(byoMachine, infrav1.MachineFinalizer)
+func (r *ByoMachineReconciler) reconcileDelete(ctx context.Context, machineScope *byoMachineScope) (reconcile.Result, error) {
+	if machineScope.ByoHost != nil {
+		// Add annotation to trigger host cleanup
+		if err := r.markHostForCleanup(ctx, machineScope); err != nil {
+			return ctrl.Result{}, err
+		}
+	}
+	controllerutil.RemoveFinalizer(machineScope.ByoMachine, infrav1.MachineFinalizer)
 	return reconcile.Result{}, nil
 }
 
-func (r ByoMachineReconciler) reconcileNormal(ctx context.Context, byoMachine *infrav1.ByoMachine, cluster *clusterv1.Cluster, machine *clusterv1.Machine) (reconcile.Result, error) {
+func (r *ByoMachineReconciler) reconcileNormal(ctx context.Context, byoMachine *infrav1.ByoMachine, cluster *clusterv1.Cluster, machine *clusterv1.Machine) (reconcile.Result, error) {
 	logger := log.FromContext(ctx).WithValues("namespace", byoMachine.Namespace, "BYOMachine", byoMachine.Name)
 
 	// TODO: Uncomment below line when we have tests for byomachine delete
@@ -373,4 +393,16 @@ func ByoHostToByoMachineMapFunc(gvk schema.GroupVersionKind) handler.MapFunc {
 			},
 		}
 	}
+}
+
+func (r *ByoMachineReconciler) markHostForCleanup(ctx context.Context, machineScope *byoMachineScope) error {
+	helper, _ := patch.NewHelper(machineScope.ByoHost, r.Client)
+
+	if machineScope.ByoHost.Annotations == nil {
+		machineScope.ByoHost.Annotations = map[string]string{}
+	}
+	machineScope.ByoHost.Annotations[hostCleanupAnnotation] = ""
+
+	// Issue the patch.
+	return helper.Patch(ctx, machineScope.ByoHost)
 }
