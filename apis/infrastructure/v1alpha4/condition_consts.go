@@ -15,6 +15,7 @@ const (
 	WaitingForMachineRefReason           = "WaitingForMachineRefToBeAssigned"
 	BootstrapDataSecretUnavailableReason = "BootstrapDataSecretUnavailable"
 	CloudInitExecutionFailedReason       = "CloudInitExecutionFailed"
+	K8sNodeAbsentReason                  = "K8sNodeAbsent"
 )
 
 // Conditions and Reasons defined on BYOMachine

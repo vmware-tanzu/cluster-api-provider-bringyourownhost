@@ -8,8 +8,10 @@ import (
 
 	infrastructurev1alpha4 "github.com/vmware-tanzu/cluster-api-provider-byoh/apis/infrastructure/v1alpha4"
 	"github.com/vmware-tanzu/cluster-api-provider-byoh/common"
+	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	clusterv1 "sigs.k8s.io/cluster-api/api/v1alpha4"
+	"sigs.k8s.io/cluster-api/controllers/remote"
 	"sigs.k8s.io/cluster-api/util/patch"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 )
@@ -71,7 +73,7 @@ var _ = Describe("Controllers/ByomachineController/Unitests", func() {
 		})
 
 		It("Should return error", func() {
-			byoMachineLookupkey := types.NamespacedName{Name: defaultByoMachineName, Namespace: defaultNamespace}
+			byoMachineLookupkey := types.NamespacedName{Name: byoMachine.Name, Namespace: defaultNamespace}
 			request := reconcile.Request{NamespacedName: byoMachineLookupkey}
 
 			_, err := reconciler.Reconcile(ctx, request)
@@ -121,7 +123,7 @@ var _ = Describe("Controllers/ByomachineController/Unitests", func() {
 		})
 
 		It("Should return error", func() {
-			byoMachineLookupkey := types.NamespacedName{Name: defaultByoMachineName, Namespace: defaultNamespace}
+			byoMachineLookupkey := types.NamespacedName{Name: byoMachine.Name, Namespace: defaultNamespace}
 			request := reconcile.Request{NamespacedName: byoMachineLookupkey}
 			_, err := reconciler.Reconcile(ctx, request)
 			Expect(err).To(MatchError("nodes \"" + hostname + "\" not found"))
@@ -134,4 +136,75 @@ var _ = Describe("Controllers/ByomachineController/Unitests", func() {
 		})
 	})
 
+	Context("ByoMachine delete preconditions", func() {
+		var (
+			ctx              context.Context
+			machineScope     *byoMachineScope
+			machine          *clusterv1.Machine
+			byoMachine       *infrastructurev1alpha4.ByoMachine
+			byoHost          *infrastructurev1alpha4.ByoHost
+			byoHostLookupKey types.NamespacedName
+			err              error
+		)
+		BeforeEach(func() {
+			ctx = context.Background()
+
+			machine = common.NewMachine("test-machine", defaultNamespace, defaultClusterName)
+			Expect(k8sClient.Create(ctx, machine)).NotTo(HaveOccurred(), "machine creation failed")
+
+			byoMachine = common.NewByoMachine("test-byomachine", defaultNamespace, defaultClusterName, machine)
+			Expect(k8sClient.Create(ctx, byoMachine)).NotTo(HaveOccurred(), "byoMachine creation failed")
+
+			byoHost = common.NewByoHost("test-host", defaultNamespace, byoMachine)
+			Expect(k8sClient.Create(ctx, byoHost)).NotTo(HaveOccurred(), "byoHost creation failed")
+
+			byoHostLookupKey = types.NamespacedName{Name: byoHost.Name, Namespace: byoHost.Namespace}
+
+			machineScope, err = newByoMachineScope(byoMachineScopeParams{
+				Client:     k8sClient,
+				Cluster:    capiCluster,
+				Machine:    machine,
+				ByoMachine: byoMachine,
+				ByoHost:    byoHost,
+			})
+			Expect(err).NotTo(HaveOccurred(), "failed creating machineScope")
+
+			reconciler = &ByoMachineReconciler{
+				Client:  k8sClient,
+				Scheme:  &runtime.Scheme{},
+				Tracker: &remote.ClusterCacheTracker{},
+			}
+		})
+
+		It("should add cleanup annotation on byohost", func() {
+
+			Expect(reconciler.markHostForCleanup(ctx, machineScope)).NotTo(HaveOccurred(), "markHostForCleanup failed")
+
+			createdByoHost := &infrastructurev1alpha4.ByoHost{}
+			Expect(k8sClient.Get(ctx, byoHostLookupKey, createdByoHost)).NotTo(HaveOccurred())
+
+			byoHostAnnotations := createdByoHost.GetAnnotations()
+			_, ok := byoHostAnnotations[hostCleanupAnnotation]
+			Expect(ok).To(BeTrue())
+		})
+
+		It("should remove host reservation", func() {
+			Expect(reconciler.removeHostReservation(ctx, machineScope)).NotTo(HaveOccurred(), "host reservation removal failed")
+
+			createdByoHost := &infrastructurev1alpha4.ByoHost{}
+			Expect(k8sClient.Get(ctx, byoHostLookupKey, createdByoHost)).NotTo(HaveOccurred())
+
+			Expect(createdByoHost.Status.MachineRef).To(BeNil())
+
+			byoHostAnnotations := createdByoHost.GetAnnotations()
+			_, ok := byoHostAnnotations[hostCleanupAnnotation]
+			Expect(ok).To(BeFalse())
+		})
+
+		AfterEach(func() {
+			Expect(k8sClient.Delete(ctx, byoMachine)).Should(Succeed())
+			Expect(k8sClient.Delete(ctx, byoHost)).Should(Succeed())
+			Expect(k8sClient.Delete(ctx, machine)).Should(Succeed())
+		})
+	})
 })
