@@ -6,6 +6,8 @@ import (
 	"os"
 	"os/exec"
 
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	"github.com/onsi/gomega/gexec"
@@ -41,7 +43,17 @@ var _ = Describe("Agent", func() {
 		})
 
 		It("should error out if the host already exists", func() {
-			byoHost := common.NewByoHost(hostName, ns.Name, nil)
+			byoHost := &infrastructurev1alpha4.ByoHost{
+				TypeMeta: metav1.TypeMeta{
+					Kind:       "ByoHost",
+					APIVersion: "infrastructure.cluster.x-k8s.io/v1alpha4",
+				},
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      hostName,
+					Namespace: ns.Name,
+				},
+				Spec: infrastructurev1alpha4.ByoHostSpec{},
+			}
 			Expect(k8sClient.Create(context.TODO(), byoHost)).NotTo(HaveOccurred())
 
 			command := exec.Command(pathToHostAgentBinary, "--kubeconfig", kubeconfigFile.Name(), "--namespace", ns.Name)
