@@ -17,13 +17,10 @@ limitations under the License.
 package e2e
 
 import (
-	"bufio"
 	"context"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"regexp"
 
@@ -39,6 +36,7 @@ import (
 	. "github.com/onsi/gomega"
 	"github.com/onsi/gomega/gexec"
 	"github.com/pkg/errors"
+	"github.com/vmware-tanzu/cluster-api-provider-byoh/common"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/utils/pointer"
 	"sigs.k8s.io/cluster-api/test/framework/clusterctl"
@@ -172,11 +170,9 @@ var _ = Describe("When BYOH joins existing cluster", func() {
 		dockerClient     *client.Client
 		byohost          container.ContainerCreateCreatedBody
 		err              error
-		passed           = false
 	)
 
 	BeforeEach(func() {
-		passed = false
 		ctx = context.TODO()
 		Expect(ctx).NotTo(BeNil(), "ctx is required for %s spec", specName)
 
@@ -265,7 +261,7 @@ var _ = Describe("When BYOH joins existing cluster", func() {
 		defer output.Close()
 
 		// read the log of host agent container in backend, and write it
-		f := writeAgentLog(output)
+		f := common.WriteDockerLog(output, AgentLogFile)
 		defer f.Close()
 
 		// output some debug info before quit this function
@@ -289,17 +285,15 @@ var _ = Describe("When BYOH joins existing cluster", func() {
 			WaitForControlPlaneIntervals: e2eConfig.GetIntervals(specName, "wait-control-plane"),
 			WaitForMachineDeployments:    e2eConfig.GetIntervals(specName, "wait-worker-nodes"),
 		}, clusterResources)
+	})
 
-		// Any failure won't go to this
-		passed = true
+	JustAfterEach(func() {
+		if CurrentGinkgoTestDescription().Failed {
+			ShowInfo()
+		}
 	})
 
 	AfterEach(func() {
-
-		if !passed {
-			showInfo()
-		}
-
 		if dockerClient != nil && byohost.ID != "" {
 			err := dockerClient.ContainerStop(ctx, byohost.ID, nil)
 			Expect(err).NotTo(HaveOccurred())
@@ -317,93 +311,7 @@ var _ = Describe("When BYOH joins existing cluster", func() {
 	})
 })
 
-func writeAgentLog(output types.HijackedResponse) *os.File {
-	s := make(chan string)
-	e := make(chan error)
-	buf := bufio.NewReader(output.Reader)
-	f, err := os.OpenFile(AgentLogFile, os.O_CREATE|os.O_WRONLY, 0666)
-	Expect(err).NotTo(HaveOccurred())
-
-	go func() {
-		for {
-			line, _, err := buf.ReadLine()
-			if err != nil {
-				// will be quit by this err: read unix @->/run/docker.sock: use of closed network connection
-				e <- err
-				break
-			} else {
-				s <- string(line)
-			}
-		}
-	}()
-
-	go func() {
-		defer GinkgoRecover()
-		for {
-			select {
-			case line := <-s:
-				_, err2 := f.WriteString(line + "\n")
-				if err2 != nil {
-					Showf("Write String to file failed, err2=%v", err2)
-				}
-				_ = f.Sync()
-			case err := <-e:
-				// Please ignore this error if you see it in output
-				Showf("Get err %v", err)
-				return
-			}
-		}
-	}()
-
-	return f
-}
-
-func showFileContent(fileName string) {
-	content, err := ioutil.ReadFile(fileName)
-	if err != nil {
-		Showf("ioutil.ReadFile %s return failed: Get err %v", fileName, err)
-		return
-	}
-
-	Showf("######################Start: Content of %s##################", fileName)
-	Showf("%s", string(content))
-	Showf("######################End: Content of %s##################", fileName)
-}
-
-func executeShellScript(shellFileName string) {
-	cmd := exec.Command("/bin/sh", "-x", shellFileName)
-	output, err := cmd.Output()
-	if err != nil {
-		Showf("execute %s return failed: Get err %v, output: %s", shellFileName, err, output)
-		return
-	}
-	Showf("#######################Start: execute result of %s##################", shellFileName)
-	Showf("%s", string(output))
-	Showf("######################End: execute result of %s##################", shellFileName)
-}
-
-func writeShellScript(shellFileName string, shellFileContent []string) {
-	f, err := os.OpenFile(shellFileName, os.O_APPEND|os.O_WRONLY|os.O_CREATE, 0777)
-	if err != nil {
-		Showf("Open %s return failed: Get err %v", shellFileName, err)
-		return
-	}
-
-	defer f.Close()
-
-	for _, line := range shellFileContent {
-		if _, err = f.WriteString(line); err != nil {
-			Showf("Write content %s return failed: Get err %v", line, err)
-			return
-		}
-		if _, err = f.WriteString("\n"); err != nil {
-			Showf("Write LF return failed: Get err %v", err)
-			return
-		}
-	}
-}
-
-func showInfo() {
+func ShowInfo() {
 	// show swap status
 	// showFileContent("/proc/swaps")
 
@@ -411,12 +319,12 @@ func showInfo() {
 	shellContent := []string{
 		"kubectl get pods --all-namespaces --kubeconfig /tmp/mgmt.conf",
 	}
-	writeShellScript(ReadAllPodsShellFile, shellContent)
-	showFileContent(ReadAllPodsShellFile)
-	executeShellScript(ReadAllPodsShellFile)
+	common.WriteShellScript(ReadAllPodsShellFile, shellContent)
+	common.ShowFileContent(ReadAllPodsShellFile)
+	common.ExecuteShellScript(ReadAllPodsShellFile)
 
 	// show the agent log
-	showFileContent(AgentLogFile)
+	common.ShowFileContent(AgentLogFile)
 
 	// show byoh-controller-manager logs
 	shellContent = []string{
@@ -425,7 +333,7 @@ func showInfo() {
 		"kubectl logs -n ${podNamespace} ${podName} --kubeconfig /tmp/mgmt.conf -c manager",
 	}
 
-	writeShellScript(ReadByohControllerManagerLogShellFile, shellContent)
-	showFileContent(ReadByohControllerManagerLogShellFile)
-	executeShellScript(ReadByohControllerManagerLogShellFile)
+	common.WriteShellScript(ReadByohControllerManagerLogShellFile, shellContent)
+	common.ShowFileContent(ReadByohControllerManagerLogShellFile)
+	common.ExecuteShellScript(ReadByohControllerManagerLogShellFile)
 }
