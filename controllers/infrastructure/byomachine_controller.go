@@ -184,7 +184,6 @@ func (r *ByoMachineReconciler) reconcileDelete(ctx context.Context, machineScope
 
 		if !(conditions.IsFalse(machineScope.ByoHost, infrav1.K8sNodeBootstrapSucceeded) && conditions.GetReason(machineScope.ByoHost, infrav1.K8sNodeBootstrapSucceeded) == infrav1.K8sNodeAbsentReason) {
 			conditions.MarkFalse(machineScope.ByoMachine, infrav1.BYOHostReady, clusterv1.DeletingReason, clusterv1.ConditionSeverityInfo, "Removing the Kubernetes node...")
-			return ctrl.Result{}, nil
 		}
 
 		if err := r.removeHostReservation(ctx, machineScope); err != nil {
@@ -387,11 +386,6 @@ func (r *ByoMachineReconciler) attachByoHost(ctx context.Context, logger logr.Lo
 	}
 	hostLabels[clusterv1.ClusterLabelName] = machineScope.ByoMachine.Labels[clusterv1.ClusterLabelName]
 	host.Labels = hostLabels
-
-	if machineScope.Machine.Spec.Bootstrap.DataSecretName == nil {
-		logger.Info("Bootstrap secret not ready")
-		return ctrl.Result{}, errors.New("bootstrap secret not ready")
-	}
 
 	host.Spec.BootstrapSecret = &corev1.ObjectReference{
 		Kind:      "Secret",
