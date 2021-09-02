@@ -12,6 +12,7 @@ import (
 	. "github.com/onsi/gomega"
 	"github.com/vmware-tanzu/cluster-api-provider-byoh/agent/cloudinit"
 	"github.com/vmware-tanzu/cluster-api-provider-byoh/agent/cloudinit/cloudinitfakes"
+	"github.com/vmware-tanzu/cluster-api-provider-byoh/common"
 )
 
 var _ = Describe("Cloudinit", func() {
@@ -60,7 +61,7 @@ runCmd:
 			fileName2 := path.Join(fileDir2, "file2.txt")
 			fileContent2 := "some-content-2"
 			fileBase64Content := base64.StdEncoding.EncodeToString([]byte(fileContent2))
-			permissions := "0777"
+			permissions := common.DefaultFileMode
 			encoding := "base64"
 
 			bootstrapSecretUnencoded := fmt.Sprintf(`write_files:
@@ -68,7 +69,7 @@ runCmd:
   content: %s
 - path: %s
   content: %s
-  permissions: '%s'
+  permissions: '%o'
   append: true
   encoding: %s`, fileName1, fileContent1, fileName2, fileBase64Content, permissions, encoding)
 

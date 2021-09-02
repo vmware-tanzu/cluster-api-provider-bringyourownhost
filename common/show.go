@@ -3,6 +3,7 @@ package common
 import (
 	"bufio"
 	"fmt"
+	"io/fs"
 	"io/ioutil"
 	"os"
 	"os/exec"
@@ -10,11 +11,15 @@ import (
 	"github.com/docker/docker/api/types"
 )
 
+const (
+	DefaultFileMode fs.FileMode = 0777
+)
+
 func WriteDockerLog(output types.HijackedResponse, outputFile string) *os.File {
 	s := make(chan string)
 	e := make(chan error)
 	buf := bufio.NewReader(output.Reader)
-	f, err := os.OpenFile(outputFile, os.O_CREATE|os.O_WRONLY, 0666)
+	f, err := os.OpenFile(outputFile, os.O_CREATE|os.O_WRONLY, DefaultFileMode)
 	if err != nil {
 		Showf("OpenFile %s failed, Get err %v", outputFile, err)
 		return nil
@@ -83,7 +88,7 @@ func ExecuteShellScript(shellFileName string) {
 }
 
 func WriteShellScript(shellFileName string, shellFileContent []string) {
-	f, err := os.OpenFile(shellFileName, os.O_APPEND|os.O_WRONLY|os.O_CREATE, 0777)
+	f, err := os.OpenFile(shellFileName, os.O_APPEND|os.O_WRONLY|os.O_CREATE, DefaultFileMode)
 	if err != nil {
 		Showf("Open %s return failed: Get err %v", shellFileName, err)
 		return

@@ -1,7 +1,6 @@
 package cloudinit
 
 import (
-	"io/fs"
 	"io/ioutil"
 	"os"
 	"path"
@@ -9,6 +8,7 @@ import (
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+	"github.com/vmware-tanzu/cluster-api-provider-byoh/common"
 )
 
 var _ = Describe("FileWriter", func() {
@@ -42,7 +42,6 @@ var _ = Describe("FileWriter", func() {
 	})
 
 	It("Should create and write to file", func() {
-		filePermission := 0777
 		file := Files{
 			Path:        path.Join(workDir, "file1.txt"),
 			Encoding:    "",
@@ -64,7 +63,7 @@ var _ = Describe("FileWriter", func() {
 
 		stats, err := os.Stat(file.Path)
 		Expect(err).NotTo(HaveOccurred())
-		Expect(stats.Mode()).To(Equal(fs.FileMode(filePermission)))
+		Expect(stats.Mode()).To(Equal(common.DefaultFileMode))
 
 	})
 

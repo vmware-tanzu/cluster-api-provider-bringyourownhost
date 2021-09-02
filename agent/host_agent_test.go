@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/base64"
 	"fmt"
-	"io/fs"
 	"io/ioutil"
 	"os"
 	"os/exec"
@@ -139,7 +138,7 @@ var _ = Describe("Agent", func() {
 			fileName2 := path.Join(workDir, "file-2.txt")
 			fileOriginContent2 := "some-content-2"
 			fileAppendContent2 := "some-content-append-2"
-			filePermission2 := 0777
+			filePermission2 := common.DefaultFileMode
 			isAppend2 := true
 
 			fileName3 := path.Join(workDir, "file-3.txt")
@@ -247,7 +246,7 @@ runCmd:
 			// check second file permission
 			Eventually(func() bool {
 				stats, err := os.Stat(fileName2)
-				if err == nil && stats.Mode() == fs.FileMode(filePermission2) {
+				if err == nil && stats.Mode() == filePermission2 {
 					return true
 				}
 				return false
