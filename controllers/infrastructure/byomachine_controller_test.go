@@ -2,6 +2,7 @@ package controllers
 
 import (
 	"context"
+	"strings"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -103,6 +104,9 @@ var _ = Describe("Controllers/ByomachineController", func() {
 
 			byoHost = common.NewByoHost(defaultByoHostName, defaultNamespace, nil)
 			Expect(k8sClient.Create(ctx, byoHost)).Should(Succeed())
+
+			Expect(clientFake.Create(ctx, common.NewNode(byoHost.Name, defaultNamespace))).Should(Succeed())
+
 		})
 
 		It("claims the first available host", func() {
@@ -161,7 +165,7 @@ var _ = Describe("Controllers/ByomachineController", func() {
 			}).Should(Equal(corev1.ConditionTrue))
 
 			node := corev1.Node{}
-			err = clientFake.Get(ctx, types.NamespacedName{Name: defaultNodeName, Namespace: defaultNamespace}, &node)
+			err = clientFake.Get(ctx, types.NamespacedName{Name: byoHost.Name, Namespace: defaultNamespace}, &node)
 			Expect(err).NotTo(HaveOccurred())
 
 			Expect(node.Spec.ProviderID).To(ContainSubstring(providerIDPrefix))
@@ -257,7 +261,7 @@ var _ = Describe("Controllers/ByomachineController", func() {
 			ctx = context.Background()
 			byoHost1 = common.NewByoHost(defaultByoHostName, defaultNamespace, nil)
 			Expect(k8sClient.Create(ctx, byoHost1)).Should(Succeed())
-			byoHost2 = common.NewByoHost(defaultByoHostName+"-1", defaultNamespace, nil)
+			byoHost2 = common.NewByoHost(defaultByoHostName, defaultNamespace, nil)
 			Expect(k8sClient.Create(ctx, byoHost2)).Should(Succeed())
 
 			ph, err := patch.NewHelper(capiCluster, k8sClient)
@@ -273,9 +277,12 @@ var _ = Describe("Controllers/ByomachineController", func() {
 			byoMachine = common.NewByoMachine(defaultByoMachineName, defaultNamespace, defaultClusterName, machine)
 			Expect(k8sClient.Create(ctx, byoMachine)).Should(Succeed())
 
+			Expect(clientFake.Create(ctx, common.NewNode(byoHost1.Name, defaultNamespace))).Should(Succeed())
+			Expect(clientFake.Create(ctx, common.NewNode(byoHost2.Name, defaultNamespace))).Should(Succeed())
+
 		})
 
-		It("claims the first available host", func() {
+		It("claims one of the available host", func() {
 			byoMachineLookupKey := types.NamespacedName{Name: byoMachine.Name, Namespace: byoMachine.Namespace}
 			createdByoMachine := &infrastructurev1alpha4.ByoMachine{}
 			Eventually(func() bool {
@@ -298,11 +305,19 @@ var _ = Describe("Controllers/ByomachineController", func() {
 				return corev1.ConditionFalse
 			}).Should(Equal(corev1.ConditionTrue))
 
-			node := corev1.Node{}
-			err := clientFake.Get(ctx, types.NamespacedName{Name: defaultNodeName, Namespace: defaultNamespace}, &node)
+			node1 := corev1.Node{}
+			err := clientFake.Get(ctx, types.NamespacedName{Name: byoHost1.Name, Namespace: defaultNamespace}, &node1)
 			Expect(err).NotTo(HaveOccurred())
 
-			Expect(node.Spec.ProviderID).To(ContainSubstring(providerIDPrefix))
+			node2 := corev1.Node{}
+			err = clientFake.Get(ctx, types.NamespacedName{Name: byoHost2.Name, Namespace: defaultNamespace}, &node2)
+			Expect(err).NotTo(HaveOccurred())
+
+			var nodeTagged bool
+			if strings.Contains(node1.Spec.ProviderID, providerIDPrefix) || strings.Contains(node2.Spec.ProviderID, providerIDPrefix) {
+				nodeTagged = true
+			}
+			Expect(nodeTagged).To(Equal(true))
 		})
 
 		It("does not claims the attached host", func() {
@@ -350,7 +365,7 @@ var _ = Describe("Controllers/ByomachineController", func() {
 			}).Should(Equal(corev1.ConditionTrue))
 
 			node := corev1.Node{}
-			err = clientFake.Get(ctx, types.NamespacedName{Name: defaultNodeName, Namespace: defaultNamespace}, &node)
+			err = clientFake.Get(ctx, types.NamespacedName{Name: byoHost1.Name, Namespace: defaultNamespace}, &node)
 			Expect(err).NotTo(HaveOccurred())
 
 			Expect(node.Spec.ProviderID).To(ContainSubstring(providerIDPrefix))

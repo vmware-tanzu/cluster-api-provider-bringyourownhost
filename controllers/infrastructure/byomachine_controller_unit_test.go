@@ -126,7 +126,7 @@ var _ = Describe("Controllers/ByomachineController/Unitests", func() {
 			byoMachineLookupkey := types.NamespacedName{Name: byoMachine.Name, Namespace: defaultNamespace}
 			request := reconcile.Request{NamespacedName: byoMachineLookupkey}
 			_, err := reconciler.Reconcile(ctx, request)
-			Expect(err).To(MatchError("nodes \"" + hostname + "\" not found"))
+			Expect(err).To(MatchError("nodes \"" + byoHost.Name + "\" not found"))
 		})
 
 		AfterEach(func() {

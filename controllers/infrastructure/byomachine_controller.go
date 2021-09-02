@@ -22,7 +22,6 @@ import (
 	"fmt"
 	"reflect"
 	"strings"
-	"time"
 
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -83,6 +82,7 @@ type ByoMachineReconciler struct {
 // - https://pkg.go.dev/sigs.k8s.io/controller-runtime@v0.8.3/pkg/reconcile
 
 // Reconcile handles ByoMachine events
+// nolint: gocyclo
 func (r *ByoMachineReconciler) Reconcile(ctx context.Context, req ctrl.Request) (_ ctrl.Result, reterr error) {
 	logger := log.FromContext(ctx).WithValues("namespace", req.Namespace, "BYOMachine", req.Name)
 
@@ -148,9 +148,9 @@ func (r *ByoMachineReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 	}
 
 	var refByoHost *infrav1.ByoHost
-	for _, byoHost := range allHosts.Items {
-		if byoHost.Status.MachineRef != nil && (byoHost.Status.MachineRef.Name == byoMachine.Name && byoHost.Status.MachineRef.Namespace == byoMachine.Namespace) {
-			refByoHost = &byoHost
+	for i := range allHosts.Items {
+		if allHosts.Items[i].Status.MachineRef != nil && (allHosts.Items[i].Status.MachineRef.Name == byoMachine.Name && allHosts.Items[i].Status.MachineRef.Namespace == byoMachine.Namespace) {
+			refByoHost = &allHosts.Items[i]
 		}
 	}
 
@@ -225,9 +225,27 @@ func (r *ByoMachineReconciler) reconcileNormal(ctx context.Context, machineScope
 	// then pick one from the host capacity pool.
 	if machineScope.ByoHost == nil {
 		logger.Info("Attempting host reservation")
-		if res, err := r.attachByoHost(ctx, logger, machineScope.Machine, machineScope.ByoMachine); err != nil || !res.IsZero() {
+		if res, err := r.attachByoHost(ctx, logger, machineScope); err != nil {
 			return res, err
 		}
+	}
+
+	if machineScope.ByoMachine.Spec.ProviderID == "" {
+		providerID := fmt.Sprintf("%s%s/%s", providerIDPrefix, machineScope.ByoHost.Name, util.RandomString(providerIDSuffixLength))
+		remoteClient, err := r.getRemoteClient(ctx, machineScope.ByoMachine)
+		if err != nil {
+			logger.Error(err, "failed to get remote client")
+			return ctrl.Result{}, err
+		}
+
+		err = r.setNodeProviderID(ctx, remoteClient, machineScope.ByoHost, providerID)
+		if err != nil {
+			logger.Error(err, "failed to set node providerID")
+			return ctrl.Result{}, err
+		}
+		machineScope.ByoMachine.Spec.ProviderID = providerID
+		machineScope.ByoMachine.Status.Ready = true
+		conditions.MarkTrue(machineScope.ByoMachine, infrav1.BYOHostReady)
 	}
 
 	return ctrl.Result{}, nil
@@ -328,7 +346,11 @@ func (r *ByoMachineReconciler) setPausedConditionForByoHost(ctx context.Context,
 	return helper.Patch(ctx, byoHost)
 }
 
-func (r *ByoMachineReconciler) attachByoHost(ctx context.Context, logger logr.Logger, machine *clusterv1.Machine, byoMachine *infrav1.ByoMachine) (ctrl.Result, error) {
+func (r *ByoMachineReconciler) attachByoHost(ctx context.Context, logger logr.Logger, machineScope *byoMachineScope) (ctrl.Result, error) {
+	if machineScope.ByoHost != nil {
+		return ctrl.Result{}, nil
+	}
+
 	hostsList := &infrav1.ByoHostList{}
 	// LabelSelector filter for byohosts
 	byohostLabels, _ := labels.NewRequirement(clusterv1.ClusterLabelName, selection.DoesNotExist, nil)
@@ -340,7 +362,7 @@ func (r *ByoMachineReconciler) attachByoHost(ctx context.Context, logger logr.Lo
 	}
 	if len(hostsList.Items) == 0 {
 		logger.Info("No hosts found, waiting..")
-		conditions.MarkFalse(byoMachine, infrav1.BYOHostReady, infrav1.BYOHostsUnavailableReason, clusterv1.ConditionSeverityInfo, "")
+		conditions.MarkFalse(machineScope.ByoMachine, infrav1.BYOHostReady, infrav1.BYOHostsUnavailableReason, clusterv1.ConditionSeverityInfo, "")
 		return ctrl.Result{}, errors.New("no hosts found")
 	}
 	// TODO- Needs smarter logic
@@ -352,29 +374,29 @@ func (r *ByoMachineReconciler) attachByoHost(ctx context.Context, logger logr.Lo
 	}
 
 	host.Status.MachineRef = &corev1.ObjectReference{
-		APIVersion: byoMachine.APIVersion,
-		Kind:       byoMachine.Kind,
-		Namespace:  byoMachine.Namespace,
-		Name:       byoMachine.Name,
-		UID:        byoMachine.UID,
+		APIVersion: machineScope.ByoMachine.APIVersion,
+		Kind:       machineScope.ByoMachine.Kind,
+		Namespace:  machineScope.ByoMachine.Namespace,
+		Name:       machineScope.ByoMachine.Name,
+		UID:        machineScope.ByoMachine.UID,
 	}
 	// Set the cluster Label
 	hostLabels := host.Labels
 	if hostLabels == nil {
 		hostLabels = make(map[string]string)
 	}
-	hostLabels[clusterv1.ClusterLabelName] = byoMachine.Labels[clusterv1.ClusterLabelName]
+	hostLabels[clusterv1.ClusterLabelName] = machineScope.ByoMachine.Labels[clusterv1.ClusterLabelName]
 	host.Labels = hostLabels
 
-	if machine.Spec.Bootstrap.DataSecretName == nil {
+	if machineScope.Machine.Spec.Bootstrap.DataSecretName == nil {
 		logger.Info("Bootstrap secret not ready")
 		return ctrl.Result{}, errors.New("bootstrap secret not ready")
 	}
 
 	host.Spec.BootstrapSecret = &corev1.ObjectReference{
 		Kind:      "Secret",
-		Namespace: byoMachine.Namespace,
-		Name:      *machine.Spec.Bootstrap.DataSecretName,
+		Namespace: machineScope.ByoMachine.Namespace,
+		Name:      *machineScope.Machine.Spec.Bootstrap.DataSecretName,
 	}
 
 	err = byohostHelper.Patch(ctx, &host)
@@ -382,24 +404,9 @@ func (r *ByoMachineReconciler) attachByoHost(ctx context.Context, logger logr.Lo
 		logger.Error(err, "failed to patch byohost")
 		return ctrl.Result{}, err
 	}
-	providerID := fmt.Sprintf("%s%s/%s", providerIDPrefix, host.Name, util.RandomString(providerIDSuffixLength))
-	remoteClient, err := r.getRemoteClient(ctx, byoMachine)
-	if err != nil {
-		logger.Error(err, "failed to get remote client")
-		return ctrl.Result{}, err
-	}
-
-	err = r.setNodeProviderID(ctx, remoteClient, &host, providerID)
-	if err != nil {
-		logger.Error(err, "failed to set node providerID")
-		return ctrl.Result{RequeueAfter: time.Second * 10}, err
-	}
-
-	byoMachine.Spec.ProviderID = providerID
-	byoMachine.Status.Ready = true
-
-	conditions.MarkTrue(byoMachine, infrav1.BYOHostReady)
-	return ctrl.Result{}, err
+	logger.Info("Successfully attached Byohost", "ByoHost.Name", host.Name)
+	machineScope.ByoHost = &host
+	return ctrl.Result{}, nil
 }
 
 // MachineToInfrastructureMapFunc returns a handler.ToRequestsFunc that watches for
