@@ -452,7 +452,8 @@ func (r *ByoMachineReconciler) removeHostReservation(ctx context.Context, machin
 	// Remove host reservation.
 	machineScope.ByoHost.Status.MachineRef = nil
 
-	// TODO: Remove cluster-label on byohost
+	// Remove cluster-name label
+	delete(machineScope.ByoHost.Labels, clusterv1.ClusterLabelName)
 
 	// Remove the cleanup annotation
 	delete(machineScope.ByoHost.Annotations, hostCleanupAnnotation)

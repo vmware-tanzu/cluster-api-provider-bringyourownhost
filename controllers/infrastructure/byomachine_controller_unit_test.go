@@ -196,6 +196,8 @@ var _ = Describe("Controllers/ByomachineController/Unitests", func() {
 
 			Expect(createdByoHost.Status.MachineRef).To(BeNil())
 
+			Expect(createdByoHost.Labels[clusterv1.ClusterLabelName]).To(BeEmpty())
+
 			byoHostAnnotations := createdByoHost.GetAnnotations()
 			_, ok := byoHostAnnotations[hostCleanupAnnotation]
 			Expect(ok).To(BeFalse())
