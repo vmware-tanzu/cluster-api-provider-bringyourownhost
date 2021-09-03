@@ -9,7 +9,7 @@ TAG ?= dev
 
 # Image URL to use all building/pushing image targets
 IMG ?= ${STAGING_REGISTRY}/${IMAGE_NAME}:${TAG}
-BYOH_BASE_IMG = byoh/node:v1.19.11
+BYOH_BASE_IMG = byoh/node:v1.22.0
 # Produce CRDs that work back to Kubernetes 1.11 (no version conversion)
 CRD_OPTIONS ?= "crd:trivialVersions=true,preserveUnknownFields=false"
 

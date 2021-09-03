@@ -39,17 +39,19 @@ spec:
           hostPath: "/var/run/docker.sock"
 ---
 kind: KubeadmControlPlane
-apiVersion: controlplane.cluster.x-k8s.io/v1alpha3
+apiVersion: controlplane.cluster.x-k8s.io/v1alpha4
 metadata:
   name: "${CLUSTER_NAME}-control-plane"
   labels:
     nodepool: "pool0"
 spec:
   replicas: ${CONTROL_PLANE_MACHINE_COUNT}
-  infrastructureTemplate:
-    kind: DockerMachineTemplate
-    apiVersion: infrastructure.cluster.x-k8s.io/v1alpha4
-    name: "${CLUSTER_NAME}-control-plane"
+  machineTemplate:
+    infrastructureRef:
+      kind: DockerMachineTemplate
+      apiVersion: infrastructure.cluster.x-k8s.io/v1alpha4
+      name: "${CLUSTER_NAME}-control-plane"
+      namespace: "${NAMESPACE}"
   kubeadmConfigSpec:
     clusterConfiguration:
       controllerManager:
@@ -59,9 +61,13 @@ spec:
     initConfiguration:
       nodeRegistration:
         criSocket: /var/run/containerd/containerd.sock
-        kubeletExtraArgs: {eviction-hard: 'nodefs.available<0%,nodefs.inodesFree<0%,imagefs.available<0%'}
+        kubeletExtraArgs:
+          cgroup-driver: cgroupfs
+          eviction-hard: nodefs.available<0%,nodefs.inodesFree<0%,imagefs.available<0%
     joinConfiguration:
       nodeRegistration:
         criSocket: /var/run/containerd/containerd.sock
-        kubeletExtraArgs: {eviction-hard: 'nodefs.available<0%,nodefs.inodesFree<0%,imagefs.available<0%'}
+        kubeletExtraArgs:
+          cgroup-driver: cgroupfs
+          eviction-hard: nodefs.available<0%,nodefs.inodesFree<0%,imagefs.available<0%
   version: ${KUBERNETES_VERSION}

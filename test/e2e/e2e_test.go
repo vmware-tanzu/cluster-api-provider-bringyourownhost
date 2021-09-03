@@ -47,7 +47,7 @@ const (
 	CNIPath            = "CNI"
 	CNIResources       = "CNI_RESOURCES"
 	IPFamily           = "IP_FAMILY"
-	KindImage          = "byoh/node:v1.19.11"
+	KindImage          = "byoh/node:v1.22.0"
 	TempKubeconfigPath = "/tmp/mgmt.conf"
 )
 

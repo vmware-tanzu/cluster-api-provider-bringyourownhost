@@ -16,7 +16,8 @@ COPY kubernetes.list /etc/apt/sources.list.d/kubernetes.list
 RUN echo "Installing kubectl kubeadm kubelet" \
     && curl -s https://packages.cloud.google.com/apt/doc/apt-key.gpg | apt-key add - \
     && apt-get update \
-    && apt-get install -y kubelet=1.19.1-00 kubeadm=1.19.1-00 kubectl=1.19.1-00 \
+    && apt-get install -y linux-image-$(uname -r) \
+    && apt-get install -y kubelet=1.22.0-00 kubeadm=1.22.0-00 kubectl=1.22.0-00 \
     && apt-mark hold containerd kubelet kubeadm kubectl \
     && apt-get clean \
     && systemctl enable kubelet.service \
