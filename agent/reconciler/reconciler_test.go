@@ -34,7 +34,7 @@ var _ = Describe("Byohost Agent Tests", func() {
 			patchHelper, err = patch.NewHelper(byoHost, k8sClient)
 			Expect(err).ShouldNot(HaveOccurred())
 
-			byoHostLookupKey = types.NamespacedName{Name: hostName, Namespace: ns}
+			byoHostLookupKey = types.NamespacedName{Name: byoHost.Name, Namespace: ns}
 		})
 
 		It("should set the Reason to ClusterOrResourcePausedReason", func() {

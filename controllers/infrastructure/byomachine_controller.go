@@ -22,10 +22,11 @@ import (
 	"fmt"
 	"reflect"
 	"strings"
-	"time"
 
+	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
+	"k8s.io/apimachinery/pkg/selection"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/cluster-api/controllers/remote"
 	"sigs.k8s.io/cluster-api/util"
@@ -39,6 +40,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 	"sigs.k8s.io/controller-runtime/pkg/source"
 
+	"github.com/go-logr/logr"
 	infrav1 "github.com/vmware-tanzu/cluster-api-provider-byoh/apis/infrastructure/v1alpha4"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -80,6 +82,7 @@ type ByoMachineReconciler struct {
 // - https://pkg.go.dev/sigs.k8s.io/controller-runtime@v0.8.3/pkg/reconcile
 
 // Reconcile handles ByoMachine events
+// nolint: gocyclo
 func (r *ByoMachineReconciler) Reconcile(ctx context.Context, req ctrl.Request) (_ ctrl.Result, reterr error) {
 	logger := log.FromContext(ctx).WithValues("namespace", req.Namespace, "BYOMachine", req.Name)
 
@@ -137,15 +140,27 @@ func (r *ByoMachineReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 		return ctrl.Result{}, nil
 	}
 
+	// TODO: Till we do not have index on host.Status.MachineRef
+	allHosts := &infrav1.ByoHostList{}
+	err = r.Client.List(ctx, allHosts)
+	if err != nil {
+		return ctrl.Result{}, err
+	}
+
+	var refByoHost *infrav1.ByoHost
+	for i := range allHosts.Items {
+		if allHosts.Items[i].Status.MachineRef != nil && (allHosts.Items[i].Status.MachineRef.Name == byoMachine.Name && allHosts.Items[i].Status.MachineRef.Namespace == byoMachine.Namespace) {
+			refByoHost = &allHosts.Items[i]
+		}
+	}
+
 	// Create the machine scope
 	machineScope, err := newByoMachineScope(byoMachineScopeParams{
 		Client:     r.Client,
 		Cluster:    cluster,
 		Machine:    machine,
 		ByoMachine: byoMachine,
-		// TODO: add byohost to scope
-		// should be able to get / filter the byohost that has this byomachine as its MachineRef
-		ByoHost: nil,
+		ByoHost:    refByoHost,
 	})
 	if err != nil {
 		return ctrl.Result{}, err
@@ -157,7 +172,7 @@ func (r *ByoMachineReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 	}
 
 	// Handle non-deleted machines
-	return r.reconcileNormal(ctx, byoMachine, cluster, machine)
+	return r.reconcileNormal(ctx, machineScope)
 }
 
 func (r *ByoMachineReconciler) reconcileDelete(ctx context.Context, machineScope *byoMachineScope) (reconcile.Result, error) {
@@ -169,7 +184,6 @@ func (r *ByoMachineReconciler) reconcileDelete(ctx context.Context, machineScope
 
 		if !(conditions.IsFalse(machineScope.ByoHost, infrav1.K8sNodeBootstrapSucceeded) && conditions.GetReason(machineScope.ByoHost, infrav1.K8sNodeBootstrapSucceeded) == infrav1.K8sNodeAbsentReason) {
 			conditions.MarkFalse(machineScope.ByoMachine, infrav1.BYOHostReady, clusterv1.DeletingReason, clusterv1.ConditionSeverityInfo, "Removing the Kubernetes node...")
-			return ctrl.Result{}, nil
 		}
 
 		if err := r.removeHostReservation(ctx, machineScope); err != nil {
@@ -180,91 +194,58 @@ func (r *ByoMachineReconciler) reconcileDelete(ctx context.Context, machineScope
 	return reconcile.Result{}, nil
 }
 
-func (r *ByoMachineReconciler) reconcileNormal(ctx context.Context, byoMachine *infrav1.ByoMachine, cluster *clusterv1.Cluster, machine *clusterv1.Machine) (reconcile.Result, error) {
-	logger := log.FromContext(ctx).WithValues("namespace", byoMachine.Namespace, "BYOMachine", byoMachine.Name)
+func (r *ByoMachineReconciler) reconcileNormal(ctx context.Context, machineScope *byoMachineScope) (reconcile.Result, error) {
+	logger := log.FromContext(ctx).WithValues("namespace", machineScope.ByoMachine.Namespace, "BYOMachine", machineScope.ByoMachine.Name)
 	// TODO: Uncomment below line when we have tests for byomachine delete
-	controllerutil.AddFinalizer(byoMachine, infrav1.MachineFinalizer)
+	controllerutil.AddFinalizer(machineScope.ByoMachine, infrav1.MachineFinalizer)
 
 	// TODO: Remove the below check after refactoring setting of Pause annotation on byoHost
-	if len(byoMachine.Spec.ProviderID) > 0 {
+	if len(machineScope.ByoMachine.Spec.ProviderID) > 0 {
 		// if there is already byohost associated with it, make sure the paused status of byohost is false
-		if err := r.setPausedConditionForByoHost(ctx, byoMachine.Spec.ProviderID, byoMachine.Namespace, false); err != nil {
+		if err := r.setPausedConditionForByoHost(ctx, machineScope.ByoMachine.Spec.ProviderID, machineScope.ByoMachine.Namespace, false); err != nil {
 			logger.Error(err, "Set resume flag for byohost failed")
 			return ctrl.Result{}, err
 		}
 	}
 
-	if !cluster.Status.InfrastructureReady {
+	if !machineScope.Cluster.Status.InfrastructureReady {
 		logger.Info("Cluster infrastructure is not ready yet")
-		conditions.MarkFalse(byoMachine, infrav1.BYOHostReady, infrav1.WaitingForClusterInfrastructureReason, clusterv1.ConditionSeverityInfo, "")
+		conditions.MarkFalse(machineScope.ByoMachine, infrav1.BYOHostReady, infrav1.WaitingForClusterInfrastructureReason, clusterv1.ConditionSeverityInfo, "")
 		return reconcile.Result{}, errors.New("cluster infrastructure is not ready yet")
 	}
 
-	if machine.Spec.Bootstrap.DataSecretName == nil {
+	if machineScope.Machine.Spec.Bootstrap.DataSecretName == nil {
 		logger.Info("Bootstrap Data Secret not available yet")
-		conditions.MarkFalse(byoMachine, infrav1.BYOHostReady, infrav1.WaitingForBootstrapDataSecretReason, clusterv1.ConditionSeverityInfo, "")
+		conditions.MarkFalse(machineScope.ByoMachine, infrav1.BYOHostReady, infrav1.WaitingForBootstrapDataSecretReason, clusterv1.ConditionSeverityInfo, "")
 		return reconcile.Result{}, errors.New("bootstrap data secret not available yet")
 	}
 
-	hostsList := &infrav1.ByoHostList{}
-	err := r.Client.List(ctx, hostsList)
-	if err != nil {
-		logger.Error(err, "failed to list byohosts")
-		return ctrl.Result{}, err
+	// If there is not yet an byoHost for this byoMachine,
+	// then pick one from the host capacity pool.
+	if machineScope.ByoHost == nil {
+		logger.Info("Attempting host reservation")
+		if res, err := r.attachByoHost(ctx, logger, machineScope); err != nil {
+			return res, err
+		}
 	}
 
-	if len(hostsList.Items) == 0 {
-		logger.Info("No hosts found, waiting..")
-		conditions.MarkFalse(byoMachine, infrav1.BYOHostReady, infrav1.BYOHostsUnavailableReason, clusterv1.ConditionSeverityInfo, "")
-		return ctrl.Result{RequeueAfter: 10 * time.Second}, errors.New("no hosts found")
+	if machineScope.ByoMachine.Spec.ProviderID == "" {
+		providerID := fmt.Sprintf("%s%s/%s", providerIDPrefix, machineScope.ByoHost.Name, util.RandomString(providerIDSuffixLength))
+		remoteClient, err := r.getRemoteClient(ctx, machineScope.ByoMachine)
+		if err != nil {
+			logger.Error(err, "failed to get remote client")
+			return ctrl.Result{}, err
+		}
+
+		err = r.setNodeProviderID(ctx, remoteClient, machineScope.ByoHost, providerID)
+		if err != nil {
+			logger.Error(err, "failed to set node providerID")
+			return ctrl.Result{}, err
+		}
+		machineScope.ByoMachine.Spec.ProviderID = providerID
+		machineScope.ByoMachine.Status.Ready = true
+		conditions.MarkTrue(machineScope.ByoMachine, infrav1.BYOHostReady)
 	}
-	// TODO- Needs smarter logic
-	host := hostsList.Items[0]
-
-	byohostHelper, _ := patch.NewHelper(&host, r.Client)
-
-	host.Status.MachineRef = &corev1.ObjectReference{
-		APIVersion: byoMachine.APIVersion,
-		Kind:       byoMachine.Kind,
-		Namespace:  byoMachine.Namespace,
-		Name:       byoMachine.Name,
-		UID:        byoMachine.UID,
-	}
-
-	if machine.Spec.Bootstrap.DataSecretName == nil {
-		logger.Info("Bootstrap secret not ready")
-		return ctrl.Result{}, errors.New("bootstrap secret not ready")
-	}
-
-	host.Spec.BootstrapSecret = &corev1.ObjectReference{
-		Kind:      "Secret",
-		Namespace: byoMachine.Namespace,
-		Name:      *machine.Spec.Bootstrap.DataSecretName,
-	}
-
-	err = byohostHelper.Patch(ctx, &host)
-	if err != nil {
-		logger.Error(err, "failed to patch byohost")
-		return ctrl.Result{}, err
-	}
-
-	providerID := fmt.Sprintf("%s%s/%s", providerIDPrefix, host.Name, util.RandomString(providerIDSuffixLength))
-	remoteClient, err := r.getRemoteClient(ctx, byoMachine)
-	if err != nil {
-		logger.Error(err, "failed to get remote client")
-		return ctrl.Result{}, err
-	}
-
-	err = r.setNodeProviderID(ctx, remoteClient, &host, providerID)
-	if err != nil {
-		logger.Error(err, "failed to set node providerID")
-		return ctrl.Result{}, err
-	}
-
-	byoMachine.Spec.ProviderID = providerID
-	byoMachine.Status.Ready = true
-
-	conditions.MarkTrue(byoMachine, infrav1.BYOHostReady)
 
 	return ctrl.Result{}, nil
 }
@@ -364,6 +345,64 @@ func (r *ByoMachineReconciler) setPausedConditionForByoHost(ctx context.Context,
 	return helper.Patch(ctx, byoHost)
 }
 
+func (r *ByoMachineReconciler) attachByoHost(ctx context.Context, logger logr.Logger, machineScope *byoMachineScope) (ctrl.Result, error) {
+	if machineScope.ByoHost != nil {
+		return ctrl.Result{}, nil
+	}
+
+	hostsList := &infrav1.ByoHostList{}
+	// LabelSelector filter for byohosts
+	byohostLabels, _ := labels.NewRequirement(clusterv1.ClusterLabelName, selection.DoesNotExist, nil)
+	selector := labels.NewSelector().Add(*byohostLabels)
+	err := r.Client.List(ctx, hostsList, &client.ListOptions{LabelSelector: selector})
+	if err != nil {
+		logger.Error(err, "failed to list byohosts")
+		return ctrl.Result{}, err
+	}
+	if len(hostsList.Items) == 0 {
+		logger.Info("No hosts found, waiting..")
+		conditions.MarkFalse(machineScope.ByoMachine, infrav1.BYOHostReady, infrav1.BYOHostsUnavailableReason, clusterv1.ConditionSeverityInfo, "")
+		return ctrl.Result{}, errors.New("no hosts found")
+	}
+	// TODO- Needs smarter logic
+	host := hostsList.Items[0]
+
+	byohostHelper, err := patch.NewHelper(&host, r.Client)
+	if err != nil {
+		logger.Error(err, "Creating patch helper failed")
+	}
+
+	host.Status.MachineRef = &corev1.ObjectReference{
+		APIVersion: machineScope.ByoMachine.APIVersion,
+		Kind:       machineScope.ByoMachine.Kind,
+		Namespace:  machineScope.ByoMachine.Namespace,
+		Name:       machineScope.ByoMachine.Name,
+		UID:        machineScope.ByoMachine.UID,
+	}
+	// Set the cluster Label
+	hostLabels := host.Labels
+	if hostLabels == nil {
+		hostLabels = make(map[string]string)
+	}
+	hostLabels[clusterv1.ClusterLabelName] = machineScope.ByoMachine.Labels[clusterv1.ClusterLabelName]
+	host.Labels = hostLabels
+
+	host.Spec.BootstrapSecret = &corev1.ObjectReference{
+		Kind:      "Secret",
+		Namespace: machineScope.ByoMachine.Namespace,
+		Name:      *machineScope.Machine.Spec.Bootstrap.DataSecretName,
+	}
+
+	err = byohostHelper.Patch(ctx, &host)
+	if err != nil {
+		logger.Error(err, "failed to patch byohost")
+		return ctrl.Result{}, err
+	}
+	logger.Info("Successfully attached Byohost", "ByoHost.Name", host.Name)
+	machineScope.ByoHost = &host
+	return ctrl.Result{}, nil
+}
+
 // MachineToInfrastructureMapFunc returns a handler.ToRequestsFunc that watches for
 // Machine events and returns reconciliation requests for an infrastructure provider object.
 func ByoHostToByoMachineMapFunc(gvk schema.GroupVersionKind) handler.MapFunc {
@@ -412,6 +451,8 @@ func (r *ByoMachineReconciler) removeHostReservation(ctx context.Context, machin
 
 	// Remove host reservation.
 	machineScope.ByoHost.Status.MachineRef = nil
+
+	// TODO: Remove cluster-label on byohost
 
 	// Remove the cleanup annotation
 	delete(machineScope.ByoHost.Annotations, hostCleanupAnnotation)
