@@ -29,20 +29,6 @@ providers:
   - name: cluster-api
     type: CoreProvider
     versions:
-      - name: v0.3.16 # latest published release
-        value: "https://github.com/kubernetes-sigs/cluster-api/releases/download/v0.3.16/core-components.yaml"
-        type: "url"
-        replacements:
-          - old: --metrics-addr=127.0.0.1:8080
-            new: --metrics-addr=:8080
-      - name: v0.4.0 # next; use manifest from source files
-        value: "https://github.com/kubernetes-sigs/cluster-api/releases/download/v0.4.0/core-components.yaml"
-        type: "url"
-        replacements:
-          - old: --metrics-bind-addr=127.0.0.1:8080
-            new: --metrics-bind-addr=:8080
-        files:
-          - sourcePath: "../data/shared/metadata.yaml"
       - name: v0.4.2 # next; use manifest from source files
         value: "https://github.com/kubernetes-sigs/cluster-api/releases/download/v0.4.2/core-components.yaml"
         type: "url"
@@ -55,20 +41,6 @@ providers:
   - name: kubeadm
     type: BootstrapProvider
     versions:
-      - name: v0.3.16 # latest published release
-        value: "https://github.com/kubernetes-sigs/cluster-api/releases/download/v0.3.16/bootstrap-components.yaml"
-        type: "url"
-        replacements:
-          - old: --metrics-addr=127.0.0.1:8080
-            new: --metrics-addr=:8080
-      - name: v0.4.0 # next; use manifest from source files
-        value: "https://github.com/kubernetes-sigs/cluster-api/releases/download/v0.4.0/bootstrap-components.yaml"
-        type: "url"
-        replacements:
-          - old: --metrics-bind-addr=127.0.0.1:8080
-            new: --metrics-bind-addr=:8080
-        files:
-          - sourcePath: "../data/shared/metadata.yaml"
       - name: v0.4.2 # next; use manifest from source files
         value: "https://github.com/kubernetes-sigs/cluster-api/releases/download/v0.4.2/bootstrap-components.yaml"
         type: "url"
@@ -81,20 +53,6 @@ providers:
   - name: kubeadm
     type: ControlPlaneProvider
     versions:
-      - name: v0.3.16 # latest published release
-        value: "https://github.com/kubernetes-sigs/cluster-api/releases/download/v0.3.16/control-plane-components.yaml"
-        type: "url"
-        replacements:
-          - old: --metrics-addr=127.0.0.1:8080
-            new: --metrics-addr=:8080
-      - name: v0.4.0 # next; use manifest from source files
-        value: "https://github.com/kubernetes-sigs/cluster-api/releases/download/v0.4.0/control-plane-components.yaml"
-        type: "url"
-        replacements:
-          - old: --metrics-bind-addr=127.0.0.1:8080
-            new: --metrics-bind-addr=:8080
-        files:
-          - sourcePath: "../data/shared/metadata.yaml"
       - name: v0.4.2 # next; use manifest from source files
         value: "https://github.com/kubernetes-sigs/cluster-api/releases/download/v0.4.2/control-plane-components.yaml"
         type: "url"
@@ -107,23 +65,6 @@ providers:
   - name: docker
     type: InfrastructureProvider
     versions:
-      # - name: v0.3.16 # latest published release
-      #   value: "https://github.com/kubernetes-sigs/cluster-api/releases/download/v0.3.16/infrastructure-components-development.yaml"
-      #   type: "url"
-      #   replacements:
-      #     - old: --metrics-addr=127.0.0.1:8080
-      #       new: --metrics-addr=:8080
-      #   files:
-      #     # Add cluster templates
-      #     - sourcePath: "../../../../cluster-api/test/e2e/data/infrastructure-docker/v1alpha3/cluster-template.yaml"
-      #- name: v0.4.0 # next; use manifest from source files
-      #  value: "https://github.com/kubernetes-sigs/cluster-api/releases/download/v0.4.0/infrastructure-components-development.yaml"
-      #  type: "url"
-      #  replacements:
-      #    - old: --metrics-bind-addr=127.0.0.1:8080
-      #      new: --metrics-bind-addr=:8080
-      #  files:
-      #    - sourcePath: "../data/shared/metadata.yaml"
       - name: v0.4.2 # next; use manifest from source files
         value: "https://github.com/kubernetes-sigs/cluster-api/releases/download/v0.4.2/infrastructure-components-development.yaml"
         type: "url"
