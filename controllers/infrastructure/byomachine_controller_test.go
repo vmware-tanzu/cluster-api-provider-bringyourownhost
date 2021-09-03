@@ -2,6 +2,7 @@ package controllers
 
 import (
 	"context"
+	"strings"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -103,6 +104,9 @@ var _ = Describe("Controllers/ByomachineController", func() {
 
 			byoHost = common.NewByoHost(defaultByoHostName, defaultNamespace, nil)
 			Expect(k8sClient.Create(ctx, byoHost)).Should(Succeed())
+
+			Expect(clientFake.Create(ctx, common.NewNode(byoHost.Name, defaultNamespace))).Should(Succeed())
+
 		})
 
 		It("claims the first available host", func() {
@@ -161,7 +165,7 @@ var _ = Describe("Controllers/ByomachineController", func() {
 			}).Should(Equal(corev1.ConditionTrue))
 
 			node := corev1.Node{}
-			err = clientFake.Get(ctx, types.NamespacedName{Name: defaultNodeName, Namespace: defaultNamespace}, &node)
+			err = clientFake.Get(ctx, types.NamespacedName{Name: byoHost.Name, Namespace: defaultNamespace}, &node)
 			Expect(err).NotTo(HaveOccurred())
 
 			Expect(node.Spec.ProviderID).To(ContainSubstring(providerIDPrefix))
@@ -173,6 +177,206 @@ var _ = Describe("Controllers/ByomachineController", func() {
 			Expect(k8sClient.Delete(ctx, machine)).Should(Succeed())
 		})
 
+	})
+
+	Context("When all ByoHost are attached", func() {
+		type testConditions struct {
+			Type   clusterv1.ConditionType
+			Status corev1.ConditionStatus
+			Reason string
+		}
+		var (
+			ctx               context.Context
+			machine           *clusterv1.Machine
+			byoHost           *infrastructurev1alpha4.ByoHost
+			byoMachine        *infrastructurev1alpha4.ByoMachine
+			expectedCondition *testConditions
+		)
+
+		BeforeEach(func() {
+			ctx = context.Background()
+			byoHost = common.NewByoHost(defaultByoHostName, defaultNamespace, nil)
+			byoHost.Labels = map[string]string{clusterv1.ClusterLabelName: capiCluster.Name}
+			Expect(k8sClient.Create(ctx, byoHost)).Should(Succeed())
+
+			ph, err := patch.NewHelper(capiCluster, k8sClient)
+			Expect(err).ShouldNot(HaveOccurred())
+			capiCluster.Status.InfrastructureReady = true
+			Expect(ph.Patch(ctx, capiCluster, patch.WithStatusObservedGeneration{})).Should(Succeed())
+
+			machine = common.NewMachine(defaultMachineName, defaultNamespace, defaultClusterName)
+			machine.Spec.Bootstrap = clusterv1.Bootstrap{
+				DataSecretName: &fakeBootstrapSecret,
+			}
+			Expect(k8sClient.Create(ctx, machine)).Should(Succeed())
+
+			byoMachine = common.NewByoMachine(defaultByoMachineName, defaultNamespace, defaultClusterName, machine)
+			Expect(k8sClient.Create(ctx, byoMachine)).Should(Succeed())
+
+		})
+
+		It("should mark BYOHostReady as False when BYOHosts is available but attached", func() {
+			byoMachineLookupKey := types.NamespacedName{Name: byoMachine.Name, Namespace: byoMachine.Namespace}
+			expectedCondition = &testConditions{
+				Type:   infrastructurev1alpha4.BYOHostReady,
+				Status: corev1.ConditionFalse,
+				Reason: infrastructurev1alpha4.BYOHostsUnavailableReason,
+			}
+			Eventually(func() *testConditions {
+				createdByoMachine := &infrastructurev1alpha4.ByoMachine{}
+				err := k8sClient.Get(ctx, byoMachineLookupKey, createdByoMachine)
+				if err != nil {
+					return &testConditions{}
+				}
+
+				actualCondition := conditions.Get(createdByoMachine, infrastructurev1alpha4.BYOHostReady)
+				if actualCondition != nil {
+					return &testConditions{
+						Type:   actualCondition.Type,
+						Status: actualCondition.Status,
+						Reason: actualCondition.Reason,
+					}
+				}
+				return &testConditions{}
+			}).Should(Equal(expectedCondition))
+		})
+
+		AfterEach(func() {
+			Expect(k8sClient.Delete(ctx, byoHost)).Should(Succeed())
+			Expect(k8sClient.Delete(ctx, byoMachine)).Should(Succeed())
+			Expect(k8sClient.Delete(ctx, machine)).Should(Succeed())
+		})
+	})
+
+	Context("When multiple BYO Host are available", func() {
+		var (
+			ctx        context.Context
+			byoHost1   *infrastructurev1alpha4.ByoHost
+			byoHost2   *infrastructurev1alpha4.ByoHost
+			byoMachine *infrastructurev1alpha4.ByoMachine
+			machine    *clusterv1.Machine
+		)
+
+		BeforeEach(func() {
+			ctx = context.Background()
+			byoHost1 = common.NewByoHost(defaultByoHostName, defaultNamespace, nil)
+			Expect(k8sClient.Create(ctx, byoHost1)).Should(Succeed())
+			byoHost2 = common.NewByoHost(defaultByoHostName, defaultNamespace, nil)
+			Expect(k8sClient.Create(ctx, byoHost2)).Should(Succeed())
+
+			ph, err := patch.NewHelper(capiCluster, k8sClient)
+			Expect(err).ShouldNot(HaveOccurred())
+			capiCluster.Status.InfrastructureReady = true
+			Expect(ph.Patch(ctx, capiCluster, patch.WithStatusObservedGeneration{})).Should(Succeed())
+
+			machine = common.NewMachine(defaultMachineName, defaultNamespace, defaultClusterName)
+			machine.Spec.Bootstrap = clusterv1.Bootstrap{
+				DataSecretName: &fakeBootstrapSecret,
+			}
+			Expect(k8sClient.Create(ctx, machine)).Should(Succeed())
+			byoMachine = common.NewByoMachine(defaultByoMachineName, defaultNamespace, defaultClusterName, machine)
+			Expect(k8sClient.Create(ctx, byoMachine)).Should(Succeed())
+
+			Expect(clientFake.Create(ctx, common.NewNode(byoHost1.Name, defaultNamespace))).Should(Succeed())
+			Expect(clientFake.Create(ctx, common.NewNode(byoHost2.Name, defaultNamespace))).Should(Succeed())
+
+		})
+
+		It("claims one of the available host", func() {
+			byoMachineLookupKey := types.NamespacedName{Name: byoMachine.Name, Namespace: byoMachine.Namespace}
+			createdByoMachine := &infrastructurev1alpha4.ByoMachine{}
+			Eventually(func() bool {
+				err := k8sClient.Get(ctx, byoMachineLookupKey, createdByoMachine)
+				if err != nil {
+					return false
+				}
+				return createdByoMachine.Status.Ready
+			}).Should(BeTrue())
+
+			Eventually(func() corev1.ConditionStatus {
+				err := k8sClient.Get(ctx, byoMachineLookupKey, createdByoMachine)
+				if err != nil {
+					return corev1.ConditionFalse
+				}
+				readyCondition := conditions.Get(createdByoMachine, infrastructurev1alpha4.BYOHostReady)
+				if readyCondition != nil {
+					return readyCondition.Status
+				}
+				return corev1.ConditionFalse
+			}).Should(Equal(corev1.ConditionTrue))
+
+			node1 := corev1.Node{}
+			err := clientFake.Get(ctx, types.NamespacedName{Name: byoHost1.Name, Namespace: defaultNamespace}, &node1)
+			Expect(err).NotTo(HaveOccurred())
+
+			node2 := corev1.Node{}
+			err = clientFake.Get(ctx, types.NamespacedName{Name: byoHost2.Name, Namespace: defaultNamespace}, &node2)
+			Expect(err).NotTo(HaveOccurred())
+
+			var nodeTagged bool
+			if strings.Contains(node1.Spec.ProviderID, providerIDPrefix) || strings.Contains(node2.Spec.ProviderID, providerIDPrefix) {
+				nodeTagged = true
+			}
+			Expect(nodeTagged).To(Equal(true))
+		})
+
+		It("does not claims the attached host", func() {
+			ph, err := patch.NewHelper(byoHost2, k8sClient)
+			Expect(err).ShouldNot(HaveOccurred())
+			byoHost2.Labels = map[string]string{clusterv1.ClusterLabelName: capiCluster.Name}
+			Expect(ph.Patch(ctx, byoHost2, patch.WithStatusObservedGeneration{})).Should(Succeed())
+
+			byoMachineLookupKey := types.NamespacedName{Name: byoMachine.Name, Namespace: byoMachine.Namespace}
+			createdByoMachine := &infrastructurev1alpha4.ByoMachine{}
+			byoHostLookupKey := types.NamespacedName{Name: byoHost1.Name, Namespace: defaultNamespace}
+
+			Eventually(func() bool {
+				createdByoHost := &infrastructurev1alpha4.ByoHost{}
+				err = k8sClient.Get(ctx, byoHostLookupKey, createdByoHost)
+				if err != nil {
+					return false
+				}
+				if createdByoHost.Status.MachineRef != nil {
+					if createdByoHost.Status.MachineRef.Namespace == defaultNamespace && createdByoHost.Status.MachineRef.Name == byoMachine.Name {
+						return true
+					}
+				}
+				return false
+			}).Should(BeTrue())
+
+			Eventually(func() bool {
+				err = k8sClient.Get(ctx, byoMachineLookupKey, createdByoMachine)
+				if err != nil {
+					return false
+				}
+				return createdByoMachine.Status.Ready
+			}).Should(BeTrue())
+
+			Eventually(func() corev1.ConditionStatus {
+				err = k8sClient.Get(ctx, byoMachineLookupKey, createdByoMachine)
+				if err != nil {
+					return corev1.ConditionFalse
+				}
+				readyCondition := conditions.Get(createdByoMachine, infrastructurev1alpha4.BYOHostReady)
+				if readyCondition != nil {
+					return readyCondition.Status
+				}
+				return corev1.ConditionFalse
+			}).Should(Equal(corev1.ConditionTrue))
+
+			node := corev1.Node{}
+			err = clientFake.Get(ctx, types.NamespacedName{Name: byoHost1.Name, Namespace: defaultNamespace}, &node)
+			Expect(err).NotTo(HaveOccurred())
+
+			Expect(node.Spec.ProviderID).To(ContainSubstring(providerIDPrefix))
+		})
+
+		AfterEach(func() {
+			Expect(k8sClient.Delete(ctx, byoHost1)).Should(Succeed())
+			Expect(k8sClient.Delete(ctx, byoHost2)).Should(Succeed())
+			Expect(k8sClient.Delete(ctx, byoMachine)).Should(Succeed())
+			Expect(k8sClient.Delete(ctx, machine)).Should(Succeed())
+		})
 	})
 
 	Context("Test for ByoMachine Reconcile preconditions", func() {

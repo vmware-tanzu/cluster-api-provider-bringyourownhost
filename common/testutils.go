@@ -63,8 +63,8 @@ func NewByoHost(byoHostName, byoHostNamespace string, byoMachine *infrastructure
 			APIVersion: "infrastructure.cluster.x-k8s.io/v1alpha4",
 		},
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      byoHostName,
-			Namespace: byoHostNamespace,
+			GenerateName: byoHostName,
+			Namespace:    byoHostNamespace,
 		},
 		Spec: infrastructurev1alpha4.ByoHostSpec{},
 	}
