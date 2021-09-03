@@ -28,10 +28,6 @@ spec:
     spec:
       joinConfiguration:
         nodeRegistration:
-          ignorePreflightErrors:
-          - FileAvailable--etc-kubernetes-kubelet.conf
-          - Port-10250
-          - FileAvailable--etc-kubernetes-pki-ca.crt
           kubeletExtraArgs:
             cgroup-driver: cgroupfs
             eviction-hard: nodefs.available<0%,nodefs.inodesFree<0%,imagefs.available<0%

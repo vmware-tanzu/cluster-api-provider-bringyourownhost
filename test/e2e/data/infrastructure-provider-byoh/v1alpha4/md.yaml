@@ -22,10 +22,6 @@ spec:
           kubeletExtraArgs:
             cgroup-driver: cgroupfs
             eviction-hard: nodefs.available<0%,nodefs.inodesFree<0%,imagefs.available<0%
-          ignorePreflightErrors:
-          - FileAvailable--etc-kubernetes-kubelet.conf
-          - Port-10250
-          - FileAvailable--etc-kubernetes-pki-ca.crt
 ---
 apiVersion: cluster.x-k8s.io/v1alpha4
 kind: MachineDeployment
