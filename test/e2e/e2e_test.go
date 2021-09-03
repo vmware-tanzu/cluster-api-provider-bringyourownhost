@@ -17,7 +17,6 @@ limitations under the License.
 package e2e
 
 import (
-	"bufio"
 	"context"
 	"fmt"
 	"io"
@@ -37,7 +36,6 @@ import (
 	. "github.com/onsi/gomega"
 	"github.com/onsi/gomega/gexec"
 	"github.com/pkg/errors"
-	"github.com/vmware-tanzu/cluster-api-provider-byoh/common"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/utils/pointer"
 	"sigs.k8s.io/cluster-api/test/framework/clusterctl"
@@ -51,10 +49,6 @@ const (
 	IPFamily           = "IP_FAMILY"
 	KindImage          = "byoh/node:v1.19.11"
 	TempKubeconfigPath = "/tmp/mgmt.conf"
-)
-
-var (
-	AgentLogFile string
 )
 
 type cpConfig struct {
@@ -189,7 +183,6 @@ var _ = Describe("When BYOH joins existing cluster", func() {
 		// Setup a Namespace where to host objects for this spec and create a watcher for the namespace events.
 		namespace, cancelWatches = setupSpecNamespace(ctx, specName, bootstrapClusterProxy, artifactFolder)
 		clusterResources = new(clusterctl.ApplyClusterTemplateAndWaitResult)
-		AgentLogFile = common.RandStr("/tmp/agent", 5) + ".log"
 	})
 
 	It("Should create a workload cluster with single BYOH host", func() {
@@ -264,49 +257,9 @@ var _ = Describe("When BYOH joins existing cluster", func() {
 		Expect(err).NotTo(HaveOccurred())
 		defer output.Close()
 
-		// write agent log for debug
-		if AgentLogFile != "" {
-			s := make(chan string)
-			e := make(chan error)
-			buf := bufio.NewReader(output.Reader)
-			f, err := os.OpenFile(AgentLogFile, os.O_CREATE|os.O_WRONLY, 0666)
-			Expect(err).NotTo(HaveOccurred())
-
-			defer func() {
-				f.Close()
-			}()
-
-			go func() {
-				for {
-					line, _, err := buf.ReadLine()
-					if err != nil {
-						// will be quit by this err: read unix @->/run/docker.sock: use of closed network connection
-						e <- err
-						break
-					} else {
-						s <- string(line)
-					}
-				}
-			}()
-
-			go func() {
-				defer GinkgoRecover()
-				for {
-					select {
-					case line := <-s:
-						_, err2 := f.WriteString(line + "\n")
-						if err2 != nil {
-							Byf("Write String to file failed, err2=%v", err2)
-						}
-						_ = f.Sync()
-					case err := <-e:
-						// Please ignore this error if you see it in output
-						Byf("Get err %v", err)
-						return
-					}
-				}
-			}()
-		}
+		// read the log of host agent container in backend, and write it
+		f := WriteDockerLog(output, AgentLogFile)
+		defer f.Close()
 
 		clusterctl.ApplyClusterTemplateAndWait(ctx, clusterctl.ApplyClusterTemplateAndWaitInput{
 			ClusterProxy: bootstrapClusterProxy,
@@ -329,6 +282,12 @@ var _ = Describe("When BYOH joins existing cluster", func() {
 
 	})
 
+	JustAfterEach(func() {
+		if CurrentGinkgoTestDescription().Failed {
+			ShowInfo()
+		}
+	})
+
 	AfterEach(func() {
 		if dockerClient != nil && byohost.ID != "" {
 			err := dockerClient.ContainerStop(ctx, byohost.ID, nil)
@@ -338,9 +297,9 @@ var _ = Describe("When BYOH joins existing cluster", func() {
 			Expect(err).NotTo(HaveOccurred())
 		}
 
-		if AgentLogFile != "" {
-			os.Remove(AgentLogFile)
-		}
+		os.Remove(AgentLogFile)
+		os.Remove(ReadByohControllerManagerLogShellFile)
+		os.Remove(ReadAllPodsShellFile)
 
 		// Dumps all the resources in the spec namespace, then cleanups the cluster object and the spec namespace itself.
 		dumpSpecResourcesAndCleanup(ctx, specName, bootstrapClusterProxy, artifactFolder, namespace, cancelWatches, clusterResources.Cluster, e2eConfig.GetIntervals, skipCleanup)
