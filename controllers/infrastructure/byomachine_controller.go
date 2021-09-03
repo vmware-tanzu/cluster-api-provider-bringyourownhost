@@ -52,6 +52,7 @@ const (
 	providerIDPrefix       = "byoh://"
 	providerIDSuffixLength = 6
 	hostCleanupAnnotation  = "byoh.infrastructure.cluster.x-k8s.io/unregistering"
+	hostMachineRefIndex    = "status.machineref"
 )
 
 // ByoMachineReconciler reconciles a ByoMachine object
@@ -140,18 +141,20 @@ func (r *ByoMachineReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 		return ctrl.Result{}, nil
 	}
 
-	// TODO: Till we do not have index on host.Status.MachineRef
-	allHosts := &infrav1.ByoHostList{}
-	err = r.Client.List(ctx, allHosts)
+	// Fetch the BYOHost which is referencing this machine, if any
+	hostsList := &infrav1.ByoHostList{}
+	err = r.Client.List(
+		ctx,
+		hostsList,
+		client.MatchingFields{hostMachineRefIndex: fmt.Sprintf("%s/%s", byoMachine.Namespace, byoMachine.Name)},
+	)
 	if err != nil {
 		return ctrl.Result{}, err
 	}
-
 	var refByoHost *infrav1.ByoHost
-	for i := range allHosts.Items {
-		if allHosts.Items[i].Status.MachineRef != nil && (allHosts.Items[i].Status.MachineRef.Name == byoMachine.Name && allHosts.Items[i].Status.MachineRef.Namespace == byoMachine.Namespace) {
-			refByoHost = &allHosts.Items[i]
-		}
+	if len(hostsList.Items) == 1 {
+		refByoHost = &hostsList.Items[0]
+		logger = logger.WithValues("BYOHost", refByoHost.Name)
 	}
 
 	// Create the machine scope
@@ -257,6 +260,14 @@ func (r *ByoMachineReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		controlledTypeName = reflect.TypeOf(controlledType).Elem().Name()
 		controlledTypeGVK  = infrav1.GroupVersion.WithKind(controlledTypeName)
 	)
+
+	// Add index to BYOHost for listing by Machine reference.
+	if err := mgr.GetCache().IndexField(context.Background(), &infrav1.ByoHost{},
+		hostMachineRefIndex,
+		r.indexByoHostByMachineRef,
+	); err != nil {
+		return err
+	}
 
 	return ctrl.NewControllerManagedBy(mgr).
 		For(controlledType).
@@ -459,4 +470,17 @@ func (r *ByoMachineReconciler) removeHostReservation(ctx context.Context, machin
 
 	// Issue the patch.
 	return helper.Patch(ctx, machineScope.ByoHost)
+}
+
+func (r *ByoMachineReconciler) indexByoHostByMachineRef(o client.Object) []string {
+	host, ok := o.(*infrav1.ByoHost)
+	if !ok {
+		log.Log.Error(errors.New("incorrect type"), "expected a BYOHost", "type", fmt.Sprintf("%T", o))
+		return nil
+	}
+
+	if host.Status.MachineRef != nil {
+		return []string{fmt.Sprintf("%s/%s", host.Status.MachineRef.Namespace, host.Status.MachineRef.Name)}
+	}
+	return nil
 }

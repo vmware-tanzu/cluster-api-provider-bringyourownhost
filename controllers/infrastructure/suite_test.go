@@ -99,15 +99,13 @@ var _ = BeforeSuite(func() {
 
 	//+kubebuilder:scaffold:scheme
 
-	k8sClient, err = client.New(cfg, client.Options{Scheme: scheme.Scheme})
-	Expect(err).NotTo(HaveOccurred())
-	Expect(k8sClient).NotTo(BeNil())
-
 	k8sManager, err := ctrl.NewManager(cfg, ctrl.Options{
 		Scheme:             scheme.Scheme,
 		MetricsBindAddress: ":6080",
 	})
 	Expect(err).NotTo(HaveOccurred())
+
+	k8sClient = k8sManager.GetClient()
 
 	capiCluster = common.NewCluster(defaultClusterName, defaultNamespace)
 	Expect(k8sClient.Create(context.Background(), capiCluster)).Should(Succeed())
