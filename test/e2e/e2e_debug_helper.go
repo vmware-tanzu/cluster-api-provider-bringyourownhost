@@ -1,4 +1,4 @@
-package common
+package e2e
 
 import (
 	"bufio"
@@ -12,7 +12,10 @@ import (
 )
 
 const (
-	DefaultFileMode fs.FileMode = 0777
+	DefaultFileMode                       fs.FileMode = 0777
+	ReadByohControllerManagerLogShellFile string      = "/tmp/read-byoh-controller-manager-log.sh"
+	ReadAllPodsShellFile                  string      = "/tmp/read-all-pods.sh"
+	AgentLogFile                          string      = "/tmp/host-agent.log"
 )
 
 func WriteDockerLog(output types.HijackedResponse, outputFile string) *os.File {
@@ -106,4 +109,31 @@ func WriteShellScript(shellFileName string, shellFileContent []string) {
 			return
 		}
 	}
+}
+
+func ShowInfo() {
+	// show swap status
+	// showFileContent("/proc/swaps")
+
+	// show the status of  all pods
+	shellContent := []string{
+		"kubectl get pods --all-namespaces --kubeconfig /tmp/mgmt.conf",
+	}
+	WriteShellScript(ReadAllPodsShellFile, shellContent)
+	ShowFileContent(ReadAllPodsShellFile)
+	ExecuteShellScript(ReadAllPodsShellFile)
+
+	// show the agent log
+	ShowFileContent(AgentLogFile)
+
+	// show byoh-controller-manager logs
+	shellContent = []string{
+		"podNamespace=`kubectl get pods --all-namespaces --kubeconfig /tmp/mgmt.conf | grep byoh-controller-manager | awk '{print $1}'`",
+		"podName=`kubectl get pods --all-namespaces --kubeconfig /tmp/mgmt.conf | grep byoh-controller-manager | awk '{print $2}'`",
+		"kubectl logs -n ${podNamespace} ${podName} --kubeconfig /tmp/mgmt.conf -c manager",
+	}
+
+	WriteShellScript(ReadByohControllerManagerLogShellFile, shellContent)
+	ShowFileContent(ReadByohControllerManagerLogShellFile)
+	ExecuteShellScript(ReadByohControllerManagerLogShellFile)
 }
