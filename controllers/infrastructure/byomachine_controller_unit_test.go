@@ -77,7 +77,7 @@ var _ = Describe("Controllers/ByomachineController/Unitests", func() {
 			request := reconcile.Request{NamespacedName: byoMachineLookupkey}
 
 			_, err := reconciler.Reconcile(ctx, request)
-			Expect(err).To(MatchError("clusters.cluster.x-k8s.io \"" + clusterName + "\" not found"))
+			Expect(err).To(MatchError("Cluster.cluster.x-k8s.io \"" + clusterName + "\" not found"))
 		})
 
 		AfterEach(func() {
