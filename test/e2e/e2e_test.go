@@ -49,7 +49,7 @@ const (
 	CNIPath            = "CNI"
 	CNIResources       = "CNI_RESOURCES"
 	IPFamily           = "IP_FAMILY"
-	KindImage          = "byoh/node:v1.19.11"
+	KindImage          = "byoh/node:v1.22.0"
 	TempKubeconfigPath = "/tmp/mgmt.conf"
 )
 
@@ -314,7 +314,7 @@ var _ = Describe("When BYOH joins existing cluster", func() {
 				LogFolder:                filepath.Join(artifactFolder, "clusters", bootstrapClusterProxy.GetName()),
 				ClusterctlConfigPath:     clusterctlConfigPath,
 				KubeconfigPath:           bootstrapClusterProxy.GetKubeconfigPath(),
-				InfrastructureProvider:   "byoh:v0.4.0",
+				InfrastructureProvider:   "byoh:v0.4.2",
 				Flavor:                   clusterctl.DefaultFlavor,
 				Namespace:                namespace.Name,
 				ClusterName:              clusterName,

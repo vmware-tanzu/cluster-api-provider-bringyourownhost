@@ -28,7 +28,12 @@ spec:
     spec:
       joinConfiguration:
         nodeRegistration:
+          ignorePreflightErrors:
+          - FileAvailable--etc-kubernetes-kubelet.conf
+          - Port-10250
+          - FileAvailable--etc-kubernetes-pki-ca.crt
           kubeletExtraArgs:
+            cgroup-driver: cgroupfs
             eviction-hard: nodefs.available<0%,nodefs.inodesFree<0%,imagefs.available<0%
 ---
 apiVersion: cluster.x-k8s.io/v1alpha4
@@ -82,17 +87,13 @@ spec:
         name: ${CLUSTER_NAME}-md-0
       version: ${KUBERNETES_VERSION}
 ---
-apiVersion: controlplane.cluster.x-k8s.io/v1alpha3
+apiVersion: controlplane.cluster.x-k8s.io/v1alpha4
 kind: KubeadmControlPlane
 metadata:
   labels:
     nodepool: pool0
   name: ${CLUSTER_NAME}-control-plane
 spec:
-  infrastructureTemplate:
-    apiVersion: infrastructure.cluster.x-k8s.io/v1alpha4
-    kind: DockerMachineTemplate
-    name: ${CLUSTER_NAME}-control-plane
   kubeadmConfigSpec:
     clusterConfiguration:
       apiServer:
@@ -108,12 +109,20 @@ spec:
       nodeRegistration:
         criSocket: /var/run/containerd/containerd.sock
         kubeletExtraArgs:
+          cgroup-driver: cgroupfs
           eviction-hard: nodefs.available<0%,nodefs.inodesFree<0%,imagefs.available<0%
     joinConfiguration:
       nodeRegistration:
         criSocket: /var/run/containerd/containerd.sock
         kubeletExtraArgs:
+          cgroup-driver: cgroupfs
           eviction-hard: nodefs.available<0%,nodefs.inodesFree<0%,imagefs.available<0%
+  machineTemplate:
+    infrastructureRef:
+      apiVersion: infrastructure.cluster.x-k8s.io/v1alpha4
+      kind: DockerMachineTemplate
+      name: ${CLUSTER_NAME}-control-plane
+      namespace: ${NAMESPACE}
   replicas: ${CONTROL_PLANE_MACHINE_COUNT}
   version: ${KUBERNETES_VERSION}
 ---
