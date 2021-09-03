@@ -36,7 +36,6 @@ import (
 	. "github.com/onsi/gomega"
 	"github.com/onsi/gomega/gexec"
 	"github.com/pkg/errors"
-	"github.com/vmware-tanzu/cluster-api-provider-byoh/common"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/utils/pointer"
 	"sigs.k8s.io/cluster-api/test/framework/clusterctl"
@@ -44,15 +43,12 @@ import (
 )
 
 const (
-	KubernetesVersion                     = "KUBERNETES_VERSION"
-	CNIPath                               = "CNI"
-	CNIResources                          = "CNI_RESOURCES"
-	IPFamily                              = "IP_FAMILY"
-	KindImage                             = "byoh/node:v1.19.11"
-	TempKubeconfigPath                    = "/tmp/mgmt.conf"
-	ReadByohControllerManagerLogShellFile = "/tmp/read-byoh-controller-manager-log.sh"
-	ReadAllPodsShellFile                  = "/tmp/read-all-pods.sh"
-	AgentLogFile                          = "/tmp/host-agent.log"
+	KubernetesVersion  = "KUBERNETES_VERSION"
+	CNIPath            = "CNI"
+	CNIResources       = "CNI_RESOURCES"
+	IPFamily           = "IP_FAMILY"
+	KindImage          = "byoh/node:v1.19.11"
+	TempKubeconfigPath = "/tmp/mgmt.conf"
 )
 
 type cpConfig struct {
@@ -262,7 +258,7 @@ var _ = Describe("When BYOH joins existing cluster", func() {
 		defer output.Close()
 
 		// read the log of host agent container in backend, and write it
-		f := common.WriteDockerLog(output, AgentLogFile)
+		f := WriteDockerLog(output, AgentLogFile)
 		defer f.Close()
 
 		clusterctl.ApplyClusterTemplateAndWait(ctx, clusterctl.ApplyClusterTemplateAndWaitInput{
@@ -309,30 +305,3 @@ var _ = Describe("When BYOH joins existing cluster", func() {
 		dumpSpecResourcesAndCleanup(ctx, specName, bootstrapClusterProxy, artifactFolder, namespace, cancelWatches, clusterResources.Cluster, e2eConfig.GetIntervals, skipCleanup)
 	})
 })
-
-func ShowInfo() {
-	// show swap status
-	// showFileContent("/proc/swaps")
-
-	// show the status of  all pods
-	shellContent := []string{
-		"kubectl get pods --all-namespaces --kubeconfig /tmp/mgmt.conf",
-	}
-	common.WriteShellScript(ReadAllPodsShellFile, shellContent)
-	common.ShowFileContent(ReadAllPodsShellFile)
-	common.ExecuteShellScript(ReadAllPodsShellFile)
-
-	// show the agent log
-	common.ShowFileContent(AgentLogFile)
-
-	// show byoh-controller-manager logs
-	shellContent = []string{
-		"podNamespace=`kubectl get pods --all-namespaces --kubeconfig /tmp/mgmt.conf | grep byoh-controller-manager | awk '{print $1}'`",
-		"podName=`kubectl get pods --all-namespaces --kubeconfig /tmp/mgmt.conf | grep byoh-controller-manager | awk '{print $2}'`",
-		"kubectl logs -n ${podNamespace} ${podName} --kubeconfig /tmp/mgmt.conf -c manager",
-	}
-
-	common.WriteShellScript(ReadByohControllerManagerLogShellFile, shellContent)
-	common.ShowFileContent(ReadByohControllerManagerLogShellFile)
-	common.ExecuteShellScript(ReadByohControllerManagerLogShellFile)
-}
