@@ -30,8 +30,8 @@ const (
 
 // ByoMachineSpec defines the desired state of ByoMachine
 type ByoMachineSpec struct {
-	// INSERT ADDITIONAL SPEC FIELDS - desired state of cluster
-	// Important: Run "make" to regenerate code after modifying this file
+	// Label Selector to choose the byohost
+	Selector *metav1.LabelSelector `json:"selector,omitempty"`
 
 	ProviderID string `json:"providerID,omitempty"`
 }
@@ -57,7 +57,6 @@ type NetworkStatus struct {
 	// the default gateway sit on.
 	IsDefault bool `json:"isDefault,omitempty"`
 }
-
 
 // ByoMachineStatus defines the observed state of ByoMachine
 type ByoMachineStatus struct {
