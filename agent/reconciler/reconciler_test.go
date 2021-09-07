@@ -5,6 +5,7 @@ import (
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+	"github.com/vmware-tanzu/cluster-api-provider-byoh/agent/cloudinit/cloudinitfakes"
 	infrastructurev1alpha4 "github.com/vmware-tanzu/cluster-api-provider-byoh/apis/infrastructure/v1alpha4"
 	"github.com/vmware-tanzu/cluster-api-provider-byoh/common"
 	corev1 "k8s.io/api/core/v1"
@@ -25,6 +26,7 @@ var _ = Describe("Byohost Agent Tests", func() {
 			hostName         = "test-host"
 			byoHost          *infrastructurev1alpha4.ByoHost
 			byoHostLookupKey types.NamespacedName
+			fakeCmdExecutor  *cloudinitfakes.FakeICmdRunner
 		)
 
 		BeforeEach(func() {
@@ -33,6 +35,8 @@ var _ = Describe("Byohost Agent Tests", func() {
 			Expect(k8sClient.Create(ctx, byoHost)).NotTo(HaveOccurred(), "failed to create byohost")
 			patchHelper, err = patch.NewHelper(byoHost, k8sClient)
 			Expect(err).ShouldNot(HaveOccurred())
+
+			fakeCmdExecutor = &cloudinitfakes.FakeICmdRunner{}
 
 			byoHostLookupKey = types.NamespacedName{Name: byoHost.Name, Namespace: ns}
 		})
@@ -183,6 +187,7 @@ var _ = Describe("Byohost Agent Tests", func() {
 			byoHost.Annotations[hostCleanupAnnotation] = ""
 			Expect(patchHelper.Patch(ctx, byoHost, patch.WithStatusObservedGeneration{})).NotTo(HaveOccurred())
 
+			fakeCmdExecutor.RunCmdReturns(nil)
 			result, reconcilerErr := reconciler.Reconcile(ctx, controllerruntime.Request{
 				NamespacedName: byoHostLookupKey,
 			})
