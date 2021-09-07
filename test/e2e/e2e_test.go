@@ -166,8 +166,8 @@ var _ = Describe("When BYOH joins existing cluster", func() {
 		clusterResources *clusterctl.ApplyClusterTemplateAndWaitResult
 		allDockerClient  []*client.Client
 		allByohost       []container.ContainerCreateCreatedBody
-		byByoHostNum     int    = 2
-		byoHostPrefix    string = "byohost"
+		byByoHostNum     = 2
+		byoHostPrefix    = "byohost"
 	)
 
 	BeforeEach(func() {
@@ -249,8 +249,7 @@ var _ = Describe("When BYOH joins existing cluster", func() {
 	})
 })
 
-func CreateByoHostDocker(ctx context.Context, hostName string, agentLogFile string) (*client.Client, container.ContainerCreateCreatedBody, *os.File, types.HijackedResponse) {
-
+func CreateByoHostDocker(ctx context.Context, hostName, agentLogFile string) (*client.Client, container.ContainerCreateCreatedBody, *os.File, types.HijackedResponse) {
 	dockerClient, err := client.NewClientWithOpts(client.FromEnv)
 	Expect(err).NotTo(HaveOccurred())
 
@@ -323,5 +322,4 @@ func CreateByoHostDocker(ctx context.Context, hostName string, agentLogFile stri
 	f := WriteDockerLog(output, agentLogFile)
 
 	return dockerClient, byohost, f, output
-
 }
