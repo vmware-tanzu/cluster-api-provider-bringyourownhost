@@ -1,6 +1,7 @@
 package reconciler
 
 import (
+	"context"
 	"go/build"
 	"path/filepath"
 	"testing"
@@ -71,7 +72,7 @@ var _ = BeforeSuite(func() {
 	reconciler = &HostReconciler{
 		Client: k8sClient,
 	}
-	err = reconciler.SetupWithManager(k8sManager)
+	err = reconciler.SetupWithManager(context.TODO(), k8sManager)
 	Expect(err).ToNot(HaveOccurred())
 
 	// TODO: Either delete the below goroutine
