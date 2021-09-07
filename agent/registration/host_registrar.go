@@ -7,6 +7,7 @@ import (
 	"github.com/jackpal/gateway"
 	infrastructurev1alpha4 "github.com/vmware-tanzu/cluster-api-provider-byoh/apis/infrastructure/v1alpha4"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	clusterv1 "sigs.k8s.io/cluster-api/api/v1alpha4"
 	"sigs.k8s.io/cluster-api/util/patch"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
@@ -25,6 +26,9 @@ func (hr HostRegistrar) Register(hostName, namespace string) error {
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      hostName,
 			Namespace: namespace,
+			Labels: map[string]string{
+				clusterv1.WatchLabel: hostName,
+			},
 		},
 		Spec:   infrastructurev1alpha4.ByoHostSpec{},
 		Status: infrastructurev1alpha4.ByoHostStatus{},
@@ -81,9 +85,9 @@ func (hr HostRegistrar) GetNetworkStatus() []infrastructurev1alpha4.NetworkStatu
 			var ip net.IP
 			switch v := addr.(type) {
 			case *net.IPNet:
-					ip = v.IP
+				ip = v.IP
 			case *net.IPAddr:
-					ip = v.IP
+				ip = v.IP
 			}
 			if ip.String() == defaultIP.String() {
 				netStatus.IsDefault = true

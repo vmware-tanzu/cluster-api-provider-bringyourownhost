@@ -9,22 +9,27 @@ import (
 	"sigs.k8s.io/cluster-api/util/annotations"
 	"sigs.k8s.io/cluster-api/util/conditions"
 	"sigs.k8s.io/cluster-api/util/patch"
+	"sigs.k8s.io/cluster-api/util/predicates"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 
 	"github.com/vmware-tanzu/cluster-api-provider-byoh/agent/cloudinit"
+	"github.com/vmware-tanzu/cluster-api-provider-byoh/agent/common"
 	infrastructurev1alpha4 "github.com/vmware-tanzu/cluster-api-provider-byoh/apis/infrastructure/v1alpha4"
 	corev1 "k8s.io/api/core/v1"
 	ctrl "sigs.k8s.io/controller-runtime"
 )
 
 type HostReconciler struct {
-	Client client.Client
+	Client           client.Client
+	WatchFilterValue string
 }
 
 const hostCleanupAnnotation = "byoh.infrastructure.cluster.x-k8s.io/unregistering"
 
 func (r HostReconciler) Reconcile(ctx context.Context, req ctrl.Request) (_ ctrl.Result, reterr error) {
+	klog.Infof("reconcileRequest.byohost=%s, mybyohost=%s", req.NamespacedName.Name, common.MyByoHostName)
+
 	// Fetch the ByoHost instance.
 	byoHost := &infrastructurev1alpha4.ByoHost{}
 	err := r.Client.Get(ctx, req.NamespacedName, byoHost)
@@ -116,9 +121,10 @@ func (r HostReconciler) getBootstrapScript(ctx context.Context, dataSecretName, 
 	return bootstrapSecret, nil
 }
 
-func (r HostReconciler) SetupWithManager(mgr manager.Manager) error {
+func (r HostReconciler) SetupWithManager(ctx context.Context, mgr manager.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&infrastructurev1alpha4.ByoHost{}).
+		WithEventFilter(predicates.ResourceNotPausedAndHasFilterLabel(ctrl.LoggerFrom(ctx), r.WatchFilterValue)).
 		Complete(r)
 }
 
