@@ -8,6 +8,7 @@ import (
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+	"github.com/vmware-tanzu/cluster-api-provider-byoh/agent/cloudinit/cloudinitfakes"
 	infrastructurev1alpha4 "github.com/vmware-tanzu/cluster-api-provider-byoh/apis/infrastructure/v1alpha4"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -70,7 +71,8 @@ var _ = BeforeSuite(func() {
 	Expect(err).ToNot(HaveOccurred())
 
 	reconciler = &HostReconciler{
-		Client: k8sClient,
+		Client:    k8sClient,
+		CmdRunner: &cloudinitfakes.FakeICmdRunner{},
 	}
 	err = reconciler.SetupWithManager(context.TODO(), k8sManager)
 	Expect(err).ToNot(HaveOccurred())

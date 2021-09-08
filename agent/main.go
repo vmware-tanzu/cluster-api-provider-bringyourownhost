@@ -5,6 +5,7 @@ import (
 	"flag"
 	"os"
 
+	"github.com/vmware-tanzu/cluster-api-provider-byoh/agent/cloudinit"
 	"github.com/vmware-tanzu/cluster-api-provider-byoh/agent/reconciler"
 	"github.com/vmware-tanzu/cluster-api-provider-byoh/agent/registration"
 	infrastructurev1alpha4 "github.com/vmware-tanzu/cluster-api-provider-byoh/apis/infrastructure/v1alpha4"
@@ -71,6 +72,7 @@ func main() {
 	if err = (reconciler.HostReconciler{
 		Client:           k8sClient,
 		WatchFilterValue: hostName,
+    CmdRunner: cloudinit.CmdRunner{},
 	}).SetupWithManager(context.TODO(), mgr); err != nil {
 		klog.Errorf("unable to create controller, err=%v", err)
 		return
