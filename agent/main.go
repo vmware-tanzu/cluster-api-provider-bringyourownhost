@@ -5,7 +5,6 @@ import (
 	"flag"
 	"os"
 
-	agentcommon "github.com/vmware-tanzu/cluster-api-provider-byoh/agent/common"
 	"github.com/vmware-tanzu/cluster-api-provider-byoh/agent/reconciler"
 	"github.com/vmware-tanzu/cluster-api-provider-byoh/agent/registration"
 	infrastructurev1alpha4 "github.com/vmware-tanzu/cluster-api-provider-byoh/apis/infrastructure/v1alpha4"
@@ -18,7 +17,8 @@ import (
 )
 
 var (
-	scheme *runtime.Scheme
+	namespace string
+	scheme    *runtime.Scheme
 )
 
 func init() {
@@ -27,7 +27,7 @@ func init() {
 	_ = corev1.AddToScheme(scheme)
 	_ = clusterv1.AddToScheme(scheme)
 
-	flag.StringVar(&agentcommon.MyByoHostNameSpace, "namespace", "default", "Namespace in the management cluster where you would like to register this host")
+	flag.StringVar(&namespace, "namespace", "default", "Namespace in the management cluster where you would like to register this host")
 }
 
 // TODO - fix logging
@@ -47,21 +47,21 @@ func main() {
 		return
 	}
 
-	agentcommon.MyByoHostName, err = os.Hostname()
+	hostName, err := os.Hostname()
 	if err != nil {
 		klog.Errorf("couldn't determine hostname, err=%v", err)
 		return
 	}
 
-	err = registration.HostRegistrar{K8sClient: k8sClient}.Register(agentcommon.MyByoHostName, agentcommon.MyByoHostNameSpace)
+	err = registration.HostRegistrar{K8sClient: k8sClient}.Register(hostName, namespace)
 	if err != nil {
-		klog.Errorf("error registering host %s registration in namespace %s, err=%v", agentcommon.MyByoHostName, agentcommon.MyByoHostNameSpace, err)
+		klog.Errorf("error registering host %s registration in namespace %s, err=%v", hostName, namespace, err)
 		return
 	}
 
 	mgr, err := ctrl.NewManager(config, ctrl.Options{
 		Scheme:    scheme,
-		Namespace: agentcommon.MyByoHostNameSpace,
+		Namespace: namespace,
 	})
 	if err != nil {
 		klog.Errorf("unable to start manager, err=%v", err)
@@ -70,7 +70,7 @@ func main() {
 
 	if err = (reconciler.HostReconciler{
 		Client:           k8sClient,
-		WatchFilterValue: agentcommon.MyByoHostName,
+		WatchFilterValue: hostName,
 	}).SetupWithManager(context.TODO(), mgr); err != nil {
 		klog.Errorf("unable to create controller, err=%v", err)
 		return

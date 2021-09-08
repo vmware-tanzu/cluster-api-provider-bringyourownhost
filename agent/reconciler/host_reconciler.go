@@ -14,7 +14,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 
 	"github.com/vmware-tanzu/cluster-api-provider-byoh/agent/cloudinit"
-	"github.com/vmware-tanzu/cluster-api-provider-byoh/agent/common"
 	infrastructurev1alpha4 "github.com/vmware-tanzu/cluster-api-provider-byoh/apis/infrastructure/v1alpha4"
 	corev1 "k8s.io/api/core/v1"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -28,8 +27,6 @@ type HostReconciler struct {
 const hostCleanupAnnotation = "byoh.infrastructure.cluster.x-k8s.io/unregistering"
 
 func (r HostReconciler) Reconcile(ctx context.Context, req ctrl.Request) (_ ctrl.Result, reterr error) {
-	klog.Infof("reconcileRequest.byohost=%s, mybyohost=%s", req.NamespacedName.Name, common.MyByoHostName)
-
 	// Fetch the ByoHost instance.
 	byoHost := &infrastructurev1alpha4.ByoHost{}
 	err := r.Client.Get(ctx, req.NamespacedName, byoHost)
