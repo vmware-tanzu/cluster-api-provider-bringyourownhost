@@ -59,7 +59,7 @@ __Clone CAPIRepo__
 ```shell
 git clone git@github.com:kubernetes-sigs/cluster-api.git
 cd cluster-api
-#checkout tag v0.4.2 as it supports multiple infra providers
+#checkout tag v0.4.2 as it supports Kubernetes v1.22.0
 git checkout v0.4.2 
 ```
 
