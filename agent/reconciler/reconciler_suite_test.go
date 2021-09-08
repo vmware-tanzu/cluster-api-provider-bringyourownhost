@@ -26,13 +26,15 @@ func TestReconciler(t *testing.T) {
 }
 
 var (
-	err         error
-	cfg         *rest.Config
-	k8sClient   client.Client
-	k8sManager  manager.Manager
-	patchHelper *patch.Helper
-	reconciler  *HostReconciler
-	testEnv     *envtest.Environment
+	err               error
+	cfg               *rest.Config
+	k8sClient         client.Client
+	k8sManager        manager.Manager
+	patchHelper       *patch.Helper
+	reconciler        *HostReconciler
+	testEnv           *envtest.Environment
+	fakeCommandRunner *cloudinitfakes.FakeICmdRunner
+	fakeFileWriter    *cloudinitfakes.FakeIFileWriter
 )
 
 var _ = BeforeSuite(func() {
@@ -69,20 +71,6 @@ var _ = BeforeSuite(func() {
 	})
 	Expect(err).ToNot(HaveOccurred())
 
-	reconciler = &HostReconciler{
-		Client:    k8sClient,
-		CmdRunner: &cloudinitfakes.FakeICmdRunner{},
-	}
-	err = reconciler.SetupWithManager(k8sManager)
-	Expect(err).ToNot(HaveOccurred())
-
-	// TODO: Either delete the below goroutine
-	// or move to individual test contexts where controller-runtime is required
-
-	// go func() {
-	// 	err = k8sManager.Start(ctrl.SetupSignalHandler())
-	// 	Expect(err).NotTo(HaveOccurred())
-	// }()
 })
 
 var _ = AfterSuite(func() {
