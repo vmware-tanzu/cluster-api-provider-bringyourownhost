@@ -18,29 +18,32 @@ import (
 )
 
 var _ = Describe("Byohost Agent Tests", func() {
+	var (
+		ctx              = context.TODO()
+		ns               = "default"
+		hostName         = "test-host"
+		byoHost          *infrastructurev1alpha4.ByoHost
+		byoHostLookupKey types.NamespacedName
+	)
+
+	BeforeEach(func() {
+		byoHost = common.NewByoHost(hostName, ns, nil)
+		Expect(k8sClient.Create(ctx, byoHost)).NotTo(HaveOccurred(), "failed to create byohost")
+		patchHelper, err = patch.NewHelper(byoHost, k8sClient)
+		Expect(err).ShouldNot(HaveOccurred())
+
+		byoHostLookupKey = types.NamespacedName{Name: byoHost.Name, Namespace: ns}
+		fakeCommandRunner = &cloudinitfakes.FakeICmdRunner{}
+		fakeFileWriter = &cloudinitfakes.FakeIFileWriter{}
+
+		reconciler = &HostReconciler{
+			Client:     k8sClient,
+			CmdRunner:  fakeCommandRunner,
+			FileWriter: fakeFileWriter,
+		}
+	})
+
 	Context("when K8sComponentsInstallationSucceeded is False", func() {
-
-		var (
-			ctx              = context.TODO()
-			ns               = "default"
-			hostName         = "test-host"
-			byoHost          *infrastructurev1alpha4.ByoHost
-			byoHostLookupKey types.NamespacedName
-			fakeCmdExecutor  *cloudinitfakes.FakeICmdRunner
-		)
-
-		BeforeEach(func() {
-
-			byoHost = common.NewByoHost(hostName, ns, nil)
-			Expect(k8sClient.Create(ctx, byoHost)).NotTo(HaveOccurred(), "failed to create byohost")
-			patchHelper, err = patch.NewHelper(byoHost, k8sClient)
-			Expect(err).ShouldNot(HaveOccurred())
-
-			fakeCmdExecutor = &cloudinitfakes.FakeICmdRunner{}
-
-			byoHostLookupKey = types.NamespacedName{Name: byoHost.Name, Namespace: ns}
-		})
-
 		It("should set the Reason to ClusterOrResourcePausedReason", func() {
 			annotations.AddAnnotations(byoHost, map[string]string{
 				clusterv1.PausedAnnotation: "paused",
@@ -187,7 +190,6 @@ var _ = Describe("Byohost Agent Tests", func() {
 			byoHost.Annotations[hostCleanupAnnotation] = ""
 			Expect(patchHelper.Patch(ctx, byoHost, patch.WithStatusObservedGeneration{})).NotTo(HaveOccurred())
 
-			fakeCmdExecutor.RunCmdReturns(nil)
 			result, reconcilerErr := reconciler.Reconcile(ctx, controllerruntime.Request{
 				NamespacedName: byoHostLookupKey,
 			})
@@ -208,9 +210,112 @@ var _ = Describe("Byohost Agent Tests", func() {
 			}))
 
 		})
+
 		AfterEach(func() {
 			Expect(k8sClient.Delete(ctx, byoHost)).NotTo(HaveOccurred())
 		})
 
+	})
+
+	Context("when agent executes the bootstrap secret", func() {
+		var (
+			byoMachine *infrastructurev1alpha4.ByoMachine
+			secret     *corev1.Secret
+		)
+
+		BeforeEach(func() {
+			byoMachine = common.NewByoMachine("test-byomachine", ns, "", nil)
+			Expect(k8sClient.Create(ctx, byoMachine)).NotTo(HaveOccurred(), "failed to create byomachine")
+
+			By("creating the bootstrap secret")
+			secretData := `runCmd:
+- echo 'some run command'`
+			secret = common.NewSecret("test-secret", secretData, ns)
+			Expect(k8sClient.Create(ctx, secret)).NotTo(HaveOccurred())
+
+			patchHelper, err = patch.NewHelper(byoHost, k8sClient)
+			Expect(err).ShouldNot(HaveOccurred())
+
+			byoHost.Status.MachineRef = &corev1.ObjectReference{
+				Kind:       "ByoMachine",
+				Namespace:  byoMachine.Namespace,
+				Name:       byoMachine.Name,
+				UID:        byoMachine.UID,
+				APIVersion: byoHost.APIVersion,
+			}
+			byoHost.Spec.BootstrapSecret = &corev1.ObjectReference{
+				Kind:      "Secret",
+				Namespace: secret.Namespace,
+				Name:      secret.Name,
+			}
+
+			Expect(patchHelper.Patch(ctx, byoHost, patch.WithStatusObservedGeneration{})).NotTo(HaveOccurred())
+		})
+
+		It("should set K8sNodeBootstrapSucceeded to True", func() {
+			result, reconcilerErr := reconciler.Reconcile(ctx, controllerruntime.Request{
+				NamespacedName: byoHostLookupKey,
+			})
+
+			Expect(result).To(Equal(controllerruntime.Result{}))
+			Expect(reconcilerErr).ToNot(HaveOccurred())
+
+			updatedByoHost := &infrastructurev1alpha4.ByoHost{}
+			err = k8sClient.Get(ctx, byoHostLookupKey, updatedByoHost)
+			Expect(err).ToNot(HaveOccurred())
+
+			k8sNodeBootstrapSucceeded := conditions.Get(updatedByoHost, infrastructurev1alpha4.K8sNodeBootstrapSucceeded)
+			Expect(*k8sNodeBootstrapSucceeded).To(conditions.MatchCondition(clusterv1.Condition{
+				Type:   infrastructurev1alpha4.K8sNodeBootstrapSucceeded,
+				Status: corev1.ConditionTrue,
+			}))
+		})
+
+		It("should execute bootstrap secret only once when K8sNodeBootstrapSucceeded is Unknown ", func() {
+			result, reconcilerErr := reconciler.Reconcile(ctx, controllerruntime.Request{
+				NamespacedName: byoHostLookupKey,
+			})
+
+			Expect(result).To(Equal(controllerruntime.Result{}))
+			Expect(reconcilerErr).ToNot(HaveOccurred())
+
+			result, reconcilerErr = reconciler.Reconcile(ctx, controllerruntime.Request{
+				NamespacedName: byoHostLookupKey,
+			})
+
+			Expect(result).To(Equal(controllerruntime.Result{}))
+			Expect(reconcilerErr).ToNot(HaveOccurred())
+
+			Expect(fakeCommandRunner.RunCmdCallCount()).To(Equal(1))
+		})
+
+		It("should execute bootstrap secret only once when K8sNodeBootstrapSucceeded is False ", func() {
+			patchHelper, err = patch.NewHelper(byoHost, k8sClient)
+			Expect(err).ShouldNot(HaveOccurred())
+			conditions.MarkFalse(byoHost, infrastructurev1alpha4.K8sNodeBootstrapSucceeded, infrastructurev1alpha4.CloudInitExecutionFailedReason, clusterv1.ConditionSeverityError, "")
+			Expect(patchHelper.Patch(ctx, byoHost, patch.WithStatusObservedGeneration{})).NotTo(HaveOccurred())
+
+			result, reconcilerErr := reconciler.Reconcile(ctx, controllerruntime.Request{
+				NamespacedName: byoHostLookupKey,
+			})
+
+			Expect(result).To(Equal(controllerruntime.Result{}))
+			Expect(reconcilerErr).ToNot(HaveOccurred())
+
+			result, reconcilerErr = reconciler.Reconcile(ctx, controllerruntime.Request{
+				NamespacedName: byoHostLookupKey,
+			})
+
+			Expect(result).To(Equal(controllerruntime.Result{}))
+			Expect(reconcilerErr).ToNot(HaveOccurred())
+
+			Expect(fakeCommandRunner.RunCmdCallCount()).To(Equal(1))
+		})
+
+		AfterEach(func() {
+			Expect(k8sClient.Delete(ctx, byoHost)).NotTo(HaveOccurred())
+			Expect(k8sClient.Delete(ctx, secret)).NotTo(HaveOccurred())
+			Expect(k8sClient.Delete(ctx, byoMachine)).NotTo(HaveOccurred())
+		})
 	})
 })
