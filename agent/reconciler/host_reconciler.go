@@ -91,7 +91,7 @@ func (r *HostReconciler) reconcileNormal(ctx context.Context, byoHost *infrastru
 		return ctrl.Result{}, err
 	}
 
-	if conditions.IsUnknown(byoHost, infrastructurev1alpha4.K8sNodeBootstrapSucceeded) || conditions.IsFalse(byoHost, infrastructurev1alpha4.K8sNodeBootstrapSucceeded) {
+	if !conditions.IsTrue(byoHost, infrastructurev1alpha4.K8sNodeBootstrapSucceeded) {
 		err = r.bootstrapK8sNode(bootstrapScript, byoHost)
 		if err != nil {
 			klog.Errorf("error in bootstrapping k8s node, err=%v", err)
