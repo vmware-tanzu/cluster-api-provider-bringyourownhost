@@ -23,7 +23,7 @@ import (
 type HostReconciler struct {
 	Client           client.Client
 	WatchFilterValue string
-  CmdRunner cloudinit.ICmdRunner
+	CmdRunner        cloudinit.ICmdRunner
 }
 
 const (
