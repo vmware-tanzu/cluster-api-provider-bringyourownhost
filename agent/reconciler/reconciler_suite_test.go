@@ -34,7 +34,8 @@ var (
 	patchHelper *patch.Helper
 	reconciler  *HostReconciler
 	testEnv     *envtest.Environment
-	hostName    = "test-host"
+  fakeCommandRunner *cloudinitfakes.FakeICmdRunner
+	fakeFileWriter    *cloudinitfakes.FakeIFileWriter
 )
 
 var _ = BeforeSuite(func() {
@@ -70,22 +71,6 @@ var _ = BeforeSuite(func() {
 		MetricsBindAddress: ":6090",
 	})
 	Expect(err).ToNot(HaveOccurred())
-
-	reconciler = &HostReconciler{
-		Client:           k8sClient,
-		CmdRunner:        &cloudinitfakes.FakeICmdRunner{},
-		WatchFilterValue: hostName,
-	}
-	err = reconciler.SetupWithManager(context.TODO(), k8sManager)
-	Expect(err).ToNot(HaveOccurred())
-
-	// TODO: Either delete the below goroutine
-	// or move to individual test contexts where controller-runtime is required
-
-	// go func() {
-	// 	err = k8sManager.Start(ctrl.SetupSignalHandler())
-	// 	Expect(err).NotTo(HaveOccurred())
-	// }()
 })
 
 var _ = AfterSuite(func() {
