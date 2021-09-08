@@ -12,16 +12,15 @@ This doc provides instructions about how to test BYO Host provider on a local wo
 
 It is required to have a docker image to be used when doing docker run for creating hosts
 
-You can fetch a ready to use image with Kubernetes v1.19 with:
-
+__Clone BYOH Repo__
 ```shell
-docker pull eu.gcr.io/capi-test-270117/byoh/test:v20210510
+git clone git@github.com:vmware-tanzu/cluster-api-provider-byoh.git
 ```
 
-If instead you want to create your own image, you can use [kinder](https://github.com/kubernetes/kubeadm/tree/master/kinder), a tool used for kubeadm ci testing.
-
+__Build image__
 ```shell
-kinder build node-image-variant --base-image=kindest/base:v20191105-ee880e9b --image=kindest/node:test --with-init-artifacts=v1.19.1 --loglevel=debug
+cd cluster-api-provider-byoh
+make prepare-byoh-image
 ```
 
 ## Setting up the management cluster
@@ -37,6 +36,7 @@ kind: Cluster
 apiVersion: kind.x-k8s.io/v1alpha4
 nodes:
 - role: control-plane
+  image: kindest/node:v1.22.0
   extraMounts:
     - hostPath: /var/run/docker.sock
       containerPath: /var/run/docker.sock
@@ -54,13 +54,13 @@ We are going using [tilt](https://tilt.dev/) in order to do so, so you can have 
 
 In order to do so you need to clone both https://github.com/kubernetes-sigs/cluster-api/ and https://github.com/vmware-tanzu/cluster-api-provider-byoh locally;
 
-__Clone CAPI and BYOH Repo__
+__Clone CAPIRepo__
+
 ```shell
-git clone git@github.com:vmware-tanzu/cluster-api-provider-byoh.git
 git clone git@github.com:kubernetes-sigs/cluster-api.git
 cd cluster-api
-#checkout tag v0.4.0 as it supports multiple infra providers
-git checkout v0.4.0 
+#checkout tag v0.4.2 as it supports Kubernetes v1.22.0
+git checkout v0.4.2 
 ```
 
 
@@ -101,7 +101,7 @@ Open a new shell and change directory to `cluster-api-provider-byoh` repository.
 ```shell
 export CLUSTER_NAME="test1"
 export NAMESPACE="default"
-export KUBERNETES_VERSION="v1.19.1"
+export KUBERNETES_VERSION="v1.22.0"
 export CONTROL_PLANE_MACHINE_COUNT=1
 
 # from cluster-api-provider-byoh folder
@@ -123,14 +123,14 @@ Create an unmanaged host.
 ```shell
 export HOST_NAME=host1
 
-docker run --detach --tty --hostname $HOST_NAME --name $HOST_NAME --privileged --security-opt seccomp=unconfined --tmpfs /tmp --tmpfs /run --volume /var --volume /lib/modules:/lib/modules:ro --network kind eu.gcr.io/capi-test-270117/byoh/test:v20210510
+docker run --detach --tty --hostname $HOST_NAME --name $HOST_NAME --privileged --security-opt seccomp=unconfined --tmpfs /tmp --tmpfs /run --volume /var --volume /lib/modules:/lib/modules:ro --network kind byoh/node:v1.22.0
 ```
 
 Build the agent binary and copy it into the host.
 
 ```shell
 # from cluster-api-provider-byoh folder
-make release-binaries
+make host-agent-binaries
 
 docker cp bin/agent-linux-amd64 $HOST_NAME:/agent
 ```
@@ -170,7 +170,7 @@ Create a machine deployment with BYOHost
 ```shell
 export CLUSTER_NAME="test1"
 export NAMESPACE="default"
-export KUBERNETES_VERSION="v1.19.1"
+export KUBERNETES_VERSION="v1.22.0"
 export CONTROL_PLANE_MACHINE_COUNT=1
 cat test/e2e/data/infrastructure-provider-byoh/v1alpha4/md.yaml | envsubst | kubectl apply -f -
 ```
