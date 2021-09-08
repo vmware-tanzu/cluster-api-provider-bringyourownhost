@@ -13,6 +13,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 
+	"github.com/pkg/errors"
 	"github.com/vmware-tanzu/cluster-api-provider-byoh/agent/cloudinit"
 	infrastructurev1alpha4 "github.com/vmware-tanzu/cluster-api-provider-byoh/apis/infrastructure/v1alpha4"
 	corev1 "k8s.io/api/core/v1"
@@ -22,9 +23,13 @@ import (
 type HostReconciler struct {
 	Client           client.Client
 	WatchFilterValue string
+  CmdRunner cloudinit.ICmdRunner
 }
 
-const hostCleanupAnnotation = "byoh.infrastructure.cluster.x-k8s.io/unregistering"
+const (
+	hostCleanupAnnotation = "byoh.infrastructure.cluster.x-k8s.io/unregistering"
+	KubeadmResetCommand   = "kubeadm reset --force"
+)
 
 func (r HostReconciler) Reconcile(ctx context.Context, req ctrl.Request) (_ ctrl.Result, reterr error) {
 	// Fetch the ByoHost instance.
@@ -126,8 +131,23 @@ func (r HostReconciler) SetupWithManager(ctx context.Context, mgr manager.Manage
 }
 
 func (r HostReconciler) hostCleanUp(ctx context.Context, byoHost *infrastructurev1alpha4.ByoHost) error {
-	// TODO: run kubeadm reset on the node
+	err := r.resetNode()
+	if err != nil {
+		return err
+	}
 
 	conditions.MarkFalse(byoHost, infrastructurev1alpha4.K8sNodeBootstrapSucceeded, infrastructurev1alpha4.K8sNodeAbsentReason, v1alpha4.ConditionSeverityInfo, "")
+	return nil
+}
+
+func (r *HostReconciler) resetNode() error {
+	klog.Info("Running kubeadm reset...")
+
+	err := r.CmdRunner.RunCmd(KubeadmResetCommand)
+	if err != nil {
+		return errors.Wrapf(err, "failed to exec kubeadm reset")
+	}
+
+	klog.Info("Kubernetes Node reset")
 	return nil
 }
