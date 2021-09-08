@@ -40,6 +40,11 @@ var _ = Describe("Controllers/ByomachineController", func() {
 			}
 			Expect(k8sClient.Create(ctx, machine)).Should(Succeed())
 
+			ph, err := patch.NewHelper(capiCluster, k8sClient)
+			Expect(err).ShouldNot(HaveOccurred())
+			capiCluster.Status.InfrastructureReady = true
+			Expect(ph.Patch(ctx, capiCluster, patch.WithStatusObservedGeneration{})).Should(Succeed())
+
 			byoMachine = common.NewByoMachine(defaultByoMachineName, defaultNamespace, defaultClusterName, machine)
 			Expect(k8sClient.Create(ctx, byoMachine)).Should(Succeed())
 		})
@@ -53,14 +58,9 @@ var _ = Describe("Controllers/ByomachineController", func() {
 				Reason: infrastructurev1alpha4.BYOHostsUnavailableReason,
 			}
 
-			By("setting cluster.Status.InfrastructureReady to True")
-			ph, err := patch.NewHelper(capiCluster, k8sClient)
-			Expect(err).ShouldNot(HaveOccurred())
-			capiCluster.Status.InfrastructureReady = true
-			Expect(ph.Patch(ctx, capiCluster, patch.WithStatusObservedGeneration{})).Should(Succeed())
-
 			Eventually(func() *testConditions {
 				createdByoMachine := &infrastructurev1alpha4.ByoMachine{}
+
 				err := k8sClient.Get(ctx, byoMachineLookupKey, createdByoMachine)
 				if err != nil {
 					return &testConditions{}
@@ -274,8 +274,6 @@ var _ = Describe("Controllers/ByomachineController", func() {
 				DataSecretName: &fakeBootstrapSecret,
 			}
 			Expect(k8sClient.Create(ctx, machine)).Should(Succeed())
-			byoMachine = common.NewByoMachine(defaultByoMachineName, defaultNamespace, defaultClusterName, machine)
-			Expect(k8sClient.Create(ctx, byoMachine)).Should(Succeed())
 
 			Expect(clientFake.Create(ctx, common.NewNode(byoHost1.Name, defaultNamespace))).Should(Succeed())
 			Expect(clientFake.Create(ctx, common.NewNode(byoHost2.Name, defaultNamespace))).Should(Succeed())
@@ -283,6 +281,9 @@ var _ = Describe("Controllers/ByomachineController", func() {
 		})
 
 		It("claims one of the available host", func() {
+			byoMachine = common.NewByoMachine(defaultByoMachineName, defaultNamespace, defaultClusterName, machine)
+			Expect(k8sClient.Create(ctx, byoMachine)).Should(Succeed())
+
 			byoMachineLookupKey := types.NamespacedName{Name: byoMachine.Name, Namespace: byoMachine.Namespace}
 			createdByoMachine := &infrastructurev1alpha4.ByoMachine{}
 			Eventually(func() bool {
@@ -325,6 +326,9 @@ var _ = Describe("Controllers/ByomachineController", func() {
 			Expect(err).ShouldNot(HaveOccurred())
 			byoHost2.Labels = map[string]string{clusterv1.ClusterLabelName: capiCluster.Name}
 			Expect(ph.Patch(ctx, byoHost2, patch.WithStatusObservedGeneration{})).Should(Succeed())
+
+			byoMachine = common.NewByoMachine(defaultByoMachineName, defaultNamespace, defaultClusterName, machine)
+			Expect(k8sClient.Create(ctx, byoMachine)).Should(Succeed())
 
 			byoMachineLookupKey := types.NamespacedName{Name: byoMachine.Name, Namespace: byoMachine.Namespace}
 			createdByoMachine := &infrastructurev1alpha4.ByoMachine{}
