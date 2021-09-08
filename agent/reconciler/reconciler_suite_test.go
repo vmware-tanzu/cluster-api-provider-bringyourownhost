@@ -34,6 +34,7 @@ var (
 	patchHelper *patch.Helper
 	reconciler  *HostReconciler
 	testEnv     *envtest.Environment
+	hostName    = "test-host"
 )
 
 var _ = BeforeSuite(func() {
@@ -71,8 +72,9 @@ var _ = BeforeSuite(func() {
 	Expect(err).ToNot(HaveOccurred())
 
 	reconciler = &HostReconciler{
-		Client:    k8sClient,
-		CmdRunner: &cloudinitfakes.FakeICmdRunner{},
+		Client:           k8sClient,
+		CmdRunner:        &cloudinitfakes.FakeICmdRunner{},
+		WatchFilterValue: hostName,
 	}
 	err = reconciler.SetupWithManager(context.TODO(), k8sManager)
 	Expect(err).ToNot(HaveOccurred())

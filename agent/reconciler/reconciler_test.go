@@ -23,7 +23,6 @@ var _ = Describe("Byohost Agent Tests", func() {
 		var (
 			ctx              = context.TODO()
 			ns               = "default"
-			hostName         = "test-host"
 			byoHost          *infrastructurev1alpha4.ByoHost
 			byoHostLookupKey types.NamespacedName
 			fakeCmdExecutor  *cloudinitfakes.FakeICmdRunner
