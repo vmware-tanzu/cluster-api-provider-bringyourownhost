@@ -1,7 +1,6 @@
 package reconciler
 
 import (
-	"context"
 	"go/build"
 	"path/filepath"
 	"testing"
@@ -27,14 +26,14 @@ func TestReconciler(t *testing.T) {
 }
 
 var (
-	err         error
-	cfg         *rest.Config
-	k8sClient   client.Client
-	k8sManager  manager.Manager
-	patchHelper *patch.Helper
-	reconciler  *HostReconciler
-	testEnv     *envtest.Environment
-  fakeCommandRunner *cloudinitfakes.FakeICmdRunner
+	err               error
+	cfg               *rest.Config
+	k8sClient         client.Client
+	k8sManager        manager.Manager
+	patchHelper       *patch.Helper
+	reconciler        *HostReconciler
+	testEnv           *envtest.Environment
+	fakeCommandRunner *cloudinitfakes.FakeICmdRunner
 	fakeFileWriter    *cloudinitfakes.FakeIFileWriter
 )
 
