@@ -10,6 +10,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/klog"
+	clusterv1 "sigs.k8s.io/cluster-api/api/v1alpha4"
 	"sigs.k8s.io/cluster-api/util/patch"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
@@ -35,6 +36,9 @@ func (hr HostRegistrar) Register(hostName, namespace string) error {
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      hostName,
 				Namespace: namespace,
+        Labels: map[string]string{
+				  clusterv1.WatchLabel: hostName,
+			  },
 			},
 			Spec:   infrastructurev1alpha4.ByoHostSpec{},
 			Status: infrastructurev1alpha4.ByoHostStatus{},

@@ -9,6 +9,7 @@ import (
 	"sigs.k8s.io/cluster-api/util/annotations"
 	"sigs.k8s.io/cluster-api/util/conditions"
 	"sigs.k8s.io/cluster-api/util/patch"
+	"sigs.k8s.io/cluster-api/util/predicates"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 
@@ -20,9 +21,10 @@ import (
 )
 
 type HostReconciler struct {
-	Client     client.Client
-	CmdRunner  cloudinit.ICmdRunner
-	FileWriter cloudinit.IFileWriter
+	Client           client.Client
+	WatchFilterValue string
+	CmdRunner        cloudinit.ICmdRunner
+  FileWriter cloudinit.IFileWriter
 }
 
 const (
@@ -122,9 +124,10 @@ func (r HostReconciler) getBootstrapScript(ctx context.Context, dataSecretName, 
 	return bootstrapSecret, nil
 }
 
-func (r HostReconciler) SetupWithManager(mgr manager.Manager) error {
+func (r HostReconciler) SetupWithManager(ctx context.Context, mgr manager.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&infrastructurev1alpha4.ByoHost{}).
+		WithEventFilter(predicates.ResourceNotPausedAndHasFilterLabel(ctrl.LoggerFrom(ctx), r.WatchFilterValue)).
 		Complete(r)
 }
 

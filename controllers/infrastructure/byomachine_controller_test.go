@@ -9,6 +9,7 @@ import (
 	infrastructurev1alpha4 "github.com/vmware-tanzu/cluster-api-provider-byoh/apis/infrastructure/v1alpha4"
 	"github.com/vmware-tanzu/cluster-api-provider-byoh/common"
 	corev1 "k8s.io/api/core/v1"
+	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	clusterv1 "sigs.k8s.io/cluster-api/api/v1alpha4"
 	"sigs.k8s.io/cluster-api/util/annotations"
@@ -216,6 +217,76 @@ var _ = Describe("Controllers/ByomachineController", func() {
 		})
 
 		It("should mark BYOHostReady as False when BYOHosts is available but attached", func() {
+			byoMachineLookupKey := types.NamespacedName{Name: byoMachine.Name, Namespace: byoMachine.Namespace}
+			expectedCondition = &testConditions{
+				Type:   infrastructurev1alpha4.BYOHostReady,
+				Status: corev1.ConditionFalse,
+				Reason: infrastructurev1alpha4.BYOHostsUnavailableReason,
+			}
+			Eventually(func() *testConditions {
+				createdByoMachine := &infrastructurev1alpha4.ByoMachine{}
+				err := k8sClient.Get(ctx, byoMachineLookupKey, createdByoMachine)
+				if err != nil {
+					return &testConditions{}
+				}
+
+				actualCondition := conditions.Get(createdByoMachine, infrastructurev1alpha4.BYOHostReady)
+				if actualCondition != nil {
+					return &testConditions{
+						Type:   actualCondition.Type,
+						Status: actualCondition.Status,
+						Reason: actualCondition.Reason,
+					}
+				}
+				return &testConditions{}
+			}).Should(Equal(expectedCondition))
+		})
+
+		AfterEach(func() {
+			Expect(k8sClient.Delete(ctx, byoHost)).Should(Succeed())
+			Expect(k8sClient.Delete(ctx, byoMachine)).Should(Succeed())
+			Expect(k8sClient.Delete(ctx, machine)).Should(Succeed())
+		})
+	})
+
+	Context("When a single BYO Host is available", func() {
+		type testConditions struct {
+			Type   clusterv1.ConditionType
+			Status corev1.ConditionStatus
+			Reason string
+		}
+		var (
+			ctx               context.Context
+			machine           *clusterv1.Machine
+			byoHost           *infrastructurev1alpha4.ByoHost
+			byoMachine        *infrastructurev1alpha4.ByoMachine
+			expectedCondition *testConditions
+		)
+
+		BeforeEach(func() {
+			ctx = context.Background()
+			byoHost = common.NewByoHost(defaultByoHostName, defaultNamespace, nil)
+			byoHost.Labels = map[string]string{"CPUs": "2"}
+			Expect(k8sClient.Create(ctx, byoHost)).Should(Succeed())
+
+			ph, err := patch.NewHelper(capiCluster, k8sClient)
+			Expect(err).ShouldNot(HaveOccurred())
+			capiCluster.Status.InfrastructureReady = true
+			Expect(ph.Patch(ctx, capiCluster, patch.WithStatusObservedGeneration{})).Should(Succeed())
+
+			machine = common.NewMachine(defaultMachineName, defaultNamespace, defaultClusterName)
+			machine.Spec.Bootstrap = clusterv1.Bootstrap{
+				DataSecretName: &fakeBootstrapSecret,
+			}
+			Expect(k8sClient.Create(ctx, machine)).Should(Succeed())
+
+			byoMachine = common.NewByoMachine(defaultByoMachineName, defaultNamespace, defaultClusterName, machine)
+			byoMachine.Spec.Selector = &v1.LabelSelector{MatchLabels: map[string]string{"CPUs": "4"}}
+			Expect(k8sClient.Create(ctx, byoMachine)).Should(Succeed())
+
+		})
+
+		It("should mark BYOHostReady as False when BYOHosts is available but label mismatch", func() {
 			byoMachineLookupKey := types.NamespacedName{Name: byoMachine.Name, Namespace: byoMachine.Namespace}
 			expectedCondition = &testConditions{
 				Type:   infrastructurev1alpha4.BYOHostReady,

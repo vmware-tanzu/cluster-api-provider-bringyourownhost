@@ -70,7 +70,6 @@ var _ = BeforeSuite(func() {
 		MetricsBindAddress: ":6090",
 	})
 	Expect(err).ToNot(HaveOccurred())
-
 })
 
 var _ = AfterSuite(func() {
