@@ -20,31 +20,30 @@ type HostRegistrar struct {
 
 func (hr HostRegistrar) Register(hostName, namespace string) error {
 	ctx := context.TODO()
-	byoHost := &infrastructurev1alpha4.ByoHost{
-		TypeMeta: metav1.TypeMeta{
-			Kind:       "ByoHost",
-			APIVersion: "infrastructure.cluster.x-k8s.io/v1alpha4",
-		},
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      hostName,
-			Namespace: namespace,
-		},
-		Spec:   infrastructurev1alpha4.ByoHostSpec{},
-		Status: infrastructurev1alpha4.ByoHostStatus{},
-	}
-
-	err := hr.K8sClient.Create(ctx, byoHost)
+	byoHost := &infrastructurev1alpha4.ByoHost{}
+	err := hr.K8sClient.Get(ctx, types.NamespacedName{Name: hostName, Namespace: namespace}, byoHost)
 	if err != nil {
-		if apierrors.IsAlreadyExists(err) {
-			err = hr.K8sClient.Get(ctx, types.NamespacedName{Name: hostName, Namespace: namespace}, byoHost)
-			if err != nil {
-				klog.Errorf("error getting host %s in namespace %s, err=%v", hostName, namespace, err)
-				return err
-			}
+		if !apierrors.IsNotFound(err) {
+			klog.Errorf("error getting host %s in namespace %s, err=%v", hostName, namespace, err)
+			return err
 		}
-
-		klog.Errorf("error creating host %s in namespace %s, err=%v", hostName, namespace, err)
-		return err
+		byoHost = &infrastructurev1alpha4.ByoHost{
+			TypeMeta: metav1.TypeMeta{
+				Kind:       "ByoHost",
+				APIVersion: "infrastructure.cluster.x-k8s.io/v1alpha4",
+			},
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      hostName,
+				Namespace: namespace,
+			},
+			Spec:   infrastructurev1alpha4.ByoHostSpec{},
+			Status: infrastructurev1alpha4.ByoHostStatus{},
+		}
+		err = hr.K8sClient.Create(ctx, byoHost)
+		if err != nil {
+			klog.Errorf("error creating host %s in namespace %s, err=%v", hostName, namespace, err)
+			return err
+		}
 	}
 
 	// run it at startup or reboot
