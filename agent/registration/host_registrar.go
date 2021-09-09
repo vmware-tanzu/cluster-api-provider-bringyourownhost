@@ -36,9 +36,9 @@ func (hr HostRegistrar) Register(hostName, namespace string) error {
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      hostName,
 				Namespace: namespace,
-        Labels: map[string]string{
-				  clusterv1.WatchLabel: hostName,
-			  },
+				Labels: map[string]string{
+					clusterv1.WatchLabel: hostName,
+				},
 			},
 			Spec:   infrastructurev1alpha4.ByoHostSpec{},
 			Status: infrastructurev1alpha4.ByoHostStatus{},
