@@ -119,23 +119,27 @@ var _ = Describe("Agent", func() {
 			ns = common.NewNamespace(common.RandStr("testns-", 5))
 			Expect(k8sClient.Create(context.TODO(), ns)).NotTo(HaveOccurred(), "failed to create test namespace")
 
-			command := exec.Command(pathToHostAgentBinary, "--kubeconfig", kubeconfigFile.Name(), "--namespace", ns.Name)
-			session, err = gexec.Start(command, GinkgoWriter, GinkgoWriter)
-			Expect(err).NotTo(HaveOccurred())
 		})
 
 		AfterEach(func() {
 			err = k8sClient.Delete(context.TODO(), ns)
 			Expect(err).NotTo(HaveOccurred())
+
 		})
 
 		It("should not error out", func() {
-			session.Terminate().Wait()
-
 			command := exec.Command(pathToHostAgentBinary, "--kubeconfig", kubeconfigFile.Name(), "--namespace", ns.Name)
 			session, err = gexec.Start(command, GinkgoWriter, GinkgoWriter)
 			Expect(err).NotTo(HaveOccurred())
+			session.Terminate().Wait()
+
+			// restart it
+			command = exec.Command(pathToHostAgentBinary, "--kubeconfig", kubeconfigFile.Name(), "--namespace", ns.Name)
+			session, err = gexec.Start(command, GinkgoWriter, GinkgoWriter)
+			Expect(err).NotTo(HaveOccurred())
+			// it should not to quit
 			Consistently(session).ShouldNot(gexec.Exit(0))
+			session.Terminate().Wait()
 		})
 
 	})
