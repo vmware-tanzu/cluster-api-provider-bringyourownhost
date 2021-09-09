@@ -188,12 +188,14 @@ func (r *ByoMachineReconciler) reconcileDelete(ctx context.Context, machineScope
 
 		if !(conditions.IsFalse(machineScope.ByoHost, infrav1.K8sNodeBootstrapSucceeded) && conditions.GetReason(machineScope.ByoHost, infrav1.K8sNodeBootstrapSucceeded) == infrav1.K8sNodeAbsentReason) {
 			conditions.MarkFalse(machineScope.ByoMachine, infrav1.BYOHostReady, clusterv1.DeletingReason, clusterv1.ConditionSeverityInfo, "Removing the Kubernetes node...")
+			return ctrl.Result{}, nil
 		}
 
 		if err := r.removeHostReservation(ctx, machineScope); err != nil {
 			return ctrl.Result{}, err
 		}
 	}
+
 	controllerutil.RemoveFinalizer(machineScope.ByoMachine, infrav1.MachineFinalizer)
 	return reconcile.Result{}, nil
 }

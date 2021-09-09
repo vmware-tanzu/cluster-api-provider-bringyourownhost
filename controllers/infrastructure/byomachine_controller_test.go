@@ -103,7 +103,7 @@ var _ = Describe("Controllers/ByomachineController", func() {
 			byoMachine = common.NewByoMachine(defaultByoMachineName, defaultNamespace, defaultClusterName, machine)
 			Expect(k8sClient.Create(ctx, byoMachine)).Should(Succeed())
 
-			byoHost = common.NewByoHost(defaultByoHostName, defaultNamespace, nil)
+			byoHost = common.NewByoHost(defaultByoHostName, defaultNamespace)
 			Expect(k8sClient.Create(ctx, byoHost)).Should(Succeed())
 
 			Expect(clientFake.Create(ctx, common.NewNode(byoHost.Name, defaultNamespace))).Should(Succeed())
@@ -196,7 +196,7 @@ var _ = Describe("Controllers/ByomachineController", func() {
 
 		BeforeEach(func() {
 			ctx = context.Background()
-			byoHost = common.NewByoHost(defaultByoHostName, defaultNamespace, nil)
+			byoHost = common.NewByoHost(defaultByoHostName, defaultNamespace)
 			byoHost.Labels = map[string]string{clusterv1.ClusterLabelName: capiCluster.Name}
 			Expect(k8sClient.Create(ctx, byoHost)).Should(Succeed())
 
@@ -265,7 +265,7 @@ var _ = Describe("Controllers/ByomachineController", func() {
 
 		BeforeEach(func() {
 			ctx = context.Background()
-			byoHost = common.NewByoHost(defaultByoHostName, defaultNamespace, nil)
+			byoHost = common.NewByoHost(defaultByoHostName, defaultNamespace)
 			byoHost.Labels = map[string]string{"CPUs": "2"}
 			Expect(k8sClient.Create(ctx, byoHost)).Should(Succeed())
 
@@ -330,9 +330,9 @@ var _ = Describe("Controllers/ByomachineController", func() {
 
 		BeforeEach(func() {
 			ctx = context.Background()
-			byoHost1 = common.NewByoHost(defaultByoHostName, defaultNamespace, nil)
+			byoHost1 = common.NewByoHost(defaultByoHostName, defaultNamespace)
 			Expect(k8sClient.Create(ctx, byoHost1)).Should(Succeed())
-			byoHost2 = common.NewByoHost(defaultByoHostName, defaultNamespace, nil)
+			byoHost2 = common.NewByoHost(defaultByoHostName, defaultNamespace)
 			Expect(k8sClient.Create(ctx, byoHost2)).Should(Succeed())
 
 			ph, err := patch.NewHelper(capiCluster, k8sClient)

@@ -8,11 +8,11 @@ import (
 
 	infrastructurev1alpha4 "github.com/vmware-tanzu/cluster-api-provider-byoh/apis/infrastructure/v1alpha4"
 	"github.com/vmware-tanzu/cluster-api-provider-byoh/common"
-	"k8s.io/apimachinery/pkg/runtime"
+	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/types"
 	clusterv1 "sigs.k8s.io/cluster-api/api/v1alpha4"
-	"sigs.k8s.io/cluster-api/controllers/remote"
 	"sigs.k8s.io/cluster-api/util/patch"
+	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 )
 
@@ -68,7 +68,7 @@ var _ = Describe("Controllers/ByomachineController/Unitests", func() {
 			byoMachine = common.NewByoMachine(defaultByoMachineName, defaultNamespace, clusterName, machine)
 			Expect(k8sClient.Create(ctx, byoMachine)).Should(Succeed())
 
-			byoHost = common.NewByoHost(defaultByoHostName, defaultNamespace, nil)
+			byoHost = common.NewByoHost(defaultByoHostName, defaultNamespace)
 			Expect(k8sClient.Create(ctx, byoHost)).Should(Succeed())
 		})
 
@@ -117,9 +117,10 @@ var _ = Describe("Controllers/ByomachineController/Unitests", func() {
 
 			byoMachine = common.NewByoMachine(defaultByoMachineName, defaultNamespace, defaultClusterName, machine)
 			Expect(k8sClient.Create(ctx, byoMachine)).Should(Succeed())
-			byoHost = common.NewByoHost(hostname, defaultNamespace, nil)
+			byoHost = common.NewByoHost(hostname, defaultNamespace)
 			Expect(k8sClient.Create(ctx, byoHost)).Should(Succeed())
 
+			WaitForObjectsToBePopulatedInCache(k8sClient, machine, byoMachine, byoHost)
 		})
 
 		It("Should return error", func() {
@@ -138,47 +139,70 @@ var _ = Describe("Controllers/ByomachineController/Unitests", func() {
 
 	Context("ByoMachine delete preconditions", func() {
 		var (
-			ctx              context.Context
-			machineScope     *byoMachineScope
-			machine          *clusterv1.Machine
-			byoMachine       *infrastructurev1alpha4.ByoMachine
-			byoHost          *infrastructurev1alpha4.ByoHost
-			byoHostLookupKey types.NamespacedName
-			err              error
+			ctx                 context.Context
+			machineScope        *byoMachineScope
+			machine             *clusterv1.Machine
+			byoMachine          *infrastructurev1alpha4.ByoMachine
+			byoHost             *infrastructurev1alpha4.ByoHost
+			byoMachineLookupKey types.NamespacedName
+			byoHostLookupKey    types.NamespacedName
 		)
 		BeforeEach(func() {
 			ctx = context.Background()
 
 			machine = common.NewMachine("test-machine", defaultNamespace, defaultClusterName)
+			machine.Spec.Bootstrap = clusterv1.Bootstrap{
+				DataSecretName: &fakeBootstrapSecret,
+			}
 			Expect(k8sClient.Create(ctx, machine)).NotTo(HaveOccurred(), "machine creation failed")
 
 			byoMachine = common.NewByoMachine("test-byomachine", defaultNamespace, defaultClusterName, machine)
 			Expect(k8sClient.Create(ctx, byoMachine)).NotTo(HaveOccurred(), "byoMachine creation failed")
 
-			byoHost = common.NewByoHost("test-host", defaultNamespace, byoMachine)
+			byoHost = common.NewByoHost("test-host", defaultNamespace)
 			Expect(k8sClient.Create(ctx, byoHost)).NotTo(HaveOccurred(), "byoHost creation failed")
 
-			byoHostLookupKey = types.NamespacedName{Name: byoHost.Name, Namespace: byoHost.Namespace}
-
-			machineScope, err = newByoMachineScope(byoMachineScopeParams{
-				Client:     k8sClient,
-				Cluster:    capiCluster,
-				Machine:    machine,
-				ByoMachine: byoMachine,
-				ByoHost:    byoHost,
-			})
-			Expect(err).NotTo(HaveOccurred(), "failed creating machineScope")
-
-			reconciler = &ByoMachineReconciler{
-				Client:  k8sClient,
-				Scheme:  &runtime.Scheme{},
-				Tracker: &remote.ClusterCacheTracker{},
+			ph, err := patch.NewHelper(byoHost, k8sClient)
+			Expect(err).ShouldNot(HaveOccurred())
+			byoHost.Status.MachineRef = &corev1.ObjectReference{
+				Kind:       "ByoMachine",
+				Namespace:  byoMachine.Namespace,
+				Name:       byoMachine.Name,
+				UID:        byoMachine.UID,
+				APIVersion: byoHost.APIVersion,
 			}
+			Expect(ph.Patch(ctx, byoHost, patch.WithStatusObservedGeneration{})).Should(Succeed())
+
+			byoMachineLookupKey = types.NamespacedName{Name: byoMachine.Name, Namespace: defaultNamespace}
+			byoHostLookupKey = types.NamespacedName{Name: byoHost.Name, Namespace: defaultNamespace}
+
+			ph, err = patch.NewHelper(capiCluster, k8sClient)
+			Expect(err).ShouldNot(HaveOccurred())
+			capiCluster.Status.InfrastructureReady = true
+			Expect(ph.Patch(ctx, capiCluster, patch.WithStatusObservedGeneration{})).Should(Succeed())
+
+			WaitForObjectsToBePopulatedInCache(k8sClient, machine, byoMachine, byoHost)
 		})
 
-		It("should add cleanup annotation on byohost", func() {
+		FIt("should add cleanup annotation on byohost", func() {
+			ph, err := patch.NewHelper(byoMachine, k8sClient)
+			Expect(err).ShouldNot(HaveOccurred())
+			controllerutil.AddFinalizer(byoMachine, infrastructurev1alpha4.MachineFinalizer)
+			Expect(ph.Patch(ctx, byoMachine, patch.WithStatusObservedGeneration{})).Should(Succeed())
 
-			Expect(reconciler.markHostForCleanup(ctx, machineScope)).NotTo(HaveOccurred(), "markHostForCleanup failed")
+			Expect(k8sClient.Delete(ctx, byoMachine)).Should(Succeed())
+			Eventually(func() bool {
+				deletedByoMachine := &infrastructurev1alpha4.ByoMachine{}
+				err := k8sClient.Get(ctx, byoMachineLookupKey, deletedByoMachine)
+				if err != nil {
+					return false
+				}
+				return !deletedByoMachine.ObjectMeta.DeletionTimestamp.IsZero()
+			}, "10s", "1s").Should(BeTrue())
+
+			request := reconcile.Request{NamespacedName: byoMachineLookupKey}
+			_, err = reconciler.Reconcile(ctx, request)
+			Expect(err).NotTo(HaveOccurred())
 
 			createdByoHost := &infrastructurev1alpha4.ByoHost{}
 			Expect(k8sClient.Get(ctx, byoHostLookupKey, createdByoHost)).NotTo(HaveOccurred())

@@ -135,3 +135,16 @@ var _ = AfterSuite(func() {
 	err := testEnv.Stop()
 	Expect(err).NotTo(HaveOccurred())
 })
+
+func WaitForObjectsToBePopulatedInCache(k8sClient client.Client, objects ...client.Object) {
+	for _, object := range objects {
+		objectCopy := object.DeepCopyObject().(client.Object)
+		key := client.ObjectKeyFromObject(object)
+		Eventually(func() (done bool) {
+			if err := k8sClient.Get(context.TODO(), key, objectCopy); err != nil {
+				return false
+			}
+			return true
+		}, "30s", "1s").Should(BeTrue())
+	}
+}
