@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"flag"
 	"os"
 
@@ -69,10 +70,11 @@ func main() {
 	}
 
 	if err = (reconciler.HostReconciler{
-		Client:    k8sClient,
-		CmdRunner: cloudinit.CmdRunner{},
-		FileWriter: cloudinit.FileWriter{},
-	}).SetupWithManager(mgr); err != nil {
+		Client:           k8sClient,
+		WatchFilterValue: hostName,
+		CmdRunner:        cloudinit.CmdRunner{},
+    FileWriter: cloudinit.FileWriter{},
+	}).SetupWithManager(context.TODO(), mgr); err != nil {
 		klog.Errorf("unable to create controller, err=%v", err)
 		return
 	}
