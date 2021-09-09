@@ -23,7 +23,6 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
-	"strconv"
 
 	"github.com/docker/cli/cli/command"
 	"github.com/docker/docker/api/types"
@@ -164,10 +163,9 @@ var _ = Describe("When BYOH joins existing cluster", func() {
 		namespace        *corev1.Namespace
 		cancelWatches    context.CancelFunc
 		clusterResources *clusterctl.ApplyClusterTemplateAndWaitResult
-		allDockerClient  []*client.Client
-		allByohost       []container.ContainerCreateCreatedBody
-		byByoHostNum     = 2
-		byoHostPrefix    = "byohost"
+		dockerClient     *client.Client
+		byohost          container.ContainerCreateCreatedBody
+		err              error
 	)
 
 	BeforeEach(func() {
@@ -190,17 +188,78 @@ var _ = Describe("When BYOH joins existing cluster", func() {
 	It("Should create a workload cluster with single BYOH host", func() {
 
 		clusterName := fmt.Sprintf("%s-%s", specName, util.RandomString(6))
+		dockerClient, err = client.NewClientWithOpts(client.FromEnv)
+		Expect(err).NotTo(HaveOccurred())
 
-		for i := 0; i < byByoHostNum; i++ {
-			hostName := byoHostPrefix + strconv.Itoa(i)
-			agentLogFile := "/tmp/" + byoHostPrefix + "-" + strconv.Itoa(i) + ".log"
-			dockerClient, byoHost, f, output := CreateByoHostDocker(ctx, hostName, agentLogFile)
-			defer f.Close()
-			defer output.Close()
-			allDockerClient = append(allDockerClient, dockerClient)
-			allByohost = append(allByohost, byoHost)
-			AllByoHostLogs = append(AllByoHostLogs, agentLogFile)
+		tmpfs := map[string]string{"/run": "", "/tmp": ""}
+
+		byohost, err = dockerClient.ContainerCreate(ctx,
+			&container.Config{Hostname: "byohost",
+				Image: KindImage,
+			},
+			&container.HostConfig{Privileged: true,
+				SecurityOpt: []string{"seccomp=unconfined"},
+				Tmpfs:       tmpfs,
+				NetworkMode: "kind",
+				Binds:       []string{"/var", "/lib/modules:/lib/modules:ro"},
+			},
+			&network.NetworkingConfig{EndpointsConfig: map[string]*network.EndpointSettings{"kind": {}}},
+			nil, "byohost")
+
+		Expect(err).NotTo(HaveOccurred())
+
+		Expect(dockerClient.ContainerStart(ctx, byohost.ID, types.ContainerStartOptions{})).NotTo(HaveOccurred())
+
+		pathToHostAgentBinary, err := gexec.Build("github.com/vmware-tanzu/cluster-api-provider-byoh/agent")
+		Expect(err).NotTo(HaveOccurred())
+
+		config := cpConfig{
+			sourcePath: pathToHostAgentBinary,
+			destPath:   "/agent",
+			container:  byohost.ID,
 		}
+
+		Expect(copyToContainer(ctx, dockerClient, config)).NotTo(HaveOccurred())
+
+		listopt := types.ContainerListOptions{}
+		listopt.Filters = filters.NewArgs()
+		listopt.Filters.Add("name", clusterConName+"-control-plane")
+
+		containers, err := dockerClient.ContainerList(ctx, listopt)
+		Expect(err).NotTo(HaveOccurred())
+		Expect(len(containers)).To(Equal(1))
+
+		profile, err := dockerClient.ContainerInspect(ctx, containers[0].ID)
+		Expect(err).NotTo(HaveOccurred())
+
+		kubeconfig, err := os.ReadFile(bootstrapClusterProxy.GetKubeconfigPath())
+		Expect(err).NotTo(HaveOccurred())
+
+		re := regexp.MustCompile("server:.*")
+		kubeconfig = re.ReplaceAll(kubeconfig, []byte("server: https://"+profile.NetworkSettings.Networks["kind"].IPAddress+":6443"))
+
+		Expect(os.WriteFile(TempKubeconfigPath, kubeconfig, 0644)).NotTo(HaveOccurred())
+
+		config.sourcePath = TempKubeconfigPath
+		config.destPath = "/mgmt.conf"
+		Expect(copyToContainer(ctx, dockerClient, config)).NotTo(HaveOccurred())
+
+		rconfig := types.ExecConfig{
+			AttachStdout: true,
+			AttachStderr: true,
+			Cmd:          []string{"./agent", "--kubeconfig", "/mgmt.conf"},
+		}
+
+		resp, err := dockerClient.ContainerExecCreate(ctx, byohost.ID, rconfig)
+		Expect(err).NotTo(HaveOccurred())
+
+		output, err := dockerClient.ContainerExecAttach(ctx, resp.ID, types.ExecStartCheck{})
+		Expect(err).NotTo(HaveOccurred())
+		defer output.Close()
+
+		// read the log of host agent container in backend, and write it
+		f := WriteDockerLog(output, AgentLogFile)
+		defer f.Close()
 
 		clusterctl.ApplyClusterTemplateAndWait(ctx, clusterctl.ApplyClusterTemplateAndWaitInput{
 			ClusterProxy: bootstrapClusterProxy,
@@ -214,7 +273,7 @@ var _ = Describe("When BYOH joins existing cluster", func() {
 				ClusterName:              clusterName,
 				KubernetesVersion:        e2eConfig.GetVariable(KubernetesVersion),
 				ControlPlaneMachineCount: pointer.Int64Ptr(1),
-				WorkerMachineCount:       pointer.Int64Ptr(int64(byByoHostNum)),
+				WorkerMachineCount:       pointer.Int64Ptr(1),
 			},
 			WaitForClusterIntervals:      e2eConfig.GetIntervals(specName, "wait-cluster"),
 			WaitForControlPlaneIntervals: e2eConfig.GetIntervals(specName, "wait-control-plane"),
@@ -230,17 +289,15 @@ var _ = Describe("When BYOH joins existing cluster", func() {
 	})
 
 	AfterEach(func() {
-		for i := 0; i < byByoHostNum; i++ {
-			if allDockerClient[i] != nil && allByohost[i].ID != "" {
-				err := allDockerClient[i].ContainerStop(ctx, allByohost[i].ID, nil)
-				Expect(err).NotTo(HaveOccurred())
+		if dockerClient != nil && byohost.ID != "" {
+			err := dockerClient.ContainerStop(ctx, byohost.ID, nil)
+			Expect(err).NotTo(HaveOccurred())
 
-				err = allDockerClient[i].ContainerRemove(ctx, allByohost[i].ID, types.ContainerRemoveOptions{})
-				Expect(err).NotTo(HaveOccurred())
-			}
-			os.Remove(AllByoHostLogs[i])
-
+			err = dockerClient.ContainerRemove(ctx, byohost.ID, types.ContainerRemoveOptions{})
+			Expect(err).NotTo(HaveOccurred())
 		}
+
+		os.Remove(AgentLogFile)
 		os.Remove(ReadByohControllerManagerLogShellFile)
 		os.Remove(ReadAllPodsShellFile)
 
@@ -248,78 +305,3 @@ var _ = Describe("When BYOH joins existing cluster", func() {
 		dumpSpecResourcesAndCleanup(ctx, specName, bootstrapClusterProxy, artifactFolder, namespace, cancelWatches, clusterResources.Cluster, e2eConfig.GetIntervals, skipCleanup)
 	})
 })
-
-func CreateByoHostDocker(ctx context.Context, hostName, agentLogFile string) (*client.Client, container.ContainerCreateCreatedBody, *os.File, types.HijackedResponse) {
-	dockerClient, err := client.NewClientWithOpts(client.FromEnv)
-	Expect(err).NotTo(HaveOccurred())
-
-	tmpfs := map[string]string{"/run": "", "/tmp": ""}
-
-	byohost, err := dockerClient.ContainerCreate(ctx,
-		&container.Config{Hostname: hostName,
-			Image: KindImage,
-		},
-		&container.HostConfig{Privileged: true,
-			SecurityOpt: []string{"seccomp=unconfined"},
-			Tmpfs:       tmpfs,
-			NetworkMode: "kind",
-			Binds:       []string{"/var", "/lib/modules:/lib/modules:ro"},
-		},
-		&network.NetworkingConfig{EndpointsConfig: map[string]*network.EndpointSettings{"kind": {}}},
-		nil, hostName)
-
-	Expect(err).NotTo(HaveOccurred())
-
-	Expect(dockerClient.ContainerStart(ctx, byohost.ID, types.ContainerStartOptions{})).NotTo(HaveOccurred())
-
-	pathToHostAgentBinary, err := gexec.Build("github.com/vmware-tanzu/cluster-api-provider-byoh/agent")
-	Expect(err).NotTo(HaveOccurred())
-
-	config := cpConfig{
-		sourcePath: pathToHostAgentBinary,
-		destPath:   "/agent",
-		container:  byohost.ID,
-	}
-
-	Expect(copyToContainer(ctx, dockerClient, config)).NotTo(HaveOccurred())
-
-	listopt := types.ContainerListOptions{}
-	listopt.Filters = filters.NewArgs()
-	listopt.Filters.Add("name", clusterConName+"-control-plane")
-
-	containers, err := dockerClient.ContainerList(ctx, listopt)
-	Expect(err).NotTo(HaveOccurred())
-	Expect(len(containers)).To(Equal(1))
-
-	profile, err := dockerClient.ContainerInspect(ctx, containers[0].ID)
-	Expect(err).NotTo(HaveOccurred())
-
-	kubeconfig, err := os.ReadFile(bootstrapClusterProxy.GetKubeconfigPath())
-	Expect(err).NotTo(HaveOccurred())
-
-	re := regexp.MustCompile("server:.*")
-	kubeconfig = re.ReplaceAll(kubeconfig, []byte("server: https://"+profile.NetworkSettings.Networks["kind"].IPAddress+":6443"))
-
-	Expect(os.WriteFile(TempKubeconfigPath, kubeconfig, 0644)).NotTo(HaveOccurred())
-
-	config.sourcePath = TempKubeconfigPath
-	config.destPath = "/mgmt.conf"
-	Expect(copyToContainer(ctx, dockerClient, config)).NotTo(HaveOccurred())
-
-	rconfig := types.ExecConfig{
-		AttachStdout: true,
-		AttachStderr: true,
-		Cmd:          []string{"./agent", "--kubeconfig", "/mgmt.conf"},
-	}
-
-	resp, err := dockerClient.ContainerExecCreate(ctx, byohost.ID, rconfig)
-	Expect(err).NotTo(HaveOccurred())
-
-	output, err := dockerClient.ContainerExecAttach(ctx, resp.ID, types.ExecStartCheck{})
-	Expect(err).NotTo(HaveOccurred())
-
-	// read the log of host agent container in backend, and write it
-	f := WriteDockerLog(output, agentLogFile)
-
-	return dockerClient, byohost, f, output
-}
