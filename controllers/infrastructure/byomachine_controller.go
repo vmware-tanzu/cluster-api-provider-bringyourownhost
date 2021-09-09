@@ -44,6 +44,7 @@ import (
 	infrav1 "github.com/vmware-tanzu/cluster-api-provider-byoh/apis/infrastructure/v1alpha4"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	clusterv1 "sigs.k8s.io/cluster-api/api/v1alpha4"
 	"sigs.k8s.io/cluster-api/util/annotations"
 )
@@ -357,15 +358,28 @@ func (r *ByoMachineReconciler) setPausedConditionForByoHost(ctx context.Context,
 }
 
 func (r *ByoMachineReconciler) attachByoHost(ctx context.Context, logger logr.Logger, machineScope *byoMachineScope) (ctrl.Result, error) {
+	var selector labels.Selector
+	var err error
 	if machineScope.ByoHost != nil {
 		return ctrl.Result{}, nil
 	}
 
 	hostsList := &infrav1.ByoHostList{}
 	// LabelSelector filter for byohosts
+	if machineScope.ByoMachine.Spec.Selector != nil {
+		selector, err = metav1.LabelSelectorAsSelector(machineScope.ByoMachine.Spec.Selector)
+		if err != nil {
+			logger.Error(err, "Label Selector as selector failed")
+			return ctrl.Result{}, err
+		}
+	} else {
+		selector = labels.NewSelector()
+	}
+
 	byohostLabels, _ := labels.NewRequirement(clusterv1.ClusterLabelName, selection.DoesNotExist, nil)
-	selector := labels.NewSelector().Add(*byohostLabels)
-	err := r.Client.List(ctx, hostsList, &client.ListOptions{LabelSelector: selector})
+	selector = selector.Add(*byohostLabels)
+
+	err = r.Client.List(ctx, hostsList, &client.ListOptions{LabelSelector: selector})
 	if err != nil {
 		logger.Error(err, "failed to list byohosts")
 		return ctrl.Result{}, err
