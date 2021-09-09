@@ -56,7 +56,7 @@ func NewMachine(machineName, namespace, clusterName string) *clusterv1.Machine {
 	return machine
 }
 
-func NewByoHost(byoHostName, byoHostNamespace string, byoMachine *infrastructurev1alpha4.ByoMachine) *infrastructurev1alpha4.ByoHost {
+func NewByoHost(byoHostName, byoHostNamespace string) *infrastructurev1alpha4.ByoHost {
 	byoHost := &infrastructurev1alpha4.ByoHost{
 		TypeMeta: metav1.TypeMeta{
 			Kind:       "ByoHost",
@@ -67,16 +67,6 @@ func NewByoHost(byoHostName, byoHostNamespace string, byoMachine *infrastructure
 			Namespace:    byoHostNamespace,
 		},
 		Spec: infrastructurev1alpha4.ByoHostSpec{},
-	}
-
-	if byoMachine != nil {
-		byoHost.Status.MachineRef = &corev1.ObjectReference{
-			Kind:       "ByoMachine",
-			Namespace:  byoMachine.Namespace,
-			Name:       byoMachine.Name,
-			UID:        byoMachine.UID,
-			APIVersion: byoHost.APIVersion,
-		}
 	}
 	return byoHost
 }
