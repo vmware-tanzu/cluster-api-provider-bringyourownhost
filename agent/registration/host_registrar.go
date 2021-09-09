@@ -6,7 +6,10 @@ import (
 
 	"github.com/jackpal/gateway"
 	infrastructurev1alpha4 "github.com/vmware-tanzu/cluster-api-provider-byoh/apis/infrastructure/v1alpha4"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/klog"
 	"sigs.k8s.io/cluster-api/util/patch"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
@@ -32,10 +35,19 @@ func (hr HostRegistrar) Register(hostName, namespace string) error {
 
 	err := hr.K8sClient.Create(ctx, byoHost)
 	if err != nil {
+		if apierrors.IsAlreadyExists(err) {
+			err = hr.K8sClient.Get(ctx, types.NamespacedName{Name: hostName, Namespace: namespace}, byoHost)
+			if err != nil {
+				klog.Errorf("error getting host %s in namespace %s, err=%v", hostName, namespace, err)
+				return err
+			}
+		}
+
+		klog.Errorf("error creating host %s in namespace %s, err=%v", hostName, namespace, err)
 		return err
 	}
 
-	// run it at startup
+	// run it at startup or reboot
 	return hr.UpdateNetwork(ctx, byoHost)
 }
 
@@ -81,9 +93,9 @@ func (hr HostRegistrar) GetNetworkStatus() []infrastructurev1alpha4.NetworkStatu
 			var ip net.IP
 			switch v := addr.(type) {
 			case *net.IPNet:
-					ip = v.IP
+				ip = v.IP
 			case *net.IPAddr:
-					ip = v.IP
+				ip = v.IP
 			}
 			if ip.String() == defaultIP.String() {
 				netStatus.IsDefault = true

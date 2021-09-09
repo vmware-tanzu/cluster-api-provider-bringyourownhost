@@ -85,13 +85,12 @@ func (r *HostReconciler) reconcileNormal(ctx context.Context, byoHost *infrastru
 		return ctrl.Result{}, nil
 	}
 
-	bootstrapScript, err := r.getBootstrapScript(ctx, byoHost.Spec.BootstrapSecret.Name, byoHost.Spec.BootstrapSecret.Namespace)
-	if err != nil {
-		klog.Errorf("error getting bootstrap script, err=%v", err)
-		return ctrl.Result{}, err
-	}
-
 	if !conditions.IsTrue(byoHost, infrastructurev1alpha4.K8sNodeBootstrapSucceeded) {
+		bootstrapScript, err := r.getBootstrapScript(ctx, byoHost.Spec.BootstrapSecret.Name, byoHost.Spec.BootstrapSecret.Namespace)
+		if err != nil {
+			klog.Errorf("error getting bootstrap script, err=%v", err)
+			return ctrl.Result{}, err
+		}
 		err = r.bootstrapK8sNode(bootstrapScript, byoHost)
 		if err != nil {
 			klog.Errorf("error in bootstrapping k8s node, err=%v", err)
@@ -99,9 +98,9 @@ func (r *HostReconciler) reconcileNormal(ctx context.Context, byoHost *infrastru
 			return ctrl.Result{}, err
 		}
 		klog.Info("k8s node successfully bootstrapped")
-	}
 
-	conditions.MarkTrue(byoHost, infrastructurev1alpha4.K8sNodeBootstrapSucceeded)
+		conditions.MarkTrue(byoHost, infrastructurev1alpha4.K8sNodeBootstrapSucceeded)
+	}
 
 	return ctrl.Result{}, nil
 }
