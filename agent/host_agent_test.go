@@ -6,6 +6,8 @@ import (
 	"os"
 	"os/exec"
 
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	"github.com/onsi/gomega/gexec"
@@ -21,13 +23,16 @@ var _ = Describe("Agent", func() {
 		var (
 			ns              *corev1.Namespace
 			err             error
+			hostName        string
 			fakedKubeConfig = "fake-kubeconfig-path"
 			session         *gexec.Session
 		)
 
 		BeforeEach(func() {
-			ns = common.NewNamespace(common.RandStr("testns-", 5))
+			ns = common.NewNamespace("testns")
 			Expect(k8sClient.Create(context.TODO(), ns)).NotTo(HaveOccurred(), "failed to create test namespace")
+
+			hostName, err = os.Hostname()
 			Expect(err).NotTo(HaveOccurred())
 		})
 
@@ -35,6 +40,26 @@ var _ = Describe("Agent", func() {
 			err = k8sClient.Delete(context.TODO(), ns)
 			Expect(err).NotTo(HaveOccurred(), "failed to delete test namespace")
 			session.Terminate().Wait()
+		})
+
+		It("should not error out if the host already exists", func() {
+			byoHost := &infrastructurev1alpha4.ByoHost{
+				TypeMeta: metav1.TypeMeta{
+					Kind:       "ByoHost",
+					APIVersion: "infrastructure.cluster.x-k8s.io/v1alpha4",
+				},
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      hostName,
+					Namespace: ns.Name,
+				},
+				Spec: infrastructurev1alpha4.ByoHostSpec{},
+			}
+			Expect(k8sClient.Create(context.TODO(), byoHost)).NotTo(HaveOccurred())
+
+			command := exec.Command(pathToHostAgentBinary, "--kubeconfig", kubeconfigFile.Name(), "--namespace", ns.Name)
+			session, err = gexec.Start(command, GinkgoWriter, GinkgoWriter)
+			Expect(err).NotTo(HaveOccurred())
+			Consistently(session).ShouldNot(gexec.Exit(0))
 		})
 
 		It("should return an error when invalid kubeconfig is passed in", func() {
@@ -56,7 +81,7 @@ var _ = Describe("Agent", func() {
 		)
 
 		BeforeEach(func() {
-			ns = common.NewNamespace(common.RandStr("testns-", 5))
+			ns = common.NewNamespace("testns")
 			Expect(k8sClient.Create(context.TODO(), ns)).NotTo(HaveOccurred(), "failed to create test namespace")
 
 			hostName, err = os.Hostname()
@@ -105,42 +130,5 @@ var _ = Describe("Agent", func() {
 			}).Should(BeTrue())
 
 		})
-	})
-
-	Context("When the host agent is restart", func() {
-
-		var (
-			ns      *corev1.Namespace
-			session *gexec.Session
-			err     error
-		)
-
-		BeforeEach(func() {
-			ns = common.NewNamespace(common.RandStr("testns-", 5))
-			Expect(k8sClient.Create(context.TODO(), ns)).NotTo(HaveOccurred(), "failed to create test namespace")
-
-		})
-
-		AfterEach(func() {
-			err = k8sClient.Delete(context.TODO(), ns)
-			Expect(err).NotTo(HaveOccurred())
-
-		})
-
-		It("should not error out", func() {
-			command := exec.Command(pathToHostAgentBinary, "--kubeconfig", kubeconfigFile.Name(), "--namespace", ns.Name)
-			session, err = gexec.Start(command, GinkgoWriter, GinkgoWriter)
-			Expect(err).NotTo(HaveOccurred())
-			session.Terminate().Wait()
-
-			// restart it
-			command = exec.Command(pathToHostAgentBinary, "--kubeconfig", kubeconfigFile.Name(), "--namespace", ns.Name)
-			session, err = gexec.Start(command, GinkgoWriter, GinkgoWriter)
-			Expect(err).NotTo(HaveOccurred())
-			// it should not to quit
-			Consistently(session).ShouldNot(gexec.Exit(0))
-			session.Terminate().Wait()
-		})
-
 	})
 })
