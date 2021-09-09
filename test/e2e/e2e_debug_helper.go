@@ -15,10 +15,7 @@ const (
 	DefaultFileMode                       fs.FileMode = 0777
 	ReadByohControllerManagerLogShellFile string      = "/tmp/read-byoh-controller-manager-log.sh"
 	ReadAllPodsShellFile                  string      = "/tmp/read-all-pods.sh"
-)
-
-var (
-	AllByoHostLogs []string
+	AgentLogFile                          string      = "/tmp/host-agent.log"
 )
 
 func WriteDockerLog(output types.HijackedResponse, outputFile string) *os.File {
@@ -127,10 +124,7 @@ func ShowInfo() {
 	ExecuteShellScript(ReadAllPodsShellFile)
 
 	// show the agent log
-
-	for _, AgentLogFile := range AllByoHostLogs {
-		ShowFileContent(AgentLogFile)
-	}
+	ShowFileContent(AgentLogFile)
 
 	// show byoh-controller-manager logs
 	shellContent = []string{
