@@ -1,22 +1,22 @@
-# Kubernetes Cluster API Provider Byoh(Bring your own host)
+# Kubernetes Cluster API Provider BYOH(Bring your own host)
 [![lint](https://github.com/vmware-tanzu/cluster-api-provider-byoh/actions/workflows/lint.yml/badge.svg)](https://github.com/vmware-tanzu/cluster-api-provider-byoh/actions/workflows/lint.yml)
 [![e2e-test](https://github.com/vmware-tanzu/cluster-api-provider-byoh/actions/workflows/e2e.yml/badge.svg)](https://github.com/vmware-tanzu/cluster-api-provider-byoh/actions/workflows/e2e.yml)
 
 ------
 
-## What is the Cluster API Provider Byoh
+## What is the Cluster API Provider BYOH
 
 The [Cluster API][cluster_api] brings
 declarative, Kubernetes-style APIs to cluster creation, configuration and
 management.
 
-__Byoh__ is a Cluster API v1alpha4 Infrastructure Provider for already-provisioned hosts running Linux.
+__BYOH__ is a Cluster API v1alpha4 Infrastructure Provider for already-provisioned hosts running Linux.
 
 ## Project Status
 
 This project is currently a work-in-progress, in an Alpha state, so it may not be production ready. There is no backwards-compatibility guarantee at this point. For more details on the roadmap and upcoming features, check out [the project's issue tracker on GitHub][issue].
 
-## Launching a Kubernetes cluster using Byoh
+## Launching a Kubernetes cluster using BYOH
 
 Check out the [test guide](./test/test-run.md) for launching a cluster on Docker.
 
@@ -34,14 +34,14 @@ Check out the [test guide](./test/test-run.md) for launching a cluster on Docker
 
 ||Cluster API v1alpha3 (v0.3)|Cluster API v1alpha4 (v0.4)|
 |-|-|-|
-|Byoh Provider v1alpha1 (v0.1.0)||✓|
+|BYOH Provider v1alpha1 (v0.1.0)||✓|
 
 
 ### Kubernetes compatibility Matrix:
 
 ||Kubernetes 1.20|Kubernetes 1.21|Kubernetes 1.22|
 |-|-|-|-|
-|Byoh Provider v1alpha1 (v0.1.0)|||✓|
+|BYOH Provider v1alpha1 (v0.1.0)|||✓|
 
 
 ## Getting involved and contributing
