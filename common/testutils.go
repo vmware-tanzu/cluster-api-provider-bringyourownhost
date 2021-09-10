@@ -114,7 +114,7 @@ func NewCluster(clusterName, namespace string) *clusterv1.Cluster {
 
 func NewNamespace(namespace string) *corev1.Namespace {
 	ns := &corev1.Namespace{
-		ObjectMeta: metav1.ObjectMeta{Name: namespace},
+		ObjectMeta: metav1.ObjectMeta{GenerateName: namespace},
 	}
 	return ns
 }

@@ -29,7 +29,7 @@ var _ = Describe("Agent", func() {
 		)
 
 		BeforeEach(func() {
-			ns = common.NewNamespace(common.RandStr("testns-", 5))
+			ns = common.NewNamespace("testns")
 			Expect(k8sClient.Create(context.TODO(), ns)).NotTo(HaveOccurred(), "failed to create test namespace")
 
 			hostName, err = os.Hostname()
@@ -42,7 +42,7 @@ var _ = Describe("Agent", func() {
 			session.Terminate().Wait()
 		})
 
-		It("should error out if the host already exists", func() {
+		It("should not error out if the host already exists", func() {
 			byoHost := &infrastructurev1alpha4.ByoHost{
 				TypeMeta: metav1.TypeMeta{
 					Kind:       "ByoHost",
@@ -59,7 +59,7 @@ var _ = Describe("Agent", func() {
 			command := exec.Command(pathToHostAgentBinary, "--kubeconfig", kubeconfigFile.Name(), "--namespace", ns.Name)
 			session, err = gexec.Start(command, GinkgoWriter, GinkgoWriter)
 			Expect(err).NotTo(HaveOccurred())
-			Eventually(session).Should(gexec.Exit(0))
+			Consistently(session).ShouldNot(gexec.Exit(0))
 		})
 
 		It("should return an error when invalid kubeconfig is passed in", func() {
@@ -81,7 +81,7 @@ var _ = Describe("Agent", func() {
 		)
 
 		BeforeEach(func() {
-			ns = common.NewNamespace(common.RandStr("testns-", 5))
+			ns = common.NewNamespace("testns")
 			Expect(k8sClient.Create(context.TODO(), ns)).NotTo(HaveOccurred(), "failed to create test namespace")
 
 			hostName, err = os.Hostname()
