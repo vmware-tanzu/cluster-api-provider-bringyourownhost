@@ -55,6 +55,7 @@ var _ = Describe("Byohost Agent Tests", func() {
 		BeforeEach(func() {
 			byoHost = common.NewByoHost(hostName, ns)
 			Expect(k8sClient.Create(ctx, byoHost)).NotTo(HaveOccurred(), "failed to create byohost")
+			var err error
 			patchHelper, err = patch.NewHelper(byoHost, k8sClient)
 			Expect(err).ShouldNot(HaveOccurred())
 
@@ -65,7 +66,7 @@ var _ = Describe("Byohost Agent Tests", func() {
 			annotations.AddAnnotations(byoHost, map[string]string{
 				clusterv1.PausedAnnotation: "paused",
 			})
-			err = patchHelper.Patch(ctx, byoHost, patch.WithStatusObservedGeneration{})
+			err := patchHelper.Patch(ctx, byoHost, patch.WithStatusObservedGeneration{})
 			Expect(err).ToNot(HaveOccurred())
 
 			result, reconcilerErr := reconciler.Reconcile(ctx, controllerruntime.Request{
@@ -97,7 +98,7 @@ var _ = Describe("Byohost Agent Tests", func() {
 			Expect(reconcilerErr).ToNot(HaveOccurred())
 
 			updatedByoHost := &infrastructurev1alpha4.ByoHost{}
-			err = k8sClient.Get(ctx, byoHostLookupKey, updatedByoHost)
+			err := k8sClient.Get(ctx, byoHostLookupKey, updatedByoHost)
 			Expect(err).ToNot(HaveOccurred())
 
 			k8sNodeBootstrapSucceeded := conditions.Get(updatedByoHost, infrastructurev1alpha4.K8sNodeBootstrapSucceeded)
@@ -131,7 +132,7 @@ var _ = Describe("Byohost Agent Tests", func() {
 				Expect(reconcilerErr).ToNot(HaveOccurred())
 
 				updatedByoHost := &infrastructurev1alpha4.ByoHost{}
-				err = k8sClient.Get(ctx, byoHostLookupKey, updatedByoHost)
+				err := k8sClient.Get(ctx, byoHostLookupKey, updatedByoHost)
 				Expect(err).ToNot(HaveOccurred())
 
 				byoHostRegistrationSucceeded := conditions.Get(updatedByoHost, infrastructurev1alpha4.K8sNodeBootstrapSucceeded)
@@ -188,7 +189,7 @@ runCmd:
 					Expect(reconcilerErr).To(HaveOccurred())
 
 					updatedByoHost := &infrastructurev1alpha4.ByoHost{}
-					err = k8sClient.Get(ctx, byoHostLookupKey, updatedByoHost)
+					err := k8sClient.Get(ctx, byoHostLookupKey, updatedByoHost)
 					Expect(err).ToNot(HaveOccurred())
 
 					k8sNodeBootstrapSucceeded := conditions.Get(updatedByoHost, infrastructurev1alpha4.K8sNodeBootstrapSucceeded)
@@ -211,7 +212,7 @@ runCmd:
 					Expect(fakeFileWriter.WriteToFileCallCount()).To(Equal(1))
 
 					updatedByoHost := &infrastructurev1alpha4.ByoHost{}
-					err = k8sClient.Get(ctx, byoHostLookupKey, updatedByoHost)
+					err := k8sClient.Get(ctx, byoHostLookupKey, updatedByoHost)
 					Expect(err).ToNot(HaveOccurred())
 
 					k8sNodeBootstrapSucceeded := conditions.Get(updatedByoHost, infrastructurev1alpha4.K8sNodeBootstrapSucceeded)
@@ -264,7 +265,7 @@ runCmd:
 				Expect(fakeCommandRunner.RunCmdArgsForCall(0)).To(Equal(KubeadmResetCommand))
 
 				updatedByoHost := &infrastructurev1alpha4.ByoHost{}
-				err = k8sClient.Get(ctx, byoHostLookupKey, updatedByoHost)
+				err := k8sClient.Get(ctx, byoHostLookupKey, updatedByoHost)
 				Expect(err).ToNot(HaveOccurred())
 
 				k8sNodeBootstrapSucceeded := conditions.Get(updatedByoHost, infrastructurev1alpha4.K8sNodeBootstrapSucceeded)
@@ -286,7 +287,7 @@ runCmd:
 				Expect(reconcilerErr.Error()).To(Equal("failed to exec kubeadm reset: failed to cleanup host"))
 
 				updatedByoHost := &infrastructurev1alpha4.ByoHost{}
-				err = k8sClient.Get(ctx, byoHostLookupKey, updatedByoHost)
+				err := k8sClient.Get(ctx, byoHostLookupKey, updatedByoHost)
 				Expect(err).ToNot(HaveOccurred())
 
 				k8sNodeBootstrapSucceeded := conditions.Get(updatedByoHost, infrastructurev1alpha4.K8sNodeBootstrapSucceeded)
