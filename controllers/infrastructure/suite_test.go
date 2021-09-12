@@ -61,7 +61,6 @@ var (
 	fakeBootstrapSecret   string = "fakeBootstrapSecret"
 	k8sManager            ctrl.Manager
 	cfg                   *rest.Config
-	err                   error
 )
 
 func TestAPIs(t *testing.T) {
@@ -85,6 +84,7 @@ var _ = BeforeSuite(func() {
 		ErrorIfCRDPathMissing: true,
 	}
 
+	var err error
 	cfg, err = testEnv.Start()
 	Expect(err).NotTo(HaveOccurred())
 	Expect(cfg).NotTo(BeNil())
@@ -167,5 +167,4 @@ func WaitForObjectToBeUpdatedInCache(object client.Object, testObjectUpdatedFunc
 		}
 		return false
 	}).Should(BeTrue())
-
 }

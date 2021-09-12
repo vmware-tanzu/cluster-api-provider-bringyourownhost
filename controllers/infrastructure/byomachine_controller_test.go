@@ -12,7 +12,6 @@ import (
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/kubernetes/scheme"
-	"sigs.k8s.io/cluster-api/api/v1alpha4"
 	clusterv1 "sigs.k8s.io/cluster-api/api/v1alpha4"
 	"sigs.k8s.io/cluster-api/util/annotations"
 	"sigs.k8s.io/cluster-api/util/conditions"
@@ -36,8 +35,9 @@ var _ = Describe("Controllers/ByomachineController", func() {
 	BeforeEach(func() {
 		ctx = context.Background()
 
-		k8sClientUncached, err = client.New(cfg, client.Options{Scheme: scheme.Scheme})
-		Expect(err).NotTo(HaveOccurred())
+		var clientErr error
+		k8sClientUncached, clientErr = client.New(cfg, client.Options{Scheme: scheme.Scheme})
+		Expect(clientErr).NotTo(HaveOccurred())
 
 		machine = common.NewMachine(defaultMachineName, defaultNamespace, defaultClusterName)
 		machine.Spec.Bootstrap = clusterv1.Bootstrap{
@@ -109,7 +109,7 @@ var _ = Describe("Controllers/ByomachineController", func() {
 
 		Context("When no BYO Hosts are available", func() {
 			It("should mark BYOHostReady as False when BYOHosts are not available", func() {
-				_, err = reconciler.Reconcile(ctx, reconcile.Request{NamespacedName: byoMachineLookupKey})
+				_, err := reconciler.Reconcile(ctx, reconcile.Request{NamespacedName: byoMachineLookupKey})
 				Expect(err).To(MatchError("no hosts found"))
 
 				createdByoMachine := &infrastructurev1alpha4.ByoMachine{}
@@ -152,7 +152,7 @@ var _ = Describe("Controllers/ByomachineController", func() {
 			})
 
 			It("claims the first available host", func() {
-				_, err = reconciler.Reconcile(ctx, reconcile.Request{NamespacedName: byoMachineLookupKey})
+				_, err := reconciler.Reconcile(ctx, reconcile.Request{NamespacedName: byoMachineLookupKey})
 				Expect(err).ToNot(HaveOccurred())
 
 				createdByoHost := &infrastructurev1alpha4.ByoHost{}
@@ -215,7 +215,7 @@ var _ = Describe("Controllers/ByomachineController", func() {
 					})
 
 					It("should add cleanup annotation on byohost so that the host agent can cleanup", func() {
-						_, err = reconciler.Reconcile(ctx, reconcile.Request{NamespacedName: byoMachineLookupKey})
+						_, err := reconciler.Reconcile(ctx, reconcile.Request{NamespacedName: byoMachineLookupKey})
 						Expect(err).NotTo(HaveOccurred())
 
 						createdByoHost := &infrastructurev1alpha4.ByoHost{}
@@ -229,7 +229,7 @@ var _ = Describe("Controllers/ByomachineController", func() {
 					It("should remove host reservation when the host agent is done cleaning up", func() {
 						ph, err := patch.NewHelper(byoHost, k8sClientUncached)
 						Expect(err).ShouldNot(HaveOccurred())
-						conditions.MarkFalse(byoHost, infrastructurev1alpha4.K8sNodeBootstrapSucceeded, infrastructurev1alpha4.K8sNodeAbsentReason, v1alpha4.ConditionSeverityInfo, "")
+						conditions.MarkFalse(byoHost, infrastructurev1alpha4.K8sNodeBootstrapSucceeded, infrastructurev1alpha4.K8sNodeAbsentReason, clusterv1.ConditionSeverityInfo, "")
 						Expect(ph.Patch(ctx, byoHost, patch.WithStatusObservedGeneration{})).Should(Succeed())
 
 						WaitForObjectToBeUpdatedInCache(byoHost, func(object client.Object) bool {
@@ -390,7 +390,7 @@ var _ = Describe("Controllers/ByomachineController", func() {
 			})
 
 			AfterEach(func() {
-				k8sClientUncached.Delete(ctx, byoHost)
+				Expect(k8sClientUncached.Delete(ctx, byoHost)).ToNot(HaveOccurred())
 			})
 
 			It("should mark BYOHostReady as False when BYOHosts is available but attached", func() {
@@ -518,7 +518,7 @@ var _ = Describe("Controllers/ByomachineController", func() {
 		})
 
 		It("should mark BYOHostReady as False when cluster.Status.InfrastructureReady is false", func() {
-			_, err = reconciler.Reconcile(ctx, reconcile.Request{NamespacedName: byoMachineLookupKey})
+			_, err := reconciler.Reconcile(ctx, reconcile.Request{NamespacedName: byoMachineLookupKey})
 			Expect(err).To(MatchError("cluster infrastructure is not ready yet"))
 
 			createdByoMachine := &infrastructurev1alpha4.ByoMachine{}
