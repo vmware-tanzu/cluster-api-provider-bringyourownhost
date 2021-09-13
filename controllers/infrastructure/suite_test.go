@@ -109,10 +109,8 @@ var _ = BeforeSuite(func() {
 	})
 	Expect(err).NotTo(HaveOccurred())
 
-	k8sClient := k8sManager.GetClient()
-
 	capiCluster = common.NewCluster(defaultClusterName, defaultNamespace)
-	Expect(k8sClient.Create(context.Background(), capiCluster)).Should(Succeed())
+	Expect(k8sManager.GetClient().Create(context.Background(), capiCluster)).Should(Succeed())
 
 	node := common.NewNode(defaultNodeName, defaultNamespace)
 	clientFake = fake.NewClientBuilder().WithObjects(
@@ -121,7 +119,7 @@ var _ = BeforeSuite(func() {
 	).Build()
 
 	reconciler = &ByoMachineReconciler{
-		Client:  k8sClient,
+		Client:  k8sManager.GetClient(),
 		Tracker: remote.NewTestClusterCacheTracker(logf.NullLogger{}, clientFake, scheme.Scheme, client.ObjectKey{Name: capiCluster.Name, Namespace: capiCluster.Namespace}),
 	}
 	err = reconciler.SetupWithManager(k8sManager)
