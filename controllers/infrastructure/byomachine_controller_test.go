@@ -52,30 +52,22 @@ var _ = Describe("Controllers/ByomachineController", func() {
 		byoMachineLookupKey = types.NamespacedName{Name: byoMachine.Name, Namespace: byoMachine.Namespace}
 	})
 
-	It("should not attempt to reconcile when byomachine namespace does not exist", func() {
+	It("should ignore byomachine if it is not found", func() {
 		_, err := reconciler.Reconcile(ctx, reconcile.Request{
 			NamespacedName: types.NamespacedName{
-				Name:      byoMachine.Name,
+				Name:      "non-existent-byomachine",
 				Namespace: "non-existent-namespace"}})
 		Expect(err).NotTo(HaveOccurred())
 	})
 
-	It("should not attempt to reconcile when byomachine name does not exist", func() {
-		_, err := reconciler.Reconcile(ctx, reconcile.Request{
-			NamespacedName: types.NamespacedName{
-				Name:      "non-existent-byomachine",
-				Namespace: defaultNamespace}})
-		Expect(err).NotTo(HaveOccurred())
-	})
-
 	It("should return error when cluster does not exist", func() {
-		machineWithoutCluster := common.NewMachine("machine-without-cluster", defaultNamespace, defaultClusterName)
-		Expect(k8sClientUncached.Create(ctx, machineWithoutCluster)).Should(Succeed())
+		machineForByoMachineWithoutCluster := common.NewMachine("machine-for-a-byomachine-without-cluster", defaultNamespace, defaultClusterName)
+		Expect(k8sClientUncached.Create(ctx, machineForByoMachineWithoutCluster)).Should(Succeed())
 
 		byoMachineWithNonExistingCluster := common.NewByoMachine(defaultByoMachineName, defaultNamespace, "non-existent-cluster", machine)
 		Expect(k8sClientUncached.Create(ctx, byoMachineWithNonExistingCluster)).Should(Succeed())
 
-		WaitForObjectsToBePopulatedInCache(machineWithoutCluster, byoMachineWithNonExistingCluster)
+		WaitForObjectsToBePopulatedInCache(machineForByoMachineWithoutCluster, byoMachineWithNonExistingCluster)
 
 		_, err := reconciler.Reconcile(ctx, reconcile.Request{
 			NamespacedName: types.NamespacedName{
@@ -107,8 +99,8 @@ var _ = Describe("Controllers/ByomachineController", func() {
 			Expect(err).To(MatchError("nodes \"" + byoHost.Name + "\" not found"))
 		})
 
-		Context("When no BYO Hosts are available", func() {
-			It("should mark BYOHostReady as False when BYOHosts are not available", func() {
+		Context("When BYO Hosts are not available", func() {
+			It("should mark BYOHostReady as False", func() {
 				_, err := reconciler.Reconcile(ctx, reconcile.Request{NamespacedName: byoMachineLookupKey})
 				Expect(err).To(MatchError("no hosts found"))
 
@@ -193,7 +185,9 @@ var _ = Describe("Controllers/ByomachineController", func() {
 					}
 					Expect(ph.Patch(ctx, byoHost, patch.WithStatusObservedGeneration{})).Should(Succeed())
 
-					WaitForObjectsToBePopulatedInCache(byoHost)
+					WaitForObjectToBeUpdatedInCache(byoHost, func(object client.Object) bool {
+						return object.(*infrastructurev1alpha4.ByoHost).Status.MachineRef != nil
+					})
 				})
 
 				Context("When ByoMachine is deleted", func() {
@@ -214,6 +208,8 @@ var _ = Describe("Controllers/ByomachineController", func() {
 						}).Should(BeTrue())
 					})
 
+					// TODO - To fix, the `reconcileDelete` should return an error if `K8sNodeBootstrapSucceeded` does not have a reason `K8sNodeAbsentReason`.
+					// Not fixing now since the e2e test is failing. Will revisit this.
 					XIt("should add cleanup annotation on byohost so that the host agent can cleanup", func() {
 						_, err := reconciler.Reconcile(ctx, reconcile.Request{NamespacedName: byoMachineLookupKey})
 						Expect(err).NotTo(HaveOccurred())
@@ -393,7 +389,7 @@ var _ = Describe("Controllers/ByomachineController", func() {
 				Expect(k8sClientUncached.Delete(ctx, byoHost)).ToNot(HaveOccurred())
 			})
 
-			It("should mark BYOHostReady as False when BYOHosts is available but attached", func() {
+			It("should mark BYOHostReady as False", func() {
 				_, err := reconciler.Reconcile(ctx, reconcile.Request{NamespacedName: byoMachineLookupKey})
 				Expect(err).To(MatchError("no hosts found"))
 
@@ -517,7 +513,7 @@ var _ = Describe("Controllers/ByomachineController", func() {
 			})
 		})
 
-		It("should mark BYOHostReady as False when cluster.Status.InfrastructureReady is false", func() {
+		It("should mark BYOHostReady as False", func() {
 			_, err := reconciler.Reconcile(ctx, reconcile.Request{NamespacedName: byoMachineLookupKey})
 			Expect(err).To(MatchError("cluster infrastructure is not ready yet"))
 
