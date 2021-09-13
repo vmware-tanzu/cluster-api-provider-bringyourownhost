@@ -74,7 +74,7 @@ providers:
   - name: byoh
     type: InfrastructureProvider
     versions:
-      - name: v0.4.0
+      - name: v0.1.0
         # Use manifest from source files
         value: ../../../config/default
         type: kustomize
@@ -87,7 +87,7 @@ providers:
         files:
           # Add a cluster template
           - sourcePath: "../data/infrastructure-provider-byoh/v1alpha4/cluster-template.yaml"
-          - sourcePath: "../data/shared/metadata.yaml"
+          - sourcePath: "../data/infrastructure-provider-byoh/v1alpha4/metadata.yaml"
 variables:
   # default variables for the e2e test; those values could be overridden via env variables, thus
   # allowing the same e2e config file to be re-used in different prow jobs e.g. each one with a K8s version permutation
