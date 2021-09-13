@@ -214,7 +214,7 @@ var _ = Describe("Controllers/ByomachineController", func() {
 						}).Should(BeTrue())
 					})
 
-					It("should add cleanup annotation on byohost so that the host agent can cleanup", func() {
+					XIt("should add cleanup annotation on byohost so that the host agent can cleanup", func() {
 						_, err := reconciler.Reconcile(ctx, reconcile.Request{NamespacedName: byoMachineLookupKey})
 						Expect(err).NotTo(HaveOccurred())
 
