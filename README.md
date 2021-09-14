@@ -1,4 +1,5 @@
 # Kubernetes Cluster API Provider BYOH(Bring your own host)
+[![lint](https://github.com/vmware-tanzu/cluster-api-provider-byoh/actions/workflows/lint.yml/badge.svg)](https://github.com/vmware-tanzu/cluster-api-provider-byoh/actions/workflows/lint.yml)
 [![test](https://github.com/vmware-tanzu/cluster-api-provider-byoh/actions/workflows/main.yml/badge.svg)](https://github.com/vmware-tanzu/cluster-api-provider-byoh/actions/workflows/main.yml)
 
 ------
