@@ -24,7 +24,7 @@ type HostReconciler struct {
 	Client           client.Client
 	WatchFilterValue string
 	CmdRunner        cloudinit.ICmdRunner
-  FileWriter cloudinit.IFileWriter
+	FileWriter       cloudinit.IFileWriter
 }
 
 const (

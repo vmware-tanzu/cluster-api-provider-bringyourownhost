@@ -1,8 +1,6 @@
-name: golangci-lint
+name: lint checks
 
 on:
-  push:
-    branches: [ main ]
   pull_request:
     branches: [ main ]
 
@@ -12,7 +10,25 @@ jobs:
     steps:
     - name: Checkout code
       uses: actions/checkout@v2
+
     - name: golangci-lint
       uses: golangci/golangci-lint-action@v2
       with:
         version: v1.42.0
+
+  vet:
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v2
+
+    - name: Set up Go
+      uses: actions/setup-go@v2
+      with:
+        go-version: 1.16
+
+    - name: Install ginkgo
+      run: sudo apt-get install golang-ginkgo-dev
+
+    - name: Run vet make target
+      run: make vet
