@@ -73,7 +73,7 @@ func main() {
 		Client:           k8sClient,
 		WatchFilterValue: hostName,
 		CmdRunner:        cloudinit.CmdRunner{},
-    FileWriter: cloudinit.FileWriter{},
+		FileWriter:       cloudinit.FileWriter{},
 	}).SetupWithManager(context.TODO(), mgr); err != nil {
 		klog.Errorf("unable to create controller, err=%v", err)
 		return

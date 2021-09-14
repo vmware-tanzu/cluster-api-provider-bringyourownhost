@@ -49,14 +49,11 @@ SHELL = /usr/bin/env bash -o pipefail
 
 all: build
 
-test: generate fmt vet manifests run-test agent-test test-e2e
-
 # Run tests
-run-test: 
-	source ./scripts/fetch_ext_bins.sh; fetch_tools; setup_envs; go test `go list ./... | grep -v test/e2e` -coverprofile cover.out
+test: generate fmt vet manifests controller-test agent-test
 
 agent-test:
-	source ./scripts/fetch_ext_bins.sh; fetch_tools; setup_envs; ginkgo -r agent -coverprofile cover.out
+	source ./scripts/fetch_ext_bins.sh; fetch_tools; setup_envs; ginkgo --randomizeAllSpecs -r agent -coverprofile cover.out
 
 controller-test:
 	source ./scripts/fetch_ext_bins.sh; fetch_tools; setup_envs; ginkgo --randomizeAllSpecs controllers/infrastructure -coverprofile cover.out
