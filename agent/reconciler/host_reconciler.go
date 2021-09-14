@@ -64,6 +64,7 @@ func (r HostReconciler) Reconcile(ctx context.Context, req ctrl.Request) (_ ctrl
 		if err != nil {
 			return ctrl.Result{}, err
 		}
+		delete(byoHost.Annotations, hostCleanupAnnotation)
 		return ctrl.Result{}, nil
 	}
 

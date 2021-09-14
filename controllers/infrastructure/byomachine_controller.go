@@ -483,9 +483,6 @@ func (r *ByoMachineReconciler) removeHostReservation(ctx context.Context, machin
 	// Remove cluster-name label
 	delete(machineScope.ByoHost.Labels, clusterv1.ClusterLabelName)
 
-	// Remove the cleanup annotation
-	delete(machineScope.ByoHost.Annotations, hostCleanupAnnotation)
-
 	// Issue the patch.
 	return helper.Patch(ctx, machineScope.ByoHost)
 }
