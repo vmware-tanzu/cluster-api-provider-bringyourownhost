@@ -28,7 +28,7 @@ var _ = Describe("Byohost Agent Tests", func() {
 	)
 
 	BeforeEach(func() {
-		byoHost = common.NewByoHost(hostName, ns, nil)
+		byoHost = common.NewByoHost(hostName, ns)
 		Expect(k8sClient.Create(ctx, byoHost)).NotTo(HaveOccurred(), "failed to create byohost")
 		patchHelper, err = patch.NewHelper(byoHost, k8sClient)
 		Expect(err).ShouldNot(HaveOccurred())
