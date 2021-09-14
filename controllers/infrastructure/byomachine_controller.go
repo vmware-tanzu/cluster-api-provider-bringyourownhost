@@ -196,6 +196,7 @@ func (r *ByoMachineReconciler) reconcileDelete(ctx context.Context, machineScope
 			return ctrl.Result{}, err
 		}
 	}
+
 	controllerutil.RemoveFinalizer(machineScope.ByoMachine, infrav1.MachineFinalizer)
 	return reconcile.Result{}, nil
 }

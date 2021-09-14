@@ -25,7 +25,7 @@ import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	"k8s.io/client-go/kubernetes/scheme"
-	"sigs.k8s.io/cluster-api/controllers/remote"
+	"k8s.io/client-go/rest"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 	"sigs.k8s.io/controller-runtime/pkg/envtest"
@@ -34,11 +34,13 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 
 	infrastructurev1alpha4 "github.com/vmware-tanzu/cluster-api-provider-byoh/apis/infrastructure/v1alpha4"
+	"github.com/vmware-tanzu/cluster-api-provider-byoh/common"
+
 	//+kubebuilder:scaffold:imports
 
-	"github.com/vmware-tanzu/cluster-api-provider-byoh/common"
 	clusterv1 "sigs.k8s.io/cluster-api/api/v1alpha4"
 	bootstrapv1 "sigs.k8s.io/cluster-api/bootstrap/kubeadm/api/v1alpha4"
+	"sigs.k8s.io/cluster-api/controllers/remote"
 	ctrl "sigs.k8s.io/controller-runtime"
 )
 
@@ -46,7 +48,6 @@ import (
 // http://onsi.github.io/ginkgo/ to learn more about Ginkgo.
 
 var (
-	k8sClient             client.Client
 	testEnv               *envtest.Environment
 	clientFake            client.Client
 	reconciler            *ByoMachineReconciler
@@ -58,6 +59,8 @@ var (
 	defaultByoMachineName string = "my-byomachine"
 	defaultNamespace      string = "default"
 	fakeBootstrapSecret   string = "fakeBootstrapSecret"
+	k8sManager            ctrl.Manager
+	cfg                   *rest.Config
 )
 
 func TestAPIs(t *testing.T) {
@@ -81,7 +84,8 @@ var _ = BeforeSuite(func() {
 		ErrorIfCRDPathMissing: true,
 	}
 
-	cfg, err := testEnv.Start()
+	var err error
+	cfg, err = testEnv.Start()
 	Expect(err).NotTo(HaveOccurred())
 	Expect(cfg).NotTo(BeNil())
 
@@ -99,16 +103,14 @@ var _ = BeforeSuite(func() {
 
 	//+kubebuilder:scaffold:scheme
 
-	k8sManager, err := ctrl.NewManager(cfg, ctrl.Options{
+	k8sManager, err = ctrl.NewManager(cfg, ctrl.Options{
 		Scheme:             scheme.Scheme,
 		MetricsBindAddress: ":6080",
 	})
 	Expect(err).NotTo(HaveOccurred())
 
-	k8sClient = k8sManager.GetClient()
-
 	capiCluster = common.NewCluster(defaultClusterName, defaultNamespace)
-	Expect(k8sClient.Create(context.Background(), capiCluster)).Should(Succeed())
+	Expect(k8sManager.GetClient().Create(context.Background(), capiCluster)).Should(Succeed())
 
 	node := common.NewNode(defaultNodeName, defaultNamespace)
 	clientFake = fake.NewClientBuilder().WithObjects(
@@ -117,16 +119,18 @@ var _ = BeforeSuite(func() {
 	).Build()
 
 	reconciler = &ByoMachineReconciler{
-		Client:  k8sClient,
+		Client:  k8sManager.GetClient(),
 		Tracker: remote.NewTestClusterCacheTracker(logf.NullLogger{}, clientFake, scheme.Scheme, client.ObjectKey{Name: capiCluster.Name, Namespace: capiCluster.Namespace}),
 	}
 	err = reconciler.SetupWithManager(k8sManager)
 	Expect(err).NotTo(HaveOccurred())
 
 	go func() {
-		err = k8sManager.Start(ctrl.SetupSignalHandler())
+		err = k8sManager.GetCache().Start(context.TODO())
 		Expect(err).NotTo(HaveOccurred())
 	}()
+
+	Expect(k8sManager.GetCache().WaitForCacheSync(context.TODO())).To(BeTrue())
 
 }, 60)
 
@@ -135,3 +139,30 @@ var _ = AfterSuite(func() {
 	err := testEnv.Stop()
 	Expect(err).NotTo(HaveOccurred())
 })
+
+func WaitForObjectsToBePopulatedInCache(objects ...client.Object) {
+	for _, object := range objects {
+		objectCopy := object.DeepCopyObject().(client.Object)
+		key := client.ObjectKeyFromObject(object)
+		Eventually(func() (done bool) {
+			if err := reconciler.Client.Get(context.TODO(), key, objectCopy); err != nil {
+				return false
+			}
+			return true
+		}).Should(BeTrue())
+	}
+}
+
+func WaitForObjectToBeUpdatedInCache(object client.Object, testObjectUpdatedFunc func(client.Object) bool) {
+	objectCopy := object.DeepCopyObject().(client.Object)
+	key := client.ObjectKeyFromObject(object)
+	Eventually(func() (done bool) {
+		if err := reconciler.Client.Get(context.TODO(), key, objectCopy); err != nil {
+			return false
+		}
+		if testObjectUpdatedFunc(objectCopy) {
+			return true
+		}
+		return false
+	}).Should(BeTrue())
+}
