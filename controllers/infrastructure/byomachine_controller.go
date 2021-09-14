@@ -22,6 +22,7 @@ import (
 	"fmt"
 	"reflect"
 	"strings"
+	"time"
 
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -54,6 +55,7 @@ const (
 	providerIDSuffixLength = 6
 	hostCleanupAnnotation  = "byoh.infrastructure.cluster.x-k8s.io/unregistering"
 	hostMachineRefIndex    = "status.machineref"
+	RequeueForbyohost      = 10 * time.Second
 )
 
 // ByoMachineReconciler reconciles a ByoMachine object
@@ -382,12 +384,12 @@ func (r *ByoMachineReconciler) attachByoHost(ctx context.Context, logger logr.Lo
 	err = r.Client.List(ctx, hostsList, &client.ListOptions{LabelSelector: selector})
 	if err != nil {
 		logger.Error(err, "failed to list byohosts")
-		return ctrl.Result{}, err
+		return ctrl.Result{RequeueAfter: RequeueForbyohost}, err
 	}
 	if len(hostsList.Items) == 0 {
 		logger.Info("No hosts found, waiting..")
 		conditions.MarkFalse(machineScope.ByoMachine, infrav1.BYOHostReady, infrav1.BYOHostsUnavailableReason, clusterv1.ConditionSeverityInfo, "")
-		return ctrl.Result{}, errors.New("no hosts found")
+		return ctrl.Result{RequeueAfter: RequeueForbyohost}, errors.New("no hosts found")
 	}
 	// TODO- Needs smarter logic
 	host := hostsList.Items[0]
