@@ -198,14 +198,10 @@ var _ = Describe("Controllers/ByomachineController", func() {
 						Expect(ph.Patch(ctx, byoMachine, patch.WithStatusObservedGeneration{})).Should(Succeed())
 
 						Expect(k8sClientUncached.Delete(ctx, byoMachine)).Should(Succeed())
-						Eventually(func() bool {
-							deletedByoMachine := &infrastructurev1alpha4.ByoMachine{}
-							err := reconciler.Client.Get(ctx, byoMachineLookupKey, deletedByoMachine)
-							if err != nil {
-								return false
-							}
-							return !deletedByoMachine.ObjectMeta.DeletionTimestamp.IsZero()
-						}).Should(BeTrue())
+
+						WaitForObjectToBeUpdatedInCache(byoMachine, func(object client.Object) bool {
+							return !object.(*infrastructurev1alpha4.ByoMachine).ObjectMeta.DeletionTimestamp.IsZero()
+						})
 					})
 
 					// TODO - To fix, the `reconcileDelete` should return an error if `K8sNodeBootstrapSucceeded` does not have a reason `K8sNodeAbsentReason`.
