@@ -1,12 +1,12 @@
 # Kubernetes Cluster API Provider BYOH(Bring your own host)
 [![lint](https://github.com/vmware-tanzu/cluster-api-provider-byoh/actions/workflows/lint.yml/badge.svg)](https://github.com/vmware-tanzu/cluster-api-provider-byoh/actions/workflows/lint.yml)
-[![e2e-test](https://github.com/vmware-tanzu/cluster-api-provider-byoh/actions/workflows/e2e.yml/badge.svg)](https://github.com/vmware-tanzu/cluster-api-provider-byoh/actions/workflows/e2e.yml)
+[![test](https://github.com/vmware-tanzu/cluster-api-provider-byoh/actions/workflows/main.yml/badge.svg)](https://github.com/vmware-tanzu/cluster-api-provider-byoh/actions/workflows/main.yml)
 
 ------
 
-## What is the Cluster API Provider BYOH
+## What is Cluster API Provider BYOH
 
-The [Cluster API][cluster_api] brings
+[Cluster API][cluster_api] brings
 declarative, Kubernetes-style APIs to cluster creation, configuration and
 management.
 
