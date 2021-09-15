@@ -42,7 +42,7 @@ const (
 
 // creating a workload cluster
 // This test is meant to provide a first, fast signal to detect regression; it is recommended to use it as a PR blocker test.
-var _ = Describe("When BYOH joins existing cluster", func() {
+var _ = Describe("When BYOH joins existing cluster [PR-Blocking]", func() {
 
 	var (
 		ctx              context.Context
