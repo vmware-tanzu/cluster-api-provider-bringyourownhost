@@ -52,9 +52,9 @@ func (hr *HostRegistrar) Register() error {
 	byoHost := &infrastructurev1alpha4.ByoHost{}
 
 	/*
-		check if /var/run/byohost.json is existed
-		if it existed, it means there is already a byohost object, read its name from this file.
-		if it not existed, it means this is a new byohost needs to be created.
+		check if ~/byohost.json is existed
+		if it existed, it means this is host agent restart situation, read the byohost object name from this file
+		if it not existed, it means this is the first host agent starts, create byohost object, and update this file.
 		The format of /var/run/byohost.json is as followed:
 		{
 			"byoHostName": "byohost",
@@ -70,7 +70,7 @@ func (hr *HostRegistrar) Register() error {
 	}
 
 	if isExisted {
-		// This is for byohost restart situation
+		// This is for host agent restart situation
 		err = hr.ReadObjFromRegisterFile()
 		if err != nil {
 			klog.Errorf("ReadObjFromRegisterFile %s data, err=%v", hr.ByoHostRegsiterFileName, err)
@@ -96,7 +96,7 @@ func (hr *HostRegistrar) Register() error {
 			return err
 		}
 	} else {
-		// This is for byohost new-create situation
+		// This is the fist time host agent starts
 		// report error when there are two hosts with same hostname
 		err = hr.K8sClient.Get(hr.ctx, types.NamespacedName{Name: hr.RegisterInfo.ByoHostName, Namespace: hr.RegisterInfo.ByoHostNameSpace}, byoHost)
 		if err == nil {
