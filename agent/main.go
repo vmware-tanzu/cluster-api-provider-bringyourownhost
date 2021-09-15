@@ -54,7 +54,14 @@ func main() {
 		return
 	}
 
-	err = registration.HostRegistrar{K8sClient: k8sClient}.Register(hostName, namespace)
+	registerClient := &registration.HostRegistrar{
+		K8sClient: k8sClient,
+		RegisterInfo: registration.Register{
+			ByoHostName:      hostName,
+			ByoHostNameSpace: namespace,
+		},
+	}
+	err = registerClient.Register()
 	if err != nil {
 		klog.Errorf("error registering host %s registration in namespace %s, err=%v", hostName, namespace, err)
 		return
@@ -69,12 +76,14 @@ func main() {
 		return
 	}
 
-	if err = (reconciler.HostReconciler{
-		Client:           k8sClient,
-		WatchFilterValue: hostName,
-		CmdRunner:        cloudinit.CmdRunner{},
-		FileWriter:       cloudinit.FileWriter{},
-	}).SetupWithManager(context.TODO(), mgr); err != nil {
+	reconcilerClient := &reconciler.HostReconciler{
+		Client:                  k8sClient,
+		WatchFilterValue:        hostName,
+		CmdRunner:               cloudinit.CmdRunner{},
+		FileWriter:              cloudinit.FileWriter{},
+		ByoHostRegsiterFileName: registerClient.ByoHostRegsiterFileName,
+	}
+	if err = reconcilerClient.SetupWithManager(context.TODO(), mgr); err != nil {
 		klog.Errorf("unable to create controller, err=%v", err)
 		return
 	}

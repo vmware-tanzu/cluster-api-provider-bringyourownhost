@@ -56,6 +56,21 @@ func NewMachine(machineName, namespace, clusterName string) *clusterv1.Machine {
 	return machine
 }
 
+func NewByoHostWithNamePrefix(byoHostNamePrefix, byoHostNamespace string) *infrastructurev1alpha4.ByoHost {
+	byoHost := &infrastructurev1alpha4.ByoHost{
+		TypeMeta: metav1.TypeMeta{
+			Kind:       "ByoHost",
+			APIVersion: "infrastructure.cluster.x-k8s.io/v1alpha4",
+		},
+		ObjectMeta: metav1.ObjectMeta{
+			GenerateName: byoHostNamePrefix,
+			Namespace:    byoHostNamespace,
+		},
+		Spec: infrastructurev1alpha4.ByoHostSpec{},
+	}
+	return byoHost
+}
+
 func NewByoHost(byoHostName, byoHostNamespace string) *infrastructurev1alpha4.ByoHost {
 	byoHost := &infrastructurev1alpha4.ByoHost{
 		TypeMeta: metav1.TypeMeta{
@@ -63,8 +78,8 @@ func NewByoHost(byoHostName, byoHostNamespace string) *infrastructurev1alpha4.By
 			APIVersion: "infrastructure.cluster.x-k8s.io/v1alpha4",
 		},
 		ObjectMeta: metav1.ObjectMeta{
-			GenerateName: byoHostName,
-			Namespace:    byoHostNamespace,
+			Name:      byoHostName,
+			Namespace: byoHostNamespace,
 		},
 		Spec: infrastructurev1alpha4.ByoHostSpec{},
 	}

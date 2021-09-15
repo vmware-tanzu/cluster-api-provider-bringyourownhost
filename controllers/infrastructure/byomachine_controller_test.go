@@ -90,7 +90,7 @@ var _ = Describe("Controllers/ByomachineController", func() {
 		})
 
 		It("should return error when node is not available", func() {
-			byoHost = common.NewByoHost("host-with-node-missing", defaultNamespace)
+			byoHost = common.NewByoHostWithNamePrefix("host-with-node-missing", defaultNamespace)
 			Expect(k8sClientUncached.Create(ctx, byoHost)).Should(Succeed())
 
 			WaitForObjectsToBePopulatedInCache(byoHost)
@@ -130,7 +130,7 @@ var _ = Describe("Controllers/ByomachineController", func() {
 
 		Context("When a single BYO Host is available", func() {
 			BeforeEach(func() {
-				byoHost = common.NewByoHost("single-available-default-host", defaultNamespace)
+				byoHost = common.NewByoHostWithNamePrefix("single-available-default-host", defaultNamespace)
 				Expect(k8sClientUncached.Create(ctx, byoHost)).Should(Succeed())
 
 				Expect(clientFake.Create(ctx, common.NewNode(byoHost.Name, defaultNamespace))).Should(Succeed())
@@ -338,7 +338,7 @@ var _ = Describe("Controllers/ByomachineController", func() {
 
 		Context("When no matching BYO Hosts are available", func() {
 			BeforeEach(func() {
-				byoHost = common.NewByoHost("byohost-with-different-label", defaultNamespace)
+				byoHost = common.NewByoHostWithNamePrefix("byohost-with-different-label", defaultNamespace)
 				byoHost.Labels = map[string]string{"CPUs": "2"}
 				Expect(k8sClientUncached.Create(ctx, byoHost)).Should(Succeed())
 
@@ -374,7 +374,7 @@ var _ = Describe("Controllers/ByomachineController", func() {
 
 		Context("When all ByoHost are attached", func() {
 			BeforeEach(func() {
-				byoHost = common.NewByoHost("byohost-attached-different-cluster", defaultNamespace)
+				byoHost = common.NewByoHostWithNamePrefix("byohost-attached-different-cluster", defaultNamespace)
 				byoHost.Labels = map[string]string{clusterv1.ClusterLabelName: capiCluster.Name}
 				Expect(k8sClientUncached.Create(ctx, byoHost)).Should(Succeed())
 
@@ -410,9 +410,9 @@ var _ = Describe("Controllers/ByomachineController", func() {
 			)
 
 			BeforeEach(func() {
-				byoHost1 = common.NewByoHost(defaultByoHostName, defaultNamespace)
+				byoHost1 = common.NewByoHostWithNamePrefix(defaultByoHostName, defaultNamespace)
 				Expect(k8sClientUncached.Create(ctx, byoHost1)).Should(Succeed())
-				byoHost2 = common.NewByoHost(defaultByoHostName, defaultNamespace)
+				byoHost2 = common.NewByoHostWithNamePrefix(defaultByoHostName, defaultNamespace)
 				Expect(k8sClientUncached.Create(ctx, byoHost2)).Should(Succeed())
 
 				WaitForObjectsToBePopulatedInCache(byoHost1, byoHost2)
