@@ -7,11 +7,24 @@ import (
 )
 
 type step struct {
-	cmd string
+	cmd  string
+	undo string
 }
 
-func (s *step) execute() {
-	stdOut, stdErr, err := shellExec(s.cmd)
+func (s *step) Execute() {
+	if len(s.cmd) > 0 {
+		s.runStep(s.cmd)
+	}
+}
+
+func (s *step) Undo() {
+	if len(s.undo) > 0 {
+		s.runStep(s.undo)
+	}
+}
+
+func (s *step) runStep(cmd string) {
+	stdOut, stdErr, err := shellExec(cmd)
 
 	if len(stdOut) > 0 {
 		fmt.Print(stdOut)
