@@ -1,0 +1,43 @@
+@startuml add-host
+title
+Current - Add ByoMachine
+end title
+
+participant HostAgent as hagent <<(A,#ADD1B2)>>
+box "Management Cluster"
+    participant APIServer as mc <<(S,#ADD1B2) >>
+    participant ByoMachineController as bmc <<(C,#ADD1B2)>>
+end box
+
+box "Workload Cluster"
+    participant APIServer as wc <<(S,#ADD1B2) >>
+end box 
+
+
+hagent -> mc: Register Host as ByoHost
+->mc: Write Op for \n 1. Owner CAPIMachine \n 2. ByoMachine \n 3. ByoHost
+
+mc --> bmc: Recieve Reconcile Event
+note right of bmc
+    1. Preconditions checks
+      a. ByoMachine/CapiMachine/ByoCluster/InfraCluster
+      b. Paused Annotation
+      c. Cluster.Status.InfrastructureReady
+      d. Machine.Spec.Bootstrap.DataSecretName
+    2. Host Selection/Attachment
+end note
+bmc -> mc: Patch Selected ByoHost for \n 1. Status.MachineRef \n 2. ObjectMeta.Labels \n 3. Spec.BootstrapSecret
+bmc -> wc: Patch Node for Spec.ProviderID
+bmc -> mc: Patch ByoMachine for \n 1. Spec.ProviderID \n 2. Status.Ready \n 3. Status.Conditions[*].infrav1.BYOHostReady \n 4. ObjectMeta.Finalizers
+
+mc --> hagent: Recieve Reconcile Event
+note left of hagent
+    1. Preconditions Checks
+      a. Paused Annotation
+      b. Status.MachineRef
+      c. Spec.BootstrapSecret
+    2. Node bootstrap Logic
+end note
+
+hagent -> mc: Patch Condition \n K8sNodeBootstrapSucceeded
+@enduml

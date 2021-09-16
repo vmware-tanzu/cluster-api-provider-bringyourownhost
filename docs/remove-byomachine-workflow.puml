@@ -1,0 +1,45 @@
+@startuml del-byomachine
+title
+Current - Remove ByoMachine
+end title
+
+
+participant HostAgent as hagent <<(A,#ADD1B2)>>
+box "Management Cluster"
+    participant APIServer as mc <<(S,#ADD1B2) >>
+    participant ByoMachineController as bmc <<(C,#ADD1B2)>>
+end box
+
+box "Workload Cluster"
+    participant APIServer as wc <<(S,#ADD1B2) >>
+end box 
+
+
+->mc: Delete Op for \n 1. Owner CapiMachine \n 2. ByoMachine
+mc --> bmc: Receive Reconcile Event
+note right of bmc
+    1. Preconditions checks
+      a. ByoMachine/CapiMachine/CapiCluster
+      b. Paused Annotation
+    2. ReconcileDelete
+end note
+bmc -> mc: Patch Attached <b>ByoHost</b> Add \n 1. Annotations[hostCleanupAnnotation]
+mc --> hagent: Receive Reconcile Event
+note left of hagent
+    1. Preconditions Checks
+      a. Paused Annotation
+    2. hostCleanUp
+      a. Kubeadm reset
+end note
+hagent -> mc: Patch <b>ByoHost</b> \n 1.K8sNodeBootstrapSucceeded \n   with K8sNodeAbsentReason
+mc --> bmc: Enqueue Reconcile event for ByoHost
+note right of bmc
+    1. Preconditions checks
+      a. ByoMachine/CapiMachine/CapiCluster
+      b. Paused Annotation
+    2. ReconcileDelete
+end note
+bmc -> mc: Patch Attached <b>ByoHost</b> Remove \n 1. Status.MachineRef \n 2. ByoHost.Labels \n 3. Annotations
+bmc -> mc: Patch <b>ByoMachine</b> Remove \n 1. Finalizer
+
+@enduml
