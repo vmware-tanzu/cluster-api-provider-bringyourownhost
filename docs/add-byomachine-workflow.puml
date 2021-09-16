@@ -1,23 +1,31 @@
-@startuml add-host
+@startuml Add-ByoMachine
 title
 Current - Add ByoMachine
 end title
+actor "platform operator" as po
+actor "site operator" as so
 
 participant HostAgent as hagent <<(A,#ADD1B2)>>
-box "Management Cluster"
+box "Management Cluster" #LightBlue
     participant APIServer as mc <<(S,#ADD1B2) >>
     participant ByoMachineController as bmc <<(C,#ADD1B2)>>
 end box
 
-box "Workload Cluster"
+box "Workload Cluster" #LightPink
     participant APIServer as wc <<(S,#ADD1B2) >>
 end box 
 
-
+so -> hagent: Runs the host agent
 hagent -> mc: Register Host as ByoHost
-->mc: Write Op for \n 1. Owner CAPIMachine \n 2. ByoMachine \n 3. ByoHost
+po->mc: Create/Scale \n ByohCluster
 
-mc --> bmc: Recieve Reconcile Event
+note right of mc
+Write Op for 
+1. Owner CAPIMachine
+2. ByoMachine
+3. ByoHost
+end note
+mc --> bmc: Receive Reconcile Event
 note right of bmc
     1. Preconditions checks
       a. ByoMachine/CapiMachine/ByoCluster/InfraCluster
@@ -26,12 +34,11 @@ note right of bmc
       d. Machine.Spec.Bootstrap.DataSecretName
     2. Host Selection/Attachment
 end note
-bmc -> mc: Patch Selected ByoHost for \n 1. Status.MachineRef \n 2. ObjectMeta.Labels \n 3. Spec.BootstrapSecret
-bmc -> wc: Patch Node for Spec.ProviderID
-bmc -> mc: Patch ByoMachine for \n 1. Spec.ProviderID \n 2. Status.Ready \n 3. Status.Conditions[*].infrav1.BYOHostReady \n 4. ObjectMeta.Finalizers
-
-mc --> hagent: Recieve Reconcile Event
-note left of hagent
+bmc -> mc: Patch Selected <b>ByoHost</b> for \n 1. Status.MachineRef \n 2. ObjectMeta.Labels \n 3. Spec.BootstrapSecret
+bmc -> wc: Patch <b>Node</b> for Spec.ProviderID
+bmc -> mc: Patch <b>ByoMachine</b> for \n 1. Spec.ProviderID \n 2. Status.Ready \n 3. Status.Conditions[*].infrav1.BYOHostReady \n 4. ObjectMeta.Finalizers
+mc --> hagent: Receive Reconcile Event
+note right of hagent
     1. Preconditions Checks
       a. Paused Annotation
       b. Status.MachineRef

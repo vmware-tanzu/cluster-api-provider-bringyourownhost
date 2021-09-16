@@ -1,21 +1,27 @@
-@startuml del-byomachine
+@startuml Del-byomachine
 title
 Current - Remove ByoMachine
 end title
 
-
+actor "platform operator" as po
 participant HostAgent as hagent <<(A,#ADD1B2)>>
-box "Management Cluster"
+box "Management Cluster" #LightBlue
     participant APIServer as mc <<(S,#ADD1B2) >>
     participant ByoMachineController as bmc <<(C,#ADD1B2)>>
 end box
 
-box "Workload Cluster"
+box "Workload Cluster" #LightPink
     participant APIServer as wc <<(S,#ADD1B2) >>
 end box 
 
 
-->mc: Delete Op for \n 1. Owner CapiMachine \n 2. ByoMachine
+po->mc: Deletes/Down Scale a ByohCluster
+note right of mc
+Delete Op for 
+1. Owner CapiMachine
+2. ByoMachine
+end note
+
 mc --> bmc: Receive Reconcile Event
 note right of bmc
     1. Preconditions checks
