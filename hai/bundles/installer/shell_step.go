@@ -6,24 +6,29 @@ import (
 	"os/exec"
 )
 
-type step struct {
-	cmd  string
-	undo string
+/*
+########################################
+# Extends Step to a shell exec command #
+########################################
+*/
+type ShellStep struct {
+	DoCmd   string
+	UndoCmd string
 }
 
-func (s *step) Execute() {
-	if len(s.cmd) > 0 {
-		s.runStep(s.cmd)
+func (s *ShellStep) Do() {
+	if len(s.DoCmd) > 0 {
+		s.runStep(s.DoCmd)
 	}
 }
 
-func (s *step) Undo() {
-	if len(s.undo) > 0 {
-		s.runStep(s.undo)
+func (s *ShellStep) Undo() {
+	if len(s.UndoCmd) > 0 {
+		s.runStep(s.UndoCmd)
 	}
 }
 
-func (s *step) runStep(command string) {
+func (s *ShellStep) runStep(command string) {
 	var stdOut bytes.Buffer
 	var stdErr bytes.Buffer
 

@@ -1,43 +1,25 @@
 package installer
 
-type installer struct {
-	steps []step
-}
-
-type BaseInstaller interface {
+/*
+#################################################
+# This is a base Kubernetes installer           #
+# it should be inherited by step factories      #
+# that implement the appropriate method factory #
+# overriders.                                   #
+#################################################
+*/
+type BaseK8sInstaller interface {
 	Install()
 	Uninstall()
-	Init()
-	InitSteps()
-	CreateSwapStep() step
-	CreateFirewallStep() step
-	AddSteps([]step)
+	KubeadmStep() Step
+	KubeletStep() Step
+	ContainerdStep() Step
+	SwapStep() Step
+	FirewallStep() Step
+	GetSteps(steps []Step) []Step
 }
 
-func (i *installer) Install() {
-	for _, step := range i.GetSteps() {
-		step.Execute()
-	}
-}
-
-func (i *installer) Uninstall() {
-	for _, step := range i.GetSteps() {
-		step.Undo()
-	}
-}
-
-func (i *installer) CreateStep(execCmd string, undoCmd string) step {
-	var s step
-	s.cmd = execCmd
-	s.undo = undoCmd
-
-	return s
-}
-
-func (i *installer) AddSteps(newSteps []step) {
-	i.steps = append(i.steps, newSteps...)
-}
-
-func (i *installer) GetSteps() []step {
-	return i.steps
+type Step interface {
+	Do()
+	Undo()
 }
