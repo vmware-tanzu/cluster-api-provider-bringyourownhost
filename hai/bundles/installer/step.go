@@ -23,32 +23,26 @@ func (s *step) Undo() {
 	}
 }
 
-func (s *step) runStep(cmd string) {
-	stdOut, stdErr, err := shellExec(cmd)
+func (s *step) runStep(command string) {
+	var stdOut bytes.Buffer
+	var stdErr bytes.Buffer
 
-	if len(stdOut) > 0 {
-		fmt.Print(stdOut)
+	const defaultShell = "bash"
+
+	cmd := exec.Command(defaultShell, "-c", command)
+	cmd.Stdout = &stdOut
+	cmd.Stderr = &stdErr
+	err := cmd.Run()
+
+	if len(stdOut.String()) > 0 {
+		fmt.Print(stdOut.String())
 	}
 
-	if len(stdErr) > 0 {
+	if len(stdErr.String()) > 0 {
 		fmt.Print(stdErr)
 	}
 
 	if err != nil {
 		fmt.Print(err.Error())
 	}
-}
-
-func shellExec(command string) (string, string, error) {
-	var stdout bytes.Buffer
-	var stderr bytes.Buffer
-
-	const defaultShell = "bash"
-
-	cmd := exec.Command(defaultShell, "-c", command)
-	cmd.Stdout = &stdout
-	cmd.Stderr = &stderr
-	err := cmd.Run()
-
-	return stdout.String(), stderr.String(), err
 }

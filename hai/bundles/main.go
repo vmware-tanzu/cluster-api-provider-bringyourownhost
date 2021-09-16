@@ -9,7 +9,6 @@ import (
 func main() {
 
 	if len(os.Args) > 1 {
-
 		builder := new(installer.Builder)
 		bundle := builder.NewInstaller()
 
@@ -28,5 +27,7 @@ func main() {
 		default:
 			println("Please specify operation: install, uninstall")
 		}
+	} else {
+		println("Please specify operation: install, uninstall")
 	}
 }
