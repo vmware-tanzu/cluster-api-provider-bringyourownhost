@@ -132,8 +132,6 @@ var _ = Describe("Byohost Agent Tests", func() {
 		})
 
 		It("should set the Reason to CloudInitExecutionFailedReason", func() {
-			//	byoHost := byoHost.DeepCopy()
-
 			byoMachine := common.NewByoMachine("test-byomachine", ns, "", nil)
 			Expect(k8sClient.Create(ctx, byoMachine)).NotTo(HaveOccurred(), "failed to create byomachine")
 
@@ -177,6 +175,8 @@ var _ = Describe("Byohost Agent Tests", func() {
 				Reason:   infrastructurev1alpha4.CloudInitExecutionFailedReason,
 				Severity: clusterv1.ConditionSeverityError,
 			}))
+
+			Expect(fakeCommandRunner.RunCmdArgsForCall(0)).To(Equal(KubeadmResetCommand))
 
 			Expect(k8sClient.Delete(ctx, secret)).NotTo(HaveOccurred())
 			Expect(k8sClient.Delete(ctx, byoMachine)).NotTo(HaveOccurred())
