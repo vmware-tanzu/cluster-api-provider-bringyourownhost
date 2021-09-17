@@ -33,6 +33,10 @@ const (
 )
 
 func (r HostReconciler) Reconcile(ctx context.Context, req ctrl.Request) (_ ctrl.Result, reterr error) {
+	log := ctrl.LoggerFrom(ctx)
+	log.WithValues("byoHost ", req.Name)
+	log.Info("Reconciling byohost...")
+
 	// Fetch the ByoHost instance.
 	byoHost := &infrastructurev1alpha4.ByoHost{}
 	err := r.Client.Get(ctx, req.NamespacedName, byoHost)
