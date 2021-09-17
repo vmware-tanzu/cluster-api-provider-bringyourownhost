@@ -203,6 +203,9 @@ var _ = Describe("Byohost Agent Tests", func() {
 			err = k8sClient.Get(ctx, byoHostLookupKey, updatedByoHost)
 			Expect(err).ToNot(HaveOccurred())
 
+			Expect(updatedByoHost.Labels).NotTo(ContainElements(clusterv1.ClusterLabelName))
+			Expect(updatedByoHost.Status.MachineRef).To(BeNil())
+			Expect(updatedByoHost.Annotations).NotTo(ContainElements(hostCleanupAnnotation))
 			k8sNodeBootstrapSucceeded := conditions.Get(updatedByoHost, infrastructurev1alpha4.K8sNodeBootstrapSucceeded)
 			Expect(*k8sNodeBootstrapSucceeded).To(conditions.MatchCondition(clusterv1.Condition{
 				Type:     infrastructurev1alpha4.K8sNodeBootstrapSucceeded,
