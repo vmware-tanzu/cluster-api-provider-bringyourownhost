@@ -12,6 +12,7 @@ import (
 ########################################
 */
 type ShellStep struct {
+	Step
 	DoCmd   string
 	UndoCmd string
 }

@@ -12,13 +12,14 @@ func main() {
 		os.Exit(-1)
 	}
 
-	ubtInstaller := new(installer.Ubuntu_20_4_1_tkg_1_22)
+	installer := &installer.BaseK8sInstaller{
+		K8sInstaller: &installer.Ubuntu_20_4_1_tkg_1_22{}}
 
 	switch os.Args[1] {
 	case "install":
-		ubtInstaller.Install(ubtInstaller.GetSteps())
+		installer.Install()
 	case "uninstall":
-		ubtInstaller.Uninstall(ubtInstaller.GetSteps())
+		installer.Uninstall()
 	default:
 		println("Please specify operation: install, uninstall")
 	}
