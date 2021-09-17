@@ -7,7 +7,6 @@ import (
 	"path/filepath"
 
 	"github.com/docker/docker/api/types"
-	"github.com/docker/docker/api/types/container"
 	"github.com/docker/docker/client"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -21,16 +20,16 @@ import (
 var _ = Describe("When testing MachineDeployment scale out/in", func() {
 
 	var (
-		ctx                 context.Context
-		specName            = "md-scale"
-		namespace           *corev1.Namespace
-		cancelWatches       context.CancelFunc
-		clusterResources    *clusterctl.ApplyClusterTemplateAndWaitResult
-		dockerClient        *client.Client
-		byohost             container.ContainerCreateCreatedBody
-		err                 error
-		byoHostCapacityPool = 5
-		byoHostName         string
+		ctx                    context.Context
+		specName               = "md-scale"
+		namespace              *corev1.Namespace
+		cancelWatches          context.CancelFunc
+		clusterResources       *clusterctl.ApplyClusterTemplateAndWaitResult
+		dockerClient           *client.Client
+		err                    error
+		byoHostCapacityPool    = 5
+		byoHostName            string
+		allbyohostContainerIDs []string
 	)
 
 	BeforeEach(func() {
@@ -59,7 +58,8 @@ var _ = Describe("When testing MachineDeployment scale out/in", func() {
 		By("Creating byohost capacity pool containing 5 hosts")
 		for i := 0; i < byoHostCapacityPool; i++ {
 			byoHostName = fmt.Sprintf("byohost-%s", util.RandomString(6))
-			_, err := setupByoDockerHost(ctx, clusterConName, byoHostName, namespace.Name, dockerClient, bootstrapClusterProxy)
+			_, byohostContainerID, err := setupByoDockerHost(ctx, clusterConName, byoHostName, namespace.Name, dockerClient, bootstrapClusterProxy)
+			allbyohostContainerIDs = append(allbyohostContainerIDs, byohostContainerID)
 			Expect(err).NotTo(HaveOccurred())
 		}
 
@@ -118,12 +118,15 @@ var _ = Describe("When testing MachineDeployment scale out/in", func() {
 	})
 
 	AfterEach(func() {
-		if dockerClient != nil && byohost.ID != "" {
-			err := dockerClient.ContainerStop(ctx, byohost.ID, nil)
-			Expect(err).NotTo(HaveOccurred())
+		if dockerClient != nil {
+			for _, byohostContainerID := range allbyohostContainerIDs {
+				err := dockerClient.ContainerStop(ctx, byohostContainerID, nil)
+				Expect(err).NotTo(HaveOccurred())
 
-			err = dockerClient.ContainerRemove(ctx, byohost.ID, types.ContainerRemoveOptions{})
-			Expect(err).NotTo(HaveOccurred())
+				err = dockerClient.ContainerRemove(ctx, byohostContainerID, types.ContainerRemoveOptions{})
+				Expect(err).NotTo(HaveOccurred())
+			}
+
 		}
 
 		os.Remove(AgentLogFile)
