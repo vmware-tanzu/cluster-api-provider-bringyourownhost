@@ -12,6 +12,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/klog"
+	"k8s.io/klog/klogr"
 	clusterv1 "sigs.k8s.io/cluster-api/api/v1alpha4"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -23,6 +24,7 @@ var (
 )
 
 func init() {
+	klog.InitFlags(nil)
 	scheme = runtime.NewScheme()
 	_ = infrastructurev1alpha4.AddToScheme(scheme)
 	_ = corev1.AddToScheme(scheme)
@@ -35,7 +37,7 @@ func init() {
 
 func main() {
 	flag.Parse()
-
+	ctrl.SetLogger(klogr.New())
 	config, err := ctrl.GetConfig()
 	if err != nil {
 		klog.Errorf("error getting kubeconfig, err=%v", err)
