@@ -1,5 +1,7 @@
 package installer
 
+import "os"
+
 /*
 #################################################
 # This is a base Kubernetes installer           #
@@ -53,4 +55,22 @@ func (b *BaseK8sInstaller) GetSteps() []Step {
 		b.K8sInstaller.FirewallStep()}
 
 	return steps
+}
+
+func RunInstaller(args []string, inst K8sInstaller) {
+
+	if len(os.Args) < 2 {
+		os.Exit(-1)
+	}
+
+	installer := &BaseK8sInstaller{K8sInstaller: inst}
+
+	switch args[1] {
+	case "install":
+		installer.Install()
+	case "uninstall":
+		installer.Uninstall()
+	default:
+		println("Please specify operation: install, uninstall")
+	}
 }

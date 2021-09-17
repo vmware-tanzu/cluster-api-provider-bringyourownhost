@@ -1,3 +1,3 @@
-module github.com/vmware-tanzu/cluster-api-provider-byoh/hai/bundles
+module github.com/vmware-tanzu/cluster-api-provider-byoh/hai/bundles/installer
 
-go 1.16
+go 1.17
