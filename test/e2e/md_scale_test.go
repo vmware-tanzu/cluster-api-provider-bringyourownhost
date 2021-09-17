@@ -118,6 +118,9 @@ var _ = Describe("When testing MachineDeployment scale out/in", func() {
 	})
 
 	AfterEach(func() {
+		// Dumps all the resources in the spec namespace, then cleanups the cluster object and the spec namespace itself.
+		dumpSpecResourcesAndCleanup(ctx, specName, bootstrapClusterProxy, artifactFolder, namespace, cancelWatches, clusterResources.Cluster, e2eConfig.GetIntervals, skipCleanup)
+
 		if dockerClient != nil {
 			for _, byohostContainerID := range allbyohostContainerIDs {
 				err := dockerClient.ContainerStop(ctx, byohostContainerID, nil)
@@ -132,8 +135,5 @@ var _ = Describe("When testing MachineDeployment scale out/in", func() {
 		os.Remove(AgentLogFile)
 		os.Remove(ReadByohControllerManagerLogShellFile)
 		os.Remove(ReadAllPodsShellFile)
-
-		// Dumps all the resources in the spec namespace, then cleanups the cluster object and the spec namespace itself.
-		dumpSpecResourcesAndCleanup(ctx, specName, bootstrapClusterProxy, artifactFolder, namespace, cancelWatches, clusterResources.Cluster, e2eConfig.GetIntervals, skipCleanup)
 	})
 })

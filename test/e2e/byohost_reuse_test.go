@@ -148,6 +148,9 @@ var _ = Describe("When BYO Host rejoins the capacity pool", func() {
 	})
 
 	AfterEach(func() {
+		// Dumps all the resources in the spec namespace, then cleanups the cluster object and the spec namespace itself.
+		dumpSpecResourcesAndCleanup(ctx, specName, bootstrapClusterProxy, artifactFolder, namespace, cancelWatches, clusterResources.Cluster, e2eConfig.GetIntervals, skipCleanup)
+
 		if dockerClient != nil && byohostContainerID != "" {
 			err := dockerClient.ContainerStop(ctx, byohostContainerID, nil)
 			Expect(err).NotTo(HaveOccurred())
@@ -159,8 +162,5 @@ var _ = Describe("When BYO Host rejoins the capacity pool", func() {
 		os.Remove(AgentLogFile)
 		os.Remove(ReadByohControllerManagerLogShellFile)
 		os.Remove(ReadAllPodsShellFile)
-
-		// Dumps all the resources in the spec namespace, then cleanups the cluster object and the spec namespace itself.
-		dumpSpecResourcesAndCleanup(ctx, specName, bootstrapClusterProxy, artifactFolder, namespace, cancelWatches, clusterResources.Cluster, e2eConfig.GetIntervals, skipCleanup)
 	})
 })
