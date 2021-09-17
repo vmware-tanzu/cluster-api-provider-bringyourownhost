@@ -60,7 +60,8 @@ func (b *BaseK8sInstaller) GetSteps() []Step {
 func RunInstaller(args []string, inst K8sInstaller) {
 
 	if len(os.Args) < 2 {
-		os.Exit(-1)
+		cmdLineHelp()
+		os.Exit(0)
 	}
 
 	installer := &BaseK8sInstaller{K8sInstaller: inst}
@@ -71,6 +72,10 @@ func RunInstaller(args []string, inst K8sInstaller) {
 	case "uninstall":
 		installer.Uninstall()
 	default:
-		println("Please specify operation: install, uninstall")
+		cmdLineHelp()
 	}
+}
+
+func cmdLineHelp() {
+	println("Please specify operation: install/uninstall")
 }
