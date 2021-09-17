@@ -100,6 +100,7 @@ func (r *HostReconciler) reconcileNormal(ctx context.Context, byoHost *infrastru
 		err = r.bootstrapK8sNode(bootstrapScript, byoHost)
 		if err != nil {
 			klog.Errorf("error in bootstrapping k8s node, err=%v", err)
+			_ = r.resetNode()
 			conditions.MarkFalse(byoHost, infrastructurev1alpha4.K8sNodeBootstrapSucceeded, infrastructurev1alpha4.CloudInitExecutionFailedReason, v1alpha4.ConditionSeverityError, "")
 			return ctrl.Result{}, err
 		}
