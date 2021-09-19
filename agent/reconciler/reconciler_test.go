@@ -38,10 +38,9 @@ var _ = Describe("Byohost Agent Tests", func() {
 		fakeFileWriter = &cloudinitfakes.FakeIFileWriter{}
 
 		reconciler = &HostReconciler{
-			Client:           k8sClient,
-			CmdRunner:        fakeCommandRunner,
-			FileWriter:       fakeFileWriter,
-			WatchFilterValue: hostName,
+			Client:     k8sClient,
+			CmdRunner:  fakeCommandRunner,
+			FileWriter: fakeFileWriter,
 		}
 	})
 
