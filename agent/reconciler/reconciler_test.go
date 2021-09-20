@@ -183,9 +183,20 @@ var _ = Describe("Byohost Agent Tests", func() {
 		})
 
 		It("should set the Reason to K8sNodeAbsentReason", func() {
+
+			byoMachine := common.NewByoMachine("test-byomachine", ns, "", nil)
+			Expect(k8sClient.Create(ctx, byoMachine)).NotTo(HaveOccurred(), "failed to create byomachine")
+
 			patchHelper, err = patch.NewHelper(byoHost, k8sClient)
 			Expect(err).ShouldNot(HaveOccurred())
-
+			byoHost.Status.MachineRef = &corev1.ObjectReference{
+				Kind:       "ByoMachine",
+				Namespace:  byoMachine.Namespace,
+				Name:       byoMachine.Name,
+				UID:        byoMachine.UID,
+				APIVersion: byoHost.APIVersion,
+			}
+			byoHost.Labels = map[string]string{clusterv1.ClusterLabelName: "test-cluster"}
 			if byoHost.Annotations == nil {
 				byoHost.Annotations = map[string]string{}
 			}
@@ -202,10 +213,9 @@ var _ = Describe("Byohost Agent Tests", func() {
 			updatedByoHost := &infrastructurev1alpha4.ByoHost{}
 			err = k8sClient.Get(ctx, byoHostLookupKey, updatedByoHost)
 			Expect(err).ToNot(HaveOccurred())
-
-			Expect(updatedByoHost.Labels).NotTo(ContainElements(clusterv1.ClusterLabelName))
+			Expect(updatedByoHost.Labels).NotTo(HaveKey(clusterv1.ClusterLabelName))
 			Expect(updatedByoHost.Status.MachineRef).To(BeNil())
-			Expect(updatedByoHost.Annotations).NotTo(ContainElements(hostCleanupAnnotation))
+			Expect(updatedByoHost.Annotations).NotTo(HaveKey(hostCleanupAnnotation))
 			k8sNodeBootstrapSucceeded := conditions.Get(updatedByoHost, infrastructurev1alpha4.K8sNodeBootstrapSucceeded)
 			Expect(*k8sNodeBootstrapSucceeded).To(conditions.MatchCondition(clusterv1.Condition{
 				Type:     infrastructurev1alpha4.K8sNodeBootstrapSucceeded,
