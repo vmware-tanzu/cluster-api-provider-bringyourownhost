@@ -17,13 +17,13 @@ type ShellStep struct {
 	UndoCmd string
 }
 
-func (s *ShellStep) Do() {
+func (s *ShellStep) do() {
 	if len(s.DoCmd) > 0 {
 		s.runStep(s.DoCmd)
 	}
 }
 
-func (s *ShellStep) Undo() {
+func (s *ShellStep) undo() {
 	if len(s.UndoCmd) > 0 {
 		s.runStep(s.UndoCmd)
 	}

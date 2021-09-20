@@ -8,5 +8,6 @@ import (
 
 func main() {
 	installer.RunInstaller(
-		os.Args, new(installer.Ubuntu_20_4_1_tkg_1_22))
+		os.Args,
+		&installer.BaseK8sInstaller{K8sStepProvider: &installer.Ubuntu_20_4_1_tkg_1_22{}})
 }

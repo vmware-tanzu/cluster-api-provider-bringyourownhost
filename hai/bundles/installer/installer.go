@@ -1,10 +1,14 @@
 package installer
 
-import "os"
+// This is a generic installer interface
+type Installer interface {
+	install()
+	uninstall()
+}
 
 /*
 #################################################
-# This is a base Kubernetes installer           #
+# This is a Kubernetes installer step provider  #
 # it should be inherited by step factories      #
 # that implement the appropriate method factory #
 # overriders.                                   #
@@ -12,70 +16,44 @@ import "os"
 */
 
 type Step interface {
-	Do()
-	Undo()
+	do()
+	undo()
 }
 
-type Installer interface {
-	Install()
-	Uninstall()
+type K8sStepProvider interface {
+	kubeadmStep() Step
+	kubeletStep() Step
+	containerdStep() Step
+	swapStep() Step
+	firewallStep() Step
+	getSteps() []Step
 }
 
-type K8sInstaller interface {
-	KubeadmStep() Step
-	KubeletStep() Step
-	ContainerdStep() Step
-	SwapStep() Step
-	FirewallStep() Step
-	GetSteps() []Step
-}
-
+//This is the default k8s installer implementation
 type BaseK8sInstaller struct {
-	K8sInstaller K8sInstaller
+	Installer
+	K8sStepProvider
 }
 
-func (b *BaseK8sInstaller) Install() {
-	for _, s := range b.GetSteps() {
-		s.Do()
+func (b *BaseK8sInstaller) install() {
+	for _, s := range b.getSteps() {
+		s.do()
 	}
 }
 
-func (b *BaseK8sInstaller) Uninstall() {
-	for _, s := range b.GetSteps() {
-		s.Undo()
+func (b *BaseK8sInstaller) uninstall() {
+	for _, s := range b.getSteps() {
+		s.undo()
 	}
 }
 
-func (b *BaseK8sInstaller) GetSteps() []Step {
+func (b *BaseK8sInstaller) getSteps() []Step {
 	var steps = []Step{
-		b.K8sInstaller.KubeletStep(),
-		b.K8sInstaller.KubeadmStep(),
-		b.K8sInstaller.ContainerdStep(),
-		b.K8sInstaller.SwapStep(),
-		b.K8sInstaller.FirewallStep()}
+		b.K8sStepProvider.kubeletStep(),
+		b.K8sStepProvider.kubeadmStep(),
+		b.K8sStepProvider.containerdStep(),
+		b.K8sStepProvider.swapStep(),
+		b.K8sStepProvider.firewallStep()}
 
 	return steps
-}
-
-func RunInstaller(args []string, inst K8sInstaller) {
-
-	if len(os.Args) < 2 {
-		cmdLineHelp()
-		os.Exit(0)
-	}
-
-	installer := &BaseK8sInstaller{K8sInstaller: inst}
-
-	switch args[1] {
-	case "install":
-		installer.Install()
-	case "uninstall":
-		installer.Uninstall()
-	default:
-		cmdLineHelp()
-	}
-}
-
-func cmdLineHelp() {
-	println("Please specify operation: install/uninstall")
 }
