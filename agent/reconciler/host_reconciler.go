@@ -21,10 +21,9 @@ import (
 )
 
 type HostReconciler struct {
-	Client           client.Client
-	WatchFilterValue string
-	CmdRunner        cloudinit.ICmdRunner
-	FileWriter       cloudinit.IFileWriter
+	Client     client.Client
+	CmdRunner  cloudinit.ICmdRunner
+	FileWriter cloudinit.IFileWriter
 }
 
 const (
@@ -132,7 +131,7 @@ func (r HostReconciler) getBootstrapScript(ctx context.Context, dataSecretName, 
 func (r HostReconciler) SetupWithManager(ctx context.Context, mgr manager.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&infrastructurev1alpha4.ByoHost{}).
-		WithEventFilter(predicates.ResourceNotPausedAndHasFilterLabel(ctrl.LoggerFrom(ctx), r.WatchFilterValue)).
+		WithEventFilter(predicates.ResourceNotPaused(ctrl.LoggerFrom(ctx))).
 		Complete(r)
 }
 

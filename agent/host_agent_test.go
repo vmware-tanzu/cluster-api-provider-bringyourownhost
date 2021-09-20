@@ -16,7 +16,6 @@ import (
 	"github.com/vmware-tanzu/cluster-api-provider-byoh/common"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/types"
-	clusterv1 "sigs.k8s.io/cluster-api/api/v1alpha4"
 )
 
 var _ = Describe("Agent", func() {
@@ -115,8 +114,6 @@ var _ = Describe("Agent", func() {
 				}
 				return createdByoHost
 			}).ShouldNot(BeNil())
-
-			Expect(createdByoHost.GetLabels()[clusterv1.WatchLabel]).To(Equal(hostName))
 		})
 
 		It("should fetch networkstatus when register the BYOHost with the management cluster", func() {
