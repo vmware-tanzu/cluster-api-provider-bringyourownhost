@@ -26,7 +26,6 @@ func TestReconciler(t *testing.T) {
 }
 
 var (
-	err               error
 	cfg               *rest.Config
 	k8sClient         client.Client
 	k8sManager        manager.Manager
@@ -46,6 +45,7 @@ var _ = BeforeSuite(func() {
 		ErrorIfCRDPathMissing: true,
 	}
 
+	var err error
 	cfg, err = testEnv.Start()
 	Expect(err).ToNot(HaveOccurred())
 	Expect(cfg).ToNot(BeNil())
@@ -73,6 +73,6 @@ var _ = BeforeSuite(func() {
 })
 
 var _ = AfterSuite(func() {
-	err = testEnv.Stop()
+	err := testEnv.Stop()
 	Expect(err).ToNot(HaveOccurred())
 })
