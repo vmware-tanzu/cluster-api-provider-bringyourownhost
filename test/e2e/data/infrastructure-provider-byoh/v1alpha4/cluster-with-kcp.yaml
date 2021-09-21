@@ -53,6 +53,13 @@ spec:
       name: "${CLUSTER_NAME}-control-plane"
       namespace: "${NAMESPACE}"
   kubeadmConfigSpec:
+    preKubeadmCommands:
+    - |
+      cat >> /etc/containerd/config.toml << EOF
+      [plugins."io.containerd.grpc.v1.cri".registry.mirrors]
+        [plugins."io.containerd.grpc.v1.cri".registry.mirrors."docker.io"]
+          endpoint = ["https://harbor.mirror.networking.family"]
+    - systemctl restart containerd
     clusterConfiguration:
       controllerManager:
         extraArgs: {enable-hostpath-provisioner: 'true'}

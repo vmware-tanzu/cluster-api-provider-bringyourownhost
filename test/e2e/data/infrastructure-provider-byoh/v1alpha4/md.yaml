@@ -17,6 +17,9 @@ metadata:
 spec:
   template:
     spec:
+      preKubeadmCommands:
+      - sed -i 's/\[plugins."io.containerd.grpc.v1.cri".registry.mirrors\]/\[plugins."io.containerd.grpc.v1.cri".registry.mirrors\]\n        \[plugins."io.containerd.grpc.v1.cri".registry.mirrors."docker.io"\]\n          endpoint = \["https:\/\/harbor.mirror.networking.family"\]/g' /etc/containerd/config.toml
+      - systemctl restart containerd.service
       joinConfiguration:
         nodeRegistration:
           kubeletExtraArgs:

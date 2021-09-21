@@ -31,6 +31,9 @@ spec:
           kubeletExtraArgs:
             cgroup-driver: cgroupfs
             eviction-hard: nodefs.available<0%,nodefs.inodesFree<0%,imagefs.available<0%
+      preKubeadmCommands:
+      - sed -i 's/\[plugins."io.containerd.grpc.v1.cri".registry.mirrors\]/\[plugins."io.containerd.grpc.v1.cri".registry.mirrors\]\n        \[plugins."io.containerd.grpc.v1.cri".registry.mirrors."docker.io"\]\n          endpoint = \["https:\/\/harbor.mirror.networking.family"\]/g' /etc/containerd/config.toml
+      - systemctl restart containerd.service
 ---
 apiVersion: cluster.x-k8s.io/v1alpha4
 kind: Cluster
@@ -113,6 +116,13 @@ spec:
         kubeletExtraArgs:
           cgroup-driver: cgroupfs
           eviction-hard: nodefs.available<0%,nodefs.inodesFree<0%,imagefs.available<0%
+    preKubeadmCommands:
+    - |
+      cat >> /etc/containerd/config.toml << EOF
+      [plugins."io.containerd.grpc.v1.cri".registry.mirrors]
+        [plugins."io.containerd.grpc.v1.cri".registry.mirrors."docker.io"]
+          endpoint = ["https://harbor.mirror.networking.family"]
+    - systemctl restart containerd
   machineTemplate:
     infrastructureRef:
       apiVersion: infrastructure.cluster.x-k8s.io/v1alpha4
