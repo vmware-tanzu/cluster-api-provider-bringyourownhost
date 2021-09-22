@@ -10,6 +10,7 @@ import (
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+	"github.com/onsi/gomega/gbytes"
 	"github.com/onsi/gomega/gexec"
 	infrastructurev1alpha4 "github.com/vmware-tanzu/cluster-api-provider-byoh/apis/infrastructure/v1alpha4"
 	"github.com/vmware-tanzu/cluster-api-provider-byoh/common"
@@ -105,8 +106,8 @@ var _ = Describe("Agent", func() {
 
 		It("should register the BYOHost with the management cluster", func() {
 			byoHostLookupKey := types.NamespacedName{Name: hostName, Namespace: ns.Name}
+			createdByoHost := &infrastructurev1alpha4.ByoHost{}
 			Eventually(func() *infrastructurev1alpha4.ByoHost {
-				createdByoHost := &infrastructurev1alpha4.ByoHost{}
 				err := k8sClient.Get(context.TODO(), byoHostLookupKey, createdByoHost)
 				if err != nil {
 					return nil
@@ -129,6 +130,13 @@ var _ = Describe("Agent", func() {
 				return false
 			}).Should(BeTrue())
 
+		})
+
+		It("should only reconcile ByoHost resource that the agent created", func() {
+			byoHost := common.NewByoHost("random-second-host", ns.Name)
+			Expect(k8sClient.Create(context.TODO(), byoHost)).NotTo(HaveOccurred(), "failed to create byohost")
+
+			Consistently(session.Err, "10s").ShouldNot(gbytes.Say(byoHost.Name))
 		})
 	})
 })

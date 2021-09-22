@@ -7,7 +7,6 @@ import (
 	"path/filepath"
 
 	"github.com/docker/docker/api/types"
-	"github.com/docker/docker/api/types/container"
 	"github.com/docker/docker/client"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -24,15 +23,15 @@ import (
 var _ = Describe("When BYO Host rejoins the capacity pool", func() {
 
 	var (
-		ctx              context.Context
-		specName         = "byohost-reuse"
-		namespace        *corev1.Namespace
-		cancelWatches    context.CancelFunc
-		clusterResources *clusterctl.ApplyClusterTemplateAndWaitResult
-		dockerClient     *client.Client
-		byohost          container.ContainerCreateCreatedBody
-		err              error
-		byoHostName      string
+		ctx                context.Context
+		specName           = "byohost-reuse"
+		namespace          *corev1.Namespace
+		cancelWatches      context.CancelFunc
+		clusterResources   *clusterctl.ApplyClusterTemplateAndWaitResult
+		dockerClient       *client.Client
+		err                error
+		byoHostName        string
+		byohostContainerID string
 	)
 
 	BeforeEach(func() {
@@ -59,7 +58,8 @@ var _ = Describe("When BYO Host rejoins the capacity pool", func() {
 		dockerClient, err = client.NewClientWithOpts(client.FromEnv)
 		Expect(err).NotTo(HaveOccurred())
 
-		output, err := setupByoDockerHost(ctx, clusterConName, byoHostName, namespace.Name, dockerClient, bootstrapClusterProxy)
+		var output types.HijackedResponse
+		output, byohostContainerID, err = setupByoDockerHost(ctx, clusterConName, byoHostName, namespace.Name, dockerClient, bootstrapClusterProxy)
 		Expect(err).NotTo(HaveOccurred())
 		defer output.Close()
 
@@ -148,19 +148,19 @@ var _ = Describe("When BYO Host rejoins the capacity pool", func() {
 	})
 
 	AfterEach(func() {
-		if dockerClient != nil && byohost.ID != "" {
-			err := dockerClient.ContainerStop(ctx, byohost.ID, nil)
+		// Dumps all the resources in the spec namespace, then cleanups the cluster object and the spec namespace itself.
+		dumpSpecResourcesAndCleanup(ctx, specName, bootstrapClusterProxy, artifactFolder, namespace, cancelWatches, clusterResources.Cluster, e2eConfig.GetIntervals, skipCleanup)
+
+		if dockerClient != nil && byohostContainerID != "" {
+			err := dockerClient.ContainerStop(ctx, byohostContainerID, nil)
 			Expect(err).NotTo(HaveOccurred())
 
-			err = dockerClient.ContainerRemove(ctx, byohost.ID, types.ContainerRemoveOptions{})
+			err = dockerClient.ContainerRemove(ctx, byohostContainerID, types.ContainerRemoveOptions{})
 			Expect(err).NotTo(HaveOccurred())
 		}
 
 		os.Remove(AgentLogFile)
 		os.Remove(ReadByohControllerManagerLogShellFile)
 		os.Remove(ReadAllPodsShellFile)
-
-		// Dumps all the resources in the spec namespace, then cleanups the cluster object and the spec namespace itself.
-		dumpSpecResourcesAndCleanup(ctx, specName, bootstrapClusterProxy, artifactFolder, namespace, cancelWatches, clusterResources.Cluster, e2eConfig.GetIntervals, skipCleanup)
 	})
 })
