@@ -6,6 +6,7 @@ import (
 	"os"
 
 	"github.com/vmware-tanzu/cluster-api-provider-byoh/agent/cloudinit"
+	agentcommon "github.com/vmware-tanzu/cluster-api-provider-byoh/agent/common"
 	"github.com/vmware-tanzu/cluster-api-provider-byoh/agent/reconciler"
 	"github.com/vmware-tanzu/cluster-api-provider-byoh/agent/registration"
 	infrastructurev1alpha4 "github.com/vmware-tanzu/cluster-api-provider-byoh/apis/infrastructure/v1alpha4"
@@ -58,7 +59,8 @@ func main() {
 		return
 	}
 
-	err = registration.HostRegistrar{K8sClient: k8sClient}.Register(hostName, namespace)
+	registerClient := &registration.HostRegistrar{K8sClient: k8sClient}
+	err = registerClient.Register(hostName, namespace)
 	if err != nil {
 		klog.Errorf("error registering host %s registration in namespace %s, err=%v", hostName, namespace, err)
 		return
@@ -83,11 +85,15 @@ func main() {
 		return
 	}
 
-	if err = (reconciler.HostReconciler{
+	reconcilerClient := &reconciler.HostReconciler{
 		Client:     k8sClient,
 		CmdRunner:  cloudinit.CmdRunner{},
 		FileWriter: cloudinit.FileWriter{},
-	}).SetupWithManager(context.TODO(), mgr); err != nil {
+		RegisterInfo: agentcommon.ByohostRegister{
+			DefaultNetworkName: registerClient.RegisterInfo.DefaultNetworkName,
+		},
+	}
+	if err = reconcilerClient.SetupWithManager(context.TODO(), mgr); err != nil {
 		klog.Errorf("unable to create controller, err=%v", err)
 		return
 	}

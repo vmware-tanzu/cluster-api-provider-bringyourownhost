@@ -5,6 +5,7 @@ import (
 	"net"
 
 	"github.com/jackpal/gateway"
+	agentcommon "github.com/vmware-tanzu/cluster-api-provider-byoh/agent/common"
 	infrastructurev1alpha4 "github.com/vmware-tanzu/cluster-api-provider-byoh/apis/infrastructure/v1alpha4"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -15,10 +16,11 @@ import (
 )
 
 type HostRegistrar struct {
-	K8sClient client.Client
+	K8sClient    client.Client
+	RegisterInfo agentcommon.ByohostRegister
 }
 
-func (hr HostRegistrar) Register(hostName, namespace string) error {
+func (hr *HostRegistrar) Register(hostName, namespace string) error {
 	ctx := context.TODO()
 	byoHost := &infrastructurev1alpha4.ByoHost{}
 	err := hr.K8sClient.Get(ctx, types.NamespacedName{Name: hostName, Namespace: namespace}, byoHost)
@@ -50,7 +52,7 @@ func (hr HostRegistrar) Register(hostName, namespace string) error {
 	return hr.UpdateNetwork(ctx, byoHost)
 }
 
-func (hr HostRegistrar) UpdateNetwork(ctx context.Context, byoHost *infrastructurev1alpha4.ByoHost) error {
+func (hr *HostRegistrar) UpdateNetwork(ctx context.Context, byoHost *infrastructurev1alpha4.ByoHost) error {
 	helper, err := patch.NewHelper(byoHost, hr.K8sClient)
 	if err != nil {
 		return err
@@ -61,7 +63,7 @@ func (hr HostRegistrar) UpdateNetwork(ctx context.Context, byoHost *infrastructu
 	return helper.Patch(ctx, byoHost)
 }
 
-func (hr HostRegistrar) GetNetworkStatus() []infrastructurev1alpha4.NetworkStatus {
+func (hr *HostRegistrar) GetNetworkStatus() []infrastructurev1alpha4.NetworkStatus {
 	Network := []infrastructurev1alpha4.NetworkStatus{}
 
 	defaultIP, err := gateway.DiscoverInterface()
@@ -98,6 +100,7 @@ func (hr HostRegistrar) GetNetworkStatus() []infrastructurev1alpha4.NetworkStatu
 			}
 			if ip.String() == defaultIP.String() {
 				netStatus.IsDefault = true
+				hr.RegisterInfo.DefaultNetworkName = netStatus.NetworkName
 			}
 			netStatus.IPAddrs = append(netStatus.IPAddrs, addr.String())
 		}

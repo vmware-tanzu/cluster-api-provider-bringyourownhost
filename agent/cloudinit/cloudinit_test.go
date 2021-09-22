@@ -12,6 +12,7 @@ import (
 	. "github.com/onsi/gomega"
 	"github.com/vmware-tanzu/cluster-api-provider-byoh/agent/cloudinit"
 	"github.com/vmware-tanzu/cluster-api-provider-byoh/agent/cloudinit/cloudinitfakes"
+	agentcommon "github.com/vmware-tanzu/cluster-api-provider-byoh/agent/common"
 )
 
 var _ = Describe("Cloudinit", func() {
@@ -72,7 +73,7 @@ runCmd:
   append: true
   encoding: %s`, fileName1, fileContent1, fileName2, fileBase64Content, permissions, encoding)
 
-			err = scriptExecutor.Execute(bootstrapSecretUnencoded)
+			err = scriptExecutor.Execute(bootstrapSecretUnencoded, agentcommon.ByohostRegister{})
 			Expect(err).NotTo(HaveOccurred())
 
 			Expect(fakeFileWriter.MkdirIfNotExistsCallCount()).To(Equal(2))
@@ -95,7 +96,7 @@ runCmd:
 		})
 
 		It("should error out when an invalid yaml is passed", func() {
-			err := scriptExecutor.Execute("invalid yaml")
+			err := scriptExecutor.Execute("invalid yaml", agentcommon.ByohostRegister{})
 
 			Expect(err).To(HaveOccurred())
 			Expect(err.Error()).To(ContainSubstring("error parsing write_files action"))
@@ -104,7 +105,7 @@ runCmd:
 		It("should error out when there is not enough permission to mkdir", func() {
 			fakeFileWriter.MkdirIfNotExistsReturns(errors.New("not enough permissions"))
 
-			err := scriptExecutor.Execute(defaultBootstrapSecret)
+			err := scriptExecutor.Execute(defaultBootstrapSecret, agentcommon.ByohostRegister{})
 
 			Expect(err).To(HaveOccurred())
 			Expect(err.Error()).To(ContainSubstring("not enough permissions"))
@@ -115,14 +116,14 @@ runCmd:
 		It("should error out write to file failes", func() {
 			fakeFileWriter.WriteToFileReturns(errors.New("cannot write to file"))
 
-			err := scriptExecutor.Execute(defaultBootstrapSecret)
+			err := scriptExecutor.Execute(defaultBootstrapSecret, agentcommon.ByohostRegister{})
 
 			Expect(err).To(HaveOccurred())
 			Expect(err.Error()).To(ContainSubstring("cannot write to file"))
 		})
 
 		It("run the command given in the runCmd directive", func() {
-			err := scriptExecutor.Execute(defaultBootstrapSecret)
+			err := scriptExecutor.Execute(defaultBootstrapSecret, agentcommon.ByohostRegister{})
 			Expect(err).NotTo(HaveOccurred())
 
 			Expect(fakeCmdExecutor.RunCmdCallCount()).To(Equal(1))
@@ -132,7 +133,7 @@ runCmd:
 
 		It("should not invoke the runCmd or writeFiles directive when absent", func() {
 
-			err := scriptExecutor.Execute("")
+			err := scriptExecutor.Execute("", agentcommon.ByohostRegister{})
 			Expect(err).NotTo(HaveOccurred())
 
 			Expect(fakeCmdExecutor.RunCmdCallCount()).To(Equal(0))
@@ -142,7 +143,7 @@ runCmd:
 
 		It("should error out when command execution fails", func() {
 			fakeCmdExecutor.RunCmdReturns(errors.New("command execution failed"))
-			err := scriptExecutor.Execute(defaultBootstrapSecret)
+			err := scriptExecutor.Execute(defaultBootstrapSecret, agentcommon.ByohostRegister{})
 			Expect(err).To(HaveOccurred())
 
 			Expect(fakeCmdExecutor.RunCmdCallCount()).To(Equal(1))

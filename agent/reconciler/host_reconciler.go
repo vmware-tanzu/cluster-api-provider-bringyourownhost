@@ -15,15 +15,17 @@ import (
 
 	"github.com/pkg/errors"
 	"github.com/vmware-tanzu/cluster-api-provider-byoh/agent/cloudinit"
+	agentcommon "github.com/vmware-tanzu/cluster-api-provider-byoh/agent/common"
 	infrastructurev1alpha4 "github.com/vmware-tanzu/cluster-api-provider-byoh/apis/infrastructure/v1alpha4"
 	corev1 "k8s.io/api/core/v1"
 	ctrl "sigs.k8s.io/controller-runtime"
 )
 
 type HostReconciler struct {
-	Client     client.Client
-	CmdRunner  cloudinit.ICmdRunner
-	FileWriter cloudinit.IFileWriter
+	Client       client.Client
+	CmdRunner    cloudinit.ICmdRunner
+	FileWriter   cloudinit.IFileWriter
+	RegisterInfo agentcommon.ByohostRegister
 }
 
 const (
@@ -31,7 +33,7 @@ const (
 	KubeadmResetCommand   = "kubeadm reset --force"
 )
 
-func (r HostReconciler) Reconcile(ctx context.Context, req ctrl.Request) (_ ctrl.Result, reterr error) {
+func (r *HostReconciler) Reconcile(ctx context.Context, req ctrl.Request) (_ ctrl.Result, reterr error) {
 	log := ctrl.LoggerFrom(ctx)
 	log.WithValues("byoHost ", req.Name)
 	log.Info("Reconciling byohost...")
@@ -117,7 +119,7 @@ func (r *HostReconciler) reconcileDelete(ctx context.Context, byoHost *infrastru
 	return ctrl.Result{}, nil
 }
 
-func (r HostReconciler) getBootstrapScript(ctx context.Context, dataSecretName, namespace string) (string, error) {
+func (r *HostReconciler) getBootstrapScript(ctx context.Context, dataSecretName, namespace string) (string, error) {
 	secret := &corev1.Secret{}
 	err := r.Client.Get(ctx, types.NamespacedName{Name: dataSecretName, Namespace: namespace}, secret)
 	if err != nil {
@@ -128,7 +130,7 @@ func (r HostReconciler) getBootstrapScript(ctx context.Context, dataSecretName, 
 	return bootstrapSecret, nil
 }
 
-func (r HostReconciler) SetupWithManager(ctx context.Context, mgr manager.Manager) error {
+func (r *HostReconciler) SetupWithManager(ctx context.Context, mgr manager.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&infrastructurev1alpha4.ByoHost{}).
 		WithEventFilter(predicates.ResourceNotPaused(ctrl.LoggerFrom(ctx))).
@@ -157,8 +159,8 @@ func (r *HostReconciler) resetNode() error {
 	return nil
 }
 
-func (r HostReconciler) bootstrapK8sNode(bootstrapScript string, byoHost *infrastructurev1alpha4.ByoHost) error {
+func (r *HostReconciler) bootstrapK8sNode(bootstrapScript string, byoHost *infrastructurev1alpha4.ByoHost) error {
 	return cloudinit.ScriptExecutor{
 		WriteFilesExecutor: r.FileWriter,
-		RunCmdExecutor:     r.CmdRunner}.Execute(bootstrapScript)
+		RunCmdExecutor:     r.CmdRunner}.Execute(bootstrapScript, r.RegisterInfo)
 }

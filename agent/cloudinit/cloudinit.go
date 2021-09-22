@@ -1,12 +1,15 @@
 package cloudinit
 
 import (
+	"bytes"
 	"encoding/base64"
 	"fmt"
 	"path/filepath"
 	"strings"
+	"text/template"
 
 	"github.com/pkg/errors"
+	agentcommon "github.com/vmware-tanzu/cluster-api-provider-byoh/agent/common"
 	"github.com/vmware-tanzu/cluster-api-provider-byoh/common"
 	"sigs.k8s.io/yaml"
 )
@@ -30,7 +33,7 @@ type Files struct {
 	Append      bool   `json:"append,omitempty"`
 }
 
-func (se ScriptExecutor) Execute(bootstrapScript string) error {
+func (se ScriptExecutor) Execute(bootstrapScript string, registerInfo agentcommon.ByohostRegister) error {
 	cloudInitData := bootstrapConfig{}
 	if err := yaml.Unmarshal([]byte(bootstrapScript), &cloudInitData); err != nil {
 		return errors.Wrapf(err, "error parsing write_files action: %s", bootstrapScript)
@@ -49,6 +52,11 @@ func (se ScriptExecutor) Execute(bootstrapScript string) error {
 			return errors.Wrap(err, fmt.Sprintf("error decoding content for %s", cloudInitData.FilesToWrite[i].Path))
 		}
 
+		cloudInitData.FilesToWrite[i].Content, err = parseTemplateContent(cloudInitData.FilesToWrite[i].Content, registerInfo)
+		if err != nil {
+			return errors.Wrap(err, fmt.Sprintf("error parse template content for %s", cloudInitData.FilesToWrite[i].Path))
+		}
+
 		err = se.WriteFilesExecutor.WriteToFile(&cloudInitData.FilesToWrite[i])
 		if err != nil {
 			return errors.Wrap(err, fmt.Sprintf("Error writing the file %s", cloudInitData.FilesToWrite[i].Path))
@@ -62,6 +70,28 @@ func (se ScriptExecutor) Execute(bootstrapScript string) error {
 		}
 	}
 	return nil
+}
+
+func parseTemplateContent(templateContent string, registerInfo agentcommon.ByohostRegister) (string, error) {
+	type Info struct {
+		DefaultNetworkName string
+	}
+
+	p := Info{DefaultNetworkName: registerInfo.DefaultNetworkName}
+
+	tmpl, err := template.New("test").Parse(templateContent)
+	if err != nil {
+		return templateContent, err
+	}
+
+	var content bytes.Buffer
+
+	err = tmpl.Execute(&content, p)
+	if err != nil {
+		return templateContent, err
+	}
+
+	return content.String(), nil
 }
 
 func parseEncodingScheme(e string) []string {

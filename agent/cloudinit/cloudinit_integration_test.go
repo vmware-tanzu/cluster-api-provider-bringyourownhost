@@ -12,17 +12,18 @@ import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	"github.com/vmware-tanzu/cluster-api-provider-byoh/agent/cloudinit"
+	agentcommon "github.com/vmware-tanzu/cluster-api-provider-byoh/agent/common"
 	"github.com/vmware-tanzu/cluster-api-provider-byoh/common"
 )
 
 var (
 	workDir        string
-	err            error
 	scriptExecutor cloudinit.ScriptExecutor
 )
 
 var _ = Describe("CloudinitIntegration", func() {
 	BeforeEach(func() {
+		var err error
 		workDir, err = ioutil.TempDir("", "host-agent-ut")
 		Expect(err).NotTo(HaveOccurred())
 
@@ -42,7 +43,7 @@ content: %s
 runCmd:
 - echo -n '%s' > %s`, fileName, fileOriginContent, fileNewContent, fileName)
 
-		err = scriptExecutor.Execute(cloudInitScript)
+		err := scriptExecutor.Execute(cloudInitScript, agentcommon.ByohostRegister{})
 		Expect(err).ToNot(HaveOccurred())
 
 		fileContents, errFileContents := ioutil.ReadFile(fileName)
@@ -57,7 +58,7 @@ runCmd:
 		filePermission := 0777
 		isAppend := true
 
-		err = ioutil.WriteFile(fileName, []byte(fileOriginContent), 0644)
+		err := ioutil.WriteFile(fileName, []byte(fileOriginContent), 0644)
 		Expect(err).NotTo(HaveOccurred())
 
 		cloudInitScript := fmt.Sprintf(`write_files:
@@ -66,7 +67,7 @@ runCmd:
   content: %s
   append: %v`, fileName, strconv.FormatInt(int64(filePermission), 8), fileAppendContent, isAppend)
 
-		err = scriptExecutor.Execute(cloudInitScript)
+		err = scriptExecutor.Execute(cloudInitScript, agentcommon.ByohostRegister{})
 		Expect(err).ToNot(HaveOccurred())
 
 		fileContents, errFileContents := ioutil.ReadFile(fileName)
@@ -88,7 +89,7 @@ runCmd:
   content: %s
   encoding: base64`, fileName, fileBase64Content)
 
-		err = scriptExecutor.Execute(cloudInitScript)
+		err := scriptExecutor.Execute(cloudInitScript, agentcommon.ByohostRegister{})
 		Expect(err).ToNot(HaveOccurred())
 
 		fileContents, err := ioutil.ReadFile(fileName)
@@ -108,12 +109,29 @@ runCmd:
   encoding: gzip+base64
   content: %s`, fileName, fileGzipBase64Content)
 
-		err = scriptExecutor.Execute(cloudInitScript)
+		err = scriptExecutor.Execute(cloudInitScript, agentcommon.ByohostRegister{})
 		Expect(err).ToNot(HaveOccurred())
 
 		fileContents, err := ioutil.ReadFile(fileName)
 		Expect(err).ToNot(HaveOccurred())
 		Expect(string(fileContents)).To(Equal(fileContent))
+	})
+
+	It("should be able to write template content", func() {
+		fileName := path.Join(workDir, "file-5.txt")
+		fileContent := "The default interface name is {{ .DefaultNetworkName }} "
+		replacedFileContent := "The default interface name is eth0"
+
+		cloudInitScript := fmt.Sprintf(`write_files:
+- path: %s
+  content: %s`, fileName, fileContent)
+
+		err := scriptExecutor.Execute(cloudInitScript, agentcommon.ByohostRegister{DefaultNetworkName: "eth0"})
+		Expect(err).ToNot(HaveOccurred())
+
+		fileContents, err := ioutil.ReadFile(fileName)
+		Expect(err).ToNot(HaveOccurred())
+		Expect(string(fileContents)).To(Equal(replacedFileContent))
 	})
 
 	AfterEach(func() {
