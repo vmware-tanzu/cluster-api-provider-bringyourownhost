@@ -145,7 +145,7 @@ func createDockerContainer(ctx context.Context, byoHostName string, dockerClient
 		nil, byoHostName)
 }
 
-func setupByoDockerHost(ctx context.Context, clusterConName, byoHostName, namespace string, dockerClient *client.Client, bootstrapClusterProxy framework.ClusterProxy) (types.HijackedResponse, error) {
+func setupByoDockerHost(ctx context.Context, clusterConName, byoHostName, namespace string, dockerClient *client.Client, bootstrapClusterProxy framework.ClusterProxy) (types.HijackedResponse, string, error) {
 	byohost, err := createDockerContainer(ctx, byoHostName, dockerClient)
 	Expect(err).NotTo(HaveOccurred())
 
@@ -194,5 +194,7 @@ func setupByoDockerHost(ctx context.Context, clusterConName, byoHostName, namesp
 	resp, err := dockerClient.ContainerExecCreate(ctx, byohost.ID, rconfig)
 	Expect(err).NotTo(HaveOccurred())
 
-	return dockerClient.ContainerExecAttach(ctx, resp.ID, types.ExecStartCheck{})
+	output, err := dockerClient.ContainerExecAttach(ctx, resp.ID, types.ExecStartCheck{})
+
+	return output, byohost.ID, err
 }

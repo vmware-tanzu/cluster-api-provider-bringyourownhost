@@ -20,10 +20,9 @@ import (
 )
 
 type HostReconciler struct {
-	Client           client.Client
-	WatchFilterValue string
-	CmdRunner        cloudinit.ICmdRunner
-	FileWriter       cloudinit.IFileWriter
+	Client     client.Client
+	CmdRunner  cloudinit.ICmdRunner
+	FileWriter cloudinit.IFileWriter
 }
 
 const (
@@ -32,6 +31,10 @@ const (
 )
 
 func (r HostReconciler) Reconcile(ctx context.Context, req ctrl.Request) (_ ctrl.Result, reterr error) {
+	log := ctrl.LoggerFrom(ctx)
+	log.WithValues("byoHost ", req.Name)
+	log.Info("Reconciling byohost...")
+
 	// Fetch the ByoHost instance.
 	byoHost := &infrastructurev1alpha4.ByoHost{}
 	err := r.Client.Get(ctx, req.NamespacedName, byoHost)
@@ -95,6 +98,7 @@ func (r *HostReconciler) reconcileNormal(ctx context.Context, byoHost *infrastru
 		err = r.bootstrapK8sNode(bootstrapScript, byoHost)
 		if err != nil {
 			klog.Errorf("error in bootstrapping k8s node, err=%v", err)
+			_ = r.resetNode()
 			conditions.MarkFalse(byoHost, infrastructurev1alpha4.K8sNodeBootstrapSucceeded, infrastructurev1alpha4.CloudInitExecutionFailedReason, v1alpha4.ConditionSeverityError, "")
 			return ctrl.Result{}, err
 		}
@@ -126,7 +130,7 @@ func (r HostReconciler) getBootstrapScript(ctx context.Context, dataSecretName, 
 func (r HostReconciler) SetupWithManager(ctx context.Context, mgr manager.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&infrastructurev1alpha4.ByoHost{}).
-		WithEventFilter(predicates.ResourceNotPausedAndHasFilterLabel(ctrl.LoggerFrom(ctx), r.WatchFilterValue)).
+		WithEventFilter(predicates.ResourceNotPaused(ctrl.LoggerFrom(ctx))).
 		Complete(r)
 }
 
