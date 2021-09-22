@@ -73,12 +73,6 @@ func (se ScriptExecutor) Execute(bootstrapScript string, registerInfo agentcommo
 }
 
 func parseTemplateContent(templateContent string, registerInfo agentcommon.ByohostRegister) (string, error) {
-	type Info struct {
-		DefaultNetworkName string
-	}
-
-	p := Info{DefaultNetworkName: registerInfo.DefaultNetworkName}
-
 	tmpl, err := template.New("test").Parse(templateContent)
 	if err != nil {
 		return templateContent, err
@@ -86,7 +80,7 @@ func parseTemplateContent(templateContent string, registerInfo agentcommon.Byoho
 
 	var content bytes.Buffer
 
-	err = tmpl.Execute(&content, p)
+	err = tmpl.Execute(&content, registerInfo)
 	if err != nil {
 		return templateContent, err
 	}
