@@ -32,6 +32,7 @@ var _ = Describe("When BYO Host rejoins the capacity pool", func() {
 		err                error
 		byoHostName        string
 		byohostContainerID string
+		agentLogFile       = "/tmp/host-agent-reuse.log"
 	)
 
 	BeforeEach(func() {
@@ -64,7 +65,7 @@ var _ = Describe("When BYO Host rejoins the capacity pool", func() {
 		defer output.Close()
 
 		// read the log of host agent container in backend, and write it
-		f := WriteDockerLog(output, AgentLogFile)
+		f := WriteDockerLog(output, agentLogFile)
 		defer f.Close()
 
 		By("Creating a cluster")
@@ -143,13 +144,17 @@ var _ = Describe("When BYO Host rejoins the capacity pool", func() {
 
 	JustAfterEach(func() {
 		if CurrentGinkgoTestDescription().Failed {
-			ShowInfo()
+			ShowInfo([]string{agentLogFile})
 		}
 	})
 
 	AfterEach(func() {
 		// Dumps all the resources in the spec namespace, then cleanups the cluster object and the spec namespace itself.
 		dumpSpecResourcesAndCleanup(ctx, specName, bootstrapClusterProxy, artifactFolder, namespace, cancelWatches, clusterResources.Cluster, e2eConfig.GetIntervals, skipCleanup)
+
+		if skipCleanup {
+			return
+		}
 
 		if dockerClient != nil && byohostContainerID != "" {
 			err := dockerClient.ContainerStop(ctx, byohostContainerID, nil)
@@ -159,7 +164,7 @@ var _ = Describe("When BYO Host rejoins the capacity pool", func() {
 			Expect(err).NotTo(HaveOccurred())
 		}
 
-		os.Remove(AgentLogFile)
+		os.Remove(agentLogFile)
 		os.Remove(ReadByohControllerManagerLogShellFile)
 		os.Remove(ReadAllPodsShellFile)
 	})

@@ -30,6 +30,7 @@ var _ = Describe("When testing MachineDeployment scale out/in", func() {
 		byoHostCapacityPool    = 5
 		byoHostName            string
 		allbyohostContainerIDs []string
+		allAgentLogFiles       []string
 	)
 
 	BeforeEach(func() {
@@ -58,9 +59,15 @@ var _ = Describe("When testing MachineDeployment scale out/in", func() {
 		By("Creating byohost capacity pool containing 5 hosts")
 		for i := 0; i < byoHostCapacityPool; i++ {
 			byoHostName = fmt.Sprintf("byohost-%s", util.RandomString(6))
-			_, byohostContainerID, err := setupByoDockerHost(ctx, clusterConName, byoHostName, namespace.Name, dockerClient, bootstrapClusterProxy)
+			output, byohostContainerID, err := setupByoDockerHost(ctx, clusterConName, byoHostName, namespace.Name, dockerClient, bootstrapClusterProxy)
 			allbyohostContainerIDs = append(allbyohostContainerIDs, byohostContainerID)
 			Expect(err).NotTo(HaveOccurred())
+
+			// read the log of host agent container in backend, and write it
+			agentLogFile := fmt.Sprintf("/tmp/host-agent-%d.log", i)
+			f := WriteDockerLog(output, agentLogFile)
+			defer f.Close()
+			allAgentLogFiles = append(allAgentLogFiles, agentLogFile)
 		}
 
 		// TODO: Write agent logs to files for better debugging
@@ -113,13 +120,17 @@ var _ = Describe("When testing MachineDeployment scale out/in", func() {
 
 	JustAfterEach(func() {
 		if CurrentGinkgoTestDescription().Failed {
-			ShowInfo()
+			ShowInfo(allAgentLogFiles)
 		}
 	})
 
 	AfterEach(func() {
 		// Dumps all the resources in the spec namespace, then cleanups the cluster object and the spec namespace itself.
 		dumpSpecResourcesAndCleanup(ctx, specName, bootstrapClusterProxy, artifactFolder, namespace, cancelWatches, clusterResources.Cluster, e2eConfig.GetIntervals, skipCleanup)
+
+		if skipCleanup {
+			return
+		}
 
 		if dockerClient != nil {
 			for _, byohostContainerID := range allbyohostContainerIDs {
@@ -132,7 +143,9 @@ var _ = Describe("When testing MachineDeployment scale out/in", func() {
 
 		}
 
-		os.Remove(AgentLogFile)
+		for _, agentLogFile := range allAgentLogFiles {
+			os.Remove(agentLogFile)
+		}
 		os.Remove(ReadByohControllerManagerLogShellFile)
 		os.Remove(ReadAllPodsShellFile)
 	})
