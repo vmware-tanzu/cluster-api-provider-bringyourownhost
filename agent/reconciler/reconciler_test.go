@@ -248,6 +248,16 @@ runCmd:
 
 		Context("When the ByoHost is marked for cleanup", func() {
 			BeforeEach(func() {
+        byoMachine = common.NewByoMachine("test-byomachine", ns, "", nil)
+				Expect(k8sClient.Create(ctx, byoMachine)).NotTo(HaveOccurred(), "failed to create byomachine")
+				byoHost.Status.MachineRef = &corev1.ObjectReference{
+					Kind:       "ByoMachine",
+					Namespace:  byoMachine.Namespace,
+					Name:       byoMachine.Name,
+					UID:        byoMachine.UID,
+					APIVersion: byoHost.APIVersion,
+				}
+				byoHost.Labels = map[string]string{clusterv1.ClusterLabelName: "test-cluster"}
 				byoHost.Annotations = map[string]string{hostCleanupAnnotation: ""}
 				conditions.MarkTrue(byoHost, infrastructurev1alpha4.K8sNodeBootstrapSucceeded)
 				Expect(patchHelper.Patch(ctx, byoHost, patch.WithStatusObservedGeneration{})).NotTo(HaveOccurred())
@@ -267,6 +277,9 @@ runCmd:
 				err := k8sClient.Get(ctx, byoHostLookupKey, updatedByoHost)
 				Expect(err).ToNot(HaveOccurred())
 
+        Expect(updatedByoHost.Labels).NotTo(HaveKey(clusterv1.ClusterLabelName))
+				Expect(updatedByoHost.Status.MachineRef).To(BeNil())
+				Expect(updatedByoHost.Annotations).NotTo(HaveKey(hostCleanupAnnotation))
 				k8sNodeBootstrapSucceeded := conditions.Get(updatedByoHost, infrastructurev1alpha4.K8sNodeBootstrapSucceeded)
 				Expect(*k8sNodeBootstrapSucceeded).To(conditions.MatchCondition(clusterv1.Condition{
 					Type:     infrastructurev1alpha4.K8sNodeBootstrapSucceeded,
