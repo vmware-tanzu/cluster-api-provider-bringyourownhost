@@ -187,14 +187,6 @@ func (r *ByoMachineReconciler) reconcileDelete(ctx context.Context, machineScope
 		if err := r.markHostForCleanup(ctx, machineScope); err != nil {
 			return ctrl.Result{}, err
 		}
-
-		if !(conditions.IsFalse(machineScope.ByoHost, infrav1.K8sNodeBootstrapSucceeded) && conditions.GetReason(machineScope.ByoHost, infrav1.K8sNodeBootstrapSucceeded) == infrav1.K8sNodeAbsentReason) {
-			conditions.MarkFalse(machineScope.ByoMachine, infrav1.BYOHostReady, clusterv1.DeletingReason, clusterv1.ConditionSeverityInfo, "Removing the Kubernetes node...")
-		}
-
-		if err := r.removeHostReservation(ctx, machineScope); err != nil {
-			return ctrl.Result{}, err
-		}
 	}
 
 	controllerutil.RemoveFinalizer(machineScope.ByoMachine, infrav1.MachineFinalizer)
@@ -469,22 +461,6 @@ func (r *ByoMachineReconciler) markHostForCleanup(ctx context.Context, machineSc
 		machineScope.ByoHost.Annotations = map[string]string{}
 	}
 	machineScope.ByoHost.Annotations[hostCleanupAnnotation] = ""
-
-	// Issue the patch.
-	return helper.Patch(ctx, machineScope.ByoHost)
-}
-
-func (r *ByoMachineReconciler) removeHostReservation(ctx context.Context, machineScope *byoMachineScope) error {
-	helper, _ := patch.NewHelper(machineScope.ByoHost, r.Client)
-
-	// Remove host reservation.
-	machineScope.ByoHost.Status.MachineRef = nil
-
-	// Remove cluster-name label
-	delete(machineScope.ByoHost.Labels, clusterv1.ClusterLabelName)
-
-	// Remove the cleanup annotation
-	delete(machineScope.ByoHost.Annotations, hostCleanupAnnotation)
 
 	// Issue the patch.
 	return helper.Patch(ctx, machineScope.ByoHost)

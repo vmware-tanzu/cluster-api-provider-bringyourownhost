@@ -2,6 +2,7 @@ package controllers
 
 import (
 	"context"
+	"fmt"
 	"strings"
 
 	. "github.com/onsi/ginkgo"
@@ -204,41 +205,25 @@ var _ = Describe("Controllers/ByomachineController", func() {
 						})
 					})
 
-					// TODO - To fix, the `reconcileDelete` should return an error if `K8sNodeBootstrapSucceeded` does not have a reason `K8sNodeAbsentReason`.
-					// Not fixing now since the e2e test is failing. Will revisit this.
-					XIt("should add cleanup annotation on byohost so that the host agent can cleanup", func() {
+					It("should add cleanup annotation on byohost so that the host agent can cleanup", func() {
 						_, err := reconciler.Reconcile(ctx, reconcile.Request{NamespacedName: byoMachineLookupKey})
 						Expect(err).NotTo(HaveOccurred())
 
 						createdByoHost := &infrastructurev1alpha4.ByoHost{}
 						Expect(k8sClientUncached.Get(ctx, byoHostLookupKey, createdByoHost)).NotTo(HaveOccurred())
 
-						byoHostAnnotations := createdByoHost.GetAnnotations()
-						_, ok := byoHostAnnotations[hostCleanupAnnotation]
-						Expect(ok).To(BeTrue())
+						Expect(createdByoHost.Annotations[hostCleanupAnnotation]).Should(Equal(""))
 					})
 
-					It("should remove host reservation when the host agent is done cleaning up", func() {
-						ph, err := patch.NewHelper(byoHost, k8sClientUncached)
-						Expect(err).ShouldNot(HaveOccurred())
-						conditions.MarkFalse(byoHost, infrastructurev1alpha4.K8sNodeBootstrapSucceeded, infrastructurev1alpha4.K8sNodeAbsentReason, clusterv1.ConditionSeverityInfo, "")
-						Expect(ph.Patch(ctx, byoHost, patch.WithStatusObservedGeneration{})).Should(Succeed())
-
-						WaitForObjectToBeUpdatedInCache(byoHost, func(object client.Object) bool {
-							return conditions.Get(object.(*infrastructurev1alpha4.ByoHost), infrastructurev1alpha4.K8sNodeBootstrapSucceeded).Reason == infrastructurev1alpha4.K8sNodeAbsentReason
-						})
-
-						_, err = reconciler.Reconcile(ctx, reconcile.Request{NamespacedName: byoMachineLookupKey})
+					It("should delete the byomachine object", func() {
+						deletedByoMachine := &infrastructurev1alpha4.ByoMachine{}
+						// assert ByoMachine Exists before the reconcile
+						Expect(k8sClientUncached.Get(ctx, byoMachineLookupKey, deletedByoMachine)).Should(Not(HaveOccurred()))
+						_, err := reconciler.Reconcile(ctx, reconcile.Request{NamespacedName: byoMachineLookupKey})
 						Expect(err).NotTo(HaveOccurred())
-
-						createdByoHost := &infrastructurev1alpha4.ByoHost{}
-						Expect(k8sClientUncached.Get(ctx, byoHostLookupKey, createdByoHost)).NotTo(HaveOccurred())
-						Expect(createdByoHost.Status.MachineRef).To(BeNil())
-						Expect(createdByoHost.Labels[clusterv1.ClusterLabelName]).To(BeEmpty())
-
-						byoHostAnnotations := createdByoHost.GetAnnotations()
-						_, ok := byoHostAnnotations[hostCleanupAnnotation]
-						Expect(ok).To(BeFalse())
+						// assert ByoMachine does not exists
+						err = k8sClientUncached.Get(ctx, byoMachineLookupKey, deletedByoMachine)
+						Expect(err).To(MatchError(fmt.Sprintf("byomachines.infrastructure.cluster.x-k8s.io \"%s\" not found", byoMachineLookupKey.Name)))
 					})
 				})
 			})

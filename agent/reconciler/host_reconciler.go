@@ -3,6 +3,11 @@ package reconciler
 import (
 	"context"
 
+	"github.com/pkg/errors"
+	"github.com/vmware-tanzu/cluster-api-provider-byoh/agent/cloudinit"
+  "github.com/vmware-tanzu/cluster-api-provider-byoh/agent/config"
+	infrastructurev1alpha4 "github.com/vmware-tanzu/cluster-api-provider-byoh/apis/infrastructure/v1alpha4"
+	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/klog"
 	"sigs.k8s.io/cluster-api/api/v1alpha4"
@@ -10,15 +15,9 @@ import (
 	"sigs.k8s.io/cluster-api/util/conditions"
 	"sigs.k8s.io/cluster-api/util/patch"
 	"sigs.k8s.io/cluster-api/util/predicates"
+	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
-
-	"github.com/pkg/errors"
-	"github.com/vmware-tanzu/cluster-api-provider-byoh/agent/cloudinit"
-	"github.com/vmware-tanzu/cluster-api-provider-byoh/agent/config"
-	infrastructurev1alpha4 "github.com/vmware-tanzu/cluster-api-provider-byoh/apis/infrastructure/v1alpha4"
-	corev1 "k8s.io/api/core/v1"
-	ctrl "sigs.k8s.io/controller-runtime"
 )
 
 type HostReconciler struct {
@@ -142,6 +141,15 @@ func (r HostReconciler) hostCleanUp(ctx context.Context, byoHost *infrastructure
 	if err != nil {
 		return err
 	}
+
+	// Remove host reservation.
+	byoHost.Status.MachineRef = nil
+
+	// Remove cluster-name label
+	delete(byoHost.Labels, v1alpha4.ClusterLabelName)
+
+	// Remove the cleanup annotation
+	delete(byoHost.Annotations, hostCleanupAnnotation)
 
 	conditions.MarkFalse(byoHost, infrastructurev1alpha4.K8sNodeBootstrapSucceeded, infrastructurev1alpha4.K8sNodeAbsentReason, v1alpha4.ConditionSeverityInfo, "")
 	return nil
