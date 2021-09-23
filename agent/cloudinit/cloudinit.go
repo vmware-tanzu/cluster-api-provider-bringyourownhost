@@ -9,7 +9,7 @@ import (
 	"text/template"
 
 	"github.com/pkg/errors"
-	agentcommon "github.com/vmware-tanzu/cluster-api-provider-byoh/agent/common"
+	"github.com/vmware-tanzu/cluster-api-provider-byoh/agent/config"
 	"github.com/vmware-tanzu/cluster-api-provider-byoh/common"
 	"sigs.k8s.io/yaml"
 )
@@ -33,7 +33,7 @@ type Files struct {
 	Append      bool   `json:"append,omitempty"`
 }
 
-func (se ScriptExecutor) Execute(bootstrapScript string, registerInfo agentcommon.ByohostRegister) error {
+func (se ScriptExecutor) Execute(bootstrapScript string, registerInfo config.ByohostRegister) error {
 	cloudInitData := bootstrapConfig{}
 	if err := yaml.Unmarshal([]byte(bootstrapScript), &cloudInitData); err != nil {
 		return errors.Wrapf(err, "error parsing write_files action: %s", bootstrapScript)
@@ -72,7 +72,7 @@ func (se ScriptExecutor) Execute(bootstrapScript string, registerInfo agentcommo
 	return nil
 }
 
-func parseTemplateContent(templateContent string, registerInfo agentcommon.ByohostRegister) (string, error) {
+func parseTemplateContent(templateContent string, registerInfo config.ByohostRegister) (string, error) {
 	tmpl, err := template.New("test").Parse(templateContent)
 	if err != nil {
 		return templateContent, err

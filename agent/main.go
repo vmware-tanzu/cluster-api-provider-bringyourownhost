@@ -6,7 +6,7 @@ import (
 	"os"
 
 	"github.com/vmware-tanzu/cluster-api-provider-byoh/agent/cloudinit"
-	agentcommon "github.com/vmware-tanzu/cluster-api-provider-byoh/agent/common"
+	agentConfig "github.com/vmware-tanzu/cluster-api-provider-byoh/agent/config"
 	"github.com/vmware-tanzu/cluster-api-provider-byoh/agent/reconciler"
 	"github.com/vmware-tanzu/cluster-api-provider-byoh/agent/registration"
 	infrastructurev1alpha4 "github.com/vmware-tanzu/cluster-api-provider-byoh/apis/infrastructure/v1alpha4"
@@ -89,7 +89,7 @@ func main() {
 		Client:     k8sClient,
 		CmdRunner:  cloudinit.CmdRunner{},
 		FileWriter: cloudinit.FileWriter{},
-		RegisterInfo: agentcommon.ByohostRegister{
+		RegisterInfo: agentConfig.ByohostRegister{
 			DefaultNetworkName: registerClient.RegisterInfo.DefaultNetworkName,
 		},
 	}

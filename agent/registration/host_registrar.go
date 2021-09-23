@@ -5,7 +5,7 @@ import (
 	"net"
 
 	"github.com/jackpal/gateway"
-	agentcommon "github.com/vmware-tanzu/cluster-api-provider-byoh/agent/common"
+	"github.com/vmware-tanzu/cluster-api-provider-byoh/agent/config"
 	infrastructurev1alpha4 "github.com/vmware-tanzu/cluster-api-provider-byoh/apis/infrastructure/v1alpha4"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -17,7 +17,7 @@ import (
 
 type HostRegistrar struct {
 	K8sClient    client.Client
-	RegisterInfo agentcommon.ByohostRegister
+	RegisterInfo config.ByohostRegister
 }
 
 func (hr *HostRegistrar) Register(hostName, namespace string) error {

@@ -12,7 +12,7 @@ import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	"github.com/vmware-tanzu/cluster-api-provider-byoh/agent/cloudinit"
-	agentcommon "github.com/vmware-tanzu/cluster-api-provider-byoh/agent/common"
+	"github.com/vmware-tanzu/cluster-api-provider-byoh/agent/config"
 	"github.com/vmware-tanzu/cluster-api-provider-byoh/common"
 )
 
@@ -43,7 +43,7 @@ content: %s
 runCmd:
 - echo -n '%s' > %s`, fileName, fileOriginContent, fileNewContent, fileName)
 
-		err := scriptExecutor.Execute(cloudInitScript, agentcommon.ByohostRegister{})
+		err := scriptExecutor.Execute(cloudInitScript, config.ByohostRegister{})
 		Expect(err).ToNot(HaveOccurred())
 
 		fileContents, errFileContents := ioutil.ReadFile(fileName)
@@ -67,7 +67,7 @@ runCmd:
   content: %s
   append: %v`, fileName, strconv.FormatInt(int64(filePermission), 8), fileAppendContent, isAppend)
 
-		err = scriptExecutor.Execute(cloudInitScript, agentcommon.ByohostRegister{})
+		err = scriptExecutor.Execute(cloudInitScript, config.ByohostRegister{})
 		Expect(err).ToNot(HaveOccurred())
 
 		fileContents, errFileContents := ioutil.ReadFile(fileName)
@@ -89,7 +89,7 @@ runCmd:
   content: %s
   encoding: base64`, fileName, fileBase64Content)
 
-		err := scriptExecutor.Execute(cloudInitScript, agentcommon.ByohostRegister{})
+		err := scriptExecutor.Execute(cloudInitScript, config.ByohostRegister{})
 		Expect(err).ToNot(HaveOccurred())
 
 		fileContents, err := ioutil.ReadFile(fileName)
@@ -109,7 +109,7 @@ runCmd:
   encoding: gzip+base64
   content: %s`, fileName, fileGzipBase64Content)
 
-		err = scriptExecutor.Execute(cloudInitScript, agentcommon.ByohostRegister{})
+		err = scriptExecutor.Execute(cloudInitScript, config.ByohostRegister{})
 		Expect(err).ToNot(HaveOccurred())
 
 		fileContents, err := ioutil.ReadFile(fileName)
@@ -126,7 +126,7 @@ runCmd:
 - path: %s
   content: %s`, fileName, fileContent)
 
-		err := scriptExecutor.Execute(cloudInitScript, agentcommon.ByohostRegister{DefaultNetworkName: "eth0"})
+		err := scriptExecutor.Execute(cloudInitScript, config.ByohostRegister{DefaultNetworkName: "eth0"})
 		Expect(err).ToNot(HaveOccurred())
 
 		fileContents, err := ioutil.ReadFile(fileName)

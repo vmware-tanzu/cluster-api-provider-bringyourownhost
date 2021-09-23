@@ -1,4 +1,4 @@
-package common
+package config
 
 type ByohostRegister struct {
 	DefaultNetworkName string
