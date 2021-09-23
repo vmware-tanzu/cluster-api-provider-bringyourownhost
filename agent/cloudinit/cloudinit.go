@@ -73,7 +73,7 @@ func (se ScriptExecutor) Execute(bootstrapScript string, registerInfo config.Byo
 }
 
 func parseTemplateContent(templateContent string, registerInfo config.ByohostRegister) (string, error) {
-	tmpl, err := template.New("test").Parse(templateContent)
+	tmpl, err := template.New("byoh").Parse(templateContent)
 	if err != nil {
 		return templateContent, err
 	}
