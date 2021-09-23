@@ -1,7 +1,9 @@
-package main // TODO change name of package
+package hainstaller // TODO change name of package
 
 import (
+	"errors"
 	"log"
+	"net/http"
 	"os"
 	"os/exec"
 	"strings"
@@ -18,105 +20,108 @@ type HostAgentInstaller struct {
 	downloadPath string
 }
 
-// Constructor function for the HostAgentInstaller class
-//
-// @param repoAddr - string
-// @param downloadPath - string
-//
-// @return *HostAgentInstaller
+// Constructor function for the HostAgentInstaller class.
 func NewHostAgentInstaller(repoAddr string, downloadPath string) *HostAgentInstaller {
 	return &HostAgentInstaller{repoAddr, downloadPath}
 }
 
+// Method that checks if a dirrectory exists.
+func checkDirExist(dirPath string) bool {
+	if fi, err := os.Stat(dirPath); os.IsNotExist(err) || !fi.IsDir() {
+		return false
+	}
+	return true
+}
+func checkWebAddrReachable(addr string) error {
+	resp, err := http.Get(addr)
+	if err != nil {
+		print(err.Error())
+		return err
+	} else if int32(resp.StatusCode) != int32(200) {
+		return errors.New("Web addres " + addr + " returned response " + resp.Status)
+	} else {
+		return nil
+	}
+}
+
 // Method that downloads the bundle from repoAddr to downloadPath.
 // This method automatically downloads the given version for the current  linux
-// distribution by using helper methods to gather all required information. The
-// folder where the bundle should be saved is created recursively  if  it  does
-// not exist and then the download is being performed using the carvel  imgpkg.
-// Finally the method returns the output of the executed command.
-//
-// @param k8sVer - string
-//
-// @return []byte
-func (hai *HostAgentInstaller) Download(k8sVer string) []byte {
-	osInfo := hai.GetHostOS()
-
+// distribution by using helper methods to gather all required  information. If
+// the folder where the bundle should be saved does exist the bundle  is  down-
+// loaded. Finally the method returns whether the download was successful.
+func (hai *HostAgentInstaller) downloadOCIBundle(k8sVer string) error {
+	bundleName, err := hai.getBundleName(k8sVer)
+	if err != nil {
+		return err
+	}
 	// TODO: Change to real path.
-	bundleName := osInfo + "_TKG_" + k8sVer
 	bundleAddr := hai.repoAddr + "/bundles/" + bundleName
 
-	// Check if the folder downloadPath exists.
-	// If it does not, it is being created recursively.
-	if fi, err := os.Stat(hai.downloadPath); os.IsNotExist(err) || !fi.IsDir() {
-
-		_, err := exec.Command("mkdir", "-p", hai.downloadPath).Output()
-
-		if err != nil {
-			log.Fatal(err)
-		}
+	if !checkDirExist(hai.downloadPath) {
+		err := errors.New("Download path does no exist.")
+		log.Print(err)
+		return err
 	}
+
+	err = checkWebAddrReachable(bundleAddr)
+	if err != nil {
+		return err
+	}
+
 	var confUI = ui.NewConfUI(ui.NewNoopLogger())
 	defer confUI.Flush()
 
 	imgpkgCmd := cmd.NewDefaultImgpkgCmd(confUI)
 
-	//used for debugging
-	//bundleAddr = "projects.registry.vmware.com"
-	//bundleName = "/cluster_api_provider_byoh/hello-world:latest"
-
 	imgpkgCmd.SetArgs([]string{"pull", "--recursive", "-i", bundleAddr + bundleName, "-o", hai.downloadPath})
-	err := imgpkgCmd.Execute()
+	err = imgpkgCmd.Execute()
 
 	if err != nil {
-		log.Fatal(err.Error())
+		log.Print(err.Error())
+		return err
 	}
-	return ([]byte("Done"))
+	return nil
 }
 
 // Method which installs the downloaded bundle. This is done by executing the
 // install.sh shell script of the given version that comes with the bundle.
-//
-// @param k8sVer - String indicating the k8s version that needs to be installed
-// @param context - additional arguments passed to the installer
-//
-// return []byte - the output of the executed command
-func (hai *HostAgentInstaller) Install(k8sVer string, context string) []byte {
+func (hai *HostAgentInstaller) InstallOCIBundle(k8sVer string, context string) error {
 	// TODO: change to real path
 	installerPath := hai.downloadPath + "/" + k8sVer + "/installer/install.sh"
 
 	out, err := exec.Command(installerPath, strings.Fields(context)...).Output()
 
 	if err != nil {
-		log.Fatal(err)
+		log.Print(err)
+		return err
 	}
 
 	println(string(out))
 
-	return out
+	return nil
 
 }
 
 // Method which uninstalls the currently installed bundle. This is done
 // by executing the uninstall.sh shell script that comes with the bundle.
-//
-// return []byte - the output of the executed command
-func (hai *HostAgentInstaller) Uninstall() []byte {
+func (hai *HostAgentInstaller) Uninstall() error {
 	// TODO: change to real path
 	uninstallerPath := hai.downloadPath + "/poc-installer/uninstall.sh"
 
 	out, err := exec.Command(uninstallerPath).Output()
 
 	if err != nil {
-		log.Fatal(err)
+		log.Print(err)
+		return err
 	}
 
 	println(string(out))
 
-	return out
+	return nil
 
 }
 
-// Method which returns the result after executing  the  command  "hostnamectl"
+// Method which returns the result after executing a command that returns info.
 // Exact output format varies between different distributions but the important
 // part is the line starting with the string  "Operating system:"  which  shows
 // the exact version of the operating  system.  This  information  is  used  to
@@ -135,69 +140,61 @@ func (hai *HostAgentInstaller) Uninstall() []byte {
 // Operating System: Ubuntu 20.04.3 LTS
 //           Kernel: Linux 5.11.0-27-generic
 //     Architecture: x86-64
-//
-//
-// @return string
-func (hai *HostAgentInstaller) getHostSystemInfo() string {
+func (hai *HostAgentInstaller) getHostSystemInfo() (string, error) {
 	out, err := exec.Command("hostnamectl").Output()
 
 	if err != nil {
-		log.Fatal(err)
+		log.Print(err)
+		return "", err
 	}
 
-	return string(out)
+	return string(out), nil
 }
 
 // Method which takes the information from the getHostSystemInfo function and
 // returns only a string containing the exact version of the opretaion system
-// running on the host.
+// running on the host and the required k8s version if they are supported.
 //
-// Example: Ubuntu_x64_20
-//			Red_Hat_Enterprise_Linux_x64_20
-//
-// @retrun string
-func (hai *HostAgentInstaller) GetHostOS() string {
-	systemInfo := hai.getHostSystemInfo()
+// Example: Ubuntu_20.04_x64_k8s_1.2.1
+func (hai *HostAgentInstaller) getBundleName(k8s string) (string, error) {
+	systemInfo, err := hai.getHostSystemInfo()
 
-	// The string which is indicating the OS and its version
+	if err != nil {
+		return "", err
+	}
+
 	const strIndicatingOSline string = "Operating System: "
 
-	var osInfo string
-	var pos int
-	for pos = strings.LastIndex(systemInfo, strIndicatingOSline) +
-		len(strIndicatingOSline); pos < len(systemInfo); pos++ {
+	type Pair struct {
+		os  string
+		k8s string
+	}
+	supportedBundles := []Pair{
+		{"Ubuntu 20.04", "1.2.1"},
+		{"CentOS Linux 7", "1.2.1"}}
+	var bundleName string
+	for _, p := range supportedBundles {
+		if strings.LastIndex(systemInfo, strIndicatingOSline+p.os) != -1 && p.k8s == k8s {
+			bundleName = p.os
 
-		char := systemInfo[pos]
-		if !((char >= 'A' && char <= 'Z') ||
-			(char >= 'a' && char <= 'z') ||
-			char == ' ') {
+			if strings.LastIndex(systemInfo, "Architecture: x86-64") != -1 {
+				bundleName += "_" + "x64"
+			} else {
+				bundleName += "_" + "x32"
+			}
+
+			bundleName += "_k8s_" + k8s
 			break
 		}
-		if char == ' ' {
-			osInfo += "_"
-		} else {
-			osInfo += string(char)
-		}
-	}
-	osInfo = osInfo[:len(osInfo)-1]
-
-	if osInfo == "" {
-		log.Fatal("OS not supported")
 	}
 
-	if strings.LastIndex(systemInfo, "Architecture: x86-64") != -1 {
-		osInfo += "_x64"
-	} else {
-		osInfo += "_x32"
+	if bundleName == "" {
+		err := "OS and k8s version not supported."
+		log.Print(err)
+		return "", errors.New(err)
 	}
 
-	var version string
+	bundleName = strings.ReplaceAll(bundleName, " ", "_")
 
-	for ; pos != '\n' && systemInfo[pos] >= '0' && systemInfo[pos] <= '9'; pos++ {
-		version += (string)(systemInfo[pos])
-	}
-
-	osInfo += "_" + version
-
-	return osInfo
+	return bundleName, nil
 }
