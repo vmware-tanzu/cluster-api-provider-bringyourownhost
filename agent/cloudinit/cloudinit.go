@@ -33,7 +33,7 @@ type Files struct {
 	Append      bool   `json:"append,omitempty"`
 }
 
-func (se ScriptExecutor) Execute(bootstrapScript string, registerInfo config.ByohostRegister) error {
+func (se ScriptExecutor) Execute(bootstrapScript string, registerInfo config.HostInfo) error {
 	cloudInitData := bootstrapConfig{}
 	if err := yaml.Unmarshal([]byte(bootstrapScript), &cloudInitData); err != nil {
 		return errors.Wrapf(err, "error parsing write_files action: %s", bootstrapScript)
@@ -72,7 +72,7 @@ func (se ScriptExecutor) Execute(bootstrapScript string, registerInfo config.Byo
 	return nil
 }
 
-func parseTemplateContent(templateContent string, registerInfo config.ByohostRegister) (string, error) {
+func parseTemplateContent(templateContent string, registerInfo config.HostInfo) (string, error) {
 	tmpl, err := template.New("byoh").Parse(templateContent)
 	if err != nil {
 		return templateContent, err

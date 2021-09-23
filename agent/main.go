@@ -59,8 +59,8 @@ func main() {
 		return
 	}
 
-	registerClient := &registration.HostRegistrar{K8sClient: k8sClient}
-	err = registerClient.Register(hostName, namespace)
+	hostRegistrar := &registration.HostRegistrar{K8sClient: k8sClient}
+	err = hostRegistrar.Register(hostName, namespace)
 	if err != nil {
 		klog.Errorf("error registering host %s registration in namespace %s, err=%v", hostName, namespace, err)
 		return
@@ -85,15 +85,15 @@ func main() {
 		return
 	}
 
-	reconcilerClient := &reconciler.HostReconciler{
+	hostReconciler := &reconciler.HostReconciler{
 		Client:     k8sClient,
 		CmdRunner:  cloudinit.CmdRunner{},
 		FileWriter: cloudinit.FileWriter{},
-		RegisterInfo: agentConfig.ByohostRegister{
-			DefaultNetworkName: registerClient.RegisterInfo.DefaultNetworkName,
+		HostInfo: agentConfig.HostInfo{
+			DefaultNetworkName: hostRegistrar.HostInfo.DefaultNetworkName,
 		},
 	}
-	if err = reconcilerClient.SetupWithManager(context.TODO(), mgr); err != nil {
+	if err = hostReconciler.SetupWithManager(context.TODO(), mgr); err != nil {
 		klog.Errorf("unable to create controller, err=%v", err)
 		return
 	}

@@ -16,8 +16,8 @@ import (
 )
 
 type HostRegistrar struct {
-	K8sClient    client.Client
-	RegisterInfo config.ByohostRegister
+	K8sClient client.Client
+	HostInfo  config.HostInfo
 }
 
 func (hr *HostRegistrar) Register(hostName, namespace string) error {
@@ -100,7 +100,7 @@ func (hr *HostRegistrar) GetNetworkStatus() []infrastructurev1alpha4.NetworkStat
 			}
 			if ip.String() == defaultIP.String() {
 				netStatus.IsDefault = true
-				hr.RegisterInfo.DefaultNetworkName = netStatus.NetworkName
+				hr.HostInfo.DefaultNetworkName = netStatus.NetworkName
 			}
 			netStatus.IPAddrs = append(netStatus.IPAddrs, addr.String())
 		}

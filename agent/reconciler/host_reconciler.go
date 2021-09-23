@@ -22,10 +22,10 @@ import (
 )
 
 type HostReconciler struct {
-	Client       client.Client
-	CmdRunner    cloudinit.ICmdRunner
-	FileWriter   cloudinit.IFileWriter
-	RegisterInfo config.ByohostRegister
+	Client     client.Client
+	CmdRunner  cloudinit.ICmdRunner
+	FileWriter cloudinit.IFileWriter
+	HostInfo   config.HostInfo
 }
 
 const (
@@ -162,5 +162,5 @@ func (r *HostReconciler) resetNode() error {
 func (r *HostReconciler) bootstrapK8sNode(bootstrapScript string, byoHost *infrastructurev1alpha4.ByoHost) error {
 	return cloudinit.ScriptExecutor{
 		WriteFilesExecutor: r.FileWriter,
-		RunCmdExecutor:     r.CmdRunner}.Execute(bootstrapScript, r.RegisterInfo)
+		RunCmdExecutor:     r.CmdRunner}.Execute(bootstrapScript, r.HostInfo)
 }

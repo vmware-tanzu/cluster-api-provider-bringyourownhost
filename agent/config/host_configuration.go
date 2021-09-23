@@ -1,5 +1,5 @@
 package config
 
-type ByohostRegister struct {
+type HostInfo struct {
 	DefaultNetworkName string
 }
