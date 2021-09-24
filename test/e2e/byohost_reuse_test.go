@@ -32,6 +32,7 @@ var _ = Describe("When BYO Host rejoins the capacity pool", func() {
 		err                error
 		byoHostName        string
 		byohostContainerID string
+		agentLogFile       = "/tmp/host-agent-reuse.log"
 	)
 
 	BeforeEach(func() {
@@ -64,7 +65,7 @@ var _ = Describe("When BYO Host rejoins the capacity pool", func() {
 		defer output.Close()
 
 		// read the log of host agent container in backend, and write it
-		f := WriteDockerLog(output, AgentLogFile)
+		f := WriteDockerLog(output, agentLogFile)
 		defer f.Close()
 
 		By("Creating a cluster")
@@ -143,7 +144,7 @@ var _ = Describe("When BYO Host rejoins the capacity pool", func() {
 
 	JustAfterEach(func() {
 		if CurrentGinkgoTestDescription().Failed {
-			ShowInfo()
+			ShowInfo([]string{agentLogFile})
 		}
 	})
 
@@ -159,7 +160,7 @@ var _ = Describe("When BYO Host rejoins the capacity pool", func() {
 			Expect(err).NotTo(HaveOccurred())
 		}
 
-		os.Remove(AgentLogFile)
+		os.Remove(agentLogFile)
 		os.Remove(ReadByohControllerManagerLogShellFile)
 		os.Remove(ReadAllPodsShellFile)
 	})
