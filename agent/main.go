@@ -6,7 +6,6 @@ import (
 	"os"
 
 	"github.com/vmware-tanzu/cluster-api-provider-byoh/agent/cloudinit"
-	agentConfig "github.com/vmware-tanzu/cluster-api-provider-byoh/agent/config"
 	"github.com/vmware-tanzu/cluster-api-provider-byoh/agent/reconciler"
 	"github.com/vmware-tanzu/cluster-api-provider-byoh/agent/registration"
 	infrastructurev1alpha4 "github.com/vmware-tanzu/cluster-api-provider-byoh/apis/infrastructure/v1alpha4"
@@ -89,8 +88,8 @@ func main() {
 		Client:     k8sClient,
 		CmdRunner:  cloudinit.CmdRunner{},
 		FileWriter: cloudinit.FileWriter{},
-		HostInfo: agentConfig.HostInfo{
-			DefaultNetworkName: hostRegistrar.HostInfo.DefaultNetworkName,
+		ByoHostInfo: registration.HostInfo{
+			DefaultNetworkName: hostRegistrar.ByoHostInfo.DefaultNetworkName,
 		},
 	}
 	if err = hostReconciler.SetupWithManager(context.TODO(), mgr); err != nil {

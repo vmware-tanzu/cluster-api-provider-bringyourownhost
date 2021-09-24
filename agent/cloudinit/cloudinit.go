@@ -9,7 +9,7 @@ import (
 	"text/template"
 
 	"github.com/pkg/errors"
-	"github.com/vmware-tanzu/cluster-api-provider-byoh/agent/config"
+	"github.com/vmware-tanzu/cluster-api-provider-byoh/agent/registration"
 	"github.com/vmware-tanzu/cluster-api-provider-byoh/common"
 	"sigs.k8s.io/yaml"
 )
@@ -33,7 +33,7 @@ type Files struct {
 	Append      bool   `json:"append,omitempty"`
 }
 
-func (se ScriptExecutor) Execute(bootstrapScript string, registerInfo config.HostInfo) error {
+func (se ScriptExecutor) Execute(bootstrapScript string, registerInfo registration.HostInfo) error {
 	cloudInitData := bootstrapConfig{}
 	if err := yaml.Unmarshal([]byte(bootstrapScript), &cloudInitData); err != nil {
 		return errors.Wrapf(err, "error parsing write_files action: %s", bootstrapScript)
@@ -72,7 +72,7 @@ func (se ScriptExecutor) Execute(bootstrapScript string, registerInfo config.Hos
 	return nil
 }
 
-func parseTemplateContent(templateContent string, registerInfo config.HostInfo) (string, error) {
+func parseTemplateContent(templateContent string, registerInfo registration.HostInfo) (string, error) {
 	tmpl, err := template.New("byoh").Parse(templateContent)
 	if err != nil {
 		return templateContent, err

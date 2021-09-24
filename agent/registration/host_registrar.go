@@ -5,7 +5,6 @@ import (
 	"net"
 
 	"github.com/jackpal/gateway"
-	"github.com/vmware-tanzu/cluster-api-provider-byoh/agent/config"
 	infrastructurev1alpha4 "github.com/vmware-tanzu/cluster-api-provider-byoh/apis/infrastructure/v1alpha4"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -15,9 +14,13 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
+type HostInfo struct {
+	DefaultNetworkName string
+}
+
 type HostRegistrar struct {
-	K8sClient client.Client
-	HostInfo  config.HostInfo
+	K8sClient   client.Client
+	ByoHostInfo HostInfo
 }
 
 func (hr *HostRegistrar) Register(hostName, namespace string) error {
@@ -100,7 +103,7 @@ func (hr *HostRegistrar) GetNetworkStatus() []infrastructurev1alpha4.NetworkStat
 			}
 			if ip.String() == defaultIP.String() {
 				netStatus.IsDefault = true
-				hr.HostInfo.DefaultNetworkName = netStatus.NetworkName
+				hr.ByoHostInfo.DefaultNetworkName = netStatus.NetworkName
 			}
 			netStatus.IPAddrs = append(netStatus.IPAddrs, addr.String())
 		}
