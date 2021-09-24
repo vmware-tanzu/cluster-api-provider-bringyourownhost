@@ -12,23 +12,30 @@ import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	"github.com/vmware-tanzu/cluster-api-provider-byoh/agent/cloudinit"
+	"github.com/vmware-tanzu/cluster-api-provider-byoh/agent/registration"
 	"github.com/vmware-tanzu/cluster-api-provider-byoh/common"
 )
 
 var (
 	workDir        string
-	err            error
 	scriptExecutor cloudinit.ScriptExecutor
 )
 
 var _ = Describe("CloudinitIntegration", func() {
 	BeforeEach(func() {
+		var err error
 		workDir, err = ioutil.TempDir("", "host-agent-ut")
 		Expect(err).NotTo(HaveOccurred())
 
 		scriptExecutor = cloudinit.ScriptExecutor{
 			WriteFilesExecutor: cloudinit.FileWriter{},
-			RunCmdExecutor:     cloudinit.CmdRunner{}}
+			RunCmdExecutor:     cloudinit.CmdRunner{},
+			ParseTemplateExecutor: cloudinit.TemplateParser{
+				Template: registration.HostInfo{
+					DefaultNetworkName: "eth0",
+				},
+			},
+		}
 	})
 
 	It("should be able to write files and execute commands", func() {
@@ -42,7 +49,7 @@ content: %s
 runCmd:
 - echo -n '%s' > %s`, fileName, fileOriginContent, fileNewContent, fileName)
 
-		err = scriptExecutor.Execute(cloudInitScript)
+		err := scriptExecutor.Execute(cloudInitScript)
 		Expect(err).ToNot(HaveOccurred())
 
 		fileContents, errFileContents := ioutil.ReadFile(fileName)
@@ -57,7 +64,7 @@ runCmd:
 		filePermission := 0777
 		isAppend := true
 
-		err = ioutil.WriteFile(fileName, []byte(fileOriginContent), 0644)
+		err := ioutil.WriteFile(fileName, []byte(fileOriginContent), 0644)
 		Expect(err).NotTo(HaveOccurred())
 
 		cloudInitScript := fmt.Sprintf(`write_files:
@@ -88,7 +95,7 @@ runCmd:
   content: %s
   encoding: base64`, fileName, fileBase64Content)
 
-		err = scriptExecutor.Execute(cloudInitScript)
+		err := scriptExecutor.Execute(cloudInitScript)
 		Expect(err).ToNot(HaveOccurred())
 
 		fileContents, err := ioutil.ReadFile(fileName)
@@ -114,6 +121,23 @@ runCmd:
 		fileContents, err := ioutil.ReadFile(fileName)
 		Expect(err).ToNot(HaveOccurred())
 		Expect(string(fileContents)).To(Equal(fileContent))
+	})
+
+	It("should be able to write template content", func() {
+		fileName := path.Join(workDir, "file-5.txt")
+		fileContent := "The default interface name is {{ .DefaultNetworkName }} "
+		replacedFileContent := "The default interface name is eth0"
+
+		cloudInitScript := fmt.Sprintf(`write_files:
+- path: %s
+  content: %s`, fileName, fileContent)
+
+		err := scriptExecutor.Execute(cloudInitScript)
+		Expect(err).ToNot(HaveOccurred())
+
+		fileContents, err := ioutil.ReadFile(fileName)
+		Expect(err).ToNot(HaveOccurred())
+		Expect(string(fileContents)).To(Equal(replacedFileContent))
 	})
 
 	AfterEach(func() {

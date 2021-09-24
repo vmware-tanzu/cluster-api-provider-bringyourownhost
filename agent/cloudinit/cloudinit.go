@@ -12,8 +12,9 @@ import (
 )
 
 type ScriptExecutor struct {
-	WriteFilesExecutor IFileWriter
-	RunCmdExecutor     ICmdRunner
+	WriteFilesExecutor    IFileWriter
+	RunCmdExecutor        ICmdRunner
+	ParseTemplateExecutor ITemplateParser
 }
 
 type bootstrapConfig struct {
@@ -47,6 +48,11 @@ func (se ScriptExecutor) Execute(bootstrapScript string) error {
 		cloudInitData.FilesToWrite[i].Content, err = decodeContent(cloudInitData.FilesToWrite[i].Content, encodings)
 		if err != nil {
 			return errors.Wrap(err, fmt.Sprintf("error decoding content for %s", cloudInitData.FilesToWrite[i].Path))
+		}
+
+		cloudInitData.FilesToWrite[i].Content, err = se.ParseTemplateExecutor.ParseTemplate(cloudInitData.FilesToWrite[i].Content)
+		if err != nil {
+			return errors.Wrap(err, fmt.Sprintf("error parse template content for %s", cloudInitData.FilesToWrite[i].Path))
 		}
 
 		err = se.WriteFilesExecutor.WriteToFile(&cloudInitData.FilesToWrite[i])

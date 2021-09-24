@@ -14,11 +14,16 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
-type HostRegistrar struct {
-	K8sClient client.Client
+type HostInfo struct {
+	DefaultNetworkName string
 }
 
-func (hr HostRegistrar) Register(hostName, namespace string) error {
+type HostRegistrar struct {
+	K8sClient   client.Client
+	ByoHostInfo HostInfo
+}
+
+func (hr *HostRegistrar) Register(hostName, namespace string) error {
 	ctx := context.TODO()
 	byoHost := &infrastructurev1alpha4.ByoHost{}
 	err := hr.K8sClient.Get(ctx, types.NamespacedName{Name: hostName, Namespace: namespace}, byoHost)
@@ -50,7 +55,7 @@ func (hr HostRegistrar) Register(hostName, namespace string) error {
 	return hr.UpdateNetwork(ctx, byoHost)
 }
 
-func (hr HostRegistrar) UpdateNetwork(ctx context.Context, byoHost *infrastructurev1alpha4.ByoHost) error {
+func (hr *HostRegistrar) UpdateNetwork(ctx context.Context, byoHost *infrastructurev1alpha4.ByoHost) error {
 	helper, err := patch.NewHelper(byoHost, hr.K8sClient)
 	if err != nil {
 		return err
@@ -61,7 +66,7 @@ func (hr HostRegistrar) UpdateNetwork(ctx context.Context, byoHost *infrastructu
 	return helper.Patch(ctx, byoHost)
 }
 
-func (hr HostRegistrar) GetNetworkStatus() []infrastructurev1alpha4.NetworkStatus {
+func (hr *HostRegistrar) GetNetworkStatus() []infrastructurev1alpha4.NetworkStatus {
 	Network := []infrastructurev1alpha4.NetworkStatus{}
 
 	defaultIP, err := gateway.DiscoverInterface()
@@ -98,6 +103,7 @@ func (hr HostRegistrar) GetNetworkStatus() []infrastructurev1alpha4.NetworkStatu
 			}
 			if ip.String() == defaultIP.String() {
 				netStatus.IsDefault = true
+				hr.ByoHostInfo.DefaultNetworkName = netStatus.NetworkName
 			}
 			netStatus.IPAddrs = append(netStatus.IPAddrs, addr.String())
 		}
