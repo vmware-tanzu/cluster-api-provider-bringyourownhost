@@ -5,7 +5,6 @@ import (
 
 	"github.com/pkg/errors"
 	"github.com/vmware-tanzu/cluster-api-provider-byoh/agent/cloudinit"
-	"github.com/vmware-tanzu/cluster-api-provider-byoh/agent/registration"
 	infrastructurev1alpha4 "github.com/vmware-tanzu/cluster-api-provider-byoh/apis/infrastructure/v1alpha4"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/types"
@@ -21,10 +20,10 @@ import (
 )
 
 type HostReconciler struct {
-	Client      client.Client
-	CmdRunner   cloudinit.ICmdRunner
-	FileWriter  cloudinit.IFileWriter
-	ByoHostInfo registration.HostInfo
+	Client         client.Client
+	CmdRunner      cloudinit.ICmdRunner
+	FileWriter     cloudinit.IFileWriter
+	TemplateParser cloudinit.ITemplateParser
 }
 
 const (
@@ -169,6 +168,7 @@ func (r *HostReconciler) resetNode() error {
 
 func (r *HostReconciler) bootstrapK8sNode(bootstrapScript string, byoHost *infrastructurev1alpha4.ByoHost) error {
 	return cloudinit.ScriptExecutor{
-		WriteFilesExecutor: r.FileWriter,
-		RunCmdExecutor:     r.CmdRunner}.Execute(bootstrapScript, r.ByoHostInfo)
+		WriteFilesExecutor:    r.FileWriter,
+		RunCmdExecutor:        r.CmdRunner,
+		ParseTemplateExecutor: r.TemplateParser}.Execute(bootstrapScript)
 }

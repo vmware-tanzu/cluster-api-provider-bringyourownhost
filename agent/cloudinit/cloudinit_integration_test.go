@@ -29,7 +29,13 @@ var _ = Describe("CloudinitIntegration", func() {
 
 		scriptExecutor = cloudinit.ScriptExecutor{
 			WriteFilesExecutor: cloudinit.FileWriter{},
-			RunCmdExecutor:     cloudinit.CmdRunner{}}
+			RunCmdExecutor:     cloudinit.CmdRunner{},
+			ParseTemplateExecutor: cloudinit.TemplateParser{
+				Template: registration.HostInfo{
+					DefaultNetworkName: "eth0",
+				},
+			},
+		}
 	})
 
 	It("should be able to write files and execute commands", func() {
@@ -43,7 +49,7 @@ content: %s
 runCmd:
 - echo -n '%s' > %s`, fileName, fileOriginContent, fileNewContent, fileName)
 
-		err := scriptExecutor.Execute(cloudInitScript, registration.HostInfo{})
+		err := scriptExecutor.Execute(cloudInitScript)
 		Expect(err).ToNot(HaveOccurred())
 
 		fileContents, errFileContents := ioutil.ReadFile(fileName)
@@ -67,7 +73,7 @@ runCmd:
   content: %s
   append: %v`, fileName, strconv.FormatInt(int64(filePermission), 8), fileAppendContent, isAppend)
 
-		err = scriptExecutor.Execute(cloudInitScript, registration.HostInfo{})
+		err = scriptExecutor.Execute(cloudInitScript)
 		Expect(err).ToNot(HaveOccurred())
 
 		fileContents, errFileContents := ioutil.ReadFile(fileName)
@@ -89,7 +95,7 @@ runCmd:
   content: %s
   encoding: base64`, fileName, fileBase64Content)
 
-		err := scriptExecutor.Execute(cloudInitScript, registration.HostInfo{})
+		err := scriptExecutor.Execute(cloudInitScript)
 		Expect(err).ToNot(HaveOccurred())
 
 		fileContents, err := ioutil.ReadFile(fileName)
@@ -109,7 +115,7 @@ runCmd:
   encoding: gzip+base64
   content: %s`, fileName, fileGzipBase64Content)
 
-		err = scriptExecutor.Execute(cloudInitScript, registration.HostInfo{})
+		err = scriptExecutor.Execute(cloudInitScript)
 		Expect(err).ToNot(HaveOccurred())
 
 		fileContents, err := ioutil.ReadFile(fileName)
@@ -126,7 +132,7 @@ runCmd:
 - path: %s
   content: %s`, fileName, fileContent)
 
-		err := scriptExecutor.Execute(cloudInitScript, registration.HostInfo{DefaultNetworkName: "eth0"})
+		err := scriptExecutor.Execute(cloudInitScript)
 		Expect(err).ToNot(HaveOccurred())
 
 		fileContents, err := ioutil.ReadFile(fileName)

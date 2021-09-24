@@ -33,11 +33,13 @@ var _ = Describe("Byohost Agent Tests", func() {
 	BeforeEach(func() {
 		fakeCommandRunner = &cloudinitfakes.FakeICmdRunner{}
 		fakeFileWriter = &cloudinitfakes.FakeIFileWriter{}
+		fakeTemplateParser = &cloudinitfakes.FakeITemplateParser{}
 
 		reconciler = &HostReconciler{
-			Client:     k8sClient,
-			CmdRunner:  fakeCommandRunner,
-			FileWriter: fakeFileWriter,
+			Client:         k8sClient,
+			CmdRunner:      fakeCommandRunner,
+			FileWriter:     fakeFileWriter,
+			TemplateParser: fakeTemplateParser,
 		}
 	})
 
@@ -248,7 +250,7 @@ runCmd:
 
 		Context("When the ByoHost is marked for cleanup", func() {
 			BeforeEach(func() {
-        byoMachine = common.NewByoMachine("test-byomachine", ns, "", nil)
+				byoMachine = common.NewByoMachine("test-byomachine", ns, "", nil)
 				Expect(k8sClient.Create(ctx, byoMachine)).NotTo(HaveOccurred(), "failed to create byomachine")
 				byoHost.Status.MachineRef = &corev1.ObjectReference{
 					Kind:       "ByoMachine",
@@ -277,7 +279,7 @@ runCmd:
 				err := k8sClient.Get(ctx, byoHostLookupKey, updatedByoHost)
 				Expect(err).ToNot(HaveOccurred())
 
-        Expect(updatedByoHost.Labels).NotTo(HaveKey(clusterv1.ClusterLabelName))
+				Expect(updatedByoHost.Labels).NotTo(HaveKey(clusterv1.ClusterLabelName))
 				Expect(updatedByoHost.Status.MachineRef).To(BeNil())
 				Expect(updatedByoHost.Annotations).NotTo(HaveKey(hostCleanupAnnotation))
 				k8sNodeBootstrapSucceeded := conditions.Get(updatedByoHost, infrastructurev1alpha4.K8sNodeBootstrapSucceeded)

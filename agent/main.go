@@ -88,8 +88,10 @@ func main() {
 		Client:     k8sClient,
 		CmdRunner:  cloudinit.CmdRunner{},
 		FileWriter: cloudinit.FileWriter{},
-		ByoHostInfo: registration.HostInfo{
-			DefaultNetworkName: hostRegistrar.ByoHostInfo.DefaultNetworkName,
+		TemplateParser: cloudinit.TemplateParser{
+			Template: registration.HostInfo{
+				DefaultNetworkName: hostRegistrar.ByoHostInfo.DefaultNetworkName,
+			},
 		},
 	}
 	if err = hostReconciler.SetupWithManager(context.TODO(), mgr); err != nil {

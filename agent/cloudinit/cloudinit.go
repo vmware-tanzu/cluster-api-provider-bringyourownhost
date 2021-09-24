@@ -1,22 +1,20 @@
 package cloudinit
 
 import (
-	"bytes"
 	"encoding/base64"
 	"fmt"
 	"path/filepath"
 	"strings"
-	"text/template"
 
 	"github.com/pkg/errors"
-	"github.com/vmware-tanzu/cluster-api-provider-byoh/agent/registration"
 	"github.com/vmware-tanzu/cluster-api-provider-byoh/common"
 	"sigs.k8s.io/yaml"
 )
 
 type ScriptExecutor struct {
-	WriteFilesExecutor IFileWriter
-	RunCmdExecutor     ICmdRunner
+	WriteFilesExecutor    IFileWriter
+	RunCmdExecutor        ICmdRunner
+	ParseTemplateExecutor ITemplateParser
 }
 
 type bootstrapConfig struct {
@@ -33,7 +31,7 @@ type Files struct {
 	Append      bool   `json:"append,omitempty"`
 }
 
-func (se ScriptExecutor) Execute(bootstrapScript string, registerInfo registration.HostInfo) error {
+func (se ScriptExecutor) Execute(bootstrapScript string) error {
 	cloudInitData := bootstrapConfig{}
 	if err := yaml.Unmarshal([]byte(bootstrapScript), &cloudInitData); err != nil {
 		return errors.Wrapf(err, "error parsing write_files action: %s", bootstrapScript)
@@ -52,7 +50,7 @@ func (se ScriptExecutor) Execute(bootstrapScript string, registerInfo registrati
 			return errors.Wrap(err, fmt.Sprintf("error decoding content for %s", cloudInitData.FilesToWrite[i].Path))
 		}
 
-		cloudInitData.FilesToWrite[i].Content, err = parseTemplateContent(cloudInitData.FilesToWrite[i].Content, registerInfo)
+		cloudInitData.FilesToWrite[i].Content, err = se.ParseTemplateExecutor.ParseTemplate(cloudInitData.FilesToWrite[i].Content)
 		if err != nil {
 			return errors.Wrap(err, fmt.Sprintf("error parse template content for %s", cloudInitData.FilesToWrite[i].Path))
 		}
@@ -70,22 +68,6 @@ func (se ScriptExecutor) Execute(bootstrapScript string, registerInfo registrati
 		}
 	}
 	return nil
-}
-
-func parseTemplateContent(templateContent string, registerInfo registration.HostInfo) (string, error) {
-	tmpl, err := template.New("byoh").Parse(templateContent)
-	if err != nil {
-		return templateContent, err
-	}
-
-	var content bytes.Buffer
-
-	err = tmpl.Execute(&content, registerInfo)
-	if err != nil {
-		return templateContent, err
-	}
-
-	return content.String(), nil
 }
 
 func parseEncodingScheme(e string) []string {

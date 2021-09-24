@@ -12,7 +12,6 @@ import (
 	. "github.com/onsi/gomega"
 	"github.com/vmware-tanzu/cluster-api-provider-byoh/agent/cloudinit"
 	"github.com/vmware-tanzu/cluster-api-provider-byoh/agent/cloudinit/cloudinitfakes"
-	"github.com/vmware-tanzu/cluster-api-provider-byoh/agent/registration"
 )
 
 var _ = Describe("Cloudinit", func() {
@@ -25,6 +24,7 @@ var _ = Describe("Cloudinit", func() {
 		var (
 			fakeFileWriter         *cloudinitfakes.FakeIFileWriter
 			fakeCmdExecutor        *cloudinitfakes.FakeICmdRunner
+			fakeTemplateParser     *cloudinitfakes.FakeITemplateParser
 			scriptExecutor         cloudinit.ScriptExecutor
 			defaultBootstrapSecret string
 		)
@@ -32,9 +32,11 @@ var _ = Describe("Cloudinit", func() {
 		BeforeEach(func() {
 			fakeFileWriter = &cloudinitfakes.FakeIFileWriter{}
 			fakeCmdExecutor = &cloudinitfakes.FakeICmdRunner{}
+			fakeTemplateParser = &cloudinitfakes.FakeITemplateParser{}
 			scriptExecutor = cloudinit.ScriptExecutor{
-				WriteFilesExecutor: fakeFileWriter,
-				RunCmdExecutor:     fakeCmdExecutor,
+				WriteFilesExecutor:    fakeFileWriter,
+				RunCmdExecutor:        fakeCmdExecutor,
+				ParseTemplateExecutor: fakeTemplateParser,
 			}
 
 			defaultBootstrapSecret = fmt.Sprintf(`write_files:
@@ -73,21 +75,24 @@ runCmd:
   append: true
   encoding: %s`, fileName1, fileContent1, fileName2, fileBase64Content, permissions, encoding)
 
-			err = scriptExecutor.Execute(bootstrapSecretUnencoded, registration.HostInfo{})
+			err = scriptExecutor.Execute(bootstrapSecretUnencoded)
 			Expect(err).NotTo(HaveOccurred())
 
 			Expect(fakeFileWriter.MkdirIfNotExistsCallCount()).To(Equal(2))
 			Expect(fakeFileWriter.WriteToFileCallCount()).To(Equal(2))
+			Expect(fakeTemplateParser.ParseTemplateCallCount()).To(Equal(2))
 
 			dirNameForFirstFile := fakeFileWriter.MkdirIfNotExistsArgsForCall(0)
 			Expect(dirNameForFirstFile).To(Equal(fileDir1))
 			firstFile := fakeFileWriter.WriteToFileArgsForCall(0)
+			firstFile.Content = fakeTemplateParser.ParseTemplateArgsForCall(0)
 			Expect(firstFile.Path).To(Equal(fileName1))
 			Expect(firstFile.Content).To(Equal(fileContent1))
 
 			dirNameForSecondFile := fakeFileWriter.MkdirIfNotExistsArgsForCall(1)
 			Expect(dirNameForSecondFile).To(Equal(fileDir2))
 			secondFile := fakeFileWriter.WriteToFileArgsForCall(1)
+			secondFile.Content = fakeTemplateParser.ParseTemplateArgsForCall(1)
 			Expect(secondFile.Path).To(Equal(fileName2))
 			Expect(secondFile.Content).To(Equal(fileContent2))
 			Expect(secondFile.Permissions).To(Equal(permissions))
@@ -96,7 +101,7 @@ runCmd:
 		})
 
 		It("should error out when an invalid yaml is passed", func() {
-			err := scriptExecutor.Execute("invalid yaml", registration.HostInfo{})
+			err := scriptExecutor.Execute("invalid yaml")
 
 			Expect(err).To(HaveOccurred())
 			Expect(err.Error()).To(ContainSubstring("error parsing write_files action"))
@@ -105,7 +110,7 @@ runCmd:
 		It("should error out when there is not enough permission to mkdir", func() {
 			fakeFileWriter.MkdirIfNotExistsReturns(errors.New("not enough permissions"))
 
-			err := scriptExecutor.Execute(defaultBootstrapSecret, registration.HostInfo{})
+			err := scriptExecutor.Execute(defaultBootstrapSecret)
 
 			Expect(err).To(HaveOccurred())
 			Expect(err.Error()).To(ContainSubstring("not enough permissions"))
@@ -116,14 +121,14 @@ runCmd:
 		It("should error out write to file failes", func() {
 			fakeFileWriter.WriteToFileReturns(errors.New("cannot write to file"))
 
-			err := scriptExecutor.Execute(defaultBootstrapSecret, registration.HostInfo{})
+			err := scriptExecutor.Execute(defaultBootstrapSecret)
 
 			Expect(err).To(HaveOccurred())
 			Expect(err.Error()).To(ContainSubstring("cannot write to file"))
 		})
 
 		It("run the command given in the runCmd directive", func() {
-			err := scriptExecutor.Execute(defaultBootstrapSecret, registration.HostInfo{})
+			err := scriptExecutor.Execute(defaultBootstrapSecret)
 			Expect(err).NotTo(HaveOccurred())
 
 			Expect(fakeCmdExecutor.RunCmdCallCount()).To(Equal(1))
@@ -133,7 +138,7 @@ runCmd:
 
 		It("should not invoke the runCmd or writeFiles directive when absent", func() {
 
-			err := scriptExecutor.Execute("", registration.HostInfo{})
+			err := scriptExecutor.Execute("")
 			Expect(err).NotTo(HaveOccurred())
 
 			Expect(fakeCmdExecutor.RunCmdCallCount()).To(Equal(0))
@@ -143,7 +148,7 @@ runCmd:
 
 		It("should error out when command execution fails", func() {
 			fakeCmdExecutor.RunCmdReturns(errors.New("command execution failed"))
-			err := scriptExecutor.Execute(defaultBootstrapSecret, registration.HostInfo{})
+			err := scriptExecutor.Execute(defaultBootstrapSecret)
 			Expect(err).To(HaveOccurred())
 
 			Expect(fakeCmdExecutor.RunCmdCallCount()).To(Equal(1))
