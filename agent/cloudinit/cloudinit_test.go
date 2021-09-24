@@ -24,6 +24,7 @@ var _ = Describe("Cloudinit", func() {
 		var (
 			fakeFileWriter         *cloudinitfakes.FakeIFileWriter
 			fakeCmdExecutor        *cloudinitfakes.FakeICmdRunner
+			fakeTemplateParser     *cloudinitfakes.FakeITemplateParser
 			scriptExecutor         cloudinit.ScriptExecutor
 			defaultBootstrapSecret string
 		)
@@ -31,9 +32,11 @@ var _ = Describe("Cloudinit", func() {
 		BeforeEach(func() {
 			fakeFileWriter = &cloudinitfakes.FakeIFileWriter{}
 			fakeCmdExecutor = &cloudinitfakes.FakeICmdRunner{}
+			fakeTemplateParser = &cloudinitfakes.FakeITemplateParser{}
 			scriptExecutor = cloudinit.ScriptExecutor{
-				WriteFilesExecutor: fakeFileWriter,
-				RunCmdExecutor:     fakeCmdExecutor,
+				WriteFilesExecutor:    fakeFileWriter,
+				RunCmdExecutor:        fakeCmdExecutor,
+				ParseTemplateExecutor: fakeTemplateParser,
 			}
 
 			defaultBootstrapSecret = fmt.Sprintf(`write_files:
@@ -77,16 +80,19 @@ runCmd:
 
 			Expect(fakeFileWriter.MkdirIfNotExistsCallCount()).To(Equal(2))
 			Expect(fakeFileWriter.WriteToFileCallCount()).To(Equal(2))
+			Expect(fakeTemplateParser.ParseTemplateCallCount()).To(Equal(2))
 
 			dirNameForFirstFile := fakeFileWriter.MkdirIfNotExistsArgsForCall(0)
 			Expect(dirNameForFirstFile).To(Equal(fileDir1))
 			firstFile := fakeFileWriter.WriteToFileArgsForCall(0)
+			firstFile.Content = fakeTemplateParser.ParseTemplateArgsForCall(0)
 			Expect(firstFile.Path).To(Equal(fileName1))
 			Expect(firstFile.Content).To(Equal(fileContent1))
 
 			dirNameForSecondFile := fakeFileWriter.MkdirIfNotExistsArgsForCall(1)
 			Expect(dirNameForSecondFile).To(Equal(fileDir2))
 			secondFile := fakeFileWriter.WriteToFileArgsForCall(1)
+			secondFile.Content = fakeTemplateParser.ParseTemplateArgsForCall(1)
 			Expect(secondFile.Path).To(Equal(fileName2))
 			Expect(secondFile.Content).To(Equal(fileContent2))
 			Expect(secondFile.Permissions).To(Equal(permissions))

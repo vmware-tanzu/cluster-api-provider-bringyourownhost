@@ -26,14 +26,15 @@ func TestReconciler(t *testing.T) {
 }
 
 var (
-	cfg               *rest.Config
-	k8sClient         client.Client
-	k8sManager        manager.Manager
-	patchHelper       *patch.Helper
-	reconciler        *HostReconciler
-	testEnv           *envtest.Environment
-	fakeCommandRunner *cloudinitfakes.FakeICmdRunner
-	fakeFileWriter    *cloudinitfakes.FakeIFileWriter
+	cfg                *rest.Config
+	k8sClient          client.Client
+	k8sManager         manager.Manager
+	patchHelper        *patch.Helper
+	reconciler         *HostReconciler
+	testEnv            *envtest.Environment
+	fakeCommandRunner  *cloudinitfakes.FakeICmdRunner
+	fakeFileWriter     *cloudinitfakes.FakeIFileWriter
+	fakeTemplateParser *cloudinitfakes.FakeITemplateParser
 )
 
 var _ = BeforeSuite(func() {
