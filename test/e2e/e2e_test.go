@@ -53,6 +53,7 @@ var _ = Describe("When BYOH joins existing cluster [PR-Blocking]", func() {
 		dockerClient       *client.Client
 		err                error
 		byohostContainerID string
+		agentLogFile       = "/tmp/host-agent.log"
 	)
 
 	BeforeEach(func() {
@@ -85,7 +86,7 @@ var _ = Describe("When BYOH joins existing cluster [PR-Blocking]", func() {
 		defer output.Close()
 
 		// read the log of host agent container in backend, and write it
-		f := WriteDockerLog(output, AgentLogFile)
+		f := WriteDockerLog(output, agentLogFile)
 		defer f.Close()
 
 		clusterctl.ApplyClusterTemplateAndWait(ctx, clusterctl.ApplyClusterTemplateAndWaitInput{
@@ -111,7 +112,7 @@ var _ = Describe("When BYOH joins existing cluster [PR-Blocking]", func() {
 
 	JustAfterEach(func() {
 		if CurrentGinkgoTestDescription().Failed {
-			ShowInfo()
+			ShowInfo([]string{agentLogFile})
 		}
 	})
 
@@ -127,7 +128,7 @@ var _ = Describe("When BYOH joins existing cluster [PR-Blocking]", func() {
 			Expect(err).NotTo(HaveOccurred())
 		}
 
-		os.Remove(AgentLogFile)
+		os.Remove(agentLogFile)
 		os.Remove(ReadByohControllerManagerLogShellFile)
 		os.Remove(ReadAllPodsShellFile)
 	})
