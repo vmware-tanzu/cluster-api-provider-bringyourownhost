@@ -291,7 +291,9 @@ func (r *ByoMachineReconciler) ClusterToByoMachines(logger logr.Logger) handler.
 	return func(o client.Object) []ctrl.Request {
 		c, ok := o.(*clusterv1.Cluster)
 		if !ok {
-			panic(fmt.Sprintf("Expected a Cluster but got a %T", o))
+			errMsg := fmt.Sprintf("Expected a Cluster but got a %T", o)
+			logger.Error(errors.New(errMsg), errMsg)
+			return nil
 		}
 
 		logger = logger.WithValues("objectMapper", "ClusterToByoMachines", "namespace", c.Namespace, "Cluster", c.Name)
