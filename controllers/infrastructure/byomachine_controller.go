@@ -210,13 +210,13 @@ func (r *ByoMachineReconciler) reconcileNormal(ctx context.Context, machineScope
 	if !machineScope.Cluster.Status.InfrastructureReady {
 		logger.Info("Cluster infrastructure is not ready yet")
 		conditions.MarkFalse(machineScope.ByoMachine, infrav1.BYOHostReady, infrav1.WaitingForClusterInfrastructureReason, clusterv1.ConditionSeverityInfo, "")
-		return reconcile.Result{}, errors.New("cluster infrastructure is not ready yet")
+		return reconcile.Result{}, nil
 	}
 
 	if machineScope.Machine.Spec.Bootstrap.DataSecretName == nil {
 		logger.Info("Bootstrap Data Secret not available yet")
 		conditions.MarkFalse(machineScope.ByoMachine, infrav1.BYOHostReady, infrav1.WaitingForBootstrapDataSecretReason, clusterv1.ConditionSeverityInfo, "")
-		return reconcile.Result{}, errors.New("bootstrap data secret not available yet")
+		return reconcile.Result{}, nil
 	}
 
 	// If there is not yet an byoHost for this byoMachine,
@@ -250,12 +250,14 @@ func (r *ByoMachineReconciler) reconcileNormal(ctx context.Context, machineScope
 }
 
 // SetupWithManager sets up the controller with the Manager.
-func (r *ByoMachineReconciler) SetupWithManager(mgr ctrl.Manager) error {
+func (r *ByoMachineReconciler) SetupWithManager(ctx context.Context, mgr ctrl.Manager) error {
 	var (
 		controlledType     = &infrav1.ByoMachine{}
 		controlledTypeName = reflect.TypeOf(controlledType).Elem().Name()
 		controlledTypeGVK  = infrav1.GroupVersion.WithKind(controlledTypeName)
 	)
+	logger := ctrl.LoggerFrom(ctx)
+	ClusterToByoMachines := r.ClusterToByoMachines(logger)
 
 	// Add index to BYOHost for listing by Machine reference.
 	if err := mgr.GetCache().IndexField(context.Background(), &infrav1.ByoHost{},
@@ -276,7 +278,39 @@ func (r *ByoMachineReconciler) SetupWithManager(mgr ctrl.Manager) error {
 			&source.Kind{Type: &clusterv1.Machine{}},
 			handler.EnqueueRequestsFromMapFunc(util.MachineToInfrastructureMapFunc(controlledTypeGVK)),
 		).
+		Watches(
+			&source.Kind{Type: &clusterv1.Cluster{}},
+			handler.EnqueueRequestsFromMapFunc(ClusterToByoMachines),
+		).
 		Complete(r)
+}
+
+// ClusterToByoMachines is a handler.ToRequestsFunc to be used to enqeue requests for reconciliation
+// of ByoMachines.
+func (r *ByoMachineReconciler) ClusterToByoMachines(logger logr.Logger) handler.MapFunc {
+	return func(o client.Object) []ctrl.Request {
+		c, ok := o.(*clusterv1.Cluster)
+		if !ok {
+			panic(fmt.Sprintf("Expected a Cluster but got a %T", o))
+		}
+
+		logger = logger.WithValues("objectMapper", "ClusterToByoMachines", "namespace", c.Namespace, "Cluster", c.Name)
+
+		clusterLabels := map[string]string{clusterv1.ClusterLabelName: c.Name}
+		byoMachineList := &infrav1.ByoMachineList{}
+		if err := r.Client.List(context.TODO(), byoMachineList, client.InNamespace(c.Namespace), client.MatchingLabels(clusterLabels)); err != nil {
+			logger.Error(err, "Failed to get ByoMachine, skipping mapping.")
+			return nil
+		}
+
+		result := make([]ctrl.Request, 0, len(byoMachineList.Items))
+		for i := range byoMachineList.Items {
+			logger.WithValues("byoMachine", byoMachineList.Items[i].Name)
+			logger.Info("Adding ByoMachine to reconciliation request.")
+			result = append(result, ctrl.Request{NamespacedName: client.ObjectKey{Namespace: byoMachineList.Items[i].Namespace, Name: byoMachineList.Items[i].Name}})
+		}
+		return result
+	}
 }
 
 // setNodeProviderID patches the provider id to the node using
