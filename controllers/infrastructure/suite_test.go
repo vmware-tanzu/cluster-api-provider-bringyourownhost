@@ -122,7 +122,7 @@ var _ = BeforeSuite(func() {
 		Client:  k8sManager.GetClient(),
 		Tracker: remote.NewTestClusterCacheTracker(logf.NullLogger{}, clientFake, scheme.Scheme, client.ObjectKey{Name: capiCluster.Name, Namespace: capiCluster.Namespace}),
 	}
-	err = reconciler.SetupWithManager(k8sManager)
+	err = reconciler.SetupWithManager(context.TODO(), k8sManager)
 	Expect(err).NotTo(HaveOccurred())
 
 	go func() {
