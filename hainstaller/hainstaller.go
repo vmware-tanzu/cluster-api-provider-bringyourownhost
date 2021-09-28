@@ -50,7 +50,11 @@ func checkWebAddrReachable(addr string) error {
 // the folder where the bundle should be saved does exist the bundle  is  down-
 // loaded. Finally the method returns whether the download was successful.
 func (hai *HostAgentInstaller) downloadOCIBundle(k8sVer string) error {
-	bundleName, err := hai.getBundleName(k8sVer)
+	systemInfo, err := hai.getHostSystemInfo()
+	if err != nil {
+		return err
+	}
+	bundleName, err := hai.getBundleName(systemInfo, k8sVer)
 	if err != nil {
 		return err
 	}
@@ -83,42 +87,23 @@ func (hai *HostAgentInstaller) downloadOCIBundle(k8sVer string) error {
 	return nil
 }
 
-// Method which installs the downloaded bundle. This is done by executing the
-// install.sh shell script of the given version that comes with the bundle.
-func (hai *HostAgentInstaller) InstallOCIBundle(k8sVer string, context string) error {
-	// TODO: change to real path
-	installerPath := hai.downloadPath + "/" + k8sVer + "/installer/install.sh"
-
-	out, err := exec.Command(installerPath, strings.Fields(context)...).Output()
-
-	if err != nil {
-		log.Print(err)
-		return err
-	}
-
-	println(string(out))
-
+// Method which installs the downloaded bundle.
+func (hai *HostAgentInstaller) InstallOCIBundle(k8sVer string, context []string) error {
+	//placeholder
+	/*installer.RunInstaller(
+	append([]string{"install", k8sVer}, context...),
+	&installer.BaseK8sInstaller{K8sStepProvider: &installer.Ubuntu_20_4_3_k8s_1_22{}})*/
 	return nil
 
 }
 
-// Method which uninstalls the currently installed bundle. This is done
-// by executing the uninstall.sh shell script that comes with the bundle.
-func (hai *HostAgentInstaller) Uninstall() error {
-	// TODO: change to real path
-	uninstallerPath := hai.downloadPath + "/poc-installer/uninstall.sh"
-
-	out, err := exec.Command(uninstallerPath).Output()
-
-	if err != nil {
-		log.Print(err)
-		return err
-	}
-
-	println(string(out))
-
+// Method which uninstalls the currently installed bundle.
+func (hai *HostAgentInstaller) UninstallOCIBundle(k8sVer string, context []string) error {
+	//placeholder
+	/*installer.RunInstaller(
+	append([]string{"uninstall", k8sVer}, context...),
+	&installer.BaseK8sInstaller{K8sStepProvider: &installer.Ubuntu_20_4_3_k8s_1_22{}})*/
 	return nil
-
 }
 
 // Method which returns the result after executing a command that returns info.
@@ -151,39 +136,77 @@ func (hai *HostAgentInstaller) getHostSystemInfo() (string, error) {
 	return string(out), nil
 }
 
+// Method which normalizes given os, arch and k8s version to the correct format
+func normalizeBundleName(os, arch, k8s string) string {
+	bundleName := os
+	if arch == "x86-64" {
+		bundleName += "_x64"
+	} else {
+		bundleName += "_x32"
+	}
+	bundleName += "_k8s_" + k8s
+
+	bundleName = strings.ReplaceAll(bundleName, " ", "_")
+
+	return bundleName
+}
+
+// placeholder
+type Installer interface {
+	install()
+	uninstall()
+}
+
+func RunInstaller(osArgs []string, i Installer) {
+}
+
+type Ubuntu_20_4_3_k8s_1_22 struct {
+}
+
+func (u *Ubuntu_20_4_3_k8s_1_22) install() {
+}
+
+func (u *Ubuntu_20_4_3_k8s_1_22) uninstall() {
+}
+
+type Ubuntu_20_4_k8s_1_22 struct {
+}
+
+func (u *Ubuntu_20_4_k8s_1_22) install() {
+}
+
+func (u *Ubuntu_20_4_k8s_1_22) uninstall() {
+}
+
 // Method which takes the information from the getHostSystemInfo function and
 // returns only a string containing the exact version of the opretaion system
 // running on the host and the required k8s version if they are supported.
 //
-// Example: Ubuntu_20.04_x64_k8s_1.2.1
-func (hai *HostAgentInstaller) getBundleName(k8s string) (string, error) {
-	systemInfo, err := hai.getHostSystemInfo()
-
-	if err != nil {
-		return "", err
-	}
+// Example: Ubuntu_20.04.3_x64_k8s_1.2.1
+func (hai *HostAgentInstaller) getBundleName(systemInfo, k8s string) (string, error) {
 
 	const strIndicatingOSline string = "Operating System: "
 
-	type Pair struct {
-		os  string
-		k8s string
+	type bundleInfo struct {
+		os        string
+		arch      string
+		k8s       string
+		installer Installer
 	}
-	supportedBundles := []Pair{
-		{"Ubuntu 20.04", "1.2.1"},
-		{"CentOS Linux 7", "1.2.1"}}
+	supportedBundles := []bundleInfo{
+		{"Ubuntu 20.04", "x86-64", "1.2.1", &Ubuntu_20_4_k8s_1_22{}},
+		{"Ubuntu 20.04.3", "x86-64", "1.2.1", &Ubuntu_20_4_3_k8s_1_22{}},
+		{"CentOS Linux 7", "i868", "1.2.1", &Ubuntu_20_4_3_k8s_1_22{}}}
+
 	var bundleName string
 	for _, p := range supportedBundles {
-		if strings.LastIndex(systemInfo, strIndicatingOSline+p.os) != -1 && p.k8s == k8s {
-			bundleName = p.os
-
-			if strings.LastIndex(systemInfo, "Architecture: x86-64") != -1 {
-				bundleName += "_" + "x64"
-			} else {
-				bundleName += "_" + "x32"
-			}
-
-			bundleName += "_k8s_" + k8s
+		pos := strings.LastIndex(systemInfo, strIndicatingOSline+p.os)
+		endPos := pos + len(strIndicatingOSline) + len(p.os)
+		if pos != -1 &&
+			(systemInfo[endPos] == ' ' || systemInfo[endPos] == '\n') &&
+			strings.LastIndex(systemInfo, "Architecture: "+p.arch) != -1 &&
+			p.k8s == k8s {
+			bundleName = normalizeBundleName(p.os, p.arch, p.k8s)
 			break
 		}
 	}
@@ -193,8 +216,6 @@ func (hai *HostAgentInstaller) getBundleName(k8s string) (string, error) {
 		log.Print(err)
 		return "", errors.New(err)
 	}
-
-	bundleName = strings.ReplaceAll(bundleName, " ", "_")
 
 	return bundleName, nil
 }
