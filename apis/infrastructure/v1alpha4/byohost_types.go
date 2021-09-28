@@ -22,6 +22,11 @@ import (
 	clusterv1 "sigs.k8s.io/cluster-api/api/v1alpha4"
 )
 
+const (
+	HostCleanupAnnotation = "byoh.infrastructure.cluster.x-k8s.io/unregistering"
+	EndPointIPAnnotation  = "byoh.infrastructure.cluster.x-k8s.io/endpointip"
+)
+
 // EDIT THIS FILE!  THIS IS SCAFFOLDING FOR YOU TO OWN!
 // NOTE: json tags are required.  Any new fields you add must have json tags for the fields to be serialized.
 

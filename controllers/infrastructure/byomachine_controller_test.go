@@ -212,7 +212,7 @@ var _ = Describe("Controllers/ByomachineController", func() {
 						createdByoHost := &infrastructurev1alpha4.ByoHost{}
 						Expect(k8sClientUncached.Get(ctx, byoHostLookupKey, createdByoHost)).NotTo(HaveOccurred())
 
-						Expect(createdByoHost.Annotations[hostCleanupAnnotation]).Should(Equal(""))
+						Expect(createdByoHost.Annotations[infrastructurev1alpha4.HostCleanupAnnotation]).Should(Equal(""))
 					})
 
 					It("should delete the byomachine object", func() {

@@ -14,6 +14,10 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
+var (
+	LocalHostRegistrar *HostRegistrar
+)
+
 type HostInfo struct {
 	DefaultNetworkName string
 }
