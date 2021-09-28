@@ -11,6 +11,7 @@ require (
 	github.com/docker/docker-credential-helpers v0.6.4 // indirect
 	github.com/go-logr/logr v0.4.0
 	github.com/jackpal/gateway v1.0.7
+	github.com/kube-vip/kube-vip v0.3.8
 	github.com/maxbrunsfeld/counterfeiter/v6 v6.4.1
 	github.com/moby/sys/mount v0.2.0 // indirect
 	github.com/onsi/ginkgo v1.16.4
