@@ -13,6 +13,8 @@ spec:
     kind: ByoHost
     listKind: ByoHostList
     plural: byohosts
+    shortNames:
+    - byoh
     singular: byohost
   scope: Namespaced
   versions:

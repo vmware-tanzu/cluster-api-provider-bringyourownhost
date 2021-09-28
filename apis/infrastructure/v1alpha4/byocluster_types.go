@@ -58,6 +58,7 @@ type APIEndpoint struct {
 }
 
 //+kubebuilder:object:root=true
+//+kubebuilder:resource:path=byoclusters,scope=Namespaced,shortName=byoc
 //+kubebuilder:subresource:status
 
 // ByoCluster is the Schema for the byoclusters API
