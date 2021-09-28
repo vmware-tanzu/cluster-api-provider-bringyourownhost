@@ -12,7 +12,6 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/types"
 	clusterv1 "sigs.k8s.io/cluster-api/api/v1alpha4"
-	"sigs.k8s.io/cluster-api/util/annotations"
 	"sigs.k8s.io/cluster-api/util/conditions"
 	"sigs.k8s.io/cluster-api/util/patch"
 	controllerruntime "sigs.k8s.io/controller-runtime"
@@ -61,33 +60,6 @@ var _ = Describe("Byohost Agent Tests", func() {
 			Expect(err).ShouldNot(HaveOccurred())
 
 			byoHostLookupKey = types.NamespacedName{Name: byoHost.Name, Namespace: ns}
-		})
-
-		It("should set the Reason to ClusterOrResourcePausedReason when the ByoHost is paused", func() {
-			annotations.AddAnnotations(byoHost, map[string]string{
-				clusterv1.PausedAnnotation: "paused",
-			})
-			err := patchHelper.Patch(ctx, byoHost, patch.WithStatusObservedGeneration{})
-			Expect(err).ToNot(HaveOccurred())
-
-			result, reconcilerErr := reconciler.Reconcile(ctx, controllerruntime.Request{
-				NamespacedName: byoHostLookupKey,
-			})
-
-			Expect(result).To(Equal(controllerruntime.Result{}))
-			Expect(reconcilerErr).ToNot(HaveOccurred())
-
-			updatedByoHost := &infrastructurev1alpha4.ByoHost{}
-			err = k8sClient.Get(ctx, byoHostLookupKey, updatedByoHost)
-			Expect(err).ToNot(HaveOccurred())
-			bootstrapSucceededCondition := conditions.Get(updatedByoHost, infrastructurev1alpha4.K8sNodeBootstrapSucceeded)
-
-			Expect(*bootstrapSucceededCondition).To(conditions.MatchCondition(clusterv1.Condition{
-				Type:     infrastructurev1alpha4.K8sNodeBootstrapSucceeded,
-				Status:   corev1.ConditionFalse,
-				Reason:   infrastructurev1alpha4.ClusterOrResourcePausedReason,
-				Severity: clusterv1.ConditionSeverityInfo,
-			}))
 		})
 
 		It("should set the Reason to WaitingForMachineRefReason if MachineRef isn't found", func() {

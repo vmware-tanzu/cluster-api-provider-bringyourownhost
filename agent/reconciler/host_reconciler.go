@@ -10,7 +10,6 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/klog"
 	"sigs.k8s.io/cluster-api/api/v1alpha4"
-	"sigs.k8s.io/cluster-api/util/annotations"
 	"sigs.k8s.io/cluster-api/util/conditions"
 	"sigs.k8s.io/cluster-api/util/patch"
 	"sigs.k8s.io/cluster-api/util/predicates"
@@ -51,13 +50,6 @@ func (r *HostReconciler) Reconcile(ctx context.Context, req ctrl.Request) (_ ctr
 			reterr = err
 		}
 	}()
-
-	// Return early if the object is paused.
-	if annotations.HasPausedAnnotation(byoHost) {
-		klog.Info("The related byoMachine or linked Cluster is marked as paused. Won't reconcile")
-		conditions.MarkFalse(byoHost, infrastructurev1alpha4.K8sNodeBootstrapSucceeded, infrastructurev1alpha4.ClusterOrResourcePausedReason, v1alpha4.ConditionSeverityInfo, "")
-		return ctrl.Result{}, nil
-	}
 
 	// Check for host cleanup annotation
 	hostAnnotations := byoHost.GetAnnotations()
@@ -112,8 +104,6 @@ func (r *HostReconciler) reconcileNormal(ctx context.Context, byoHost *infrastru
 }
 
 func (r *HostReconciler) reconcileDelete(ctx context.Context, byoHost *infrastructurev1alpha4.ByoHost) (ctrl.Result, error) {
-	// TODO: add logic when this host has MachineRef assigned
-
 	return ctrl.Result{}, nil
 }
 
@@ -147,7 +137,7 @@ func (r HostReconciler) hostCleanUp(ctx context.Context, byoHost *infrastructure
 	// Remove cluster-name label
 	delete(byoHost.Labels, v1alpha4.ClusterLabelName)
 
-	// Remove the cleanup annotation
+	// Remove cleanup annotation
 	delete(byoHost.Annotations, hostCleanupAnnotation)
 
 	conditions.MarkFalse(byoHost, infrastructurev1alpha4.K8sNodeBootstrapSucceeded, infrastructurev1alpha4.K8sNodeAbsentReason, v1alpha4.ConditionSeverityInfo, "")
