@@ -305,7 +305,7 @@ var _ = Describe("Controllers/ByomachineController", func() {
 				})
 
 				_, err = reconciler.Reconcile(ctx, reconcile.Request{NamespacedName: byoMachineLookupKey})
-				Expect(err).To(MatchError("bootstrap data secret not available yet"))
+				Expect(err).To(BeNil())
 
 				createdByoMachine := &infrastructurev1alpha4.ByoMachine{}
 				err = k8sClientUncached.Get(ctx, byoMachineLookupKey, createdByoMachine)
@@ -496,7 +496,7 @@ var _ = Describe("Controllers/ByomachineController", func() {
 
 		It("should mark BYOHostReady as False", func() {
 			_, err := reconciler.Reconcile(ctx, reconcile.Request{NamespacedName: byoMachineLookupKey})
-			Expect(err).To(MatchError("cluster infrastructure is not ready yet"))
+			Expect(err).To(BeNil())
 
 			createdByoMachine := &infrastructurev1alpha4.ByoMachine{}
 			err = k8sClientUncached.Get(ctx, byoMachineLookupKey, createdByoMachine)
