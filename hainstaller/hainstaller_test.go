@@ -7,17 +7,21 @@ import (
 )
 
 // Test for Ubuntu 20.04.3 64 bit
-func TestGetBundleName(t *testing.T) {
+func TestOSDetectorDetect(t *testing.T) {
 
-	hai := NewHostAgentInstaller("placeholder", "placeholder")
-	systemInfo, err := hai.getHostSystemInfo()
-
+	d := newOSDetector()
+	os, err := d.detect()
 	if err != nil {
 		t.Errorf("Could not get system info.")
 	}
-	bundleName, _ := hai.getBundleName(systemInfo, "1.2.1")
-	expected := "Ubuntu_20.04.3_x64_k8s_1.2.1"
-	if bundleName != expected {
-		t.Errorf("Bundle name was incorrect, got: %s, want: %s", bundleName, expected)
+	expected := "Ubuntu_20.04.3_x64"
+	if os != expected {
+		t.Errorf("Bundle name was incorrect, got: %s, want: %s", os, expected)
 	}
 }
+
+// Test for hai
+// Test only for filterSystemInfo and normalizeOsName
+// Test for install/uninstall bundle
+// Test for registry
+// Test for BundleDownloader

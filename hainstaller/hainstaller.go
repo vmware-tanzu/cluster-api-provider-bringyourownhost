@@ -20,90 +20,110 @@ type HostAgentInstaller struct {
 	downloadPath string
 }
 
-// Constructor function for the HostAgentInstaller class.
-func NewHostAgentInstaller(repoAddr string, downloadPath string) *HostAgentInstaller {
-	return &HostAgentInstaller{repoAddr, downloadPath}
-}
+// Method which downloads and installs the bundle.
+func (hai *HostAgentInstaller) Install(k8sVer string, context []string) error {
+	reg := newRegistry()
+	bd := NewBundleDownloader()
+	osd := newOSDetector()
 
-// Method that checks if a dirrectory exists.
-func checkDirExist(dirPath string) bool {
-	if fi, err := os.Stat(dirPath); os.IsNotExist(err) || !fi.IsDir() {
-		return false
-	}
-	return true
-}
-func checkWebAddrReachable(addr string) error {
-	resp, err := http.Get(addr)
-	if err != nil {
-		print(err.Error())
-		return err
-	} else if int32(resp.StatusCode) != int32(200) {
-		return errors.New("Web addres " + addr + " returned response " + resp.Status)
-	} else {
-		return nil
-	}
-}
-
-// Method that downloads the bundle from repoAddr to downloadPath.
-// This method automatically downloads the given version for the current  linux
-// distribution by using helper methods to gather all required  information. If
-// the folder where the bundle should be saved does exist the bundle  is  down-
-// loaded. Finally the method returns whether the download was successful.
-func (hai *HostAgentInstaller) downloadOCIBundle(k8sVer string) error {
-	systemInfo, err := hai.getHostSystemInfo()
-	if err != nil {
-		return err
-	}
-	bundleName, err := hai.getBundleName(systemInfo, k8sVer)
-	if err != nil {
-		return err
-	}
-	// TODO: Change to real path.
-	bundleAddr := hai.repoAddr + "/bundles/" + bundleName
-
-	if !checkDirExist(hai.downloadPath) {
-		err := errors.New("Download path does no exist.")
-		log.Print(err)
-		return err
-	}
-
-	err = checkWebAddrReachable(bundleAddr)
+	os, err := osd.detect()
 	if err != nil {
 		return err
 	}
 
-	var confUI = ui.NewConfUI(ui.NewNoopLogger())
-	defer confUI.Flush()
-
-	imgpkgCmd := cmd.NewDefaultImgpkgCmd(confUI)
-
-	imgpkgCmd.SetArgs([]string{"pull", "--recursive", "-i", bundleAddr + bundleName, "-o", hai.downloadPath})
-	err = imgpkgCmd.Execute()
-
+	err = bd.Download(hai.repoAddr, hai.downloadPath, os, k8sVer)
 	if err != nil {
-		log.Print(err.Error())
 		return err
 	}
-	return nil
-}
 
-// Method which installs the downloaded bundle.
-func (hai *HostAgentInstaller) InstallOCIBundle(k8sVer string, context []string) error {
+	bundleInstaller, err := reg.getInstaller(os, k8sVer)
+	if err != nil {
+		return err
+	}
+	bundleInstaller.install()
+
 	//placeholder
 	/*installer.RunInstaller(
 	append([]string{"install", k8sVer}, context...),
-	&installer.BaseK8sInstaller{K8sStepProvider: &installer.Ubuntu_20_4_3_k8s_1_22{}})*/
+	&installer.BaseK8sInstaller{K8sStepProvider: bundleInstaller})*/
 	return nil
 
 }
 
 // Method which uninstalls the currently installed bundle.
-func (hai *HostAgentInstaller) UninstallOCIBundle(k8sVer string, context []string) error {
+func (hai *HostAgentInstaller) Uninstall(k8sVer string, context []string) error {
+	//TODO add check if the given version is installed
+
+	reg := newRegistry()
+	osd := newOSDetector()
+
+	os, err := osd.detect()
+	if err != nil {
+		return err
+	}
+
+	bundleInstaller, err := reg.getInstaller(os, k8sVer)
+	if err != nil {
+		return err
+	}
+
+	bundleInstaller.uninstall()
 	//placeholder
 	/*installer.RunInstaller(
 	append([]string{"uninstall", k8sVer}, context...),
-	&installer.BaseK8sInstaller{K8sStepProvider: &installer.Ubuntu_20_4_3_k8s_1_22{}})*/
+	&installer.BaseK8sInstaller{K8sStepProvider: bundleInstaller})*/
 	return nil
+}
+
+// Constructor function for the HostAgentInstaller class.
+func NewHostAgentInstaller(repoAddr string, downloadPath string) *HostAgentInstaller {
+	return &HostAgentInstaller{repoAddr, downloadPath}
+}
+
+// placeholder/mockup, will be deleted
+type Installer interface {
+	install()
+	uninstall()
+}
+type Ubuntu_20_4_3_k8s_1_22 struct{}
+
+func (u *Ubuntu_20_4_3_k8s_1_22) install()   {}
+func (u *Ubuntu_20_4_3_k8s_1_22) uninstall() {}
+
+// end of mockup
+
+// Struct that contains a map of all supported OS and k8s bundles
+type registry struct {
+	supportedBundles map[string]map[string]Installer
+}
+
+// Constructor for the registry struct
+func newRegistry() registry {
+	supportedBundles := map[string]map[string]Installer{
+		"Ubuntu_20.04.3_x64": {"1.22": &Ubuntu_20_4_3_k8s_1_22{}}}
+
+	return registry{supportedBundles}
+}
+
+// Method that checks if the given OS and k8s version are supported and returns
+// the installer.
+func (r *registry) getInstaller(normalizedOS, normalizedk8s string) (Installer, error) {
+	if installer, ok := r.supportedBundles[normalizedOS][normalizedk8s]; ok {
+		return installer, nil
+	} else {
+		err := "Bundle not supported."
+		log.Print(err)
+		return nil, errors.New(err)
+	}
+}
+
+// Struct containing all the logic for detecting the OS version.
+type oSDetector struct {
+}
+
+// Constructor for OSDetector
+func newOSDetector() *oSDetector {
+	return &oSDetector{}
 }
 
 // Method which returns the result after executing a command that returns info.
@@ -125,7 +145,7 @@ func (hai *HostAgentInstaller) UninstallOCIBundle(k8sVer string, context []strin
 // Operating System: Ubuntu 20.04.3 LTS
 //           Kernel: Linux 5.11.0-27-generic
 //     Architecture: x86-64
-func (hai *HostAgentInstaller) getHostSystemInfo() (string, error) {
+func (osd *oSDetector) getHostSystemInfo() (string, error) {
 	out, err := exec.Command("hostnamectl").Output()
 
 	if err != nil {
@@ -136,86 +156,119 @@ func (hai *HostAgentInstaller) getHostSystemInfo() (string, error) {
 	return string(out), nil
 }
 
-// Method which normalizes given os, arch and k8s version to the correct format
-func normalizeBundleName(os, arch, k8s string) string {
-	bundleName := os
+// Method which normalizes given os, arch and k8s version to the correct format.
+func (osd *oSDetector) normalizeOsName(os, ver, arch string) string {
+	osName := strings.TrimSpace(os) + " " + ver
 	if arch == "x86-64" {
-		bundleName += "_x64"
+		osName += "_x64"
 	} else {
-		bundleName += "_x32"
+		osName += "_x32"
 	}
-	bundleName += "_k8s_" + k8s
 
-	bundleName = strings.ReplaceAll(bundleName, " ", "_")
+	osName = strings.ReplaceAll(osName, " ", "_")
 
-	return bundleName
+	return osName
 }
 
-// placeholder
-type Installer interface {
-	install()
-	uninstall()
-}
-
-func RunInstaller(osArgs []string, i Installer) {
-}
-
-type Ubuntu_20_4_3_k8s_1_22 struct {
-}
-
-func (u *Ubuntu_20_4_3_k8s_1_22) install() {
-}
-
-func (u *Ubuntu_20_4_3_k8s_1_22) uninstall() {
-}
-
-type Ubuntu_20_4_k8s_1_22 struct {
-}
-
-func (u *Ubuntu_20_4_k8s_1_22) install() {
-}
-
-func (u *Ubuntu_20_4_k8s_1_22) uninstall() {
-}
-
-// Method which takes the information from the getHostSystemInfo function and
-// returns only a string containing the exact version of the opretaion system
-// running on the host and the required k8s version if they are supported.
-//
-// Example: Ubuntu_20.04.3_x64_k8s_1.2.1
-func (hai *HostAgentInstaller) getBundleName(systemInfo, k8s string) (string, error) {
-
+// Method that extracts the important information from getHostSystemInfo.
+func (osd *oSDetector) filterSystemInfo(systemInfo string) (string, string, string) {
 	const strIndicatingOSline string = "Operating System: "
+	const strIndicatingArchline string = "Architecture: "
+	var os, ver, arch string
 
-	type bundleInfo struct {
-		os        string
-		arch      string
-		k8s       string
-		installer Installer
+	i := strings.LastIndex(systemInfo, strIndicatingOSline) + len(strIndicatingOSline)
+	for ; !(systemInfo[i] >= '0' && systemInfo[i] <= '9') && systemInfo[i] != '\n'; i++ {
+		os += string(systemInfo[i])
 	}
-	supportedBundles := []bundleInfo{
-		{"Ubuntu 20.04", "x86-64", "1.2.1", &Ubuntu_20_4_k8s_1_22{}},
-		{"Ubuntu 20.04.3", "x86-64", "1.2.1", &Ubuntu_20_4_3_k8s_1_22{}},
-		{"CentOS Linux 7", "i868", "1.2.1", &Ubuntu_20_4_3_k8s_1_22{}}}
-
-	var bundleName string
-	for _, p := range supportedBundles {
-		pos := strings.LastIndex(systemInfo, strIndicatingOSline+p.os)
-		endPos := pos + len(strIndicatingOSline) + len(p.os)
-		if pos != -1 &&
-			(systemInfo[endPos] == ' ' || systemInfo[endPos] == '\n') &&
-			strings.LastIndex(systemInfo, "Architecture: "+p.arch) != -1 &&
-			p.k8s == k8s {
-			bundleName = normalizeBundleName(p.os, p.arch, p.k8s)
-			break
-		}
+	for ; (systemInfo[i] >= '0' && systemInfo[i] <= '9') || systemInfo[i] == '.'; i++ {
+		ver += string(systemInfo[i])
 	}
+	i = strings.LastIndex(systemInfo, strIndicatingArchline) + len(strIndicatingArchline)
+	for ; systemInfo[i] != '\n'; i++ {
+		arch += string(systemInfo[i])
+	}
+	return os, ver, arch
+}
 
-	if bundleName == "" {
-		err := "OS and k8s version not supported."
+//Method that returns the os info in normalized format.
+func (osd *oSDetector) detect() (string, error) {
+	systemInfo, err := osd.getHostSystemInfo()
+	if err != nil {
+		return "", err
+	}
+	os, ver, arch := osd.filterSystemInfo(systemInfo)
+	if os == "" || ver == "" || arch == "" {
+		err := "Could not detect OS correctly."
 		log.Print(err)
 		return "", errors.New(err)
 	}
 
-	return bundleName, nil
+	normalizedOS := osd.normalizeOsName(os, ver, arch)
+	return normalizedOS, nil
+}
+
+// Struct for downloading a bundle
+type BundleDownloader struct {
+}
+
+// Constructor for BundleDownloader
+func NewBundleDownloader() *BundleDownloader {
+	return &BundleDownloader{}
+}
+
+// Method that checks if a dirrectory exists.
+func (bd *BundleDownloader) checkDirExist(dirPath string) bool {
+	if fi, err := os.Stat(dirPath); os.IsNotExist(err) || !fi.IsDir() {
+		return false
+	}
+	return true
+}
+
+// Method that checks if a web address is reachable.
+func (bd *BundleDownloader) checkWebAddrReachable(addr string) error {
+	resp, err := http.Get(addr)
+	if err != nil {
+		print(err.Error())
+		return err
+	} else if int32(resp.StatusCode) != int32(200) {
+		return errors.New("Web addres " + addr + " returned response " + resp.Status)
+	} else {
+		return nil
+	}
+}
+
+// Method that downloads the bundle from repoAddr to downloadPath.
+// This method automatically downloads the given version for the current  linux
+// distribution by using helper methods to gather all required  information. If
+// the folder where the bundle should be saved does exist the bundle  is  down-
+// loaded. Finally the method returns whether the download was successful.
+func (bd *BundleDownloader) Download(repoAddr, downloadPath, osVer, k8sVer string) error {
+
+	// TODO: Change to real path.
+	bundleAddr := repoAddr + "/bundles/" + osVer + "/" + k8sVer
+
+	if !bd.checkDirExist(downloadPath) {
+		err := errors.New("Download path does no exist.")
+		log.Print(err)
+		return err
+	}
+
+	err := bd.checkWebAddrReachable(bundleAddr)
+	if err != nil {
+		return err
+	}
+
+	var confUI = ui.NewConfUI(ui.NewNoopLogger())
+	defer confUI.Flush()
+
+	imgpkgCmd := cmd.NewDefaultImgpkgCmd(confUI)
+
+	imgpkgCmd.SetArgs([]string{"pull", "--recursive", "-i", bundleAddr, "-o", downloadPath})
+	err = imgpkgCmd.Execute()
+
+	if err != nil {
+		log.Print(err.Error())
+		return err
+	}
+	return nil
 }
