@@ -88,7 +88,7 @@ var _ = Describe("Agent", func() {
 			hostName, err = os.Hostname()
 			Expect(err).NotTo(HaveOccurred())
 
-			command := exec.Command(pathToHostAgentBinary, "--kubeconfig", kubeconfigFile.Name(), "--namespace", ns.Name)
+			command := exec.Command(pathToHostAgentBinary, "--kubeconfig", kubeconfigFile.Name(), "--namespace", ns.Name, "--label", "site=apac")
 
 			session, err = gexec.Start(command, GinkgoWriter, GinkgoWriter)
 			Expect(err).NotTo(HaveOccurred())
@@ -114,6 +114,18 @@ var _ = Describe("Agent", func() {
 				}
 				return createdByoHost
 			}).ShouldNot(BeNil())
+		})
+
+		It("should register the BYOHost with the passed labels", func() {
+			byoHostLookupKey := types.NamespacedName{Name: hostName, Namespace: ns.Name}
+			createdByoHost := &infrastructurev1alpha4.ByoHost{}
+			Eventually(func() map[string]string {
+				err := k8sClient.Get(context.TODO(), byoHostLookupKey, createdByoHost)
+				if err != nil {
+					return nil
+				}
+				return createdByoHost.ObjectMeta.Labels
+			}).Should(Equal(map[string]string{"site": "apac"}))
 		})
 
 		It("should fetch networkstatus when register the BYOHost with the management cluster", func() {

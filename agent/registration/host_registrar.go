@@ -27,7 +27,7 @@ type HostRegistrar struct {
 	ByoHostInfo HostInfo
 }
 
-func (hr *HostRegistrar) Register(hostName, namespace string) error {
+func (hr *HostRegistrar) Register(hostName, namespace string, hostLabels map[string]string) error {
 	ctx := context.TODO()
 	byoHost := &infrastructurev1alpha4.ByoHost{}
 	err := hr.K8sClient.Get(ctx, types.NamespacedName{Name: hostName, Namespace: namespace}, byoHost)
@@ -44,6 +44,7 @@ func (hr *HostRegistrar) Register(hostName, namespace string) error {
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      hostName,
 				Namespace: namespace,
+				Labels:    hostLabels,
 			},
 			Spec:   infrastructurev1alpha4.ByoHostSpec{},
 			Status: infrastructurev1alpha4.ByoHostStatus{},
