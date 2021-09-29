@@ -21,14 +21,12 @@ import (
 	"errors"
 	"fmt"
 	"reflect"
-	"strings"
 	"time"
 
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/selection"
-	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/cluster-api/controllers/remote"
 	"sigs.k8s.io/cluster-api/util"
 	"sigs.k8s.io/cluster-api/util/conditions"
@@ -134,18 +132,6 @@ func (r *ByoMachineReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 		}
 	}()
 
-	// Return early if the object or Cluster is paused.
-	if annotations.IsPaused(cluster, byoMachine) {
-		logger.Info("byoMachine or linked Cluster is marked as paused. Won't reconcile")
-		if byoMachine.Spec.ProviderID != "" {
-			if err = r.setPausedConditionForByoHost(ctx, byoMachine.Spec.ProviderID, req.Namespace, true); err != nil {
-				logger.Error(err, "Set Paused flag for byohost")
-			}
-		}
-		conditions.MarkFalse(byoMachine, infrav1.BYOHostReady, infrav1.ClusterOrResourcePausedReason, clusterv1.ConditionSeverityInfo, "")
-		return ctrl.Result{}, nil
-	}
-
 	// Fetch the BYOHost which is referencing this machine, if any
 	hostsList := &infrav1.ByoHostList{}
 	err = r.Client.List(
@@ -174,6 +160,18 @@ func (r *ByoMachineReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 		return ctrl.Result{}, err
 	}
 
+	// Return early if the object or Cluster is paused.
+	if annotations.IsPaused(cluster, byoMachine) {
+		logger.Info("byoMachine or linked Cluster is marked as paused. Won't reconcile")
+		if machineScope.ByoHost != nil {
+			if err = r.setPausedConditionForByoHost(ctx, machineScope, true); err != nil {
+				logger.Error(err, "cannot set paused annotation for byohost")
+			}
+		}
+		conditions.MarkFalse(byoMachine, infrav1.BYOHostReady, infrav1.ClusterOrResourcePausedReason, clusterv1.ConditionSeverityInfo, "")
+		return ctrl.Result{}, nil
+	}
+
 	// Handle deleted machines
 	if !byoMachine.ObjectMeta.DeletionTimestamp.IsZero() {
 		return r.reconcileDelete(ctx, machineScope)
@@ -197,13 +195,12 @@ func (r *ByoMachineReconciler) reconcileDelete(ctx context.Context, machineScope
 
 func (r *ByoMachineReconciler) reconcileNormal(ctx context.Context, machineScope *byoMachineScope) (reconcile.Result, error) {
 	logger := log.FromContext(ctx).WithValues("namespace", machineScope.ByoMachine.Namespace, "BYOMachine", machineScope.ByoMachine.Name)
-	// TODO: Uncomment below line when we have tests for byomachine delete
+
 	controllerutil.AddFinalizer(machineScope.ByoMachine, infrav1.MachineFinalizer)
 
-	// TODO: Remove the below check after refactoring setting of Pause annotation on byoHost
-	if len(machineScope.ByoMachine.Spec.ProviderID) > 0 {
+	if machineScope.ByoHost != nil {
 		// if there is already byohost associated with it, make sure the paused status of byohost is false
-		if err := r.setPausedConditionForByoHost(ctx, machineScope.ByoMachine.Spec.ProviderID, machineScope.ByoMachine.Namespace, false); err != nil {
+		if err := r.setPausedConditionForByoHost(ctx, machineScope, false); err != nil {
 			logger.Error(err, "Set resume flag for byohost failed")
 			return ctrl.Result{}, err
 		}
@@ -357,44 +354,22 @@ func (r *ByoMachineReconciler) getRemoteClient(ctx context.Context, byoMachine *
 	return remoteClient, nil
 }
 
-func (r *ByoMachineReconciler) setPausedConditionForByoHost(ctx context.Context, providerID, nameSpace string, isPaused bool) error {
-	// The format of providerID is "byoh://<byoHostName>/<RandomString(6)>
-	if !strings.HasPrefix(providerID, providerIDPrefix) {
-		return errors.New("invalid providerID prefix")
-	}
-
-	strs := strings.Split(providerID[len(providerIDPrefix):], "/")
-
-	if len(strs) == 0 {
-		return errors.New("invalid providerID format")
-	}
-
-	byoHostName := strs[0]
-
-	byoHost := &infrav1.ByoHost{}
-	err := r.Client.Get(ctx, types.NamespacedName{Name: byoHostName, Namespace: nameSpace}, byoHost)
-	if err != nil {
-		return err
-	}
-
-	helper, err := patch.NewHelper(byoHost, r.Client)
+func (r *ByoMachineReconciler) setPausedConditionForByoHost(ctx context.Context, machineScope *byoMachineScope, isPaused bool) error {
+	helper, err := patch.NewHelper(machineScope.ByoHost, r.Client)
 	if err != nil {
 		return err
 	}
 
 	if isPaused {
 		desired := map[string]string{
-			clusterv1.PausedAnnotation: "paused",
+			clusterv1.PausedAnnotation: "",
 		}
-		annotations.AddAnnotations(byoHost, desired)
+		annotations.AddAnnotations(machineScope.ByoHost, desired)
 	} else {
-		_, ok := byoHost.Annotations[clusterv1.PausedAnnotation]
-		if ok {
-			delete(byoHost.Annotations, clusterv1.PausedAnnotation)
-		}
+		delete(machineScope.ByoHost.Annotations, clusterv1.PausedAnnotation)
 	}
 
-	return helper.Patch(ctx, byoHost)
+	return helper.Patch(ctx, machineScope.ByoHost)
 }
 
 func (r *ByoMachineReconciler) attachByoHost(ctx context.Context, logger logr.Logger, machineScope *byoMachineScope) (ctrl.Result, error) {
