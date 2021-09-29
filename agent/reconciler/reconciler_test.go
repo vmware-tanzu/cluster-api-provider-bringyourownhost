@@ -3,8 +3,6 @@ package reconciler
 import (
 	"context"
 	"errors"
-	"os"
-	"path/filepath"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -250,7 +248,7 @@ runCmd:
 				Expect(fakeCommandRunner.RunCmdArgsForCall(0)).To(Equal(KubeadmResetCommand))
 
 				updatedByoHost := &infrastructurev1alpha4.ByoHost{}
-				err = k8sClient.Get(ctx, byoHostLookupKey, updatedByoHost)
+				err := k8sClient.Get(ctx, byoHostLookupKey, updatedByoHost)
 				Expect(err).ToNot(HaveOccurred())
 
 				Expect(updatedByoHost.Labels).NotTo(HaveKey(clusterv1.ClusterLabelName))
