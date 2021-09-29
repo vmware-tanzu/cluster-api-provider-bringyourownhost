@@ -1,7 +1,7 @@
 package cloudinit
 
 import (
-	"fmt"
+	"os"
 	"os/exec"
 )
 
@@ -15,7 +15,6 @@ type CmdRunner struct {
 
 func (r CmdRunner) RunCmd(cmd string) error {
 	command := exec.Command("/bin/sh", "-c", cmd)
-	output, err := command.Output()
-	fmt.Println(string(output))
-	return err
+	command.Stderr = os.Stderr
+	return command.Run()
 }
