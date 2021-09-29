@@ -3,6 +3,8 @@ package reconciler
 import (
 	"context"
 	"errors"
+	"os"
+	"path/filepath"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -235,6 +237,15 @@ runCmd:
 				byoHost.Annotations = map[string]string{hostCleanupAnnotation: ""}
 				conditions.MarkTrue(byoHost, infrastructurev1alpha4.K8sNodeBootstrapSucceeded)
 				Expect(patchHelper.Patch(ctx, byoHost, patch.WithStatusObservedGeneration{})).NotTo(HaveOccurred())
+
+				dir := filepath.Dir(bootstrapSentinelFile)
+				err := os.MkdirAll(dir, 0644)
+				Expect(err).NotTo(HaveOccurred())
+
+				f, err := os.Create(bootstrapSentinelFile)
+				Expect(err).NotTo(HaveOccurred())
+				defer f.Close()
+
 			})
 
 			It("should reset the node and set the Reason to K8sNodeAbsentReason", func() {
@@ -247,8 +258,11 @@ runCmd:
 				Expect(fakeCommandRunner.RunCmdCallCount()).To(Equal(1))
 				Expect(fakeCommandRunner.RunCmdArgsForCall(0)).To(Equal(KubeadmResetCommand))
 
+				_, err := os.Stat(bootstrapSentinelFile)
+				Expect(os.IsNotExist(err)).To(BeTrue())
+
 				updatedByoHost := &infrastructurev1alpha4.ByoHost{}
-				err := k8sClient.Get(ctx, byoHostLookupKey, updatedByoHost)
+				err = k8sClient.Get(ctx, byoHostLookupKey, updatedByoHost)
 				Expect(err).ToNot(HaveOccurred())
 
 				Expect(updatedByoHost.Labels).NotTo(HaveKey(clusterv1.ClusterLabelName))
