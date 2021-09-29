@@ -13,6 +13,8 @@ spec:
     kind: ByoCluster
     listKind: ByoClusterList
     plural: byoclusters
+    shortNames:
+    - byoc
     singular: byocluster
   scope: Namespaced
   versions:
