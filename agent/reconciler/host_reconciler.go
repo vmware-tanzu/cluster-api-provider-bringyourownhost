@@ -2,6 +2,7 @@ package reconciler
 
 import (
 	"context"
+	"os"
 
 	"github.com/pkg/errors"
 	"github.com/vmware-tanzu/cluster-api-provider-byoh/agent/cloudinit"
@@ -28,6 +29,7 @@ type HostReconciler struct {
 const (
 	hostCleanupAnnotation = "byoh.infrastructure.cluster.x-k8s.io/unregistering"
 	KubeadmResetCommand   = "kubeadm reset --force"
+	bootstrapSentinelFile = "/run/cluster-api/bootstrap-success.complete"
 )
 
 func (r *HostReconciler) Reconcile(ctx context.Context, req ctrl.Request) (_ ctrl.Result, reterr error) {
@@ -129,6 +131,14 @@ func (r HostReconciler) hostCleanUp(ctx context.Context, byoHost *infrastructure
 	err := r.resetNode()
 	if err != nil {
 		return err
+	}
+
+	klog.Info("Removing the bootstrap sentinel file...")
+	if _, err := os.Stat(bootstrapSentinelFile); !os.IsNotExist(err) {
+		err := os.Remove(bootstrapSentinelFile)
+		if err != nil {
+			return errors.Wrapf(err, "failed to delete sentinel file %s", bootstrapSentinelFile)
+		}
 	}
 
 	// Remove host reservation.
