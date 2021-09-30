@@ -232,7 +232,7 @@ runCmd:
 					APIVersion: byoHost.APIVersion,
 				}
 				byoHost.Labels = map[string]string{clusterv1.ClusterLabelName: "test-cluster"}
-				byoHost.Annotations = map[string]string{hostCleanupAnnotation: ""}
+				byoHost.Annotations = map[string]string{infrastructurev1alpha4.HostCleanupAnnotation: ""}
 				conditions.MarkTrue(byoHost, infrastructurev1alpha4.K8sNodeBootstrapSucceeded)
 				Expect(patchHelper.Patch(ctx, byoHost, patch.WithStatusObservedGeneration{})).NotTo(HaveOccurred())
 			})
@@ -253,7 +253,7 @@ runCmd:
 
 				Expect(updatedByoHost.Labels).NotTo(HaveKey(clusterv1.ClusterLabelName))
 				Expect(updatedByoHost.Status.MachineRef).To(BeNil())
-				Expect(updatedByoHost.Annotations).NotTo(HaveKey(hostCleanupAnnotation))
+				Expect(updatedByoHost.Annotations).NotTo(HaveKey(infrastructurev1alpha4.HostCleanupAnnotation))
 				k8sNodeBootstrapSucceeded := conditions.Get(updatedByoHost, infrastructurev1alpha4.K8sNodeBootstrapSucceeded)
 				Expect(*k8sNodeBootstrapSucceeded).To(conditions.MatchCondition(clusterv1.Condition{
 					Type:     infrastructurev1alpha4.K8sNodeBootstrapSucceeded,
