@@ -53,7 +53,6 @@ import (
 const (
 	providerIDPrefix       = "byoh://"
 	providerIDSuffixLength = 6
-	hostCleanupAnnotation  = "byoh.infrastructure.cluster.x-k8s.io/unregistering"
 	hostMachineRefIndex    = "status.machineref"
 	RequeueForbyohost      = 10 * time.Second
 )
@@ -432,6 +431,10 @@ func (r *ByoMachineReconciler) attachByoHost(ctx context.Context, logger logr.Lo
 		Namespace: machineScope.ByoMachine.Namespace,
 		Name:      *machineScope.Machine.Spec.Bootstrap.DataSecretName,
 	}
+	if host.Annotations == nil {
+		host.Annotations = make(map[string]string)
+	}
+	host.Annotations[infrav1.EndPointIPAnnotation] = machineScope.Cluster.Spec.ControlPlaneEndpoint.Host
 
 	err = byohostHelper.Patch(ctx, &host)
 	if err != nil {
@@ -480,7 +483,7 @@ func (r *ByoMachineReconciler) markHostForCleanup(ctx context.Context, machineSc
 	if machineScope.ByoHost.Annotations == nil {
 		machineScope.ByoHost.Annotations = map[string]string{}
 	}
-	machineScope.ByoHost.Annotations[hostCleanupAnnotation] = ""
+	machineScope.ByoHost.Annotations[infrav1.HostCleanupAnnotation] = ""
 
 	// Issue the patch.
 	return helper.Patch(ctx, machineScope.ByoHost)

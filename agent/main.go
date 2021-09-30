@@ -58,8 +58,8 @@ func main() {
 		return
 	}
 
-	hostRegistrar := &registration.HostRegistrar{K8sClient: k8sClient}
-	err = hostRegistrar.Register(hostName, namespace)
+	registration.LocalHostRegistrar = &registration.HostRegistrar{K8sClient: k8sClient}
+	err = registration.LocalHostRegistrar.Register(hostName, namespace)
 	if err != nil {
 		klog.Errorf("error registering host %s registration in namespace %s, err=%v", hostName, namespace, err)
 		return
@@ -90,7 +90,7 @@ func main() {
 		FileWriter: cloudinit.FileWriter{},
 		TemplateParser: cloudinit.TemplateParser{
 			Template: registration.HostInfo{
-				DefaultNetworkName: hostRegistrar.ByoHostInfo.DefaultNetworkName,
+				DefaultNetworkName: registration.LocalHostRegistrar.ByoHostInfo.DefaultNetworkName,
 			},
 		},
 	}
