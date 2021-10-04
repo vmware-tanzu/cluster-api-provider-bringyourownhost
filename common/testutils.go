@@ -40,6 +40,7 @@ func NewByoMachine(byoMachineName, byoMachineNamespace, clusterName string, mach
 }
 
 func NewMachine(machineName, namespace, clusterName string) *clusterv1.Machine {
+	testClusterVersion := "1.22"
 	machine := &clusterv1.Machine{
 		TypeMeta: metav1.TypeMeta{
 			Kind:       "Machine",
@@ -51,6 +52,7 @@ func NewMachine(machineName, namespace, clusterName string) *clusterv1.Machine {
 		},
 		Spec: clusterv1.MachineSpec{
 			ClusterName: clusterName,
+			Version:     &testClusterVersion,
 		},
 	}
 	return machine
