@@ -8,7 +8,6 @@ import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	infrastructurev1alpha4 "github.com/vmware-tanzu/cluster-api-provider-byoh/apis/infrastructure/v1alpha4"
-	infrav1 "github.com/vmware-tanzu/cluster-api-provider-byoh/apis/infrastructure/v1alpha4"
 	"github.com/vmware-tanzu/cluster-api-provider-byoh/common"
 	corev1 "k8s.io/api/core/v1"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -162,7 +161,7 @@ var _ = Describe("Controllers/ByomachineController", func() {
 				// Assert annotations on byohost
 				testClusterVersion := "1.22"
 				createdByoHostAnnotations := createdByoHost.GetAnnotations()
-				Expect(createdByoHostAnnotations[infrav1.ClusterVersionAnnotation]).To(Equal(testClusterVersion))
+				Expect(createdByoHostAnnotations[infrastructurev1alpha4.ClusterVersionAnnotation]).To(Equal(testClusterVersion))
 
 				createdByoMachine := &infrastructurev1alpha4.ByoMachine{}
 				err = k8sClientUncached.Get(ctx, byoMachineLookupKey, createdByoMachine)
