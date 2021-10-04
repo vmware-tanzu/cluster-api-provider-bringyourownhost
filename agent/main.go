@@ -37,16 +37,35 @@ func (l *labelFlags) String() string {
 	return strings.Join(result, ",")
 }
 
+// nolint: gomnd
 // Set implements flag.Value interface
 func (l *labelFlags) Set(value string) error {
-	// nolint: gomnd
-	parts := strings.SplitN(value, "=", 2)
-	// nolint: gomnd
-	if len(parts) < 2 {
-		return fmt.Errorf("invalid argument value. expect key=value, got %s", value)
+	// account for comma-separated key-value pairs in a single invocation
+	if len(strings.Split(value, ",")) > 1 {
+		for _, s := range strings.Split(value, ",") {
+			if s == "" {
+				continue
+			}
+			parts := strings.SplitN(s, "=", 2)
+			if len(parts) < 2 {
+				return fmt.Errorf("invalid argument value. expect key=value, got %s", value)
+			}
+			k := strings.TrimSpace(parts[0])
+			v := strings.TrimSpace(parts[1])
+			(*l)[k] = v
+		}
+		return nil
+	} else {
+		// account for only one key-value pair in a single invocation
+		parts := strings.SplitN(value, "=", 2)
+		if len(parts) < 2 {
+			return fmt.Errorf("invalid argument value. expect key=value, got %s", value)
+		}
+		k := strings.TrimSpace(parts[0])
+		v := strings.TrimSpace(parts[1])
+		(*l)[k] = v
+		return nil
 	}
-	(*l)[parts[0]] = parts[1]
-	return nil
 }
 
 var (
@@ -59,7 +78,7 @@ var (
 
 func main() {
 	flag.StringVar(&namespace, "namespace", "default", "Namespace in the management cluster where you would like to register this host")
-	flag.Var(&labels, "label", "labels to attach to the ByoHost CR in the form labelname=labelVal for e.g. 'site=apac'")
+	flag.Var(&labels, "label", "labels to attach to the ByoHost CR in the form labelname=labelVal for e.g. '--label site=apac --label cores=2'")
 	klog.InitFlags(nil)
 	flag.Parse()
 	scheme = runtime.NewScheme()
