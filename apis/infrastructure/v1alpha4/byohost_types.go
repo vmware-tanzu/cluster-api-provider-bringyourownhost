@@ -25,7 +25,7 @@ import (
 const (
 	HostCleanupAnnotation = "byoh.infrastructure.cluster.x-k8s.io/unregistering"
 	EndPointIPAnnotation  = "byoh.infrastructure.cluster.x-k8s.io/endpointip"
-	K8sVersionAnnotation  = "byoh.infrastructure.cluster.x-k8s.io/clusterversion"
+	K8sVersionAnnotation  = "byoh.infrastructure.cluster.x-k8s.io/k8sversion"
 )
 
 // EDIT THIS FILE!  THIS IS SCAFFOLDING FOR YOU TO OWN!
