@@ -158,10 +158,15 @@ func (r HostReconciler) hostCleanUp(ctx context.Context, byoHost *infrastructure
 
 	// Remove cluster-name label
 	delete(byoHost.Labels, v1alpha4.ClusterLabelName)
+
 	// Remove the EndPointIP annotation
 	delete(byoHost.Annotations, infrastructurev1alpha4.EndPointIPAnnotation)
+
 	// Remove the cleanup annotation
 	delete(byoHost.Annotations, infrastructurev1alpha4.HostCleanupAnnotation)
+
+	// Remove the cluster version annotation
+	delete(byoHost.Annotations, infrastructurev1alpha4.ClusterVersionAnnotation)
 
 	conditions.MarkFalse(byoHost, infrastructurev1alpha4.K8sNodeBootstrapSucceeded, infrastructurev1alpha4.K8sNodeAbsentReason, v1alpha4.ConditionSeverityInfo, "")
 	return nil
