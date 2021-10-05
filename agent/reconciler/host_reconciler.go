@@ -92,6 +92,14 @@ func (r *HostReconciler) reconcileNormal(ctx context.Context, byoHost *infrastru
 			klog.Errorf("error getting bootstrap script, err=%v", err)
 			return ctrl.Result{}, err
 		}
+
+		err = r.installK8sComponents(byoHost)
+		if err != nil {
+			klog.Errorf("error in installing k8s components, err=%v", err)
+			conditions.MarkFalse(byoHost, infrastructurev1alpha4.K8sComponentsInstallationSucceeded, infrastructurev1alpha4.K8sComponentsInstallationFailedReason, v1alpha4.ConditionSeverityInfo, "")
+			return ctrl.Result{}, err
+		}
+
 		err = r.bootstrapK8sNode(bootstrapScript, byoHost)
 		if err != nil {
 			klog.Errorf("error in bootstrapping k8s node, err=%v", err)
@@ -166,7 +174,7 @@ func (r HostReconciler) hostCleanUp(ctx context.Context, byoHost *infrastructure
 	delete(byoHost.Annotations, infrastructurev1alpha4.HostCleanupAnnotation)
 
 	// Remove the cluster version annotation
-	delete(byoHost.Annotations, infrastructurev1alpha4.ClusterVersionAnnotation)
+	delete(byoHost.Annotations, infrastructurev1alpha4.K8sVersionAnnotation)
 
 	conditions.MarkFalse(byoHost, infrastructurev1alpha4.K8sNodeBootstrapSucceeded, infrastructurev1alpha4.K8sNodeAbsentReason, v1alpha4.ConditionSeverityInfo, "")
 	return nil
@@ -189,4 +197,13 @@ func (r *HostReconciler) bootstrapK8sNode(bootstrapScript string, byoHost *infra
 		WriteFilesExecutor:    r.FileWriter,
 		RunCmdExecutor:        r.CmdRunner,
 		ParseTemplateExecutor: r.TemplateParser}.Execute(bootstrapScript)
+}
+
+func (r *HostReconciler) installK8sComponents(byoHost *infrastructurev1alpha4.ByoHost) error {
+	conditions.MarkFalse(byoHost, infrastructurev1alpha4.K8sComponentsInstallationSucceeded, infrastructurev1alpha4.K8sComponentsInstallingReason, v1alpha4.ConditionSeverityInfo, "")
+	// TODO: call installer.Install(k8sVersion) here
+	// if err, return err
+
+	conditions.MarkTrue(byoHost, infrastructurev1alpha4.K8sComponentsInstallationSucceeded)
+	return nil
 }
