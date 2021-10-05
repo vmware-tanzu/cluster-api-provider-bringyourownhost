@@ -161,7 +161,7 @@ var _ = Describe("Controllers/ByomachineController", func() {
 				// Assert annotations on byohost
 				testClusterVersion := "1.22"
 				createdByoHostAnnotations := createdByoHost.GetAnnotations()
-				Expect(createdByoHostAnnotations[infrastructurev1alpha4.ClusterVersionAnnotation]).To(Equal(testClusterVersion))
+				Expect(createdByoHostAnnotations[infrastructurev1alpha4.K8sVersionAnnotation]).To(Equal(testClusterVersion))
 
 				createdByoMachine := &infrastructurev1alpha4.ByoMachine{}
 				err = k8sClientUncached.Get(ctx, byoMachineLookupKey, createdByoMachine)
