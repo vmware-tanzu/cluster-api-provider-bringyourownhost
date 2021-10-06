@@ -154,6 +154,15 @@ var _ = Describe("Controllers/ByomachineController", func() {
 				Expect(createdByoHost.Status.MachineRef.Namespace).To(Equal(byoMachine.Namespace))
 				Expect(createdByoHost.Status.MachineRef.Name).To(Equal(byoMachine.Name))
 
+				// Assert labels on byohost
+				createdByoHostLabels := createdByoHost.GetLabels()
+				Expect(createdByoHostLabels[clusterv1.ClusterLabelName]).To(Equal(capiCluster.Name))
+
+				// Assert annotations on byohost
+				testClusterVersion := "1.22"
+				createdByoHostAnnotations := createdByoHost.GetAnnotations()
+				Expect(createdByoHostAnnotations[infrastructurev1alpha4.K8sVersionAnnotation]).To(Equal(testClusterVersion))
+
 				createdByoMachine := &infrastructurev1alpha4.ByoMachine{}
 				err = k8sClientUncached.Get(ctx, byoMachineLookupKey, createdByoMachine)
 				Expect(err).ToNot(HaveOccurred())
