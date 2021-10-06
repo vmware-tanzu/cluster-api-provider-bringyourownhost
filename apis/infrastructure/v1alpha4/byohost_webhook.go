@@ -27,7 +27,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/webhook"
 )
 
-// log is for logging in this package.
+// log is for logging in this package
 var byohostlog = logf.Log.WithName("byohost-resource")
 
 func (h *ByoHost) SetupWebhookWithManager(mgr ctrl.Manager) error {

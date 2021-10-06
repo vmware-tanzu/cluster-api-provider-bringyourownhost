@@ -27,6 +27,9 @@ type HostRegistrar struct {
 	ByoHostInfo HostInfo
 }
 
+// Register is called on agent startup
+// This function registers the byohost as available capacity in the management cluster
+// If the CR is already present, we consider this to be a restart / reboot of the agent process
 func (hr *HostRegistrar) Register(hostName, namespace string, hostLabels map[string]string) error {
 	ctx := context.TODO()
 	byoHost := &infrastructurev1alpha4.ByoHost{}
