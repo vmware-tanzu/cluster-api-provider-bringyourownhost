@@ -435,6 +435,7 @@ func (r *ByoMachineReconciler) attachByoHost(ctx context.Context, logger logr.Lo
 		host.Annotations = make(map[string]string)
 	}
 	host.Annotations[infrav1.EndPointIPAnnotation] = machineScope.Cluster.Spec.ControlPlaneEndpoint.Host
+	host.Annotations[infrav1.K8sVersionAnnotation] = *machineScope.Machine.Spec.Version
 
 	err = byohostHelper.Patch(ctx, &host)
 	if err != nil {

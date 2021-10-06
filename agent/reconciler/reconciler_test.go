@@ -117,7 +117,7 @@ var _ = Describe("Byohost Agent Tests", func() {
 				}))
 			})
 
-			It("return an error if we fail to load the bootstrap secret", func() {
+			It("should return an error if we fail to load the bootstrap secret", func() {
 				byoHost.Spec.BootstrapSecret = &corev1.ObjectReference{
 					Kind:      "Secret",
 					Namespace: "non-existent",
@@ -232,7 +232,10 @@ runCmd:
 					APIVersion: byoHost.APIVersion,
 				}
 				byoHost.Labels = map[string]string{clusterv1.ClusterLabelName: "test-cluster"}
-				byoHost.Annotations = map[string]string{infrastructurev1alpha4.HostCleanupAnnotation: ""}
+				byoHost.Annotations = map[string]string{
+					infrastructurev1alpha4.HostCleanupAnnotation: "",
+					infrastructurev1alpha4.K8sVersionAnnotation:  "1.22",
+				}
 				conditions.MarkTrue(byoHost, infrastructurev1alpha4.K8sNodeBootstrapSucceeded)
 				Expect(patchHelper.Patch(ctx, byoHost, patch.WithStatusObservedGeneration{})).NotTo(HaveOccurred())
 			})
@@ -254,6 +257,9 @@ runCmd:
 				Expect(updatedByoHost.Labels).NotTo(HaveKey(clusterv1.ClusterLabelName))
 				Expect(updatedByoHost.Status.MachineRef).To(BeNil())
 				Expect(updatedByoHost.Annotations).NotTo(HaveKey(infrastructurev1alpha4.HostCleanupAnnotation))
+				Expect(updatedByoHost.Annotations).NotTo(HaveKey(infrastructurev1alpha4.EndPointIPAnnotation))
+				Expect(updatedByoHost.Annotations).NotTo(HaveKey(infrastructurev1alpha4.K8sVersionAnnotation))
+
 				k8sNodeBootstrapSucceeded := conditions.Get(updatedByoHost, infrastructurev1alpha4.K8sNodeBootstrapSucceeded)
 				Expect(*k8sNodeBootstrapSucceeded).To(conditions.MatchCondition(clusterv1.Condition{
 					Type:     infrastructurev1alpha4.K8sNodeBootstrapSucceeded,
