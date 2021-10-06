@@ -36,7 +36,6 @@ var _ = Describe("Byohost Installer Tests", func() {
 		It("Should return string in normalized format and work with OS names with more than one word", func() {
 			os = "Red Hat Enterprise Linux"
 			ver = "8.1"
-			arch = "x64"
 			expectedDetectedOS := strings.ReplaceAll(os+"_"+ver+"_"+arch, " ", "_")
 			detectedOS, err = d.delegateDetect(func() (string, error) { return d.mockHostSystemInfo(os, ver, arch) })
 			Expect(err).ShouldNot((HaveOccurred()))

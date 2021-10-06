@@ -8,7 +8,7 @@ import (
 )
 
 const (
-	osNotDetected = "Could not detect OS correctly."
+	osNotDetected = "Could not detect OS correctly"
 )
 
 // oSDetector contains all the logic for detecting the OS version.
@@ -105,19 +105,19 @@ func (osd *osDetector) filterSystemInfo(systemInfo string) [3]string {
 
 	var os, ver, arch string
 
-	osRegex := regexp.MustCompile(strIndicatingOSline + `[a-zA-Z]+[ a-zA-z]*[a-zA-Z]+`)
+	osRegex := regexp.MustCompile(strIndicatingOSline + `[a-zA-Z]+[ a-zA-Z]*[a-zA-Z]+`)
 	locOS := osRegex.FindIndex([]byte(systemInfo))
 	if locOS != nil {
 		os = systemInfo[locOS[0]+len(strIndicatingOSline) : locOS[1]]
 	}
 
-	verRegex := regexp.MustCompile(strIndicatingOSline + `[a-zA-Z]+[ a-zA-z]* ([0-9]+(\.[0-9]+)*)`)
+	verRegex := regexp.MustCompile(strIndicatingOSline + `[a-zA-Z]+[ a-zA-Z]* ([0-9]+(\.[0-9]+)*)`)
 	locVer := verRegex.FindIndex([]byte(systemInfo))
 	if locVer != nil {
 		ver = systemInfo[locOS[1]+1 : locVer[1]]
 	}
 
-	archRegex := regexp.MustCompile(strIndicatingArchline + `[a-zA-Z]+[ a-zA-z0-9-]*`)
+	archRegex := regexp.MustCompile(strIndicatingArchline + `[a-zA-Z]+[ a-zA-Z0-9-]*`)
 	locArch := archRegex.FindIndex([]byte(systemInfo))
 	if locArch != nil {
 		arch = systemInfo[locArch[0]+len(strIndicatingArchline) : locArch[1]]

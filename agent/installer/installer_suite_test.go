@@ -7,9 +7,9 @@ import (
 	. "github.com/onsi/gomega"
 )
 
-func TestOSDetector(t *testing.T) {
+func TestInstaller(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "osDetector Suite")
+	RunSpecs(t, "Installer Suite")
 }
 
 var (
@@ -31,11 +31,5 @@ func (osd *osDetector) mockHostSystemInfo(os, ver, arch string) (string, error) 
 		"           Kernel: Linux 5.11.0-27-generic\n" +
 		"     Architecture: " + archMap[arch] + "\n"
 
-	return string(out), nil
+	return out, nil
 }
-
-var _ = BeforeSuite(func() {
-})
-
-var _ = AfterSuite(func() {
-})
