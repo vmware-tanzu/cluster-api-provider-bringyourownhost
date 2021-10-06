@@ -89,7 +89,7 @@ type ByoMachineReconciler struct {
 func (r *ByoMachineReconciler) Reconcile(ctx context.Context, req ctrl.Request) (_ ctrl.Result, reterr error) {
 	logger := log.FromContext(ctx).WithValues("namespace", req.Namespace, "BYOMachine", req.Name)
 
-	// Fetch the ByoMachine instance.
+	// Fetch the ByoMachine instance
 	byoMachine := &infrav1.ByoMachine{}
 	err := r.Client.Get(ctx, req.NamespacedName, byoMachine)
 	if err != nil {
@@ -99,7 +99,7 @@ func (r *ByoMachineReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 		return ctrl.Result{}, err
 	}
 
-	// Fetch the Machine.
+	// Fetch the Machine
 	machine, err := util.GetOwnerMachine(ctx, r.Client, byoMachine.ObjectMeta)
 	if err != nil {
 		logger.Error(err, "failed to get Owner Machine")
@@ -111,7 +111,7 @@ func (r *ByoMachineReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 		return ctrl.Result{}, nil
 	}
 
-	// Fetch the Cluster.
+	// Fetch the Cluster
 	cluster, err := util.GetClusterFromMetadata(ctx, r.Client, byoMachine.ObjectMeta)
 	if err != nil {
 		logger.Error(err, "ByoMachine owner Machine is missing cluster label or cluster does not exist")
@@ -159,7 +159,7 @@ func (r *ByoMachineReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 		return ctrl.Result{}, err
 	}
 
-	// Return early if the object or Cluster is paused.
+	// Return early if the object or Cluster is paused
 	if annotations.IsPaused(cluster, byoMachine) {
 		logger.Info("byoMachine or linked Cluster is marked as paused. Won't reconcile")
 		if machineScope.ByoHost != nil {
@@ -218,7 +218,7 @@ func (r *ByoMachineReconciler) reconcileNormal(ctx context.Context, machineScope
 	}
 
 	// If there is not yet an byoHost for this byoMachine,
-	// then pick one from the host capacity pool.
+	// then pick one from the host capacity pool
 	if machineScope.ByoHost == nil {
 		logger.Info("Attempting host reservation")
 		if res, err := r.attachByoHost(ctx, logger, machineScope); err != nil {
@@ -257,7 +257,7 @@ func (r *ByoMachineReconciler) SetupWithManager(ctx context.Context, mgr ctrl.Ma
 	logger := ctrl.LoggerFrom(ctx)
 	ClusterToByoMachines := r.ClusterToByoMachines(logger)
 
-	// Add index to BYOHost for listing by Machine reference.
+	// Add index to BYOHost for listing by Machine reference
 	if err := mgr.GetCache().IndexField(context.Background(), &infrav1.ByoHost{},
 		hostMachineRefIndex,
 		r.indexByoHostByMachineRef,
@@ -271,7 +271,7 @@ func (r *ByoMachineReconciler) SetupWithManager(ctx context.Context, mgr ctrl.Ma
 			&source.Kind{Type: &infrav1.ByoHost{}},
 			handler.EnqueueRequestsFromMapFunc(ByoHostToByoMachineMapFunc(controlledTypeGVK)),
 		).
-		// Watch the CAPI resource that owns this infrastructure resource.
+		// Watch the CAPI resource that owns this infrastructure resource
 		Watches(
 			&source.Kind{Type: &clusterv1.Machine{}},
 			handler.EnqueueRequestsFromMapFunc(util.MachineToInfrastructureMapFunc(controlledTypeGVK)),
@@ -285,7 +285,7 @@ func (r *ByoMachineReconciler) SetupWithManager(ctx context.Context, mgr ctrl.Ma
 }
 
 // ClusterToByoMachines is a handler.ToRequestsFunc to be used to enqeue requests for reconciliation
-// of ByoMachines.
+// of ByoMachines
 func (r *ByoMachineReconciler) ClusterToByoMachines(logger logr.Logger) handler.MapFunc {
 	return func(o client.Object) []ctrl.Request {
 		c, ok := o.(*clusterv1.Cluster)
@@ -448,7 +448,7 @@ func (r *ByoMachineReconciler) attachByoHost(ctx context.Context, logger logr.Lo
 }
 
 // MachineToInfrastructureMapFunc returns a handler.ToRequestsFunc that watches for
-// Machine events and returns reconciliation requests for an infrastructure provider object.
+// Machine events and returns reconciliation requests for an infrastructure provider object
 func ByoHostToByoMachineMapFunc(gvk schema.GroupVersionKind) handler.MapFunc {
 	return func(o client.Object) []reconcile.Request {
 		h, ok := o.(*infrav1.ByoHost)
@@ -456,12 +456,12 @@ func ByoHostToByoMachineMapFunc(gvk schema.GroupVersionKind) handler.MapFunc {
 			return nil
 		}
 		if h.Status.MachineRef == nil {
-			// TODO, we can enqueue byomachine which provideID is nil to get better performance than requeue
+			// TODO, we can enqueue byomachine which providerID is nil to get better performance than requeue
 			return nil
 		}
 
 		gk := gvk.GroupKind()
-		// Return early if the GroupKind doesn't match what we expect.
+		// Return early if the GroupKind doesn't match what we expect
 		byomachineGK := h.Status.MachineRef.GroupVersionKind().GroupKind()
 		if gk != byomachineGK {
 			return nil
@@ -486,7 +486,7 @@ func (r *ByoMachineReconciler) markHostForCleanup(ctx context.Context, machineSc
 	}
 	machineScope.ByoHost.Annotations[infrav1.HostCleanupAnnotation] = ""
 
-	// Issue the patch.
+	// Issue the patch for byohost
 	return helper.Patch(ctx, machineScope.ByoHost)
 }
 
