@@ -58,6 +58,9 @@ agent-test:
 controller-test:
 	source ./scripts/fetch_ext_bins.sh; fetch_tools; setup_envs; ginkgo --randomizeAllSpecs controllers/infrastructure -coverprofile cover.out
 
+installer-test:
+	source ./scripts/fetch_ext_bins.sh; fetch_tools; setup_envs; ginkgo --randomizeAllSpecs -r installer -coverprofile cover.out
+
 ##@ General
 
 # The help target prints out all targets with their descriptions organized

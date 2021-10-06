@@ -1,49 +1,68 @@
-package hainstaller
+package installer
 
 import (
 	"errors"
-	"log"
 	"os/exec"
+	"regexp"
 	"strings"
 )
 
+const (
+	osNotDetected = "Could not detect OS correctly."
+)
+
 // oSDetector contains all the logic for detecting the OS version.
-type oSDetector struct {
+type osDetector struct {
+	normalizedOS string
 }
 
 // newOSDetector is a constructor for OSDetector
-func newOSDetector() *oSDetector {
-	return &oSDetector{}
+func newOSDetector() *osDetector {
+	return &osDetector{""}
 }
 
 // detect returns the os info in normalized format.
 // The format is as follows: <os>_<ver>_<arch>
 // Example with Ubuntu 21.04.3 64bit: Ubuntu_20.04.3_x64
-func (osd *oSDetector) detect() (string, error) {
-	systemInfo, err := osd.getHostSystemInfo()
+func (osd *osDetector) detect() (string, error) {
+
+	return osd.delegateDetect(func() (string, error) { return osd.getHostSystemInfo() })
+}
+
+// delegateDetect is a helper method to enable testing of detect with mock methods.
+func (osd *osDetector) delegateDetect(f func() (string, error)) (string, error) {
+	if osd.normalizedOS != "" {
+		return osd.normalizedOS, nil
+	}
+
+	systemInfo, err := f()
 	if err != nil {
 		return "", err
 	}
-	os, ver, arch := osd.filterSystemInfo(systemInfo)
+	osDetails := osd.filterSystemInfo(systemInfo)
+	os := osDetails[0]
+	ver := osDetails[1]
+	arch := osDetails[2]
 	if os == "" || ver == "" || arch == "" {
-		err := "Could not detect OS correctly."
-		log.Print(err)
-		return "", errors.New(err)
+		return "", errors.New(osNotDetected)
 	}
 
-	normalizedOS := osd.normalizeOsName(os, ver, arch)
+	normalizedOS := osd.normalizeOSName(os, ver, arch)
+	osd.normalizedOS = normalizedOS
 	return normalizedOS, nil
 }
 
 // normalizeOsName normalizes given os, arch and k8s version to the correct format.
 // Takes as arguments os, ver and arch then returns string in the format <os>_<ver>_<arch>
-func (osd *oSDetector) normalizeOsName(os, ver, arch string) string {
-	osName := os + " " + ver
-	if arch == "x86-64" {
-		osName += "_x64"
-	} else {
-		osName += "_x32"
+func (osd *osDetector) normalizeOSName(os, ver, arch string) string {
+	archMap := map[string]string{
+		"x86-64": "x64",
+		"i686":   "x32",
+		"arm":    "arm",
 	}
+	osName := os + " " + ver
+
+	osName = osName + "_" + archMap[arch]
 
 	osName = strings.ReplaceAll(osName, " ", "_")
 
@@ -69,11 +88,10 @@ func (osd *oSDetector) normalizeOsName(os, ver, arch string) string {
 // Operating System: Ubuntu 20.04.3 LTS
 //           Kernel: Linux 5.11.0-27-generic
 //     Architecture: x86-64
-func (osd *oSDetector) getHostSystemInfo() (string, error) {
+func (osd *osDetector) getHostSystemInfo() (string, error) {
 	out, err := exec.Command("hostnamectl").Output()
 
 	if err != nil {
-		log.Print(err)
 		return "", err
 	}
 
@@ -81,21 +99,29 @@ func (osd *oSDetector) getHostSystemInfo() (string, error) {
 }
 
 // Method that extracts the important information from getHostSystemInfo.
-func (osd *oSDetector) filterSystemInfo(systemInfo string) (string, string, string) {
+func (osd *osDetector) filterSystemInfo(systemInfo string) [3]string {
 	const strIndicatingOSline string = "Operating System: "
 	const strIndicatingArchline string = "Architecture: "
+
 	var os, ver, arch string
 
-	i := strings.LastIndex(systemInfo, strIndicatingOSline) + len(strIndicatingOSline)
-	for ; !(systemInfo[i] >= '0' && systemInfo[i] <= '9') && systemInfo[i] != '\n'; i++ {
-		os += string(systemInfo[i])
+	osRegex := regexp.MustCompile(strIndicatingOSline + `[a-zA-Z]+[ a-zA-z]*[a-zA-Z]+`)
+	locOS := osRegex.FindIndex([]byte(systemInfo))
+	if locOS != nil {
+		os = systemInfo[locOS[0]+len(strIndicatingOSline) : locOS[1]]
 	}
-	for ; (systemInfo[i] >= '0' && systemInfo[i] <= '9') || systemInfo[i] == '.'; i++ {
-		ver += string(systemInfo[i])
+
+	verRegex := regexp.MustCompile(strIndicatingOSline + `[a-zA-Z]+[ a-zA-z]* ([0-9]+(\.[0-9]+)*)`)
+	locVer := verRegex.FindIndex([]byte(systemInfo))
+	if locVer != nil {
+		ver = systemInfo[locOS[1]+1 : locVer[1]]
 	}
-	i = strings.LastIndex(systemInfo, strIndicatingArchline) + len(strIndicatingArchline)
-	for ; systemInfo[i] != '\n'; i++ {
-		arch += string(systemInfo[i])
+
+	archRegex := regexp.MustCompile(strIndicatingArchline + `[a-zA-Z]+[ a-zA-z0-9-]*`)
+	locArch := archRegex.FindIndex([]byte(systemInfo))
+	if locArch != nil {
+		arch = systemInfo[locArch[0]+len(strIndicatingArchline) : locArch[1]]
 	}
-	return strings.TrimSpace(os), ver, arch
+
+	return [3]string{os, ver, arch}
 }
