@@ -50,7 +50,7 @@ SHELL = /usr/bin/env bash -o pipefail
 all: build
 
 # Run tests
-test: generate fmt vet manifests controller-test agent-test webhook-test
+test: generate fmt vet manifests controller-test agent-test webhook-test installer-test
 
 agent-test:
 	source ./scripts/fetch_ext_bins.sh; fetch_tools; setup_envs; ginkgo --randomizeAllSpecs -r agent -coverprofile cover.out
@@ -62,7 +62,7 @@ webhook-test:
 	source ./scripts/fetch_ext_bins.sh; fetch_tools; setup_envs; ginkgo apis/infrastructure/v1alpha4 -coverprofile cover.out
 
 installer-test:
-	source ./scripts/fetch_ext_bins.sh; fetch_tools; setup_envs; ginkgo --randomizeAllSpecs -r installer -coverprofile cover.out
+	source ./scripts/fetch_ext_bins.sh; fetch_tools; setup_envs; ginkgo --randomizeAllSpecs agent/installer -coverprofile cover.out
 
 ##@ General
 
