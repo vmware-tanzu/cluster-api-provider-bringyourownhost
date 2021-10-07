@@ -87,8 +87,9 @@ type ByoMachineReconciler struct {
 // Reconcile handles ByoMachine events
 // nolint: gocyclo
 func (r *ByoMachineReconciler) Reconcile(ctx context.Context, req ctrl.Request) (_ ctrl.Result, reterr error) {
-	logger := log.FromContext(ctx).WithValues("namespace", req.Namespace, "BYOMachine", req.Name)
-
+	logger := log.FromContext(ctx)
+	logger.Info("Reconcile request received")
+  
 	// Fetch the ByoMachine instance
 	byoMachine := &infrav1.ByoMachine{}
 	err := r.Client.Get(ctx, req.NamespacedName, byoMachine)
@@ -122,7 +123,7 @@ func (r *ByoMachineReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 		logger.Info(fmt.Sprintf("Please associate this machine with a cluster using the label %s: <name of cluster>", clusterv1.ClusterLabelName))
 		return ctrl.Result{}, nil
 	}
-
+	logger = logger.WithValues("cluster", cluster.Name)
 	helper, _ := patch.NewHelper(byoMachine, r.Client)
 	defer func() {
 		if err = helper.Patch(ctx, byoMachine); err != nil && reterr == nil {
@@ -181,8 +182,11 @@ func (r *ByoMachineReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 }
 
 func (r *ByoMachineReconciler) reconcileDelete(ctx context.Context, machineScope *byoMachineScope) (reconcile.Result, error) {
+	logger := log.FromContext(ctx).WithValues("cluster", machineScope.Cluster.Name)
+	logger.Info("Deleting ByoMachine")
 	if machineScope.ByoHost != nil {
 		// Add annotation to trigger host cleanup
+		logger.Info("Releasing ByoHost", "byohost", machineScope.ByoHost.Name)
 		if err := r.markHostForCleanup(ctx, machineScope); err != nil {
 			return ctrl.Result{}, err
 		}
@@ -193,7 +197,8 @@ func (r *ByoMachineReconciler) reconcileDelete(ctx context.Context, machineScope
 }
 
 func (r *ByoMachineReconciler) reconcileNormal(ctx context.Context, machineScope *byoMachineScope) (reconcile.Result, error) {
-	logger := log.FromContext(ctx).WithValues("namespace", machineScope.ByoMachine.Namespace, "BYOMachine", machineScope.ByoMachine.Name)
+	logger := log.FromContext(ctx).WithValues("cluster", machineScope.Cluster.Name)
+	logger.Info("Reconciling ByoMachine")
 
 	controllerutil.AddFinalizer(machineScope.ByoMachine, infrav1.MachineFinalizer)
 
@@ -221,12 +226,13 @@ func (r *ByoMachineReconciler) reconcileNormal(ctx context.Context, machineScope
 	// then pick one from the host capacity pool
 	if machineScope.ByoHost == nil {
 		logger.Info("Attempting host reservation")
-		if res, err := r.attachByoHost(ctx, logger, machineScope); err != nil {
+		if res, err := r.attachByoHost(ctx, machineScope); err != nil {
 			return res, err
 		}
 	}
 
 	if machineScope.ByoMachine.Spec.ProviderID == "" {
+		logger.Info("Updating Node with ProviderID")
 		providerID := fmt.Sprintf("%s%s/%s", providerIDPrefix, machineScope.ByoHost.Name, util.RandomString(providerIDSuffixLength))
 		remoteClient, err := r.getRemoteClient(ctx, machineScope.ByoMachine)
 		if err != nil {
@@ -371,7 +377,8 @@ func (r *ByoMachineReconciler) setPausedConditionForByoHost(ctx context.Context,
 	return helper.Patch(ctx, machineScope.ByoHost)
 }
 
-func (r *ByoMachineReconciler) attachByoHost(ctx context.Context, logger logr.Logger, machineScope *byoMachineScope) (ctrl.Result, error) {
+func (r *ByoMachineReconciler) attachByoHost(ctx context.Context, machineScope *byoMachineScope) (ctrl.Result, error) {
+	logger := log.FromContext(ctx).WithValues("cluster", machineScope.Cluster.Name)
 	var selector labels.Selector
 	var err error
 	if machineScope.ByoHost != nil {
@@ -442,7 +449,7 @@ func (r *ByoMachineReconciler) attachByoHost(ctx context.Context, logger logr.Lo
 		logger.Error(err, "failed to patch byohost")
 		return ctrl.Result{}, err
 	}
-	logger.Info("Successfully attached Byohost", "ByoHost.Name", host.Name)
+	logger.Info("Successfully attached Byohost", "byohost", host.Name)
 	machineScope.ByoHost = &host
 	return ctrl.Result{}, nil
 }
