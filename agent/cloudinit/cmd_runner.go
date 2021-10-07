@@ -13,6 +13,7 @@ type ICmdRunner interface {
 type CmdRunner struct {
 }
 
+// RunCmd executes the command string
 func (r CmdRunner) RunCmd(cmd string) error {
 	command := exec.Command("/bin/sh", "-c", cmd)
 	command.Stderr = os.Stderr

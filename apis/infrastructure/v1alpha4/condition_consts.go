@@ -14,28 +14,56 @@ const (
 	// components are currently installed on the node.
 	K8sComponentsInstallationSucceeded clusterv1.ConditionType = "K8sComponentsInstallationSucceeded"
 
-	// K8sNodeBootstrapSucceeded is False
-	WaitingForMachineRefReason           = "WaitingForMachineRefToBeAssigned"
-	BootstrapDataSecretUnavailableReason = "BootstrapDataSecretUnavailable"
-	CloudInitExecutionFailedReason       = "CloudInitExecutionFailed"
-	K8sNodeAbsentReason                  = "K8sNodeAbsent"
+	// WaitingForMachineRefReason indicates when a ByoHost is registered into a capacity pool and
+	// waiting for a byohost.Status.MachineRef to be assigned
+	WaitingForMachineRefReason = "WaitingForMachineRefToBeAssigned"
 
-	// K8sComponentsInstallationSucceeded is False
-	K8sComponentsInstallingReason         = "K8sComponentsInstalling"
+	// BootstrapDataSecretUnavailableReason indicates that the bootstrap provider is yet to provide the
+	// secret that contains bootstrap information
+	// This secret is available on byohost.Spec.BootstrapSecret field
+	BootstrapDataSecretUnavailableReason = "BootstrapDataSecretUnavailable"
+
+	// CloudInitExecutionFailedReason indicates that cloudinit failed to parse and execute the directives
+	// that are part of the cloud-config file
+	CloudInitExecutionFailedReason = "CloudInitExecutionFailed"
+
+	// K8sNodeAbsentReason indicates that the node is not a Kubernetes node
+	// This is usually set after executing kubeadm reset on the node
+	K8sNodeAbsentReason = "K8sNodeAbsent"
+
+	// K8sComponentsInstallingReason indicates that the k8s components are being
+	// downloaded and installed
+	K8sComponentsInstallingReason = "K8sComponentsInstalling"
+
+	// K8sComponentsInstallationFailedReason indicates that the installer failed to install all the
+	// k8s components on this host
 	K8sComponentsInstallationFailedReason = "K8sComponentsInstallationFailed"
 )
 
 // Conditions and Reasons defined on BYOMachine
 const (
+
+	// BYOHostReady documents the k8s node is ready and can take on workloads
 	BYOHostReady clusterv1.ConditionType = "BYOHostReady"
 
-	// BYOHostReady is False
+	// WaitingForClusterInfrastructureReason indicates the cluster that the ByoMachine belongs to
+	// is waiting to be owned by the corresponding CAPI Cluster
 	WaitingForClusterInfrastructureReason = "WaitingForClusterInfrastructure"
-	WaitingForBootstrapDataSecretReason   = "WaitingForBootstrapDataSecret"
-	BYOHostsUnavailableReason             = "BYOHostsUnavailable"
+
+	// WaitingForBootstrapDataSecretReason indicates that the bootstrap provider is yet to provide the
+	// secret that contains bootstrap information
+	// This secret is available on Machine.Spec.Bootstrap.DataSecretName
+	WaitingForBootstrapDataSecretReason = "WaitingForBootstrapDataSecret"
+
+	// BYOHostsUnavailableReason indicates that no byohosts are available in the capacity pool
+	BYOHostsUnavailableReason = "BYOHostsUnavailable"
 )
 
 // Reasons common to all Byo Resources
 const (
+
+	// ClusterOrResourcePausedReason indicates that either
+	// Spec.Paused field on the cluster is set to true
+	// or the resource is marked with Paused annotation
 	ClusterOrResourcePausedReason = "ClusterOrResourcePaused"
 )

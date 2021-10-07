@@ -28,14 +28,8 @@ const (
 	K8sVersionAnnotation  = "byoh.infrastructure.cluster.x-k8s.io/k8sversion"
 )
 
-// EDIT THIS FILE!  THIS IS SCAFFOLDING FOR YOU TO OWN!
-// NOTE: json tags are required.  Any new fields you add must have json tags for the fields to be serialized.
-
 // ByoHostSpec defines the desired state of ByoHost
 type ByoHostSpec struct {
-	// INSERT ADDITIONAL SPEC FIELDS - desired state of cluster
-	// Important: Run "make" to regenerate code after modifying this file
-
 	// BootstrapSecret is an optional reference to a Cluster API Secret
 	// for bootstrap purpose
 	// +optional
@@ -44,9 +38,6 @@ type ByoHostSpec struct {
 
 // ByoHostStatus defines the observed state of ByoHost
 type ByoHostStatus struct {
-	// INSERT ADDITIONAL STATUS FIELD - define observed state of cluster
-	// Important: Run "make" to regenerate code after modifying this file
-
 	// MachineRef is an optional reference to a Cluster API Machine
 	// using this host.
 	// +optional

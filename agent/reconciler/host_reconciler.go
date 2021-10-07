@@ -34,12 +34,13 @@ const (
 	KubeadmResetCommand   = "kubeadm reset --force"
 )
 
+// Reconcile handles events for the ByoHost that is registered by this agent process
 func (r *HostReconciler) Reconcile(ctx context.Context, req ctrl.Request) (_ ctrl.Result, reterr error) {
 	log := ctrl.LoggerFrom(ctx)
 	log.WithValues("byoHost ", req.Name)
 	log.Info("Reconciling byohost...")
 
-	// Fetch the ByoHost instance.
+	// Fetch the ByoHost instance
 	byoHost := &infrastructurev1alpha4.ByoHost{}
 	err := r.Client.Get(ctx, req.NamespacedName, byoHost)
 	if err != nil {
@@ -161,7 +162,7 @@ func (r HostReconciler) hostCleanUp(ctx context.Context, byoHost *infrastructure
 		}
 	}
 
-	// Remove host reservation.
+	// Remove host reservation
 	byoHost.Status.MachineRef = nil
 
 	// Remove cluster-name label

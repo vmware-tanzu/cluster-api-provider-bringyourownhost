@@ -27,6 +27,7 @@ type IFileWriter interface {
 type FileWriter struct {
 }
 
+// MkdirIfNotExists creates the directory if it does not exist already
 func (w FileWriter) MkdirIfNotExists(dirName string) error {
 	_, err := os.Stat(dirName)
 
@@ -40,6 +41,8 @@ func (w FileWriter) MkdirIfNotExists(dirName string) error {
 	return nil
 }
 
+// WriteToFile writes contents to file with appropriate permissions
+// as provided in the write_files directive of cloud-config file
 func (w FileWriter) WriteToFile(file *Files) error {
 	initPermission := fs.FileMode(filePermission)
 	if stats, err := os.Stat(file.Path); os.IsExist(err) {
