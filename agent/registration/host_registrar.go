@@ -28,6 +28,7 @@ type HostRegistrar struct {
 }
 
 func (hr *HostRegistrar) Register(hostName, namespace string, hostLabels map[string]string) error {
+	klog.Info("Registering ByoHost")
 	ctx := context.TODO()
 	byoHost := &infrastructurev1alpha4.ByoHost{}
 	err := hr.K8sClient.Get(ctx, types.NamespacedName{Name: hostName, Namespace: namespace}, byoHost)
@@ -61,6 +62,7 @@ func (hr *HostRegistrar) Register(hostName, namespace string, hostLabels map[str
 }
 
 func (hr *HostRegistrar) UpdateNetwork(ctx context.Context, byoHost *infrastructurev1alpha4.ByoHost) error {
+	klog.Info("Add Network Info")
 	helper, err := patch.NewHelper(byoHost, hr.K8sClient)
 	if err != nil {
 		return err

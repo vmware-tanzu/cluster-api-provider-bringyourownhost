@@ -10,7 +10,6 @@ import (
 	infrastructurev1alpha4 "github.com/vmware-tanzu/cluster-api-provider-byoh/apis/infrastructure/v1alpha4"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/types"
-	"k8s.io/klog"
 	"sigs.k8s.io/cluster-api/api/v1alpha4"
 	"sigs.k8s.io/cluster-api/util/conditions"
 	"sigs.k8s.io/cluster-api/util/patch"
@@ -35,22 +34,21 @@ const (
 )
 
 func (r *HostReconciler) Reconcile(ctx context.Context, req ctrl.Request) (_ ctrl.Result, reterr error) {
-	log := ctrl.LoggerFrom(ctx)
-	log.WithValues("byoHost ", req.Name)
-	log.Info("Reconciling byohost...")
+	logger := ctrl.LoggerFrom(ctx)
+	logger.Info("Reconcile request received")
 
 	// Fetch the ByoHost instance.
 	byoHost := &infrastructurev1alpha4.ByoHost{}
 	err := r.Client.Get(ctx, req.NamespacedName, byoHost)
 	if err != nil {
-		klog.Errorf("error getting ByoHost %s in namespace %s, err=%v", req.NamespacedName.Namespace, req.NamespacedName.Name, err)
+		logger.Error(err, "error getting ByoHost")
 		return ctrl.Result{}, err
 	}
 
 	helper, _ := patch.NewHelper(byoHost, r.Client)
 	defer func() {
 		if err = helper.Patch(ctx, byoHost); err != nil && reterr == nil {
-			klog.Errorf("failed to patch byohost, err=%v", err)
+			logger.Error(err, "failed to patch byohost")
 			reterr = err
 		}
 	}()
@@ -74,14 +72,15 @@ func (r *HostReconciler) Reconcile(ctx context.Context, req ctrl.Request) (_ ctr
 }
 
 func (r *HostReconciler) reconcileNormal(ctx context.Context, byoHost *infrastructurev1alpha4.ByoHost) (ctrl.Result, error) {
+	logger := ctrl.LoggerFrom(ctx)
 	if byoHost.Status.MachineRef == nil {
-		klog.Info("Machine ref not yet set")
+		logger.Info("Machine ref not yet set")
 		conditions.MarkFalse(byoHost, infrastructurev1alpha4.K8sNodeBootstrapSucceeded, infrastructurev1alpha4.WaitingForMachineRefReason, v1alpha4.ConditionSeverityInfo, "")
 		return ctrl.Result{}, nil
 	}
 
 	if byoHost.Spec.BootstrapSecret == nil {
-		klog.Info("BootstrapDataSecret not ready")
+		logger.Info("BootstrapDataSecret not ready")
 		conditions.MarkFalse(byoHost, infrastructurev1alpha4.K8sNodeBootstrapSucceeded, infrastructurev1alpha4.BootstrapDataSecretUnavailableReason, v1alpha4.ConditionSeverityInfo, "")
 		return ctrl.Result{}, nil
 	}
@@ -89,25 +88,25 @@ func (r *HostReconciler) reconcileNormal(ctx context.Context, byoHost *infrastru
 	if !conditions.IsTrue(byoHost, infrastructurev1alpha4.K8sNodeBootstrapSucceeded) {
 		bootstrapScript, err := r.getBootstrapScript(ctx, byoHost.Spec.BootstrapSecret.Name, byoHost.Spec.BootstrapSecret.Namespace)
 		if err != nil {
-			klog.Errorf("error getting bootstrap script, err=%v", err)
+			logger.Error(err, "error getting bootstrap script")
 			return ctrl.Result{}, err
 		}
 
-		err = r.installK8sComponents(byoHost)
+		err = r.installK8sComponents(ctx, byoHost)
 		if err != nil {
-			klog.Errorf("error in installing k8s components, err=%v", err)
+			logger.Error(err, "error in installing k8s components")
 			conditions.MarkFalse(byoHost, infrastructurev1alpha4.K8sComponentsInstallationSucceeded, infrastructurev1alpha4.K8sComponentsInstallationFailedReason, v1alpha4.ConditionSeverityInfo, "")
 			return ctrl.Result{}, err
 		}
 
-		err = r.bootstrapK8sNode(bootstrapScript, byoHost)
+		err = r.bootstrapK8sNode(ctx, bootstrapScript, byoHost)
 		if err != nil {
-			klog.Errorf("error in bootstrapping k8s node, err=%v", err)
-			_ = r.resetNode()
+			logger.Error(err, "error in bootstrapping k8s node")
+			_ = r.resetNode(ctx)
 			conditions.MarkFalse(byoHost, infrastructurev1alpha4.K8sNodeBootstrapSucceeded, infrastructurev1alpha4.CloudInitExecutionFailedReason, v1alpha4.ConditionSeverityError, "")
 			return ctrl.Result{}, err
 		}
-		klog.Info("k8s node successfully bootstrapped")
+		logger.Info("k8s node successfully bootstrapped")
 
 		conditions.MarkTrue(byoHost, infrastructurev1alpha4.K8sNodeBootstrapSucceeded)
 	}
@@ -138,12 +137,14 @@ func (r *HostReconciler) SetupWithManager(ctx context.Context, mgr manager.Manag
 }
 
 func (r HostReconciler) hostCleanUp(ctx context.Context, byoHost *infrastructurev1alpha4.ByoHost) error {
-	err := r.resetNode()
+	logger := ctrl.LoggerFrom(ctx)
+	logger.Info("cleaning up host")
+	err := r.resetNode(ctx)
 	if err != nil {
 		return err
 	}
 
-	klog.Info("Removing the bootstrap sentinel file...")
+	logger.Info("Removing the bootstrap sentinel file...")
 	if _, err := os.Stat(bootstrapSentinelFile); !os.IsNotExist(err) {
 		err := os.Remove(bootstrapSentinelFile)
 		if err != nil {
@@ -180,26 +181,31 @@ func (r HostReconciler) hostCleanUp(ctx context.Context, byoHost *infrastructure
 	return nil
 }
 
-func (r *HostReconciler) resetNode() error {
-	klog.Info("Running kubeadm reset...")
+func (r *HostReconciler) resetNode(ctx context.Context) error {
+	logger := ctrl.LoggerFrom(ctx)
+	logger.Info("Running kubeadm reset")
 
 	err := r.CmdRunner.RunCmd(KubeadmResetCommand)
 	if err != nil {
 		return errors.Wrapf(err, "failed to exec kubeadm reset")
 	}
 
-	klog.Info("Kubernetes Node reset")
+	logger.Info("Kubernetes Node reset completed")
 	return nil
 }
 
-func (r *HostReconciler) bootstrapK8sNode(bootstrapScript string, byoHost *infrastructurev1alpha4.ByoHost) error {
+func (r *HostReconciler) bootstrapK8sNode(ctx context.Context, bootstrapScript string, byoHost *infrastructurev1alpha4.ByoHost) error {
+	logger := ctrl.LoggerFrom(ctx)
+	logger.Info("Bootstraping k8s Node")
 	return cloudinit.ScriptExecutor{
 		WriteFilesExecutor:    r.FileWriter,
 		RunCmdExecutor:        r.CmdRunner,
 		ParseTemplateExecutor: r.TemplateParser}.Execute(bootstrapScript)
 }
 
-func (r *HostReconciler) installK8sComponents(byoHost *infrastructurev1alpha4.ByoHost) error {
+func (r *HostReconciler) installK8sComponents(ctx context.Context, byoHost *infrastructurev1alpha4.ByoHost) error {
+	logger := ctrl.LoggerFrom(ctx)
+	logger.Info("Installing K8s")
 	conditions.MarkFalse(byoHost, infrastructurev1alpha4.K8sComponentsInstallationSucceeded, infrastructurev1alpha4.K8sComponentsInstallingReason, v1alpha4.ConditionSeverityInfo, "")
 	// TODO: call installer.Install(k8sVersion) here
 	// if err, return err
