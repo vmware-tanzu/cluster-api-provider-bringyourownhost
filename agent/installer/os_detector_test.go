@@ -5,10 +5,12 @@ import (
 	. "github.com/onsi/gomega"
 )
 
-var funcExecCounter int
+type MockHostnamectl struct {
+	callCount int
+}
 
-func (osd *osDetector) mockGetHostnamectl(os, ver, arch string) (string, error) {
-	funcExecCounter++
+func (mh *MockHostnamectl) Get(os, ver, arch string) (string, error) {
+	mh.callCount++
 	out := "  Static hostname: ubuntu\n" +
 		"        Icon name: computer-vm\n" +
 		"          Chassis: vm\n" +
@@ -26,6 +28,7 @@ var _ = Describe("Byohost Installer Tests", func() {
 
 	var (
 		d          *osDetector
+		mh         *MockHostnamectl
 		os         string
 		ver        string
 		arch       string
@@ -35,6 +38,7 @@ var _ = Describe("Byohost Installer Tests", func() {
 
 	BeforeEach(func() {
 		d = &osDetector{}
+		mh = &MockHostnamectl{}
 		os = "Ubuntu"
 		ver = "20.04.3"
 		arch = "x86-64"
@@ -42,25 +46,23 @@ var _ = Describe("Byohost Installer Tests", func() {
 
 	Context("When the OS is detected", func() {
 		It("Should return string in normalized format", func() {
-			detectedOS, err = d.DetectByHostnamectl(func() (string, error) { return d.mockGetHostnamectl(os, ver, arch) })
+			detectedOS, err = d.DetectByHostnamectl(func() (string, error) { return mh.Get(os, ver, arch) })
 			Expect(err).ShouldNot((HaveOccurred()))
 			Expect(detectedOS).To(Equal("Ubuntu_20.04.3_x86-64"))
 		})
 		It("Should cache OS and not execute again getHostnamectl", func() {
-			beginFuncExecCounter := funcExecCounter
-			_, err = d.DetectByHostnamectl(func() (string, error) { return d.mockGetHostnamectl(os, ver, arch) })
+			_, err = d.DetectByHostnamectl(func() (string, error) { return mh.Get(os, ver, arch) })
 			Expect(err).ShouldNot((HaveOccurred()))
-			Expect(beginFuncExecCounter + 1).To(Equal(funcExecCounter))
-			expectedFuncExecCounter := funcExecCounter
-			_, err = d.DetectByHostnamectl(func() (string, error) { return d.mockGetHostnamectl(os, ver, arch) })
+			Expect(mh.callCount).To(Equal(1))
+			_, err = d.DetectByHostnamectl(func() (string, error) { return mh.Get(os, ver, arch) })
 			Expect(err).ShouldNot((HaveOccurred()))
-			Expect(expectedFuncExecCounter).To(Equal(funcExecCounter))
+			Expect(mh.callCount).To(Equal(1))
 		})
 
 		It("Should return string in normalized format and work with OS names with more than one word", func() {
 			os = "Red Hat Enterprise Linux"
 			ver = "8.1"
-			detectedOS, err = d.DetectByHostnamectl(func() (string, error) { return d.mockGetHostnamectl(os, ver, arch) })
+			detectedOS, err = d.DetectByHostnamectl(func() (string, error) { return mh.Get(os, ver, arch) })
 			Expect(err).ShouldNot((HaveOccurred()))
 			Expect(detectedOS).To(Equal("Red_Hat_Enterprise_Linux_8.1_x86-64"))
 		})
@@ -73,19 +75,19 @@ var _ = Describe("Byohost Installer Tests", func() {
 	Context("When the OS is not detected", func() {
 		It("Should return error if OS distribution is missing", func() {
 			os = ""
-			_, err = d.DetectByHostnamectl(func() (string, error) { return d.mockGetHostnamectl(os, ver, arch) })
+			_, err = d.DetectByHostnamectl(func() (string, error) { return mh.Get(os, ver, arch) })
 			Expect(err).Should((HaveOccurred()))
 		})
 
 		It("Should return error if OS version is missing", func() {
 			ver = ""
-			_, err = d.DetectByHostnamectl(func() (string, error) { return d.mockGetHostnamectl(os, ver, arch) })
+			_, err = d.DetectByHostnamectl(func() (string, error) { return mh.Get(os, ver, arch) })
 			Expect(err).Should((HaveOccurred()))
 		})
 
 		It("Should return error if OS architecture is missing", func() {
 			arch = ""
-			_, err = d.DetectByHostnamectl(func() (string, error) { return d.mockGetHostnamectl(os, ver, arch) })
+			_, err = d.DetectByHostnamectl(func() (string, error) { return mh.Get(os, ver, arch) })
 			Expect(err).Should((HaveOccurred()))
 		})
 

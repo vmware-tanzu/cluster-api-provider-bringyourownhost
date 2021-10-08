@@ -24,7 +24,7 @@ func (osd *osDetector) Detect() (string, error) {
 	return osd.DetectByHostnamectl(func() (string, error) { return osd.getHostnamectl() })
 }
 
-// delegateByHostnamectl is a helper method to enable testing of detect with mock methods.
+// DetectByHostnamectl is a helper method to enable testing of detect with mock methods.
 func (osd *osDetector) DetectByHostnamectl(f func() (string, error)) (string, error) {
 	if osd.cachedNormalizedOS != "" {
 		return osd.cachedNormalizedOS, nil
