@@ -21,11 +21,11 @@ type osDetector struct {
 // The format is as follows: <os>_<ver>_<arch>
 // Example with Ubuntu 21.04.3 64bit: Ubuntu_20.04.3_x64
 func (osd *osDetector) Detect() (string, error) {
-	return osd.delegateByHostnamectl(func() (string, error) { return osd.getHostnamectl() })
+	return osd.DetectByHostnamectl(func() (string, error) { return osd.getHostnamectl() })
 }
 
 // delegateByHostnamectl is a helper method to enable testing of detect with mock methods.
-func (osd *osDetector) delegateByHostnamectl(f func() (string, error)) (string, error) {
+func (osd *osDetector) DetectByHostnamectl(f func() (string, error)) (string, error) {
 	if osd.cachedNormalizedOS != "" {
 		return osd.cachedNormalizedOS, nil
 	}
