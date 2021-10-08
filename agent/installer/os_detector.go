@@ -2,6 +2,7 @@ package installer
 
 import (
 	"errors"
+	"fmt"
 	"os/exec"
 	"regexp"
 	"strings"
@@ -19,12 +20,12 @@ type osDetector struct {
 // detect returns the os info in normalized format.
 // The format is as follows: <os>_<ver>_<arch>
 // Example with Ubuntu 21.04.3 64bit: Ubuntu_20.04.3_x64
-func (osd *osDetector) detect() (string, error) {
-	return osd.delegateDetect(func() (string, error) { return osd.getHostSystemInfo() })
+func (osd *osDetector) Detect() (string, error) {
+	return osd.delegateByHostnamectl(func() (string, error) { return osd.getHostnamectl() })
 }
 
-// delegateDetect is a helper method to enable testing of detect with mock methods.
-func (osd *osDetector) delegateDetect(f func() (string, error)) (string, error) {
+// delegateByHostnamectl is a helper method to enable testing of detect with mock methods.
+func (osd *osDetector) delegateByHostnamectl(f func() (string, error)) (string, error) {
 	if osd.cachedNormalizedOS != "" {
 		return osd.cachedNormalizedOS, nil
 	}
@@ -33,7 +34,7 @@ func (osd *osDetector) delegateDetect(f func() (string, error)) (string, error) 
 	if err != nil {
 		return "", err
 	}
-	osDetails := filterSystemInfo(systemInfo)
+	osDetails := parseHostnamectl(systemInfo)
 	os := osDetails[0]
 	ver := osDetails[1]
 	arch := osDetails[2]
@@ -48,10 +49,7 @@ func (osd *osDetector) delegateDetect(f func() (string, error)) (string, error) 
 // normalizeOsName normalizes given os, arch and k8s version to the correct format.
 // Takes as arguments os, ver and arch then returns string in the format <os>_<ver>_<arch>
 func normalizeOSName(os, ver, arch string) string {
-	osName := os + " " + ver
-
-	osName = osName + "_" + arch
-
+	osName := fmt.Sprintf("%s_%s_%s", os, ver, arch)
 	osName = strings.ReplaceAll(osName, " ", "_")
 
 	return osName
@@ -76,7 +74,7 @@ func normalizeOSName(os, ver, arch string) string {
 // Operating System: Ubuntu 20.04.3 LTS
 //           Kernel: Linux 5.11.0-27-generic
 //     Architecture: x86-64
-func (osd *osDetector) getHostSystemInfo() (string, error) {
+func (osd *osDetector) getHostnamectl() (string, error) {
 	out, err := exec.Command("hostnamectl").Output()
 
 	if err != nil {
@@ -87,7 +85,7 @@ func (osd *osDetector) getHostSystemInfo() (string, error) {
 }
 
 // Method that extracts the important information from getHostSystemInfo.
-func filterSystemInfo(systemInfo string) [3]string {
+func parseHostnamectl(systemInfo string) [3]string {
 	const strIndicatingOSline string = "Operating System: "
 	const strIndicatingArchline string = "Architecture: "
 

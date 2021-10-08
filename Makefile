@@ -57,7 +57,7 @@ agent-test:
 
 controller-test:
 	source ./scripts/fetch_ext_bins.sh; fetch_tools; setup_envs; ginkgo --randomizeAllSpecs controllers/infrastructure -coverprofile cover.out
-  
+
 webhook-test:
 	source ./scripts/fetch_ext_bins.sh; fetch_tools; setup_envs; ginkgo apis/infrastructure/v1alpha4 -coverprofile cover.out
 
