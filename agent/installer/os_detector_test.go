@@ -58,6 +58,11 @@ var _ = Describe("Byohost Installer Tests", func() {
 			Expect(err).ShouldNot((HaveOccurred()))
 			Expect(detectedOS).To(Equal(expectedDetectedOS))
 		})
+
+		It("Should not error with real hostnamectl", func() {
+			_, err = d.detect()
+			Expect(err).ShouldNot((HaveOccurred()))
+		})
 	})
 	Context("When the OS is not detected", func() {
 		It("Should return error if OS distribution is missing", func() {
