@@ -8,17 +8,12 @@ import (
 )
 
 const (
-	osNotDetected = "Could not detect OS correctly"
+	osNotDetected = "could not detect OS correctly"
 )
 
 // oSDetector contains all the logic for detecting the OS version.
 type osDetector struct {
-	normalizedOS string
-}
-
-// newOSDetector is a constructor for OSDetector
-func newOSDetector() *osDetector {
-	return &osDetector{""}
+	cachedNormalizedOS string
 }
 
 // detect returns the os info in normalized format.
@@ -31,15 +26,15 @@ func (osd *osDetector) detect() (string, error) {
 
 // delegateDetect is a helper method to enable testing of detect with mock methods.
 func (osd *osDetector) delegateDetect(f func() (string, error)) (string, error) {
-	if osd.normalizedOS != "" {
-		return osd.normalizedOS, nil
+	if osd.cachedNormalizedOS != "" {
+		return osd.cachedNormalizedOS, nil
 	}
 
 	systemInfo, err := f()
 	if err != nil {
 		return "", err
 	}
-	osDetails := osd.filterSystemInfo(systemInfo)
+	osDetails := filterSystemInfo(systemInfo)
 	os := osDetails[0]
 	ver := osDetails[1]
 	arch := osDetails[2]
@@ -47,22 +42,16 @@ func (osd *osDetector) delegateDetect(f func() (string, error)) (string, error) 
 		return "", errors.New(osNotDetected)
 	}
 
-	normalizedOS := osd.normalizeOSName(os, ver, arch)
-	osd.normalizedOS = normalizedOS
-	return normalizedOS, nil
+	osd.cachedNormalizedOS = normalizeOSName(os, ver, arch)
+	return osd.cachedNormalizedOS, nil
 }
 
 // normalizeOsName normalizes given os, arch and k8s version to the correct format.
 // Takes as arguments os, ver and arch then returns string in the format <os>_<ver>_<arch>
-func (osd *osDetector) normalizeOSName(os, ver, arch string) string {
-	archMap := map[string]string{
-		"x86-64": "x64",
-		"i686":   "x32",
-		"arm":    "arm",
-	}
+func normalizeOSName(os, ver, arch string) string {
 	osName := os + " " + ver
 
-	osName = osName + "_" + archMap[arch]
+	osName = osName + "_" + arch
 
 	osName = strings.ReplaceAll(osName, " ", "_")
 
@@ -99,7 +88,7 @@ func (osd *osDetector) getHostSystemInfo() (string, error) {
 }
 
 // Method that extracts the important information from getHostSystemInfo.
-func (osd *osDetector) filterSystemInfo(systemInfo string) [3]string {
+func filterSystemInfo(systemInfo string) [3]string {
 	const strIndicatingOSline string = "Operating System: "
 	const strIndicatingArchline string = "Architecture: "
 
@@ -111,7 +100,7 @@ func (osd *osDetector) filterSystemInfo(systemInfo string) [3]string {
 		os = systemInfo[locOS[0]+len(strIndicatingOSline) : locOS[1]]
 	}
 
-	verRegex := regexp.MustCompile(strIndicatingOSline + `[a-zA-Z]+[ a-zA-Z]* ([0-9]+(\.[0-9]+)*)`)
+	verRegex := regexp.MustCompile(strIndicatingOSline + `[a-zA-Z]+[ a-zA-Z]* (\d+(\.\d+)*)`)
 	locVer := verRegex.FindIndex([]byte(systemInfo))
 	if locVer != nil {
 		ver = systemInfo[locOS[1]+1 : locVer[1]]
