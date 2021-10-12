@@ -13,7 +13,7 @@ const (
 	ErrorBundleDownload     = Error("Error downloading bundle")
 	ErrorBundleExtract      = Error("Error extracting bundle")
 	ErrorBundleInstall      = Error("Error installing bundle")
-        ErrorBundleUninstall    = Error("Error uninstalling bundle")
+	ErrorBundleUninstall    = Error("Error uninstalling bundle")
 )
 
 type installer struct {
@@ -22,8 +22,10 @@ type installer struct {
 	logger *log.Logger
 }
 
-func New(bundleRepo string, downloadPath string, logger *log.Logger) (*installer, error) {
-	return nil, ErrorOsK8sNotSupported
+func New(bundleRepo, downloadPath string, logger *log.Logger) (*installer, error) {
+	return &installer{bundleRepo : bundleRepo,
+	                  downloadPath : downloadPath,
+	                  logger :logger  }, ErrorOsK8sNotSupported
 }
 
 func (i *installer) Install(k8sVer string) error {
