@@ -18,7 +18,7 @@ spec:
     singular: byocluster
   scope: Namespaced
   versions:
-  - name: v1alpha4
+  - name: v1beta1
     schema:
       openAPIV3Schema:
         description: ByoCluster is the Schema for the byoclusters API
@@ -97,6 +97,7 @@ spec:
                         important.
                       type: string
                   required:
+                  - lastTransitionTime
                   - status
                   - type
                   type: object
