@@ -5,7 +5,6 @@ import (
 	"compress/gzip"
 	"io"
 	"math/rand"
-	"os"
 	"time"
 
 	"github.com/pkg/errors"
@@ -60,15 +59,4 @@ func GunzipData(data []byte) ([]byte, error) {
 	}
 
 	return resB.Bytes(), nil
-}
-
-func IsFileExists(path string) (bool, error) {
-	_, err := os.Stat(path)
-	if err == nil {
-		return true, nil
-	}
-	if os.IsNotExist(err) {
-		return false, nil
-	}
-	return false, err
 }
