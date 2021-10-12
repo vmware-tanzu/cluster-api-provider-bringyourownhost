@@ -8,6 +8,7 @@ import (
 	"github.com/vmware-tanzu/cluster-api-provider-byoh/agent/cloudinit"
 	"github.com/vmware-tanzu/cluster-api-provider-byoh/agent/registration"
 	infrastructurev1alpha4 "github.com/vmware-tanzu/cluster-api-provider-byoh/apis/infrastructure/v1alpha4"
+	"github.com/vmware-tanzu/cluster-api-provider-byoh/common"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/cluster-api/api/v1alpha4"
@@ -100,6 +101,8 @@ func (r *HostReconciler) reconcileNormal(ctx context.Context, byoHost *infrastru
 			return ctrl.Result{}, err
 		}
 
+		r.preCleanUp(ctx)
+
 		err = r.bootstrapK8sNode(ctx, bootstrapScript, byoHost)
 		if err != nil {
 			logger.Error(err, "error in bootstrapping k8s node")
@@ -135,6 +138,18 @@ func (r *HostReconciler) SetupWithManager(ctx context.Context, mgr manager.Manag
 		For(&infrastructurev1alpha4.ByoHost{}).
 		WithEventFilter(predicates.ResourceNotPaused(ctrl.LoggerFrom(ctx))).
 		Complete(r)
+}
+
+func (r HostReconciler) preCleanUp(ctx context.Context) {
+	logger := ctrl.LoggerFrom(ctx)
+	logger.Info("cleaning up host in advance")
+
+	kubeadmDir := "/run/kubeadm"
+
+	if isExist, _ := common.IsFileExists(kubeadmDir); isExist {
+		logger.Info("Deleting directory /run/kubeadm")
+		os.RemoveAll(kubeadmDir)
+	}
 }
 
 func (r HostReconciler) hostCleanUp(ctx context.Context, byoHost *infrastructurev1alpha4.ByoHost) error {
