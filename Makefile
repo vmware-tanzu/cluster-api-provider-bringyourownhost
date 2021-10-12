@@ -59,7 +59,7 @@ controller-test:
 	source ./scripts/fetch_ext_bins.sh; fetch_tools; setup_envs; ginkgo --randomizeAllSpecs controllers/infrastructure -coverprofile cover.out
 
 webhook-test:
-	source ./scripts/fetch_ext_bins.sh; fetch_tools; setup_envs; ginkgo apis/infrastructure/v1alpha4 -coverprofile cover.out
+	source ./scripts/fetch_ext_bins.sh; fetch_tools; setup_envs; ginkgo apis/infrastructure/v1beta1 -coverprofile cover.out
 
 ##@ General
 
@@ -115,10 +115,10 @@ test-e2e: docker-build prepare-byoh-image $(GINKGO) cluster-templates ## Run the
 	    -e2e.skip-resource-cleanup=$(SKIP_RESOURCE_CLEANUP) -e2e.use-existing-cluster=$(USE_EXISTING_CLUSTER) \
 		-e2e.existing-cluster-kubeconfig-path=$(EXISTING_CLUSTER_KUBECONFIG_PATH)
 
-cluster-templates: kustomize cluster-templates-v1alpha4
+cluster-templates: kustomize cluster-templates-v1beta1
 
-cluster-templates-v1alpha4: kustomize ## Generate cluster templates for v1alpha4
-	$(KUSTOMIZE) build $(BYOH_TEMPLATES)/v1alpha4 --load_restrictor none > $(BYOH_TEMPLATES)/v1alpha4/cluster-template.yaml
+cluster-templates-v1beta1: kustomize ## Generate cluster templates for v1beta1
+	$(KUSTOMIZE) build $(BYOH_TEMPLATES)/v1beta1 --load_restrictor none > $(BYOH_TEMPLATES)/v1beta1/cluster-template.yaml
 
 $(GINKGO): # Build ginkgo from tools folder.
 	cd $(TOOLS_DIR) && go build -tags=tools -o $(BIN_DIR)/ginkgo github.com/onsi/ginkgo/ginkgo

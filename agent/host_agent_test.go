@@ -12,7 +12,7 @@ import (
 	. "github.com/onsi/gomega"
 	"github.com/onsi/gomega/gbytes"
 	"github.com/onsi/gomega/gexec"
-	infrastructurev1alpha4 "github.com/vmware-tanzu/cluster-api-provider-byoh/apis/infrastructure/v1alpha4"
+	infrastructurev1beta1 "github.com/vmware-tanzu/cluster-api-provider-byoh/apis/infrastructure/v1beta1"
 	"github.com/vmware-tanzu/cluster-api-provider-byoh/common"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/types"
@@ -44,16 +44,16 @@ var _ = Describe("Agent", func() {
 		})
 
 		It("should not error out if the host already exists", func() {
-			byoHost := &infrastructurev1alpha4.ByoHost{
+			byoHost := &infrastructurev1beta1.ByoHost{
 				TypeMeta: metav1.TypeMeta{
 					Kind:       "ByoHost",
-					APIVersion: "infrastructure.cluster.x-k8s.io/v1alpha4",
+					APIVersion: "infrastructure.cluster.x-k8s.io/v1beta1",
 				},
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      hostName,
 					Namespace: ns.Name,
 				},
-				Spec: infrastructurev1alpha4.ByoHostSpec{},
+				Spec: infrastructurev1beta1.ByoHostSpec{},
 			}
 			Expect(k8sClient.Create(context.TODO(), byoHost)).NotTo(HaveOccurred())
 
@@ -106,8 +106,8 @@ var _ = Describe("Agent", func() {
 
 		It("should register the BYOHost with the management cluster", func() {
 			byoHostLookupKey := types.NamespacedName{Name: hostName, Namespace: ns.Name}
-			createdByoHost := &infrastructurev1alpha4.ByoHost{}
-			Eventually(func() *infrastructurev1alpha4.ByoHost {
+			createdByoHost := &infrastructurev1beta1.ByoHost{}
+			Eventually(func() *infrastructurev1beta1.ByoHost {
 				err := k8sClient.Get(context.TODO(), byoHostLookupKey, createdByoHost)
 				if err != nil {
 					return nil
@@ -118,7 +118,7 @@ var _ = Describe("Agent", func() {
 
 		It("should register the BYOHost with the passed labels", func() {
 			byoHostLookupKey := types.NamespacedName{Name: hostName, Namespace: ns.Name}
-			createdByoHost := &infrastructurev1alpha4.ByoHost{}
+			createdByoHost := &infrastructurev1beta1.ByoHost{}
 			Eventually(func() map[string]string {
 				err := k8sClient.Get(context.TODO(), byoHostLookupKey, createdByoHost)
 				if err != nil {
@@ -131,7 +131,7 @@ var _ = Describe("Agent", func() {
 		It("should fetch networkstatus when register the BYOHost with the management cluster", func() {
 			byoHostLookupKey := types.NamespacedName{Name: hostName, Namespace: ns.Name}
 			Eventually(func() bool {
-				createdByoHost := &infrastructurev1alpha4.ByoHost{}
+				createdByoHost := &infrastructurev1beta1.ByoHost{}
 				err := k8sClient.Get(context.TODO(), byoHostLookupKey, createdByoHost)
 				if err != nil {
 					return false

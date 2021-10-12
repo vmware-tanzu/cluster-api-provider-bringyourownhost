@@ -5,7 +5,7 @@ import (
 	"net"
 
 	"github.com/jackpal/gateway"
-	infrastructurev1alpha4 "github.com/vmware-tanzu/cluster-api-provider-byoh/apis/infrastructure/v1alpha4"
+	infrastructurev1beta1 "github.com/vmware-tanzu/cluster-api-provider-byoh/apis/infrastructure/v1beta1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
@@ -33,25 +33,25 @@ type HostRegistrar struct {
 func (hr *HostRegistrar) Register(hostName, namespace string, hostLabels map[string]string) error {
 	klog.Info("Registering ByoHost")
 	ctx := context.TODO()
-	byoHost := &infrastructurev1alpha4.ByoHost{}
+	byoHost := &infrastructurev1beta1.ByoHost{}
 	err := hr.K8sClient.Get(ctx, types.NamespacedName{Name: hostName, Namespace: namespace}, byoHost)
 	if err != nil {
 		if !apierrors.IsNotFound(err) {
 			klog.Errorf("error getting host %s in namespace %s, err=%v", hostName, namespace, err)
 			return err
 		}
-		byoHost = &infrastructurev1alpha4.ByoHost{
+		byoHost = &infrastructurev1beta1.ByoHost{
 			TypeMeta: metav1.TypeMeta{
 				Kind:       "ByoHost",
-				APIVersion: "infrastructure.cluster.x-k8s.io/v1alpha4",
+				APIVersion: "infrastructure.cluster.x-k8s.io/v1beta1",
 			},
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      hostName,
 				Namespace: namespace,
 				Labels:    hostLabels,
 			},
-			Spec:   infrastructurev1alpha4.ByoHostSpec{},
-			Status: infrastructurev1alpha4.ByoHostStatus{},
+			Spec:   infrastructurev1beta1.ByoHostSpec{},
+			Status: infrastructurev1beta1.ByoHostStatus{},
 		}
 		err = hr.K8sClient.Create(ctx, byoHost)
 		if err != nil {
@@ -64,7 +64,7 @@ func (hr *HostRegistrar) Register(hostName, namespace string, hostLabels map[str
 	return hr.UpdateNetwork(ctx, byoHost)
 }
 
-func (hr *HostRegistrar) UpdateNetwork(ctx context.Context, byoHost *infrastructurev1alpha4.ByoHost) error {
+func (hr *HostRegistrar) UpdateNetwork(ctx context.Context, byoHost *infrastructurev1beta1.ByoHost) error {
 	klog.Info("Add Network Info")
 	helper, err := patch.NewHelper(byoHost, hr.K8sClient)
 	if err != nil {
@@ -76,8 +76,8 @@ func (hr *HostRegistrar) UpdateNetwork(ctx context.Context, byoHost *infrastruct
 	return helper.Patch(ctx, byoHost)
 }
 
-func (hr *HostRegistrar) GetNetworkStatus() []infrastructurev1alpha4.NetworkStatus {
-	Network := []infrastructurev1alpha4.NetworkStatus{}
+func (hr *HostRegistrar) GetNetworkStatus() []infrastructurev1beta1.NetworkStatus {
+	Network := []infrastructurev1beta1.NetworkStatus{}
 
 	defaultIP, err := gateway.DiscoverInterface()
 	if err != nil {
@@ -90,7 +90,7 @@ func (hr *HostRegistrar) GetNetworkStatus() []infrastructurev1alpha4.NetworkStat
 	}
 
 	for _, iface := range ifaces {
-		netStatus := infrastructurev1alpha4.NetworkStatus{}
+		netStatus := infrastructurev1beta1.NetworkStatus{}
 
 		if iface.Flags&net.FlagUp > 0 {
 			netStatus.Connected = true
