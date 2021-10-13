@@ -29,8 +29,8 @@ providers:
   - name: cluster-api
     type: CoreProvider
     versions:
-      - name: v0.4.2 # next; use manifest from source files
-        value: "https://github.com/kubernetes-sigs/cluster-api/releases/download/v0.4.2/core-components.yaml"
+      - name: v1.0.0 # next; use manifest from source files
+        value: "https://github.com/kubernetes-sigs/cluster-api/releases/download/v1.0.0/core-components.yaml"
         type: "url"
         replacements:
           - old: --metrics-bind-addr=127.0.0.1:8080
@@ -41,8 +41,8 @@ providers:
   - name: kubeadm
     type: BootstrapProvider
     versions:
-      - name: v0.4.2 # next; use manifest from source files
-        value: "https://github.com/kubernetes-sigs/cluster-api/releases/download/v0.4.2/bootstrap-components.yaml"
+      - name: v1.0.0 # next; use manifest from source files
+        value: "https://github.com/kubernetes-sigs/cluster-api/releases/download/v1.0.0/bootstrap-components.yaml"
         type: "url"
         replacements:
           - old: --metrics-bind-addr=127.0.0.1:8080
@@ -53,8 +53,8 @@ providers:
   - name: kubeadm
     type: ControlPlaneProvider
     versions:
-      - name: v0.4.2 # next; use manifest from source files
-        value: "https://github.com/kubernetes-sigs/cluster-api/releases/download/v0.4.2/control-plane-components.yaml"
+      - name: v1.0.0 # next; use manifest from source files
+        value: "https://github.com/kubernetes-sigs/cluster-api/releases/download/v1.0.0/control-plane-components.yaml"
         type: "url"
         replacements:
           - old: --metrics-bind-addr=127.0.0.1:8080
@@ -65,8 +65,8 @@ providers:
   - name: docker
     type: InfrastructureProvider
     versions:
-      - name: v0.4.2 # next; use manifest from source files
-        value: "https://github.com/kubernetes-sigs/cluster-api/releases/download/v0.4.2/infrastructure-components-development.yaml"
+      - name: v1.0.0 # next; use manifest from source files
+        value: "https://github.com/kubernetes-sigs/cluster-api/releases/download/v1.0.0/infrastructure-components-development.yaml"
         type: "url"
         files:
           - sourcePath: "../data/shared/metadata.yaml"
@@ -86,7 +86,7 @@ providers:
 
         files:
           # Add a cluster template
-          - sourcePath: "../data/infrastructure-provider-byoh/v1alpha4/cluster-template.yaml"
+          - sourcePath: "../data/infrastructure-provider-byoh/v1beta1/cluster-template.yaml"
           - sourcePath: "../../../metadata.yaml"
 variables:
   # default variables for the e2e test; those values could be overridden via env variables, thus
@@ -106,7 +106,7 @@ variables:
   KUBETEST_CONFIGURATION: "./data/kubetest/conformance.yaml"
   NODE_DRAIN_TIMEOUT: "60s"
   # NOTE: INIT_WITH_BINARY is used only by the clusterctl upgrade test to initialize the management cluster to be upgraded
-  INIT_WITH_BINARY: "https://github.com/kubernetes-sigs/cluster-api/releases/download/v0.4.2/clusterctl-{OS}-{ARCH}"
+  INIT_WITH_BINARY: "https://github.com/kubernetes-sigs/cluster-api/releases/download/v1.0.0/clusterctl-{OS}-{ARCH}"
 
 intervals:
   default/wait-controllers: ["3m", "10s"]

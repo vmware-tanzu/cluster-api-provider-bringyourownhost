@@ -18,7 +18,7 @@ spec:
     singular: byohost
   scope: Namespaced
   versions:
-  - name: v1alpha4
+  - name: v1beta1
     schema:
       openAPIV3Schema:
         description: ByoHost is the Schema for the byohosts API
@@ -119,6 +119,7 @@ spec:
                         important.
                       type: string
                   required:
+                  - lastTransitionTime
                   - status
                   - type
                   type: object
