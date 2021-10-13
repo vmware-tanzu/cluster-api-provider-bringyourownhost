@@ -152,7 +152,6 @@ func (r HostReconciler) kubeadmDirCleanup(ctx context.Context) error {
 }
 
 func (r HostReconciler) hostCleanUp(ctx context.Context, byoHost *infrastructurev1beta1.ByoHost) error {
-
 	logger := ctrl.LoggerFrom(ctx)
 	logger.Info("cleaning up host")
 	err := r.resetNode(ctx)
