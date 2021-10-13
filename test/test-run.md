@@ -59,8 +59,7 @@ __Clone CAPIRepo__
 ```shell
 git clone git@github.com:kubernetes-sigs/cluster-api.git
 cd cluster-api
-#checkout tag v0.4.2 as it supports Kubernetes v1.22.0
-git checkout v0.4.2 
+git checkout v1.0.0 
 ```
 
 
@@ -105,7 +104,7 @@ export KUBERNETES_VERSION="v1.22.0"
 export CONTROL_PLANE_MACHINE_COUNT=1
 
 # from cluster-api-provider-byoh folder
-cat test/e2e/data/infrastructure-provider-byoh/v1alpha4/cluster-with-kcp.yaml | envsubst | kubectl apply -f -
+cat test/e2e/data/infrastructure-provider-byoh/v1beta1/cluster-with-kcp.yaml | envsubst | kubectl apply -f -
 ```
 
 Check if the control plane node is running Phase, wait if its in provisioning phase.
@@ -172,7 +171,7 @@ export CLUSTER_NAME="test1"
 export NAMESPACE="default"
 export KUBERNETES_VERSION="v1.22.0"
 export CONTROL_PLANE_MACHINE_COUNT=1
-cat test/e2e/data/infrastructure-provider-byoh/v1alpha4/md.yaml | envsubst | kubectl apply -f -
+cat test/e2e/data/infrastructure-provider-byoh/v1beta1/md.yaml | envsubst | kubectl apply -f -
 ```
 
 Check if the worker node is running.

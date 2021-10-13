@@ -2,7 +2,7 @@ module github.com/vmware-tanzu/cluster-api-provider-byoh
 
 go 1.16
 
-replace sigs.k8s.io/cluster-api => sigs.k8s.io/cluster-api v0.4.2
+replace sigs.k8s.io/cluster-api => sigs.k8s.io/cluster-api v1.0.0
 
 require (
 	github.com/containerd/containerd v1.5.4 // indirect
@@ -17,7 +17,7 @@ require (
 	github.com/maxbrunsfeld/counterfeiter/v6 v6.4.1
 	github.com/moby/sys/mount v0.2.0 // indirect
 	github.com/onsi/ginkgo v1.16.4
-	github.com/onsi/gomega v1.14.0
+	github.com/onsi/gomega v1.16.0
 	github.com/pkg/errors v0.9.1
 	github.com/theupdateframework/notary v0.7.0 // indirect
 	k8s.io/api v0.21.3

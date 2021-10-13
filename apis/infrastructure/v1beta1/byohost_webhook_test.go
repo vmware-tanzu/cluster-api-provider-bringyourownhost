@@ -1,4 +1,4 @@
-package v1alpha4
+package v1beta1
 
 import (
 	"context"
@@ -31,7 +31,7 @@ var _ = Describe("ByohostWebhook", func() {
 			byoHost = &ByoHost{
 				TypeMeta: metav1.TypeMeta{
 					Kind:       "ByoHost",
-					APIVersion: "infrastructure.cluster.x-k8s.io/v1alpha4",
+					APIVersion: "infrastructure.cluster.x-k8s.io/v1beta1",
 				},
 				ObjectMeta: metav1.ObjectMeta{
 					GenerateName: "byohost-",
@@ -55,7 +55,7 @@ var _ = Describe("ByohostWebhook", func() {
 				byoMachine = &ByoMachine{
 					TypeMeta: metav1.TypeMeta{
 						Kind:       "ByoMachine",
-						APIVersion: "infrastructure.cluster.x-k8s.io/v1alpha4",
+						APIVersion: "infrastructure.cluster.x-k8s.io/v1beta1",
 					},
 					ObjectMeta: metav1.ObjectMeta{
 						GenerateName: "byomachine-",
@@ -93,7 +93,7 @@ var _ = Describe("ByohostWebhook", func() {
 			byoHost = ByoHost{
 				TypeMeta: metav1.TypeMeta{
 					Kind:       "ByoHost",
-					APIVersion: "infrastructure.cluster.x-k8s.io/v1alpha4",
+					APIVersion: "infrastructure.cluster.x-k8s.io/v1beta1",
 				},
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "byohost",

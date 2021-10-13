@@ -10,11 +10,11 @@ import (
 	"github.com/docker/docker/client"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-	infrastructurev1alpha4 "github.com/vmware-tanzu/cluster-api-provider-byoh/apis/infrastructure/v1alpha4"
+	infrastructurev1beta1 "github.com/vmware-tanzu/cluster-api-provider-byoh/apis/infrastructure/v1beta1"
 	corev1 "k8s.io/api/core/v1"
 	k8stypes "k8s.io/apimachinery/pkg/types"
 	"k8s.io/utils/pointer"
-	clusterv1 "sigs.k8s.io/cluster-api/api/v1alpha4"
+	clusterv1 "sigs.k8s.io/cluster-api/api/v1beta1"
 	"sigs.k8s.io/cluster-api/test/framework"
 	"sigs.k8s.io/cluster-api/test/framework/clusterctl"
 	"sigs.k8s.io/cluster-api/util"
@@ -90,7 +90,7 @@ var _ = Describe("When BYO Host rejoins the capacity pool", func() {
 
 		// Assert on byohost cluster label to match clusterName
 		byoHostLookupKey := k8stypes.NamespacedName{Name: byoHostName, Namespace: namespace.Name}
-		byoHostToBeReused := &infrastructurev1alpha4.ByoHost{}
+		byoHostToBeReused := &infrastructurev1beta1.ByoHost{}
 		Expect(bootstrapClusterProxy.GetClient().Get(ctx, byoHostLookupKey, byoHostToBeReused)).Should(Succeed())
 		cluster, ok := byoHostToBeReused.Labels[clusterv1.ClusterLabelName]
 		Expect(ok).To(BeTrue())
@@ -107,7 +107,7 @@ var _ = Describe("When BYO Host rejoins the capacity pool", func() {
 
 		// Assert if cluster label is removed
 		// This verifies that the byohost has rejoined the capacity pool
-		byoHostToBeReused = &infrastructurev1alpha4.ByoHost{}
+		byoHostToBeReused = &infrastructurev1beta1.ByoHost{}
 		Expect(bootstrapClusterProxy.GetClient().Get(ctx, byoHostLookupKey, byoHostToBeReused)).Should(Succeed())
 		_, ok = byoHostToBeReused.Labels[clusterv1.ClusterLabelName]
 		Expect(ok).To(BeFalse())
@@ -134,7 +134,7 @@ var _ = Describe("When BYO Host rejoins the capacity pool", func() {
 		}, clusterResources)
 
 		// Assert on byohost cluster label to match clusterName
-		byoHostToBeReused = &infrastructurev1alpha4.ByoHost{}
+		byoHostToBeReused = &infrastructurev1beta1.ByoHost{}
 		Expect(bootstrapClusterProxy.GetClient().Get(ctx, byoHostLookupKey, byoHostToBeReused)).Should(Succeed())
 		cluster, ok = byoHostToBeReused.Labels[clusterv1.ClusterLabelName]
 		Expect(ok).To(BeTrue())
