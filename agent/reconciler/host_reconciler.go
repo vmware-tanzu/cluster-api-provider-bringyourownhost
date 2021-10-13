@@ -102,7 +102,7 @@ func (r *HostReconciler) reconcileNormal(ctx context.Context, byoHost *infrastru
 
 		err = r.kubeadmDirCleanup(ctx)
 		if err != nil {
-			logger.Error(err, "rror cleaning up kubeadm directory, please delete it manually for reconcile to proceed.")
+			logger.Error(err, "error cleaning up kubeadm directory, please delete it manually for reconcile to proceed.")
 			return ctrl.Result{}, err
 		}
 
