@@ -168,9 +168,9 @@ Deploy a CNI solution
 
 ```shell
 kubectl get secret $CLUSTER_NAME-kubeconfig -o jsonpath='{.data.value}' | base64 -d > $CLUSTER_NAME-kubeconfig
-kubectl --kubeconfig $CLUSTER_NAME-kubeconfig apply -f test/e2e/data/cni/calico/calico-with-harbor.yaml
+kubectl --kubeconfig $CLUSTER_NAME-kubeconfig apply -f test/e2e/data/cni/kindnet/kindnet.yaml
 ```
-Alternatively, you can also apply ```kindnet/kindnet.yaml```
+
 After a short while, our nodes should be running and in Ready state.
 Check the workload cluster
 
