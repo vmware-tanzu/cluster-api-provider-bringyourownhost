@@ -100,6 +100,12 @@ func (r *HostReconciler) reconcileNormal(ctx context.Context, byoHost *infrastru
 			return ctrl.Result{}, err
 		}
 
+		err = r.kubeadmDirCleanup(ctx)
+		if err != nil {
+			logger.Error(err, "error cleaning up kubeadm directory, please delete it manually for reconcile to proceed.")
+			return ctrl.Result{}, err
+		}
+
 		err = r.bootstrapK8sNode(ctx, bootstrapScript, byoHost)
 		if err != nil {
 			logger.Error(err, "error in bootstrapping k8s node")
@@ -135,6 +141,14 @@ func (r *HostReconciler) SetupWithManager(ctx context.Context, mgr manager.Manag
 		For(&infrastructurev1beta1.ByoHost{}).
 		WithEventFilter(predicates.ResourceNotPaused(ctrl.LoggerFrom(ctx))).
 		Complete(r)
+}
+
+// cleanup kubeadm dir to remove any stale config on the host
+func (r HostReconciler) kubeadmDirCleanup(ctx context.Context) error {
+	logger := ctrl.LoggerFrom(ctx)
+	logger.Info("cleaning up kubeadm directory")
+	const kubeadmDir = "/run/kubeadm"
+	return os.RemoveAll(kubeadmDir)
 }
 
 func (r HostReconciler) hostCleanUp(ctx context.Context, byoHost *infrastructurev1beta1.ByoHost) error {
