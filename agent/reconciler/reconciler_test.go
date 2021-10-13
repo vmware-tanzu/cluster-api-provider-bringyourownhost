@@ -7,11 +7,11 @@ import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	"github.com/vmware-tanzu/cluster-api-provider-byoh/agent/cloudinit/cloudinitfakes"
-	infrastructurev1alpha4 "github.com/vmware-tanzu/cluster-api-provider-byoh/apis/infrastructure/v1alpha4"
+	infrastructurev1beta1 "github.com/vmware-tanzu/cluster-api-provider-byoh/apis/infrastructure/v1beta1"
 	"github.com/vmware-tanzu/cluster-api-provider-byoh/common"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/types"
-	clusterv1 "sigs.k8s.io/cluster-api/api/v1alpha4"
+	clusterv1 "sigs.k8s.io/cluster-api/api/v1beta1"
 	"sigs.k8s.io/cluster-api/util/conditions"
 	"sigs.k8s.io/cluster-api/util/patch"
 	controllerruntime "sigs.k8s.io/controller-runtime"
@@ -23,8 +23,8 @@ var _ = Describe("Byohost Agent Tests", func() {
 		ctx              = context.TODO()
 		ns               = "default"
 		hostName         = "test-host"
-		byoHost          *infrastructurev1alpha4.ByoHost
-		byoMachine       *infrastructurev1alpha4.ByoMachine
+		byoHost          *infrastructurev1beta1.ByoHost
+		byoMachine       *infrastructurev1beta1.ByoMachine
 		byoHostLookupKey types.NamespacedName
 		bootstrapSecret  *corev1.Secret
 	)
@@ -70,15 +70,14 @@ var _ = Describe("Byohost Agent Tests", func() {
 			Expect(result).To(Equal(controllerruntime.Result{}))
 			Expect(reconcilerErr).ToNot(HaveOccurred())
 
-			updatedByoHost := &infrastructurev1alpha4.ByoHost{}
+			updatedByoHost := &infrastructurev1beta1.ByoHost{}
 			err := k8sClient.Get(ctx, byoHostLookupKey, updatedByoHost)
 			Expect(err).ToNot(HaveOccurred())
-
-			k8sNodeBootstrapSucceeded := conditions.Get(updatedByoHost, infrastructurev1alpha4.K8sNodeBootstrapSucceeded)
+			k8sNodeBootstrapSucceeded := conditions.Get(updatedByoHost, infrastructurev1beta1.K8sNodeBootstrapSucceeded)
 			Expect(*k8sNodeBootstrapSucceeded).To(conditions.MatchCondition(clusterv1.Condition{
-				Type:     infrastructurev1alpha4.K8sNodeBootstrapSucceeded,
+				Type:     infrastructurev1beta1.K8sNodeBootstrapSucceeded,
 				Status:   corev1.ConditionFalse,
-				Reason:   infrastructurev1alpha4.WaitingForMachineRefReason,
+				Reason:   infrastructurev1beta1.WaitingForMachineRefReason,
 				Severity: clusterv1.ConditionSeverityInfo,
 			}))
 		})
@@ -104,15 +103,15 @@ var _ = Describe("Byohost Agent Tests", func() {
 				Expect(result).To(Equal(controllerruntime.Result{}))
 				Expect(reconcilerErr).ToNot(HaveOccurred())
 
-				updatedByoHost := &infrastructurev1alpha4.ByoHost{}
+				updatedByoHost := &infrastructurev1beta1.ByoHost{}
 				err := k8sClient.Get(ctx, byoHostLookupKey, updatedByoHost)
 				Expect(err).ToNot(HaveOccurred())
 
-				byoHostRegistrationSucceeded := conditions.Get(updatedByoHost, infrastructurev1alpha4.K8sNodeBootstrapSucceeded)
+				byoHostRegistrationSucceeded := conditions.Get(updatedByoHost, infrastructurev1beta1.K8sNodeBootstrapSucceeded)
 				Expect(*byoHostRegistrationSucceeded).To(conditions.MatchCondition(clusterv1.Condition{
-					Type:     infrastructurev1alpha4.K8sNodeBootstrapSucceeded,
+					Type:     infrastructurev1beta1.K8sNodeBootstrapSucceeded,
 					Status:   corev1.ConditionFalse,
-					Reason:   infrastructurev1alpha4.BootstrapDataSecretUnavailableReason,
+					Reason:   infrastructurev1beta1.BootstrapDataSecretUnavailableReason,
 					Severity: clusterv1.ConditionSeverityInfo,
 				}))
 			})
@@ -161,15 +160,15 @@ runCmd:
 					Expect(result).To(Equal(controllerruntime.Result{}))
 					Expect(reconcilerErr).To(HaveOccurred())
 
-					updatedByoHost := &infrastructurev1alpha4.ByoHost{}
+					updatedByoHost := &infrastructurev1beta1.ByoHost{}
 					err := k8sClient.Get(ctx, byoHostLookupKey, updatedByoHost)
 					Expect(err).ToNot(HaveOccurred())
 
-					k8sNodeBootstrapSucceeded := conditions.Get(updatedByoHost, infrastructurev1alpha4.K8sNodeBootstrapSucceeded)
+					k8sNodeBootstrapSucceeded := conditions.Get(updatedByoHost, infrastructurev1beta1.K8sNodeBootstrapSucceeded)
 					Expect(*k8sNodeBootstrapSucceeded).To(conditions.MatchCondition(clusterv1.Condition{
-						Type:     infrastructurev1alpha4.K8sNodeBootstrapSucceeded,
+						Type:     infrastructurev1beta1.K8sNodeBootstrapSucceeded,
 						Status:   corev1.ConditionFalse,
-						Reason:   infrastructurev1alpha4.CloudInitExecutionFailedReason,
+						Reason:   infrastructurev1beta1.CloudInitExecutionFailedReason,
 						Severity: clusterv1.ConditionSeverityError,
 					}))
 				})
@@ -184,13 +183,13 @@ runCmd:
 					Expect(fakeCommandRunner.RunCmdCallCount()).To(Equal(1))
 					Expect(fakeFileWriter.WriteToFileCallCount()).To(Equal(1))
 
-					updatedByoHost := &infrastructurev1alpha4.ByoHost{}
+					updatedByoHost := &infrastructurev1beta1.ByoHost{}
 					err := k8sClient.Get(ctx, byoHostLookupKey, updatedByoHost)
 					Expect(err).ToNot(HaveOccurred())
 
-					k8sNodeBootstrapSucceeded := conditions.Get(updatedByoHost, infrastructurev1alpha4.K8sNodeBootstrapSucceeded)
+					k8sNodeBootstrapSucceeded := conditions.Get(updatedByoHost, infrastructurev1beta1.K8sNodeBootstrapSucceeded)
 					Expect(*k8sNodeBootstrapSucceeded).To(conditions.MatchCondition(clusterv1.Condition{
-						Type:   infrastructurev1alpha4.K8sNodeBootstrapSucceeded,
+						Type:   infrastructurev1beta1.K8sNodeBootstrapSucceeded,
 						Status: corev1.ConditionTrue,
 					}))
 				})
@@ -233,10 +232,10 @@ runCmd:
 				}
 				byoHost.Labels = map[string]string{clusterv1.ClusterLabelName: "test-cluster"}
 				byoHost.Annotations = map[string]string{
-					infrastructurev1alpha4.HostCleanupAnnotation: "",
-					infrastructurev1alpha4.K8sVersionAnnotation:  "1.22",
+					infrastructurev1beta1.HostCleanupAnnotation: "",
+					infrastructurev1beta1.K8sVersionAnnotation:  "1.22",
 				}
-				conditions.MarkTrue(byoHost, infrastructurev1alpha4.K8sNodeBootstrapSucceeded)
+				conditions.MarkTrue(byoHost, infrastructurev1beta1.K8sNodeBootstrapSucceeded)
 				Expect(patchHelper.Patch(ctx, byoHost, patch.WithStatusObservedGeneration{})).NotTo(HaveOccurred())
 			})
 
@@ -249,22 +248,21 @@ runCmd:
 
 				Expect(fakeCommandRunner.RunCmdCallCount()).To(Equal(1))
 				Expect(fakeCommandRunner.RunCmdArgsForCall(0)).To(Equal(KubeadmResetCommand))
-
-				updatedByoHost := &infrastructurev1alpha4.ByoHost{}
+				updatedByoHost := &infrastructurev1beta1.ByoHost{}
 				err := k8sClient.Get(ctx, byoHostLookupKey, updatedByoHost)
 				Expect(err).ToNot(HaveOccurred())
 
 				Expect(updatedByoHost.Labels).NotTo(HaveKey(clusterv1.ClusterLabelName))
 				Expect(updatedByoHost.Status.MachineRef).To(BeNil())
-				Expect(updatedByoHost.Annotations).NotTo(HaveKey(infrastructurev1alpha4.HostCleanupAnnotation))
-				Expect(updatedByoHost.Annotations).NotTo(HaveKey(infrastructurev1alpha4.EndPointIPAnnotation))
-				Expect(updatedByoHost.Annotations).NotTo(HaveKey(infrastructurev1alpha4.K8sVersionAnnotation))
+				Expect(updatedByoHost.Annotations).NotTo(HaveKey(infrastructurev1beta1.HostCleanupAnnotation))
+				Expect(updatedByoHost.Annotations).NotTo(HaveKey(infrastructurev1beta1.EndPointIPAnnotation))
+				Expect(updatedByoHost.Annotations).NotTo(HaveKey(infrastructurev1beta1.K8sVersionAnnotation))
 
-				k8sNodeBootstrapSucceeded := conditions.Get(updatedByoHost, infrastructurev1alpha4.K8sNodeBootstrapSucceeded)
+				k8sNodeBootstrapSucceeded := conditions.Get(updatedByoHost, infrastructurev1beta1.K8sNodeBootstrapSucceeded)
 				Expect(*k8sNodeBootstrapSucceeded).To(conditions.MatchCondition(clusterv1.Condition{
-					Type:     infrastructurev1alpha4.K8sNodeBootstrapSucceeded,
+					Type:     infrastructurev1beta1.K8sNodeBootstrapSucceeded,
 					Status:   corev1.ConditionFalse,
-					Reason:   infrastructurev1alpha4.K8sNodeAbsentReason,
+					Reason:   infrastructurev1beta1.K8sNodeAbsentReason,
 					Severity: clusterv1.ConditionSeverityInfo,
 				}))
 			})
@@ -278,13 +276,13 @@ runCmd:
 				Expect(result).To(Equal(controllerruntime.Result{}))
 				Expect(reconcilerErr.Error()).To(Equal("failed to exec kubeadm reset: failed to cleanup host"))
 
-				updatedByoHost := &infrastructurev1alpha4.ByoHost{}
+				updatedByoHost := &infrastructurev1beta1.ByoHost{}
 				err := k8sClient.Get(ctx, byoHostLookupKey, updatedByoHost)
 				Expect(err).ToNot(HaveOccurred())
 
-				k8sNodeBootstrapSucceeded := conditions.Get(updatedByoHost, infrastructurev1alpha4.K8sNodeBootstrapSucceeded)
+				k8sNodeBootstrapSucceeded := conditions.Get(updatedByoHost, infrastructurev1beta1.K8sNodeBootstrapSucceeded)
 				Expect(*k8sNodeBootstrapSucceeded).To(conditions.MatchCondition(clusterv1.Condition{
-					Type:   infrastructurev1alpha4.K8sNodeBootstrapSucceeded,
+					Type:   infrastructurev1beta1.K8sNodeBootstrapSucceeded,
 					Status: corev1.ConditionTrue,
 				}))
 			})
