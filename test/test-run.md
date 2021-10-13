@@ -32,7 +32,7 @@ We are using [kind](https://kind.sigs.k8s.io/) to create the Kubernetes cluster 
 ```shell
 cat > kind-cluster.yaml <<EOF
 kind: Cluster
-apiVersion: kind.x-k8s.io/v1beta1
+apiVersion: kind.x-k8s.io/v1alpha4
 nodes:
 - role: control-plane
   image: kindest/node:v1.22.0
@@ -87,32 +87,28 @@ cluster.
 
 ### Add a minimum of two hosts to the capacity pool
 
-Create an unmanaged host.
-
+Create Management Cluster kubeconfig
 ```shell
-export HOST_NAME=host1
-
-docker run --detach --tty --hostname $HOST_NAME --name $HOST_NAME --privileged --security-opt seccomp=unconfined --tmpfs /tmp --tmpfs /run --volume /var --volume /lib/modules:/lib/modules:ro --network kind byoh/node:v1.22.0
-```
-
-Build the agent binary and copy it into the host.
-
-```shell
-# from cluster-api-provider-bringyourownhost folder
-make host-agent-binaries
-
-docker cp bin/agent-linux-amd64 $HOST_NAME:/agent
-```
-
-In order to provide some credentials for the agent to use when to connect to the management cluster, copy management cluster kubeconfig file into the host.
-
-```shell	
 cp ~/.kube/config ~/.kube/management-cluster.conf
-
 export KIND_IP=$(docker inspect -f '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' kind-control-plane)
 sed -i 's/    server\:.*/    server\: https\:\/\/'"$KIND_IP"'\:6443/g' ~/.kube/management-cluster.conf
+```
+Generate host-agent binaries
+```
+make host-agent-binaries
+```
 
-docker cp ~/.kube/management-cluster.conf $HOST_NAME:/management-cluster.conf
+Create n docker hosts, where ```n>1```
+```shell
+for i in {1..n}
+do
+echo "Creating docker container host $i"
+docker run --detach --tty --hostname host$i --name host$i --privileged --security-opt seccomp=unconfined --tmpfs /tmp --tmpfs /run --volume /var --volume /lib/modules:/lib/modules:ro --network kind byoh/node:v1.22.0
+echo "Copy agent binary to host $i"
+docker cp bin/agent-linux-amd64 host$i:/agent
+echo "Copy kubeconfig to host $i"
+docker cp ~/.kube/management-cluster.conf host$i:/management-cluster.conf
+done
 ```
 
 Start the agent on the host and keep it running
@@ -123,7 +119,7 @@ docker exec -it $HOST_NAME bin/bash
 ./agent --kubeconfig management-cluster.conf
 ```
 
-Repeat the same steps with by changing the `HOST_NAME` env variable.
+Repeat the same steps with by changing the `HOST_NAME` env variable for all the hosts that you created.
 
 Check if the hosts registered itself into the management cluster.
 
@@ -141,10 +137,9 @@ export KUBERNETES_VERSION="v1.22.0"
 export CONTROL_PLANE_MACHINE_COUNT=1
 export WORKER_MACHINE_COUNT=1
 export CONTROL_PLANE_ENDPOINT=<static IP from the subnet where the containers are running>
-export VIP_INTERFACE=<interface on the container>
 ```
 
-# from cluster-api-provider-bringyourownhost folder
+From ```cluster-api-provider-bringyourownhost``` folder
 
 ```shell
 cat test/e2e/data/infrastructure-provider-byoh/v1beta1/cluster-template-byoh.yaml | envsubst | kubectl apply -f -
