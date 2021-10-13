@@ -145,7 +145,7 @@ func (r *HostReconciler) SetupWithManager(ctx context.Context, mgr manager.Manag
 
 func (r HostReconciler) preCleanUp(ctx context.Context) error {
 	logger := ctrl.LoggerFrom(ctx)
-	logger.Info("cleaning up host in advance")
+	logger.Info("cleaning up kubeadm directory")
 
 	// cleanup kubeadm dir to remove any stale config on the host
 	const kubeadmDir = "/run/kubeadm"
