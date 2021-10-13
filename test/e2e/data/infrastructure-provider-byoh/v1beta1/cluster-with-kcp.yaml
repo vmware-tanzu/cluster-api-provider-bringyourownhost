@@ -1,5 +1,5 @@
 ---
-apiVersion: cluster.x-k8s.io/v1alpha4
+apiVersion: cluster.x-k8s.io/v1beta1
 kind: Cluster
 metadata:
   name: ${CLUSTER_NAME}
@@ -14,20 +14,20 @@ spec:
       cidrBlocks: ["192.168.0.0/16"]
     serviceDomain: "cluster.local"
   infrastructureRef:
-    apiVersion: infrastructure.cluster.x-k8s.io/v1alpha4
+    apiVersion: infrastructure.cluster.x-k8s.io/v1beta1
     kind: DockerCluster
     name: ${CLUSTER_NAME}
   controlPlaneRef:
     kind: KubeadmControlPlane
-    apiVersion: controlplane.cluster.x-k8s.io/v1alpha4
+    apiVersion: controlplane.cluster.x-k8s.io/v1beta1
     name: "${CLUSTER_NAME}-control-plane"
 ---
-apiVersion: infrastructure.cluster.x-k8s.io/v1alpha4
+apiVersion: infrastructure.cluster.x-k8s.io/v1beta1
 kind: DockerCluster
 metadata:
   name: ${CLUSTER_NAME}
 ---
-apiVersion: infrastructure.cluster.x-k8s.io/v1alpha4
+apiVersion: infrastructure.cluster.x-k8s.io/v1beta1
 kind: DockerMachineTemplate
 metadata:
   name: "${CLUSTER_NAME}-control-plane"
@@ -39,7 +39,7 @@ spec:
           hostPath: "/var/run/docker.sock"
 ---
 kind: KubeadmControlPlane
-apiVersion: controlplane.cluster.x-k8s.io/v1alpha4
+apiVersion: controlplane.cluster.x-k8s.io/v1beta1
 metadata:
   name: "${CLUSTER_NAME}-control-plane"
   labels:
@@ -49,7 +49,7 @@ spec:
   machineTemplate:
     infrastructureRef:
       kind: DockerMachineTemplate
-      apiVersion: infrastructure.cluster.x-k8s.io/v1alpha4
+      apiVersion: infrastructure.cluster.x-k8s.io/v1beta1
       name: "${CLUSTER_NAME}-control-plane"
       namespace: "${NAMESPACE}"
   kubeadmConfigSpec:

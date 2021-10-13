@@ -18,7 +18,7 @@ spec:
     singular: byomachine
   scope: Namespaced
   versions:
-  - name: v1alpha4
+  - name: v1beta1
     schema:
       openAPIV3Schema:
         description: ByoMachine is the Schema for the byomachines API
@@ -128,6 +128,7 @@ spec:
                         important.
                       type: string
                   required:
+                  - lastTransitionTime
                   - status
                   - type
                   type: object

@@ -1,0 +1,7 @@
+apiVersion: infrastructure.cluster.x-k8s.io/v1beta1
+kind: ByoCluster
+metadata:
+  name: byocluster-sample
+spec:
+  # Add fields here
+  foo: bar
