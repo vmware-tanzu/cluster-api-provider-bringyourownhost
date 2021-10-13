@@ -7,11 +7,13 @@ replace sigs.k8s.io/cluster-api => sigs.k8s.io/cluster-api v0.4.2
 require (
 	cloud.google.com/go v0.83.0 // indirect
 	github.com/containerd/containerd v1.5.4 // indirect
+	github.com/cppforlife/go-cli-ui v0.0.0-20200716203538-1e47f820817f
 	github.com/docker/cli v20.10.7+incompatible
 	github.com/docker/docker v20.10.7+incompatible
 	github.com/docker/docker-credential-helpers v0.6.4 // indirect
 	github.com/go-logr/logr v1.1.0
 	github.com/jackpal/gateway v1.0.7
+	github.com/k14s/imgpkg v0.20.0
 	github.com/kube-vip/kube-vip v0.3.8
 	github.com/mattn/go-isatty v0.0.14 // indirect
 	github.com/maxbrunsfeld/counterfeiter/v6 v6.4.1
