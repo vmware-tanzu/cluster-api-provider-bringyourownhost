@@ -102,7 +102,7 @@ func (r *HostReconciler) reconcileNormal(ctx context.Context, byoHost *infrastru
 
 		err = r.kubeadmDirCleanup(ctx)
 		if err != nil {
-			logger.Error(err, "error cleaning up host in advance")
+			logger.Error(err, "error cleaning up kubeadm directory")
 			return ctrl.Result{}, err
 		}
 
