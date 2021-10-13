@@ -1,7 +1,7 @@
 package installer
 
 import (
-	"log"
+	"github.com/go-logr/logr"
 )
 
 type Error string
@@ -19,10 +19,10 @@ const (
 type installer struct {
 	bundleRepo string
 	downloadPath string
-	logger *log.Logger
+	logger logr.Logger
 }
 
-func New(bundleRepo, downloadPath string, logger *log.Logger) (*installer, error) {
+func New(bundleRepo, downloadPath string, logger logr.Logger) (*installer, error) {
 	return &installer{bundleRepo : bundleRepo,
 	                  downloadPath : downloadPath,
 	                  logger : logger}, nil
