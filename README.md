@@ -10,7 +10,7 @@
 declarative, Kubernetes-style APIs to cluster creation, configuration and
 management.
 
-__BYOH__ is a Cluster API v1alpha4 Infrastructure Provider for already-provisioned hosts running Linux.
+__BYOH__ is a Cluster API v1beta1 Infrastructure Provider for already-provisioned hosts running Linux.
 
 ## Project Status
 
@@ -32,7 +32,7 @@ Check out the [test guide](./test/test-run.md) for launching a cluster on Docker
 
 ### Cluster API compatibility Matrix:
 
-||Cluster API v1alpha3 (v0.3)|Cluster API v1alpha4 (v0.4)|
+||Cluster API v1alpha4 (v0.4)|Cluster API v1beta1 (v1.0)|
 |-|-|-|
 |BYOH Provider v1alpha1 (v0.1.0)||✓|
 

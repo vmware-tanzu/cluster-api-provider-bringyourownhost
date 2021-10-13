@@ -7,13 +7,13 @@ import (
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-	infrastructurev1alpha4 "github.com/vmware-tanzu/cluster-api-provider-byoh/apis/infrastructure/v1alpha4"
+	infrastructurev1beta1 "github.com/vmware-tanzu/cluster-api-provider-byoh/apis/infrastructure/v1beta1"
 	"github.com/vmware-tanzu/cluster-api-provider-byoh/common"
 	corev1 "k8s.io/api/core/v1"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/kubernetes/scheme"
-	clusterv1 "sigs.k8s.io/cluster-api/api/v1alpha4"
+	clusterv1 "sigs.k8s.io/cluster-api/api/v1beta1"
 	"sigs.k8s.io/cluster-api/util/annotations"
 	"sigs.k8s.io/cluster-api/util/conditions"
 	"sigs.k8s.io/cluster-api/util/patch"
@@ -27,10 +27,10 @@ var _ = Describe("Controllers/ByomachineController", func() {
 		byoMachineLookupKey types.NamespacedName
 		byoHostLookupKey    types.NamespacedName
 		ctx                 context.Context
-		byoMachine          *infrastructurev1alpha4.ByoMachine
+		byoMachine          *infrastructurev1beta1.ByoMachine
 		machine             *clusterv1.Machine
 		k8sClientUncached   client.Client
-		byoHost             *infrastructurev1alpha4.ByoHost
+		byoHost             *infrastructurev1beta1.ByoHost
 	)
 
 	BeforeEach(func() {
@@ -74,8 +74,7 @@ var _ = Describe("Controllers/ByomachineController", func() {
 			NamespacedName: types.NamespacedName{
 				Name:      byoMachineWithNonExistingCluster.Name,
 				Namespace: byoMachineWithNonExistingCluster.Namespace}})
-
-		Expect(err).To(MatchError("Cluster.cluster.x-k8s.io \"non-existent-cluster\" not found"))
+		Expect(err).To(MatchError("failed to get Cluster/non-existent-cluster: Cluster.cluster.x-k8s.io \"non-existent-cluster\" not found"))
 	})
 
 	Context("When cluster infrastructure is ready", func() {
@@ -105,15 +104,15 @@ var _ = Describe("Controllers/ByomachineController", func() {
 				_, err := reconciler.Reconcile(ctx, reconcile.Request{NamespacedName: byoMachineLookupKey})
 				Expect(err).To(MatchError("no hosts found"))
 
-				createdByoMachine := &infrastructurev1alpha4.ByoMachine{}
+				createdByoMachine := &infrastructurev1beta1.ByoMachine{}
 				err = k8sClientUncached.Get(ctx, byoMachineLookupKey, createdByoMachine)
 				Expect(err).ToNot(HaveOccurred())
-				actualCondition := conditions.Get(createdByoMachine, infrastructurev1alpha4.BYOHostReady)
+				actualCondition := conditions.Get(createdByoMachine, infrastructurev1beta1.BYOHostReady)
 
 				Expect(*actualCondition).To(conditions.MatchCondition(clusterv1.Condition{
-					Type:     infrastructurev1alpha4.BYOHostReady,
+					Type:     infrastructurev1beta1.BYOHostReady,
 					Status:   corev1.ConditionFalse,
-					Reason:   infrastructurev1alpha4.BYOHostsUnavailableReason,
+					Reason:   infrastructurev1beta1.BYOHostsUnavailableReason,
 					Severity: clusterv1.ConditionSeverityInfo,
 				}))
 			})
@@ -122,10 +121,10 @@ var _ = Describe("Controllers/ByomachineController", func() {
 				_, err := reconciler.Reconcile(ctx, reconcile.Request{NamespacedName: byoMachineLookupKey})
 				Expect(err).To(HaveOccurred())
 
-				updatedByoMachine := &infrastructurev1alpha4.ByoMachine{}
+				updatedByoMachine := &infrastructurev1beta1.ByoMachine{}
 				err = k8sClientUncached.Get(ctx, byoMachineLookupKey, updatedByoMachine)
 				Expect(err).ToNot(HaveOccurred())
-				Expect(controllerutil.ContainsFinalizer(updatedByoMachine, infrastructurev1alpha4.MachineFinalizer)).To(BeTrue())
+				Expect(controllerutil.ContainsFinalizer(updatedByoMachine, infrastructurev1beta1.MachineFinalizer)).To(BeTrue())
 			})
 		})
 
@@ -148,7 +147,7 @@ var _ = Describe("Controllers/ByomachineController", func() {
 				_, err := reconciler.Reconcile(ctx, reconcile.Request{NamespacedName: byoMachineLookupKey})
 				Expect(err).ToNot(HaveOccurred())
 
-				createdByoHost := &infrastructurev1alpha4.ByoHost{}
+				createdByoHost := &infrastructurev1beta1.ByoHost{}
 				err = k8sClientUncached.Get(ctx, byoHostLookupKey, createdByoHost)
 				Expect(err).ToNot(HaveOccurred())
 				Expect(createdByoHost.Status.MachineRef.Namespace).To(Equal(byoMachine.Namespace))
@@ -161,17 +160,17 @@ var _ = Describe("Controllers/ByomachineController", func() {
 				// Assert annotations on byohost
 				testClusterVersion := "1.22"
 				createdByoHostAnnotations := createdByoHost.GetAnnotations()
-				Expect(createdByoHostAnnotations[infrastructurev1alpha4.K8sVersionAnnotation]).To(Equal(testClusterVersion))
+				Expect(createdByoHostAnnotations[infrastructurev1beta1.K8sVersionAnnotation]).To(Equal(testClusterVersion))
 
-				createdByoMachine := &infrastructurev1alpha4.ByoMachine{}
+				createdByoMachine := &infrastructurev1beta1.ByoMachine{}
 				err = k8sClientUncached.Get(ctx, byoMachineLookupKey, createdByoMachine)
 				Expect(err).ToNot(HaveOccurred())
 				Expect(createdByoMachine.Spec.ProviderID).To(ContainSubstring(providerIDPrefix))
 				Expect(createdByoMachine.Status.Ready).To(BeTrue())
 
-				actualCondition := conditions.Get(createdByoMachine, infrastructurev1alpha4.BYOHostReady)
+				actualCondition := conditions.Get(createdByoMachine, infrastructurev1beta1.BYOHostReady)
 				Expect(*actualCondition).To(conditions.MatchCondition(clusterv1.Condition{
-					Type:   infrastructurev1alpha4.BYOHostReady,
+					Type:   infrastructurev1beta1.BYOHostReady,
 					Status: corev1.ConditionTrue,
 				}))
 
@@ -196,7 +195,7 @@ var _ = Describe("Controllers/ByomachineController", func() {
 					Expect(ph.Patch(ctx, byoHost, patch.WithStatusObservedGeneration{})).Should(Succeed())
 
 					WaitForObjectToBeUpdatedInCache(byoHost, func(object client.Object) bool {
-						return object.(*infrastructurev1alpha4.ByoHost).Status.MachineRef != nil
+						return object.(*infrastructurev1beta1.ByoHost).Status.MachineRef != nil
 					})
 				})
 
@@ -204,13 +203,13 @@ var _ = Describe("Controllers/ByomachineController", func() {
 					BeforeEach(func() {
 						ph, err := patch.NewHelper(byoMachine, k8sClientUncached)
 						Expect(err).ShouldNot(HaveOccurred())
-						controllerutil.AddFinalizer(byoMachine, infrastructurev1alpha4.MachineFinalizer)
+						controllerutil.AddFinalizer(byoMachine, infrastructurev1beta1.MachineFinalizer)
 						Expect(ph.Patch(ctx, byoMachine, patch.WithStatusObservedGeneration{})).Should(Succeed())
 
 						Expect(k8sClientUncached.Delete(ctx, byoMachine)).Should(Succeed())
 
 						WaitForObjectToBeUpdatedInCache(byoMachine, func(object client.Object) bool {
-							return !object.(*infrastructurev1alpha4.ByoMachine).ObjectMeta.DeletionTimestamp.IsZero()
+							return !object.(*infrastructurev1beta1.ByoMachine).ObjectMeta.DeletionTimestamp.IsZero()
 						})
 					})
 
@@ -218,14 +217,14 @@ var _ = Describe("Controllers/ByomachineController", func() {
 						_, err := reconciler.Reconcile(ctx, reconcile.Request{NamespacedName: byoMachineLookupKey})
 						Expect(err).NotTo(HaveOccurred())
 
-						createdByoHost := &infrastructurev1alpha4.ByoHost{}
+						createdByoHost := &infrastructurev1beta1.ByoHost{}
 						Expect(k8sClientUncached.Get(ctx, byoHostLookupKey, createdByoHost)).NotTo(HaveOccurred())
 
-						Expect(createdByoHost.Annotations[infrastructurev1alpha4.HostCleanupAnnotation]).Should(Equal(""))
+						Expect(createdByoHost.Annotations[infrastructurev1beta1.HostCleanupAnnotation]).Should(Equal(""))
 					})
 
 					It("should delete the byomachine object", func() {
-						deletedByoMachine := &infrastructurev1alpha4.ByoMachine{}
+						deletedByoMachine := &infrastructurev1beta1.ByoMachine{}
 						// assert ByoMachine Exists before the reconcile
 						Expect(k8sClientUncached.Get(ctx, byoMachineLookupKey, deletedByoMachine)).Should(Not(HaveOccurred()))
 						_, err := reconciler.Reconcile(ctx, reconcile.Request{NamespacedName: byoMachineLookupKey})
@@ -249,21 +248,21 @@ var _ = Describe("Controllers/ByomachineController", func() {
 				Expect(ph.Patch(ctx, byoMachine, patch.WithStatusObservedGeneration{})).Should(Succeed())
 
 				WaitForObjectToBeUpdatedInCache(byoMachine, func(object client.Object) bool {
-					return annotations.HasPausedAnnotation(object.(*infrastructurev1alpha4.ByoMachine))
+					return annotations.HasPausedAnnotation(object.(*infrastructurev1beta1.ByoMachine))
 				})
 
 				_, err = reconciler.Reconcile(ctx, reconcile.Request{NamespacedName: byoMachineLookupKey})
 				Expect(err).ToNot(HaveOccurred())
 
-				createdByoMachine := &infrastructurev1alpha4.ByoMachine{}
+				createdByoMachine := &infrastructurev1beta1.ByoMachine{}
 				err = k8sClientUncached.Get(ctx, byoMachineLookupKey, createdByoMachine)
 				Expect(err).ToNot(HaveOccurred())
 
-				actualCondition := conditions.Get(createdByoMachine, infrastructurev1alpha4.BYOHostReady)
+				actualCondition := conditions.Get(createdByoMachine, infrastructurev1beta1.BYOHostReady)
 				Expect(*actualCondition).To(conditions.MatchCondition(clusterv1.Condition{
-					Type:     infrastructurev1alpha4.BYOHostReady,
+					Type:     infrastructurev1beta1.BYOHostReady,
 					Status:   corev1.ConditionFalse,
-					Reason:   infrastructurev1alpha4.ClusterOrResourcePausedReason,
+					Reason:   infrastructurev1beta1.ClusterOrResourcePausedReason,
 					Severity: clusterv1.ConditionSeverityInfo,
 				}))
 			})
@@ -285,15 +284,15 @@ var _ = Describe("Controllers/ByomachineController", func() {
 				_, err := reconciler.Reconcile(ctx, reconcile.Request{NamespacedName: pausedByoMachineLookupKey})
 				Expect(err).ToNot(HaveOccurred())
 
-				createdByoMachine := &infrastructurev1alpha4.ByoMachine{}
+				createdByoMachine := &infrastructurev1beta1.ByoMachine{}
 				err = k8sClientUncached.Get(ctx, pausedByoMachineLookupKey, createdByoMachine)
 				Expect(err).ToNot(HaveOccurred())
 
-				actualCondition := conditions.Get(createdByoMachine, infrastructurev1alpha4.BYOHostReady)
+				actualCondition := conditions.Get(createdByoMachine, infrastructurev1beta1.BYOHostReady)
 				Expect(*actualCondition).To(conditions.MatchCondition(clusterv1.Condition{
-					Type:     infrastructurev1alpha4.BYOHostReady,
+					Type:     infrastructurev1beta1.BYOHostReady,
 					Status:   corev1.ConditionFalse,
-					Reason:   infrastructurev1alpha4.ClusterOrResourcePausedReason,
+					Reason:   infrastructurev1beta1.ClusterOrResourcePausedReason,
 					Severity: clusterv1.ConditionSeverityInfo,
 				}))
 
@@ -316,15 +315,15 @@ var _ = Describe("Controllers/ByomachineController", func() {
 				_, err = reconciler.Reconcile(ctx, reconcile.Request{NamespacedName: byoMachineLookupKey})
 				Expect(err).To(BeNil())
 
-				createdByoMachine := &infrastructurev1alpha4.ByoMachine{}
+				createdByoMachine := &infrastructurev1beta1.ByoMachine{}
 				err = k8sClientUncached.Get(ctx, byoMachineLookupKey, createdByoMachine)
 				Expect(err).ShouldNot(HaveOccurred())
 
-				actualCondition := conditions.Get(createdByoMachine, infrastructurev1alpha4.BYOHostReady)
+				actualCondition := conditions.Get(createdByoMachine, infrastructurev1beta1.BYOHostReady)
 				Expect(*actualCondition).To(conditions.MatchCondition(clusterv1.Condition{
-					Type:     infrastructurev1alpha4.BYOHostReady,
+					Type:     infrastructurev1beta1.BYOHostReady,
 					Status:   corev1.ConditionFalse,
-					Reason:   infrastructurev1alpha4.WaitingForBootstrapDataSecretReason,
+					Reason:   infrastructurev1beta1.WaitingForBootstrapDataSecretReason,
 					Severity: clusterv1.ConditionSeverityInfo,
 				}))
 			})
@@ -352,15 +351,15 @@ var _ = Describe("Controllers/ByomachineController", func() {
 				_, err := reconciler.Reconcile(ctx, reconcile.Request{NamespacedName: byoMachineLookupKey})
 				Expect(err).To(MatchError("no hosts found"))
 
-				createdByoMachine := &infrastructurev1alpha4.ByoMachine{}
+				createdByoMachine := &infrastructurev1beta1.ByoMachine{}
 				err = k8sClientUncached.Get(ctx, byoMachineLookupKey, createdByoMachine)
 				Expect(err).ToNot(HaveOccurred())
 
-				actualCondition := conditions.Get(createdByoMachine, infrastructurev1alpha4.BYOHostReady)
+				actualCondition := conditions.Get(createdByoMachine, infrastructurev1beta1.BYOHostReady)
 				Expect(*actualCondition).To(conditions.MatchCondition(clusterv1.Condition{
-					Type:     infrastructurev1alpha4.BYOHostReady,
+					Type:     infrastructurev1beta1.BYOHostReady,
 					Status:   corev1.ConditionFalse,
-					Reason:   infrastructurev1alpha4.BYOHostsUnavailableReason,
+					Reason:   infrastructurev1beta1.BYOHostsUnavailableReason,
 					Severity: clusterv1.ConditionSeverityInfo,
 				}))
 			})
@@ -383,15 +382,15 @@ var _ = Describe("Controllers/ByomachineController", func() {
 				_, err := reconciler.Reconcile(ctx, reconcile.Request{NamespacedName: byoMachineLookupKey})
 				Expect(err).To(MatchError("no hosts found"))
 
-				createdByoMachine := &infrastructurev1alpha4.ByoMachine{}
+				createdByoMachine := &infrastructurev1beta1.ByoMachine{}
 				err = k8sClientUncached.Get(ctx, byoMachineLookupKey, createdByoMachine)
 				Expect(err).ToNot(HaveOccurred())
 
-				actualCondition := conditions.Get(createdByoMachine, infrastructurev1alpha4.BYOHostReady)
+				actualCondition := conditions.Get(createdByoMachine, infrastructurev1beta1.BYOHostReady)
 				Expect(*actualCondition).To(conditions.MatchCondition(clusterv1.Condition{
-					Type:     infrastructurev1alpha4.BYOHostReady,
+					Type:     infrastructurev1beta1.BYOHostReady,
 					Status:   corev1.ConditionFalse,
-					Reason:   infrastructurev1alpha4.BYOHostsUnavailableReason,
+					Reason:   infrastructurev1beta1.BYOHostsUnavailableReason,
 					Severity: clusterv1.ConditionSeverityInfo,
 				}))
 			})
@@ -399,8 +398,8 @@ var _ = Describe("Controllers/ByomachineController", func() {
 
 		Context("When multiple BYO Host are available", func() {
 			var (
-				byoHost1 *infrastructurev1alpha4.ByoHost
-				byoHost2 *infrastructurev1alpha4.ByoHost
+				byoHost1 *infrastructurev1beta1.ByoHost
+				byoHost2 *infrastructurev1beta1.ByoHost
 			)
 
 			BeforeEach(func() {
@@ -419,15 +418,15 @@ var _ = Describe("Controllers/ByomachineController", func() {
 				_, err := reconciler.Reconcile(ctx, reconcile.Request{NamespacedName: byoMachineLookupKey})
 				Expect(err).ToNot(HaveOccurred())
 
-				createdByoMachine := &infrastructurev1alpha4.ByoMachine{}
+				createdByoMachine := &infrastructurev1beta1.ByoMachine{}
 				err = k8sClientUncached.Get(ctx, byoMachineLookupKey, createdByoMachine)
 				Expect(err).ToNot(HaveOccurred())
 
 				Expect(createdByoMachine.Status.Ready).To(BeTrue())
 
-				readyCondition := conditions.Get(createdByoMachine, infrastructurev1alpha4.BYOHostReady)
+				readyCondition := conditions.Get(createdByoMachine, infrastructurev1beta1.BYOHostReady)
 				Expect(*readyCondition).To(conditions.MatchCondition(clusterv1.Condition{
-					Type:   infrastructurev1alpha4.BYOHostReady,
+					Type:   infrastructurev1beta1.BYOHostReady,
 					Status: corev1.ConditionTrue,
 				}))
 
@@ -453,26 +452,26 @@ var _ = Describe("Controllers/ByomachineController", func() {
 				Expect(ph.Patch(ctx, byoHost2, patch.WithStatusObservedGeneration{})).Should(Succeed())
 
 				WaitForObjectToBeUpdatedInCache(byoHost2, func(object client.Object) bool {
-					return object.(*infrastructurev1alpha4.ByoHost).Labels[clusterv1.ClusterLabelName] == capiCluster.Name
+					return object.(*infrastructurev1beta1.ByoHost).Labels[clusterv1.ClusterLabelName] == capiCluster.Name
 				})
 
 				_, err = reconciler.Reconcile(ctx, reconcile.Request{NamespacedName: byoMachineLookupKey})
 				Expect(err).ToNot(HaveOccurred())
 
-				createdByoHost := &infrastructurev1alpha4.ByoHost{}
+				createdByoHost := &infrastructurev1beta1.ByoHost{}
 				err = k8sClientUncached.Get(ctx, types.NamespacedName{Name: byoHost1.Name, Namespace: defaultNamespace}, createdByoHost)
 				Expect(err).ToNot(HaveOccurred())
 				Expect(createdByoHost.Status.MachineRef.Namespace).To(Equal(defaultNamespace))
 				Expect(createdByoHost.Status.MachineRef.Name).To(Equal(byoMachine.Name))
 
-				createdByoMachine := &infrastructurev1alpha4.ByoMachine{}
+				createdByoMachine := &infrastructurev1beta1.ByoMachine{}
 				err = k8sClientUncached.Get(ctx, byoMachineLookupKey, createdByoMachine)
 				Expect(err).ToNot(HaveOccurred())
 				Expect(createdByoMachine.Status.Ready).To(BeTrue())
 
-				readyCondition := conditions.Get(createdByoMachine, infrastructurev1alpha4.BYOHostReady)
+				readyCondition := conditions.Get(createdByoMachine, infrastructurev1beta1.BYOHostReady)
 				Expect(*readyCondition).To(conditions.MatchCondition(clusterv1.Condition{
-					Type:   infrastructurev1alpha4.BYOHostReady,
+					Type:   infrastructurev1beta1.BYOHostReady,
 					Status: corev1.ConditionTrue,
 				}))
 
@@ -507,15 +506,15 @@ var _ = Describe("Controllers/ByomachineController", func() {
 			_, err := reconciler.Reconcile(ctx, reconcile.Request{NamespacedName: byoMachineLookupKey})
 			Expect(err).To(BeNil())
 
-			createdByoMachine := &infrastructurev1alpha4.ByoMachine{}
+			createdByoMachine := &infrastructurev1beta1.ByoMachine{}
 			err = k8sClientUncached.Get(ctx, byoMachineLookupKey, createdByoMachine)
 			Expect(err).ShouldNot(HaveOccurred())
 
-			actualCondition := conditions.Get(createdByoMachine, infrastructurev1alpha4.BYOHostReady)
+			actualCondition := conditions.Get(createdByoMachine, infrastructurev1beta1.BYOHostReady)
 			Expect(*actualCondition).To(conditions.MatchCondition(clusterv1.Condition{
-				Type:     infrastructurev1alpha4.BYOHostReady,
+				Type:     infrastructurev1beta1.BYOHostReady,
 				Status:   corev1.ConditionFalse,
-				Reason:   infrastructurev1alpha4.WaitingForClusterInfrastructureReason,
+				Reason:   infrastructurev1beta1.WaitingForClusterInfrastructureReason,
 				Severity: clusterv1.ConditionSeverityInfo,
 			}))
 		})

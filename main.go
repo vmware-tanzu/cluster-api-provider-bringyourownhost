@@ -34,11 +34,11 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/healthz"
 
-	infrastructurev1alpha4 "github.com/vmware-tanzu/cluster-api-provider-byoh/apis/infrastructure/v1alpha4"
 	byohcontrollers "github.com/vmware-tanzu/cluster-api-provider-byoh/controllers/infrastructure"
 
+	infrastructurev1beta1 "github.com/vmware-tanzu/cluster-api-provider-byoh/apis/infrastructure/v1beta1"
 	//+kubebuilder:scaffold:imports
-	clusterv1 "sigs.k8s.io/cluster-api/api/v1alpha4"
+	clusterv1 "sigs.k8s.io/cluster-api/api/v1beta1"
 	"sigs.k8s.io/cluster-api/controllers/remote"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
 )
@@ -52,7 +52,7 @@ func init() {
 	klog.InitFlags(nil)
 	utilruntime.Must(clientgoscheme.AddToScheme(scheme))
 
-	utilruntime.Must(infrastructurev1alpha4.AddToScheme(scheme))
+	utilruntime.Must(infrastructurev1beta1.AddToScheme(scheme))
 	//+kubebuilder:scaffold:scheme
 
 	utilruntime.Must(clusterv1.AddToScheme(scheme))
@@ -128,7 +128,8 @@ func main() {
 		setupLog.Error(err, "unable to create controller", "controller", "ByoCluster")
 		os.Exit(1)
 	}
-	if err = (&infrastructurev1alpha4.ByoHost{}).SetupWebhookWithManager(mgr); err != nil {
+
+	if err = (&infrastructurev1beta1.ByoHost{}).SetupWebhookWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create webhook", "webhook", "ByoHost")
 		os.Exit(1)
 	}

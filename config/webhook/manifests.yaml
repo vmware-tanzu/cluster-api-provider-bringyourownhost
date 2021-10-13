@@ -13,14 +13,14 @@ webhooks:
     service:
       name: webhook-service
       namespace: system
-      path: /validate-infrastructure-cluster-x-k8s-io-v1alpha4-byohost
+      path: /validate-infrastructure-cluster-x-k8s-io-v1beta1-byohost
   failurePolicy: Fail
   name: vbyohost.kb.io
   rules:
   - apiGroups:
     - infrastructure.cluster.x-k8s.io
     apiVersions:
-    - v1alpha4
+    - v1beta1
     operations:
     - CREATE
     - UPDATE
