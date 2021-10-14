@@ -128,7 +128,7 @@ Open another shell and run
 kubectl get byohosts 
 ```
 
-Open a new shell and change directory to `cluster-api-provider-byoh` repository. Run below commands
+Open a new shell and change directory to `cluster-api-provider-bringyourownhost` repository. Run below commands
 
 ```shell
 export CLUSTER_NAME="test1"
@@ -142,7 +142,7 @@ export CONTROL_PLANE_ENDPOINT=<static IP from the subnet where the containers ar
 From ```cluster-api-provider-bringyourownhost``` folder
 
 ```shell
-cat test/e2e/data/infrastructure-provider-byoh/v1beta1/cluster-template-byoh.yaml | envsubst | kubectl apply -f -
+cat test/e2e/data/infrastructure-provider-bringyourownhost/v1beta1/cluster-template-byoh.yaml | envsubst | kubectl apply -f -
 ```
 
 ```shell
