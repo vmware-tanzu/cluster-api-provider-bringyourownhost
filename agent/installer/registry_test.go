@@ -20,10 +20,10 @@ var _ = Describe("Byohost Installer Tests", func() {
                 })
 	        It("Should allow adding and gettnig installers", func() {
 			r := NewRegistry()
-			Expect(r.Add("ubuntu", "1.22", 122)).ShouldNot((HaveOccurred()))
-			Expect(r.Add("ubuntu", "1.22", 122)).Should((HaveOccurred()))
-			Expect(r.Add("ubuntu", "1.23", 123)).ShouldNot((HaveOccurred()))
-			Expect(r.Add("rhel", "1.24", 124)).ShouldNot((HaveOccurred()))
+			Expect(func() { r.Add("ubuntu", "1.22", 122) }).NotTo(Panic())
+			Expect(func() { r.Add("ubuntu", "1.22", 1122) }).To(Panic())
+			Expect(func() { r.Add("ubuntu", "1.23", 123) }).NotTo(Panic())
+			Expect(func() { r.Add("rhel", "1.24", 124) }).NotTo(Panic())
 
 			Expect(r.GetInstaller("ubuntu","1.22")).To(Equal(122))
 			Expect(r.GetInstaller("ubuntu","1.23")).To(Equal(123))
