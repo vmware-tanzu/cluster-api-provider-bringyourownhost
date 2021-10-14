@@ -20,17 +20,16 @@ func NewRegistry() registry {
 	return registry{make(osk8sInstallerMap)}
 }
 
-func (r *registry) Add(os, k8sVer string, installer osk8sInstaller) error {
+func (r *registry) Add(os, k8sVer string, installer osk8sInstaller) {
 	if _, ok := r.osk8sInstallerMap[os]; !ok {
 		r.osk8sInstallerMap[os] = make(k8sInstallerMap)
 	}
 
 	if _, alreadyExist := r.osk8sInstallerMap[os][k8sVer]; alreadyExist {
-		return fmt.Errorf("%v %v already exists", os, k8sVer)
+		panic(fmt.Sprintf("%v %v already exists", os, k8sVer))
 	}
 
 	r.osk8sInstallerMap[os][k8sVer] = installer
-	return nil
 }
 
 func (r *registry) ListOS() []string {
