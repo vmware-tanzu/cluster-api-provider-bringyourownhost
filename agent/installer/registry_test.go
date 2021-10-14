@@ -11,39 +11,61 @@ import (
 
 var _ = Describe("Byohost Installer Tests", func() {
 	 Context("When registry is created", func() {
-                It("Should be empty", func() {
-			r := NewRegistry()
+		type dummyinstaller int
 
-			Expect(len(r.ListOS())).To(Equal(0))
-			Expect(len(r.ListK8s("x"))).To(Equal(0))
+		const (
+			dummy122  = dummyinstaller(122)
+			dummy1122 = dummyinstaller(1122)
+			dummy123  = dummyinstaller(123)
+			dummy124  = dummyinstaller(124)
+		)
+
+		var (
+			r registry
+		)
+
+		BeforeEach(func() {
+			r = NewRegistry()
+		})
+
+                It("Should be empty", func() {
+			Expect(r.ListOS()).To(HaveLen(0))
+			Expect(r.ListK8s("x")).To(HaveLen(0))
 			Expect(r.GetInstaller("a","b")).To(BeNil())
                 })
-	        It("Should allow adding and gettnig installers", func() {
-			r := NewRegistry()
-			Expect(func() { r.Add("ubuntu", "1.22", 122) }).NotTo(Panic())
-			Expect(func() { r.Add("ubuntu", "1.22", 1122) }).To(Panic())
-			Expect(func() { r.Add("ubuntu", "1.23", 123) }).NotTo(Panic())
-			Expect(func() { r.Add("rhel", "1.24", 124) }).NotTo(Panic())
+	        It("Should allow working with installers", func() {
+			Expect(func() { r.Add("ubuntu", "1.22", dummy122) }).NotTo(Panic())
+			Expect(func() { r.Add("ubuntu", "1.23", dummy123) }).NotTo(Panic())
+			Expect(func() { r.Add("rhel", "1.24", dummy124) }).NotTo(Panic())
 
-			Expect(r.GetInstaller("ubuntu","1.22")).To(Equal(122))
-			Expect(r.GetInstaller("ubuntu","1.23")).To(Equal(123))
-			Expect(r.GetInstaller("rhel","1.24")).To(Equal(124))
+			Expect(r.GetInstaller("ubuntu","1.22")).To(Equal(dummy122))
+			Expect(r.GetInstaller("ubuntu","1.23")).To(Equal(dummy123))
+			Expect(r.GetInstaller("rhel","1.24")).To(Equal(dummy124))
 
-			osList := r.ListOS()
-			sort.Strings(osList)
-			Expect(osList).To(BeEquivalentTo([]string{"rhel", "ubuntu"}))
+			Expect(r.ListOS()).To(ContainElements("rhel", "ubuntu"))
+			Expect(r.ListOS()).To(HaveLen(2))
 
-			k8sList := r.ListK8s("ubuntu")
-			sort.Strings(k8sList)
-			Expect(k8sList).To(BeEquivalentTo([]string{"1.22", "1.23"}))
+			Expect(r.ListK8s("ubuntu")).To(ContainElements("1.22", "1.23"))
+			Expect(r.ListK8s("ubuntu")).To(HaveLen(2))
 
-			Expect(r.ListK8s("rhel")).To(BeEquivalentTo([]string{"1.24"}))
+			Expect(r.ListK8s("rhel")).To(ContainElement("1.24"))
+			Expect(r.ListK8s("rhel")).To(HaveLen(1))
 
 			Expect(r.GetInstaller("photon","1.22")).To(BeNil())
-			osList = r.ListOS()
+			osList := r.ListOS()
 			sort.Strings(osList)
-			Expect(osList).To(BeEquivalentTo([]string{"rhel", "ubuntu"}))
-	        })
-	})
+			Expect(r.ListOS()).To(ContainElements("rhel", "ubuntu"))
+			Expect(r.ListOS()).To(HaveLen(2))
 
+	        })
+		It("Should panic on duplicate installers", func() {
+			/*
+			 * Add is expected to be called with literals only.
+			 * Adding a mapping to already existing os and k8s is clearly a typo and bug.
+			 * Make it obvious
+			 */
+			Expect(func() { r.Add("ubuntu", "1.22", dummy122) }).NotTo(Panic())
+			Expect(func() { r.Add("ubuntu", "1.22", dummy1122) }).To(Panic())
+		})
+	})
 })
