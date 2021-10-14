@@ -4,7 +4,6 @@
 package installer
 
 import (
-	"sort"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 )
@@ -52,8 +51,6 @@ var _ = Describe("Byohost Installer Tests", func() {
 			Expect(r.ListK8s("rhel")).To(HaveLen(1))
 
 			Expect(r.GetInstaller("photon","1.22")).To(BeNil())
-			osList := r.ListOS()
-			sort.Strings(osList)
 			Expect(r.ListOS()).To(ContainElements("rhel", "ubuntu"))
 			Expect(r.ListOS()).To(HaveLen(2))
 
