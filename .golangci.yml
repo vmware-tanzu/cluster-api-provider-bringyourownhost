@@ -70,6 +70,16 @@ linters-settings:
   funlen:
     lines: 100
     statements: 50
+  goheader:
+    values:
+      const:
+        COMPANY: VMware, Inc.
+        LICENSE: Apache-2.0
+      regexp:
+        YEAR: 20\d*-*\d*
+    template: |-
+      Copyright {{ YEAR }} {{ COMPANY }} All Rights Reserved.
+      SPDX-License-Identifier: {{ LICENSE }}
   goconst:
     min-len: 2
     min-occurrences: 2
