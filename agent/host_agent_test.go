@@ -16,7 +16,7 @@ import (
 	"github.com/onsi/gomega/gbytes"
 	"github.com/onsi/gomega/gexec"
 	infrastructurev1beta1 "github.com/vmware-tanzu/cluster-api-provider-byoh/apis/infrastructure/v1beta1"
-	"github.com/vmware-tanzu/cluster-api-provider-byoh/common"
+	"github.com/vmware-tanzu/cluster-api-provider-byoh/test/builder"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/types"
 )
@@ -33,7 +33,7 @@ var _ = Describe("Agent", func() {
 		)
 
 		BeforeEach(func() {
-			ns = common.NewNamespace("testns")
+			ns = builder.Namespace("testns").Build()
 			Expect(k8sClient.Create(context.TODO(), ns)).NotTo(HaveOccurred(), "failed to create test namespace")
 
 			hostName, err = os.Hostname()
@@ -47,6 +47,9 @@ var _ = Describe("Agent", func() {
 		})
 
 		It("should not error out if the host already exists", func() {
+			// not using the builder method here
+			// because builder makes use of GenerateName that generates random names
+			// For the below byoHost we need the name to be deterministic
 			byoHost := &infrastructurev1beta1.ByoHost{
 				TypeMeta: metav1.TypeMeta{
 					Kind:       "ByoHost",
@@ -85,7 +88,7 @@ var _ = Describe("Agent", func() {
 		)
 
 		BeforeEach(func() {
-			ns = common.NewNamespace("testns")
+			ns = builder.Namespace("testns").Build()
 			Expect(k8sClient.Create(context.TODO(), ns)).NotTo(HaveOccurred(), "failed to create test namespace")
 
 			hostName, err = os.Hostname()
@@ -148,7 +151,7 @@ var _ = Describe("Agent", func() {
 		})
 
 		It("should only reconcile ByoHost resource that the agent created", func() {
-			byoHost := common.NewByoHost("random-second-host", ns.Name)
+			byoHost := builder.ByoHost(ns.Name, "random-second-host").Build()
 			Expect(k8sClient.Create(context.TODO(), byoHost)).NotTo(HaveOccurred(), "failed to create byohost")
 
 			Consistently(session.Err, "10s").ShouldNot(gbytes.Say(byoHost.Name))
