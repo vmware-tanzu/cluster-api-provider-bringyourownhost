@@ -9,6 +9,7 @@ import (
 
 	"github.com/pkg/errors"
 	"github.com/vmware-tanzu/cluster-api-provider-byoh/agent/cloudinit"
+	"github.com/vmware-tanzu/cluster-api-provider-byoh/agent/installer"
 	"github.com/vmware-tanzu/cluster-api-provider-byoh/agent/registration"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/types"
@@ -162,6 +163,13 @@ func (r HostReconciler) hostCleanUp(ctx context.Context, byoHost *infrastructure
 		return err
 	}
 
+	k8sInstaller, _ := installer.New("", "", logger)
+	k8sVersion := byoHost.GetAnnotations()[infrastructurev1beta1.K8sVersionAnnotation]
+	err = k8sInstaller.Uninstall(k8sVersion)
+	if err != nil {
+		return err
+	}
+
 	logger.Info("Removing the bootstrap sentinel file...")
 	if _, err := os.Stat(bootstrapSentinelFile); !os.IsNotExist(err) {
 		err := os.Remove(bootstrapSentinelFile)
@@ -223,9 +231,13 @@ func (r *HostReconciler) installK8sComponents(ctx context.Context, byoHost *infr
 	logger := ctrl.LoggerFrom(ctx)
 	logger.Info("Installing K8s")
 	conditions.MarkFalse(byoHost, infrastructurev1beta1.K8sComponentsInstallationSucceeded, infrastructurev1beta1.K8sComponentsInstallingReason, clusterv1.ConditionSeverityInfo, "")
-	// TODO: call installer.Install(k8sVersion) here
-	// if err, return err
 
+	k8sInstaller, _ := installer.New("", "", logger)
+	k8sVersion := byoHost.GetAnnotations()[infrastructurev1beta1.K8sVersionAnnotation]
+	err := k8sInstaller.Install(k8sVersion)
+	if err != nil {
+		return err
+	}
 	conditions.MarkTrue(byoHost, infrastructurev1beta1.K8sComponentsInstallationSucceeded)
 	return nil
 }
