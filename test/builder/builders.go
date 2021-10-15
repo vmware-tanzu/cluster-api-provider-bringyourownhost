@@ -16,6 +16,7 @@ type ByoMachineBuilder struct {
 	name         string
 	clusterLabel string
 	machine      *clusterv1.Machine
+	selector     map[string]string
 }
 
 // ByoMachine returns a ByoMachineBuilder with the given name and namespace
@@ -35,6 +36,12 @@ func (b *ByoMachineBuilder) WithOwnerMachine(machine *clusterv1.Machine) *ByoMac
 // WithClusterLabel adds the passed cluster label to the ByoMachineBuilder
 func (b *ByoMachineBuilder) WithClusterLabel(clusterName string) *ByoMachineBuilder {
 	b.clusterLabel = clusterName
+	return b
+}
+
+// WithClusterLabel adds the passed cluster label to the ByoMachineBuilder
+func (b *ByoMachineBuilder) WithLabelSelector(selector map[string]string) *ByoMachineBuilder {
+	b.selector = selector
 	return b
 }
 
@@ -66,6 +73,9 @@ func (b *ByoMachineBuilder) Build() *infrastructurev1beta1.ByoMachine {
 			clusterv1.ClusterLabelName: b.clusterLabel,
 		}
 	}
+	if b.selector != nil {
+		byoMachine.Spec.Selector = &metav1.LabelSelector{MatchLabels: b.selector}
+	}
 
 	return byoMachine
 }
@@ -74,6 +84,7 @@ func (b *ByoMachineBuilder) Build() *infrastructurev1beta1.ByoMachine {
 type ByoHostBuilder struct {
 	namespace string
 	name      string
+	labels    map[string]string
 }
 
 // ByoHost returns a ByoHostBuilder with the given name and namespace
@@ -82,6 +93,12 @@ func ByoHost(namespace, name string) *ByoHostBuilder {
 		namespace: namespace,
 		name:      name,
 	}
+}
+
+// WithLabels adds the passed labels to the ByoHostBuilder
+func (b *ByoHostBuilder) WithLabels(labels map[string]string) *ByoHostBuilder {
+	b.labels = labels
+	return b
 }
 
 // Build returns a ByoHost with the attributes added to the ByoHostBuilder
@@ -97,16 +114,20 @@ func (b *ByoHostBuilder) Build() *infrastructurev1beta1.ByoHost {
 		},
 		Spec: infrastructurev1beta1.ByoHostSpec{},
 	}
+	if b.labels != nil {
+		byoHost.Labels = b.labels
+	}
 
 	return byoHost
 }
 
 // MachineBuilder holds the variables and objects required to build a clusterv1.Machine
 type MachineBuilder struct {
-	namespace string
-	name      string
-	cluster   string
-	version   string
+	namespace           string
+	name                string
+	cluster             string
+	version             string
+	bootstrapDataSecret string
 }
 
 // Machine returns a MachineBuilder with the given name and namespace
@@ -129,21 +150,32 @@ func (m *MachineBuilder) WithClusterVersion(version string) *MachineBuilder {
 	return m
 }
 
+// WithBootstrapDataSecret adds the passed bootstrap secret to the MachineBuilder
+func (m *MachineBuilder) WithBootstrapDataSecret(secret string) *MachineBuilder {
+	m.bootstrapDataSecret = secret
+	return m
+}
+
 // Build returns a Machine with the attributes added to the MachineBuilder
-func (b *MachineBuilder) Build() *clusterv1.Machine {
+func (m *MachineBuilder) Build() *clusterv1.Machine {
 	machine := &clusterv1.Machine{
 		TypeMeta: metav1.TypeMeta{
 			Kind:       "Machine",
 			APIVersion: clusterv1.GroupVersion.String(),
 		},
 		ObjectMeta: metav1.ObjectMeta{
-			GenerateName: b.name,
-			Namespace:    b.namespace,
+			GenerateName: m.name,
+			Namespace:    m.namespace,
 		},
 		Spec: clusterv1.MachineSpec{
-			ClusterName: b.cluster,
-			Version:     &b.version,
+			ClusterName: m.cluster,
+			Version:     &m.version,
 		},
+	}
+	if m.bootstrapDataSecret != "" {
+		machine.Spec.Bootstrap = clusterv1.Bootstrap{
+			DataSecretName: &m.bootstrapDataSecret,
+		}
 	}
 
 	return machine
@@ -153,6 +185,7 @@ func (b *MachineBuilder) Build() *clusterv1.Machine {
 type ClusterBuilder struct {
 	namespace string
 	name      string
+	paused    bool
 }
 
 // Cluster returns a ClusterBuilder with the given name and namespace
@@ -161,6 +194,12 @@ func Cluster(namespace, name string) *ClusterBuilder {
 		namespace: namespace,
 		name:      name,
 	}
+}
+
+// WithPausedField adds the passed paused value to the ClusterBuilder
+func (c *ClusterBuilder) WithPausedField(paused bool) *ClusterBuilder {
+	c.paused = paused
+	return c
 }
 
 // Build returns a Cluster with the attributes added to the ClusterBuilder
@@ -175,6 +214,9 @@ func (c *ClusterBuilder) Build() *clusterv1.Cluster {
 			Namespace: c.namespace,
 		},
 		Spec: clusterv1.ClusterSpec{},
+	}
+	if c.paused {
+		cluster.Spec.Paused = c.paused
 	}
 
 	return cluster
@@ -258,7 +300,7 @@ type NamespaceBuilder struct {
 }
 
 // Namespace returns a NamespaceBuilder with the given name
-func Namespace(namespace, name string) *NamespaceBuilder {
+func Namespace(name string) *NamespaceBuilder {
 	return &NamespaceBuilder{
 		name: name,
 	}
