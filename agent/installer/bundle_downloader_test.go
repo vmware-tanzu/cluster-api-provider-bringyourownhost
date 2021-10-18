@@ -6,8 +6,10 @@ package installer
 import (
 	"errors"
 	"log"
+	"math/rand"
 	"os"
 	"path/filepath"
+	"strconv"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -20,10 +22,10 @@ type mockImgpkg struct {
 
 func (mi *mockImgpkg) Get(_, k8sVerDirPath string) error {
 	mi.callCount++
-	return mi.bd.makeK8sVerDir(k8sVerDirPath, k8sVerDirPath+"/testDownloader")
+	return nil
 }
 
-func RemoveContents(dir string) error {
+func RemoveDir(dir string) error {
 	d, err := os.Open(dir)
 	if err != nil {
 		return err
@@ -58,10 +60,10 @@ var _ = Describe("Byohost Installer Tests", func() {
 	)
 
 	BeforeEach(func() {
-		bd = &bundleDownloader{}
-		mi = &mockImgpkg{0, bd}
 		repoAddr = ""
-		downloadPath = "./testFolder"
+		downloadPath = "/tmp/downloaderTest" + strconv.Itoa(rand.Intn(100000))
+		bd = &bundleDownloader{repoAddr, downloadPath}
+		mi = &mockImgpkg{0, bd}
 		normalizedOsVer = "Ubuntu_20.04.3_x64"
 		k8sVer = "1.22"
 	})
@@ -69,7 +71,7 @@ var _ = Describe("Byohost Installer Tests", func() {
 	Context("When given correct arguments", func() {
 		BeforeEach(func() {
 			mi.callCount = 0
-			err := RemoveContents(downloadPath)
+			err := RemoveDir(downloadPath)
 			if err != nil {
 				err = os.Mkdir(downloadPath, dirPermissions)
 				if err != nil {
@@ -78,39 +80,36 @@ var _ = Describe("Byohost Installer Tests", func() {
 			}
 		})
 		AfterEach(func() {
-			err := RemoveContents(downloadPath)
+			err := RemoveDir(downloadPath)
 			if err != nil {
 				log.Fatal(err)
 			}
 		})
 		It("Should download bundle", func() {
-			err := bd.DownloadFromRepo(repoAddr,
-				downloadPath,
+			err := bd.DownloadFromRepo(
 				normalizedOsVer,
 				k8sVer,
 				func(a, b string) error { return mi.Get(a, b) })
 			Expect(err).ShouldNot((HaveOccurred()))
 
-			err = bd.DownloadFromRepo(repoAddr,
-				downloadPath,
+			err = bd.DownloadFromRepo(
 				normalizedOsVer,
 				k8sVer,
 				func(a, b string) error { return mi.Get(a, b) })
-			Expect(err).Should(Equal(errors.New(k8sVersionAlreadyDownloaded)))
+			Expect(err).ShouldNot((HaveOccurred()))
 			Expect(mi.callCount).Should(Equal(1))
 
-			err = bd.Download(repoAddr,
-				downloadPath,
+			err = bd.Download(
 				normalizedOsVer,
 				k8sVer)
-			Expect(err).Should(Equal(errors.New(k8sVersionAlreadyDownloaded)))
+			Expect(err).ShouldNot((HaveOccurred()))
 		})
 	})
 	Context("When given bad arguments", func() {
 		It("Should error when given bad repo address", func() {
 			repoAddr = "a$s!d.a*s-d.a-s-d"
-			err := bd.Download(repoAddr,
-				downloadPath,
+			bd = &bundleDownloader{repoAddr, downloadPath}
+			err := bd.Download(
 				normalizedOsVer,
 				k8sVer)
 			Expect(err).Should(HaveOccurred())
@@ -118,12 +117,12 @@ var _ = Describe("Byohost Installer Tests", func() {
 		})
 		It("Should error when given bad download path", func() {
 			downloadPath = "./a$s!d.a*s-d.a-s-d"
-			err := bd.Download(repoAddr,
-				downloadPath,
+			bd = &bundleDownloader{repoAddr, downloadPath}
+			err := bd.Download(
 				normalizedOsVer,
 				k8sVer)
 			if !Expect(err).Should(Equal(errors.New(downloadPathNotExist))) {
-				err = RemoveContents(downloadPath)
+				err = RemoveDir(downloadPath)
 				Expect(err).ShouldNot(HaveOccurred())
 			}
 		})
