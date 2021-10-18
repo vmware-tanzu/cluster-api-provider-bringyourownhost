@@ -36,7 +36,7 @@ type NetworkStatus struct {
 	// MACAddr is the MAC address of the network device.
 	MACAddr string `json:"macAddr"`
 
-	// NetworkInterfaceName is the name of the network.
+	// NetworkInterfaceName is the name of the network interface.
 	// +optional
 	NetworkInterfaceName string `json:"networkInterfaceName,omitempty"`
 
