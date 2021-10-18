@@ -186,7 +186,8 @@ spec:
                       description: MACAddr is the MAC address of the network device.
                       type: string
                     networkInterfaceName:
-                      description: NetworkInterfaceName is the name of the network.
+                      description: NetworkInterfaceName is the name of the network
+                        interface.
                       type: string
                   required:
                   - macAddr
