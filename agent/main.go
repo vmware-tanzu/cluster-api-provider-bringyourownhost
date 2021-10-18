@@ -72,15 +72,17 @@ func (l *labelFlags) Set(value string) error {
 }
 
 var (
-	namespace string
-	scheme    *runtime.Scheme
-	labels    = make(labelFlags)
+	namespace    string
+	registry     string
+	downloadpath string
+	scheme       *runtime.Scheme
+	labels       = make(labelFlags)
 )
-
-// TODO - fix logging
 
 func main() {
 	flag.StringVar(&namespace, "namespace", "default", "Namespace in the management cluster where you would like to register this host")
+	flag.StringVar(&registry, "registry", "projects.registry.vmware.com", "Any local registry from where you want to pull the k8s bundle from")
+	flag.StringVar(&downloadpath, "downloadpath", "/tmp/kubernetes/bundles", "System path to place all the downloaded bundles")
 	flag.Var(&labels, "label", "labels to attach to the ByoHost CR in the form labelname=labelVal for e.g. '--label site=apac --label cores=2'")
 	klog.InitFlags(nil)
 	flag.Parse()
@@ -89,7 +91,8 @@ func main() {
 	_ = corev1.AddToScheme(scheme)
 	_ = clusterv1.AddToScheme(scheme)
 
-	ctrl.SetLogger(klogr.New())
+	logger := klogr.New()
+	ctrl.SetLogger(logger)
 	config, err := ctrl.GetConfig()
 	if err != nil {
 		klog.Errorf("error getting kubeconfig, err=%v", err)
@@ -142,6 +145,11 @@ func main() {
 			Template: registration.HostInfo{
 				DefaultNetworkInterfaceName: registration.LocalHostRegistrar.ByoHostInfo.DefaultNetworkInterfaceName,
 			},
+		},
+		InstallerOpts: reconciler.K8sOptions{
+			Registry:     registry,
+			DownloadPath: downloadpath,
+			Logger:       logger,
 		},
 	}
 	if err = hostReconciler.SetupWithManager(context.TODO(), mgr); err != nil {
