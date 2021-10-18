@@ -22,7 +22,7 @@ var (
 )
 
 type HostInfo struct {
-	DefaultNetworkName string
+	DefaultNetworkInterfaceName string
 }
 
 type HostRegistrar struct {
@@ -105,7 +105,7 @@ func (hr *HostRegistrar) GetNetworkStatus() []infrastructurev1beta1.NetworkStatu
 			continue
 		}
 
-		netStatus.NetworkName = iface.Name
+		netStatus.NetworkInterfaceName = iface.Name
 		for _, addr := range addrs {
 			var ip net.IP
 			switch v := addr.(type) {
@@ -116,7 +116,7 @@ func (hr *HostRegistrar) GetNetworkStatus() []infrastructurev1beta1.NetworkStatu
 			}
 			if ip.String() == defaultIP.String() {
 				netStatus.IsDefault = true
-				hr.ByoHostInfo.DefaultNetworkName = netStatus.NetworkName
+				hr.ByoHostInfo.DefaultNetworkInterfaceName = netStatus.NetworkInterfaceName
 			}
 			netStatus.IPAddrs = append(netStatus.IPAddrs, addr.String())
 		}
