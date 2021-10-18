@@ -35,7 +35,7 @@ var _ = Describe("CloudinitIntegration", func() {
 			RunCmdExecutor:     cloudinit.CmdRunner{},
 			ParseTemplateExecutor: cloudinit.TemplateParser{
 				Template: registration.HostInfo{
-					DefaultNetworkName: "eth0",
+					DefaultNetworkInterfaceName: "eth0",
 				},
 			},
 		}
@@ -128,7 +128,7 @@ runCmd:
 
 	It("should be able to write template content", func() {
 		fileName := path.Join(workDir, "file-5.txt")
-		fileContent := "The default interface name is {{ .DefaultNetworkName }} "
+		fileContent := "The default interface name is {{ .DefaultNetworkInterfaceName }} "
 		replacedFileContent := "The default interface name is eth0"
 
 		cloudInitScript := fmt.Sprintf(`write_files:
