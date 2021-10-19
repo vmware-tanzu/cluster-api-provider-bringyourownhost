@@ -29,7 +29,14 @@ type HostReconciler struct {
 	CmdRunner      cloudinit.ICmdRunner
 	FileWriter     cloudinit.IFileWriter
 	TemplateParser cloudinit.ITemplateParser
-	InstallerOpts  K8sOptions
+	K8sInstaller   Installer
+}
+
+//go:generate go run github.com/maxbrunsfeld/counterfeiter/v6 -generate
+//counterfeiter:generate . Installer
+type Installer interface {
+	Install(string) error
+	Uninstall(string) error
 }
 
 const (
@@ -164,10 +171,11 @@ func (r HostReconciler) hostCleanUp(ctx context.Context, byoHost *infrastructure
 	}
 
 	k8sVersion := byoHost.GetAnnotations()[infrastructurev1beta1.K8sVersionAnnotation]
-	err = r.InstallerOpts.UnInstall(k8sVersion)
+	err = r.K8sInstaller.Uninstall(k8sVersion)
 	if err != nil {
 		return err
 	}
+	conditions.MarkFalse(byoHost, infrastructurev1beta1.K8sNodeBootstrapSucceeded, infrastructurev1beta1.K8sNodeAbsentReason, clusterv1.ConditionSeverityInfo, "")
 
 	logger.Info("Removing the bootstrap sentinel file...")
 	if _, err := os.Stat(bootstrapSentinelFile); !os.IsNotExist(err) {
@@ -232,7 +240,7 @@ func (r *HostReconciler) installK8sComponents(ctx context.Context, byoHost *infr
 	conditions.MarkFalse(byoHost, infrastructurev1beta1.K8sComponentsInstallationSucceeded, infrastructurev1beta1.K8sComponentsInstallingReason, clusterv1.ConditionSeverityInfo, "")
 
 	k8sVersion := byoHost.GetAnnotations()[infrastructurev1beta1.K8sVersionAnnotation]
-	err := r.InstallerOpts.Install(k8sVersion)
+	err := r.K8sInstaller.Install(k8sVersion)
 	if err != nil {
 		return err
 	}

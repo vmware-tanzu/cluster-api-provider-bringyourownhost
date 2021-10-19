@@ -11,6 +11,7 @@ import (
 	"strings"
 
 	"github.com/vmware-tanzu/cluster-api-provider-byoh/agent/cloudinit"
+	"github.com/vmware-tanzu/cluster-api-provider-byoh/agent/installer"
 	"github.com/vmware-tanzu/cluster-api-provider-byoh/agent/reconciler"
 	"github.com/vmware-tanzu/cluster-api-provider-byoh/agent/registration"
 	infrastructurev1beta1 "github.com/vmware-tanzu/cluster-api-provider-byoh/apis/infrastructure/v1beta1"
@@ -137,6 +138,11 @@ func main() {
 		return
 	}
 
+	k8sInstaller, err := installer.New(registry, downloadpath, logger)
+	if err != nil {
+		klog.Errorf("unable to instantiate installer, err=%v", err)
+		return
+	}
 	hostReconciler := &reconciler.HostReconciler{
 		Client:     k8sClient,
 		CmdRunner:  cloudinit.CmdRunner{},
@@ -146,11 +152,7 @@ func main() {
 				DefaultNetworkInterfaceName: registration.LocalHostRegistrar.ByoHostInfo.DefaultNetworkInterfaceName,
 			},
 		},
-		InstallerOpts: reconciler.K8sOptions{
-			Registry:     registry,
-			DownloadPath: downloadpath,
-			Logger:       logger,
-		},
+		K8sInstaller: k8sInstaller,
 	}
 	if err = hostReconciler.SetupWithManager(context.TODO(), mgr); err != nil {
 		klog.Errorf("unable to create controller, err=%v", err)

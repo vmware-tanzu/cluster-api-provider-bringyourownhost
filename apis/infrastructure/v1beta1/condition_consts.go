@@ -41,6 +41,10 @@ const (
 	// K8sComponentsInstallationFailedReason indicates that the installer failed to install all the
 	// k8s components on this host
 	K8sComponentsInstallationFailedReason = "K8sComponentsInstallationFailed"
+
+	// K8sComponentsUninstalledReason indicates that the installer has uninstalled the
+	// k8s components on this host
+	K8sComponentsUninstalledReason = "K8sComponentsUninstalled"
 )
 
 // Conditions and Reasons defined on BYOMachine
