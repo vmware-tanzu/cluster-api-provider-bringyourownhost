@@ -4,12 +4,10 @@
 package installer
 
 import (
-	"errors"
+	"io/ioutil"
 	"log"
-	"math/rand"
 	"os"
-	"path/filepath"
-	"strconv"
+	"time"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -17,7 +15,6 @@ import (
 
 type mockImgpkg struct {
 	callCount int
-	bd        *bundleDownloader
 }
 
 func (mi *mockImgpkg) Get(_, k8sVerDirPath string) error {
@@ -25,107 +22,69 @@ func (mi *mockImgpkg) Get(_, k8sVerDirPath string) error {
 	return nil
 }
 
-func RemoveDir(dir string) error {
-	d, err := os.Open(dir)
-	if err != nil {
-		return err
-	}
-	defer d.Close()
-	names, err := d.Readdirnames(-1)
-	if err != nil {
-		return err
-	}
-	for _, name := range names {
-		err = os.RemoveAll(filepath.Join(dir, name))
-		if err != nil {
-			return err
-		}
-	}
-	err = os.Remove(dir)
-	if err != nil {
-		return err
-	}
-	return nil
-}
-
 var _ = Describe("Byohost Installer Tests", func() {
 
 	var (
-		bd              *bundleDownloader
-		mi              *mockImgpkg
-		repoAddr        string
-		downloadPath    string
-		normalizedOsVer string
-		k8sVer          string
+		bd                  *bundleDownloader
+		mi                  *mockImgpkg
+		repoAddr            string
+		downloadPath        string
+		normalizedOsVersion string
+		k8sVersion          string
 	)
 
 	BeforeEach(func() {
-		repoAddr = ""
-		downloadPath = "/tmp/downloaderTest" + strconv.Itoa(rand.Intn(100000))
-		bd = &bundleDownloader{repoAddr, downloadPath}
-		mi = &mockImgpkg{0, bd}
-		normalizedOsVer = "Ubuntu_20.04.3_x64"
-		k8sVer = "1.22"
+		normalizedOsVersion = "Ubuntu_20.04.3_x64"
+		k8sVersion = "1.22"
 	})
 
 	Context("When given correct arguments", func() {
 		BeforeEach(func() {
-			mi.callCount = 0
-			err := RemoveDir(downloadPath)
+			repoAddr = ""
+			var err error
+			downloadPath, err = ioutil.TempDir("/tmp", "downloaderTest")
 			if err != nil {
-				err = os.Mkdir(downloadPath, dirPermissions)
-				if err != nil {
-					log.Fatal(err)
-				}
+				log.Fatal(err)
 			}
+			bd = &bundleDownloader{repoAddr, downloadPath}
+			mi = &mockImgpkg{}
 		})
 		AfterEach(func() {
-			err := RemoveDir(downloadPath)
+			err := os.RemoveAll(downloadPath)
 			if err != nil {
 				log.Fatal(err)
 			}
 		})
 		It("Should download bundle", func() {
+			// Test download on cache missing
 			err := bd.DownloadFromRepo(
-				normalizedOsVer,
-				k8sVer,
+				normalizedOsVersion,
+				k8sVersion,
 				func(a, b string) error { return mi.Get(a, b) })
 			Expect(err).ShouldNot((HaveOccurred()))
 
+			// Test no download on cache hit
 			err = bd.DownloadFromRepo(
-				normalizedOsVer,
-				k8sVer,
+				normalizedOsVersion,
+				k8sVersion,
 				func(a, b string) error { return mi.Get(a, b) })
 			Expect(err).ShouldNot((HaveOccurred()))
 			Expect(mi.callCount).Should(Equal(1))
 
+			// Making linter happy
 			err = bd.Download(
-				normalizedOsVer,
-				k8sVer)
+				normalizedOsVersion,
+				k8sVersion)
+			Expect(err).ShouldNot((HaveOccurred()))
+		})
+		It("Should create dir if missing and download bundle", func() {
+			bd.downloadPath = bd.downloadPath + "/a/b/c/d"
+			err := bd.DownloadFromRepo(
+				normalizedOsVersion,
+				k8sVersion,
+				func(a, b string) error { return mi.Get(a, b) })
+			time.Sleep(8 * time.Second)
 			Expect(err).ShouldNot((HaveOccurred()))
 		})
 	})
-	Context("When given bad arguments", func() {
-		It("Should error when given bad repo address", func() {
-			repoAddr = "a$s!d.a*s-d.a-s-d"
-			bd = &bundleDownloader{repoAddr, downloadPath}
-			err := bd.Download(
-				normalizedOsVer,
-				k8sVer)
-			Expect(err).Should(HaveOccurred())
-			Expect(err).ShouldNot(Equal(downloadPathNotExist))
-		})
-		It("Should error when given bad download path", func() {
-			downloadPath = "./a$s!d.a*s-d.a-s-d"
-			bd = &bundleDownloader{repoAddr, downloadPath}
-			err := bd.Download(
-				normalizedOsVer,
-				k8sVer)
-			if !Expect(err).Should(Equal(errors.New(downloadPathNotExist))) {
-				err = RemoveDir(downloadPath)
-				Expect(err).ShouldNot(HaveOccurred())
-			}
-		})
-	})
-
 })
