@@ -21,7 +21,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 
 	infrastructurev1beta1 "github.com/vmware-tanzu/cluster-api-provider-byoh/apis/infrastructure/v1beta1"
-	"github.com/vmware-tanzu/cluster-api-provider-byoh/common"
+	"github.com/vmware-tanzu/cluster-api-provider-byoh/test/builder"
 
 	//+kubebuilder:scaffold:imports
 
@@ -93,10 +93,10 @@ var _ = BeforeSuite(func() {
 	})
 	Expect(err).NotTo(HaveOccurred())
 
-	capiCluster = common.NewCluster(defaultClusterName, defaultNamespace)
+	capiCluster = builder.Cluster(defaultNamespace, defaultClusterName).Build()
 	Expect(k8sManager.GetClient().Create(context.Background(), capiCluster)).Should(Succeed())
 
-	node := common.NewNode(defaultNodeName, defaultNamespace)
+	node := builder.Node(defaultNamespace, defaultNodeName).Build()
 	clientFake = fake.NewClientBuilder().WithObjects(
 		capiCluster,
 		node,
