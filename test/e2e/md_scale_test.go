@@ -15,33 +15,25 @@ import (
 	. "github.com/onsi/gomega"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/utils/pointer"
+	"sigs.k8s.io/cluster-api/test/framework"
 	"sigs.k8s.io/cluster-api/test/framework/clusterctl"
 	"sigs.k8s.io/cluster-api/util"
 )
 
-const (
-	KubernetesVersion = "KUBERNETES_VERSION"
-	CNIPath           = "CNI"
-	CNIResources      = "CNI_RESOURCES"
-	IPFamily          = "IP_FAMILY"
-)
-
-// creating a workload cluster
-// This test is meant to provide a first, fast signal to detect regression; it is recommended to use it as a PR blocker test.
-var _ = Describe("When BYOH joins existing cluster [PR-Blocking]", func() {
+var _ = Describe("When testing MachineDeployment scale out/in", func() {
 
 	var (
-		ctx                 context.Context
-		specName            = "quick-start"
-		namespace           *corev1.Namespace
-		clusterName         string
-		cancelWatches       context.CancelFunc
-		clusterResources    *clusterctl.ApplyClusterTemplateAndWaitResult
-		dockerClient        *client.Client
-		err                 error
-		byohostContainerIDs []string
-		agentLogFile1       = "/tmp/host-agent1.log"
-		agentLogFile2       = "/tmp/host-agent2.log"
+		ctx                    context.Context
+		specName               = "md-scale"
+		namespace              *corev1.Namespace
+		cancelWatches          context.CancelFunc
+		clusterResources       *clusterctl.ApplyClusterTemplateAndWaitResult
+		dockerClient           *client.Client
+		err                    error
+		byoHostCapacityPool    = 6
+		byoHostName            string
+		allbyohostContainerIDs []string
+		allAgentLogFiles       []string
 	)
 
 	BeforeEach(func() {
@@ -61,31 +53,29 @@ var _ = Describe("When BYOH joins existing cluster [PR-Blocking]", func() {
 		clusterResources = new(clusterctl.ApplyClusterTemplateAndWaitResult)
 	})
 
-	It("Should create a workload cluster with single BYOH host", func() {
-		clusterName = fmt.Sprintf("%s-%s", specName, util.RandomString(6))
-		byoHostName1 := "byohost1"
-		byoHostName2 := "byohost2"
+	It("Should successfully scale a MachineDeployment up and down upon changes to the MachineDeployment replica count", func() {
+		clusterName := fmt.Sprintf("%s-%s", specName, util.RandomString(6))
 
 		dockerClient, err = client.NewClientWithOpts(client.FromEnv)
 		Expect(err).NotTo(HaveOccurred())
 
-		var output types.HijackedResponse
-		output, byohostContainerID, err := setupByoDockerHost(ctx, clusterConName, byoHostName1, namespace.Name, dockerClient, bootstrapClusterProxy)
-		Expect(err).NotTo(HaveOccurred())
-		defer output.Close()
-		byohostContainerIDs = append(byohostContainerIDs, byohostContainerID)
-		f := WriteDockerLog(output, agentLogFile1)
-		defer f.Close()
+		By("Creating byohost capacity pool containing 5 hosts")
+		for i := 0; i < byoHostCapacityPool; i++ {
+			byoHostName = fmt.Sprintf("byohost-%s", util.RandomString(6))
+			output, byohostContainerID, err := setupByoDockerHost(ctx, clusterConName, byoHostName, namespace.Name, dockerClient, bootstrapClusterProxy)
+			allbyohostContainerIDs = append(allbyohostContainerIDs, byohostContainerID)
+			Expect(err).NotTo(HaveOccurred())
 
-		output, byohostContainerID, err = setupByoDockerHost(ctx, clusterConName, byoHostName2, namespace.Name, dockerClient, bootstrapClusterProxy)
-		Expect(err).NotTo(HaveOccurred())
-		defer output.Close()
-		byohostContainerIDs = append(byohostContainerIDs, byohostContainerID)
+			// read the log of host agent container in backend, and write it
+			agentLogFile := fmt.Sprintf("/tmp/host-agent-%d.log", i)
+			f := WriteDockerLog(output, agentLogFile)
+			defer f.Close()
+			allAgentLogFiles = append(allAgentLogFiles, agentLogFile)
+		}
 
-		// read the log of host agent container in backend, and write it
-		f = WriteDockerLog(output, agentLogFile2)
-		defer f.Close()
+		// TODO: Write agent logs to files for better debugging
 
+		By("creating a workload cluster with one control plane node and one worker node")
 		clusterctl.ApplyClusterTemplateAndWait(ctx, clusterctl.ApplyClusterTemplateAndWaitInput{
 			ClusterProxy: bootstrapClusterProxy,
 			ConfigCluster: clusterctl.ConfigClusterInput{
@@ -97,7 +87,7 @@ var _ = Describe("When BYOH joins existing cluster [PR-Blocking]", func() {
 				Namespace:                namespace.Name,
 				ClusterName:              clusterName,
 				KubernetesVersion:        e2eConfig.GetVariable(KubernetesVersion),
-				ControlPlaneMachineCount: pointer.Int64Ptr(1),
+				ControlPlaneMachineCount: pointer.Int64Ptr(3),
 				WorkerMachineCount:       pointer.Int64Ptr(1),
 			},
 			WaitForClusterIntervals:      e2eConfig.GetIntervals(specName, "wait-cluster"),
@@ -105,11 +95,35 @@ var _ = Describe("When BYOH joins existing cluster [PR-Blocking]", func() {
 			WaitForMachineDeployments:    e2eConfig.GetIntervals(specName, "wait-worker-nodes"),
 		}, clusterResources)
 
+		Expect(clusterResources.MachineDeployments[0].Spec.Replicas).To(Equal(pointer.Int32Ptr(1)))
+
+		By("Scaling the MachineDeployment out to 3")
+		framework.ScaleAndWaitMachineDeployment(ctx, framework.ScaleAndWaitMachineDeploymentInput{
+			ClusterProxy:              bootstrapClusterProxy,
+			Cluster:                   clusterResources.Cluster,
+			MachineDeployment:         clusterResources.MachineDeployments[0],
+			Replicas:                  3,
+			WaitForMachineDeployments: e2eConfig.GetIntervals(specName, "wait-worker-nodes"),
+		})
+
+		Expect(clusterResources.MachineDeployments[0].Spec.Replicas).To(Equal(pointer.Int32Ptr(3)))
+
+		By("Scaling the MachineDeployment down to 2")
+		framework.ScaleAndWaitMachineDeployment(ctx, framework.ScaleAndWaitMachineDeploymentInput{
+			ClusterProxy:              bootstrapClusterProxy,
+			Cluster:                   clusterResources.Cluster,
+			MachineDeployment:         clusterResources.MachineDeployments[0],
+			Replicas:                  2,
+			WaitForMachineDeployments: e2eConfig.GetIntervals(specName, "wait-worker-nodes"),
+		})
+
+		Expect(clusterResources.MachineDeployments[0].Spec.Replicas).To(Equal(pointer.Int32Ptr(2)))
+
 	})
 
 	JustAfterEach(func() {
 		if CurrentGinkgoTestDescription().Failed {
-			ShowInfo([]string{agentLogFile1, agentLogFile2})
+			ShowInfo(allAgentLogFiles)
 		}
 	})
 
@@ -117,18 +131,20 @@ var _ = Describe("When BYOH joins existing cluster [PR-Blocking]", func() {
 		// Dumps all the resources in the spec namespace, then cleanups the cluster object and the spec namespace itself.
 		dumpSpecResourcesAndCleanup(ctx, specName, bootstrapClusterProxy, artifactFolder, namespace, cancelWatches, clusterResources.Cluster, e2eConfig.GetIntervals, skipCleanup)
 
-		if dockerClient != nil && len(byohostContainerIDs) != 0 {
-			for _, byohostContainerID := range byohostContainerIDs {
+		if dockerClient != nil {
+			for _, byohostContainerID := range allbyohostContainerIDs {
 				err := dockerClient.ContainerStop(ctx, byohostContainerID, nil)
 				Expect(err).NotTo(HaveOccurred())
 
 				err = dockerClient.ContainerRemove(ctx, byohostContainerID, types.ContainerRemoveOptions{})
 				Expect(err).NotTo(HaveOccurred())
 			}
+
 		}
 
-		os.Remove(agentLogFile1)
-		os.Remove(agentLogFile2)
+		for _, agentLogFile := range allAgentLogFiles {
+			os.Remove(agentLogFile)
+		}
 		os.Remove(ReadByohControllerManagerLogShellFile)
 		os.Remove(ReadAllPodsShellFile)
 	})
