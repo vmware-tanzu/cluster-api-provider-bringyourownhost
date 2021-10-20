@@ -7,8 +7,8 @@ import (
 	"errors"
 	"fmt"
 	"io/fs"
-	"io/ioutil"
 	"os"
+	"path/filepath"
 	"strings"
 
 	"github.com/cppforlife/go-cli-ui/ui"
@@ -20,7 +20,6 @@ var (
 )
 
 const (
-	Separator                     = os.PathSeparator
 	ErrDownloadBadRepo            = "no such host"
 	ErrDownloadConnectionTimedOut = "connection timed out"
 	ErrDownloadNameResolution     = "temporary failure in name resolution"
@@ -62,7 +61,7 @@ func (bd *bundleDownloader) DownloadFromRepo(
 		return nil
 	}
 
-	dir, err := ioutil.TempDir(bd.downloadPath, "tempBundle")
+	dir, err := os.MkdirTemp(bd.downloadPath, "tempBundle")
 	defer os.RemoveAll(dir)
 	if err != nil {
 		return err
@@ -108,7 +107,7 @@ func (bd *bundleDownloader) filterError(err error) error {
 
 // GetBundleDirPath returns the path to directory containing the required bundle.
 func (bd *bundleDownloader) GetBundleDirPath(k8sVersion string) string {
-	return fmt.Sprintf("%s%c%s", bd.downloadPath, Separator, k8sVersion)
+	return filepath.Join(bd.downloadPath, k8sVersion)
 }
 
 // getBundleAddr returns the exact address to the bundle in the repo.

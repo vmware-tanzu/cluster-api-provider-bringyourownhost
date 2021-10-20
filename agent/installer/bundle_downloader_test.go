@@ -5,10 +5,9 @@ package installer
 
 import (
 	"errors"
-	"fmt"
-	"io/ioutil"
 	"log"
 	"os"
+	"path/filepath"
 	"time"
 
 	. "github.com/onsi/ginkgo"
@@ -54,7 +53,7 @@ var _ = Describe("Byohost Installer Tests", func() {
 		k8sVersion = "1.22"
 		repoAddr = ""
 		var err error
-		downloadPath, err = ioutil.TempDir(string(Separator)+"tmp", "downloaderTest")
+		downloadPath, err = os.MkdirTemp("", "downloaderTest")
 		if err != nil {
 			log.Fatal(err)
 		}
@@ -86,7 +85,7 @@ var _ = Describe("Byohost Installer Tests", func() {
 			Expect(mi.callCount).Should(Equal(1))
 		})
 		It("Should create dir if missing and download bundle", func() {
-			bd.downloadPath = fmt.Sprintf("%s%c%s%c%s%c%s", bd.downloadPath, Separator, "a", Separator, "b", Separator, "c")
+			bd.downloadPath = filepath.Join(bd.downloadPath, "a", "b", "c")
 			err := bd.DownloadFromRepo(
 				normalizedOsVersion,
 				k8sVersion,
