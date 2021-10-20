@@ -237,7 +237,7 @@ func (r *HostReconciler) bootstrapK8sNode(ctx context.Context, bootstrapScript s
 func (r *HostReconciler) installK8sComponents(ctx context.Context, byoHost *infrastructurev1beta1.ByoHost) error {
 	logger := ctrl.LoggerFrom(ctx)
 	logger.Info("Installing K8s")
-	conditions.MarkFalse(byoHost, infrastructurev1beta1.K8sComponentsInstallationSucceeded, infrastructurev1beta1.K8sComponentsInstallingReason, clusterv1.ConditionSeverityInfo, "")
+	//	conditions.MarkFalse(byoHost, infrastructurev1beta1.K8sComponentsInstallationSucceeded, infrastructurev1beta1.K8sComponentsInstallingReason, clusterv1.ConditionSeverityInfo, "")
 
 	k8sVersion := byoHost.GetAnnotations()[infrastructurev1beta1.K8sVersionAnnotation]
 	err := r.K8sInstaller.Install(k8sVersion)
