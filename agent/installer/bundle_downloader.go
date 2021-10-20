@@ -4,10 +4,12 @@
 package installer
 
 import (
+	"errors"
 	"fmt"
 	"io/fs"
 	"io/ioutil"
 	"os"
+	"strings"
 
 	"github.com/cppforlife/go-cli-ui/ui"
 	"github.com/k14s/imgpkg/pkg/imgpkg/cmd"
@@ -18,7 +20,11 @@ var (
 )
 
 const (
-	Separator = os.PathSeparator
+	Separator                     = os.PathSeparator
+	ErrDownloadBadRepo            = "no such host"
+	ErrDownloadConnectionTimedOut = "connection timed out"
+	ErrDownloadNameResolution     = "temporary failure in name resolution"
+	ErrDownloadOutOfSpace         = "no space left on device"
 )
 
 // bundleDownloader for downloading an OCI image.
@@ -57,13 +63,13 @@ func (bd *bundleDownloader) DownloadFromRepo(
 	}
 
 	dir, err := ioutil.TempDir(bd.downloadPath, "tempBundle")
-	defer os.Remove(dir)
+	defer os.RemoveAll(dir)
 	if err != nil {
 		return err
 	}
 
 	bundleAddr := bd.getBundleAddr(normalizedOsVersion, k8sVersion)
-	err = downloadByTool(bundleAddr, dir)
+	err = bd.filterError(downloadByTool(bundleAddr, dir))
 	if err != nil {
 		return err
 	}
@@ -79,9 +85,25 @@ func (bd *bundleDownloader) downloadByImgpkg(
 	defer confUI.Flush()
 
 	imgpkgCmd := cmd.NewDefaultImgpkgCmd(confUI)
-
 	imgpkgCmd.SetArgs([]string{"pull", "--recursive", "-b", bundleAddr, "-o", bundleDirPath})
 	return imgpkgCmd.Execute()
+}
+
+// filterError returns known errors in standardized format.
+func (bd *bundleDownloader) filterError(err error) error {
+	if err != nil {
+		errStr := strings.ToLower(err.Error())
+		if strings.HasSuffix(errStr, ErrDownloadBadRepo) {
+			return errors.New(ErrDownloadBadRepo)
+		} else if strings.HasSuffix(errStr, ErrDownloadConnectionTimedOut) {
+			return errors.New(ErrDownloadConnectionTimedOut)
+		} else if strings.HasSuffix(errStr, ErrDownloadNameResolution) {
+			return errors.New(ErrDownloadNameResolution)
+		} else if strings.HasSuffix(errStr, ErrDownloadOutOfSpace) {
+			return errors.New(ErrDownloadOutOfSpace)
+		}
+	}
+	return err
 }
 
 // GetBundleDirPath returns the path to directory containing the required bundle.
