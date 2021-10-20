@@ -13,6 +13,7 @@ import (
 	. "github.com/onsi/gomega"
 	"k8s.io/client-go/kubernetes/scheme"
 	"k8s.io/client-go/rest"
+	"k8s.io/client-go/tools/record"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 	"sigs.k8s.io/controller-runtime/pkg/envtest"
@@ -38,6 +39,7 @@ var (
 	testEnv               *envtest.Environment
 	clientFake            client.Client
 	reconciler            *ByoMachineReconciler
+	recorder              *record.FakeRecorder
 	capiCluster           *clusterv1.Cluster
 	defaultClusterName    string = "my-cluster"
 	defaultNodeName       string = "my-host"
@@ -102,9 +104,11 @@ var _ = BeforeSuite(func() {
 		node,
 	).Build()
 
+	recorder = record.NewFakeRecorder(32)
 	reconciler = &ByoMachineReconciler{
-		Client:  k8sManager.GetClient(),
-		Tracker: remote.NewTestClusterCacheTracker(logf.NullLogger{}, clientFake, scheme.Scheme, client.ObjectKey{Name: capiCluster.Name, Namespace: capiCluster.Namespace}),
+		Client:   k8sManager.GetClient(),
+		Tracker:  remote.NewTestClusterCacheTracker(logf.NullLogger{}, clientFake, scheme.Scheme, client.ObjectKey{Name: capiCluster.Name, Namespace: capiCluster.Namespace}),
+		Recorder: recorder,
 	}
 	err = reconciler.SetupWithManager(context.TODO(), k8sManager)
 	Expect(err).NotTo(HaveOccurred())

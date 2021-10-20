@@ -12,6 +12,7 @@ import (
 	"github.com/vmware-tanzu/cluster-api-provider-byoh/agent/registration"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/client-go/tools/record"
 	clusterv1 "sigs.k8s.io/cluster-api/api/v1beta1"
 	"sigs.k8s.io/cluster-api/util/conditions"
 	"sigs.k8s.io/cluster-api/util/patch"
@@ -29,6 +30,7 @@ type HostReconciler struct {
 	CmdRunner      cloudinit.ICmdRunner
 	FileWriter     cloudinit.IFileWriter
 	TemplateParser cloudinit.ITemplateParser
+	Recorder       record.EventRecorder
 }
 
 const (
@@ -93,12 +95,14 @@ func (r *HostReconciler) reconcileNormal(ctx context.Context, byoHost *infrastru
 		bootstrapScript, err := r.getBootstrapScript(ctx, byoHost.Spec.BootstrapSecret.Name, byoHost.Spec.BootstrapSecret.Namespace)
 		if err != nil {
 			logger.Error(err, "error getting bootstrap script")
+			r.Recorder.Eventf(byoHost, corev1.EventTypeWarning, "ReadBootstrapSecretFailed", "bootstrap secret %s not found", byoHost.Spec.BootstrapSecret.Name)
 			return ctrl.Result{}, err
 		}
 
 		err = r.installK8sComponents(ctx, byoHost)
 		if err != nil {
 			logger.Error(err, "error in installing k8s components")
+			r.Recorder.Event(byoHost, corev1.EventTypeWarning, "InstallK8sComponentFailed", "k8s component installation failed")
 			conditions.MarkFalse(byoHost, infrastructurev1beta1.K8sComponentsInstallationSucceeded, infrastructurev1beta1.K8sComponentsInstallationFailedReason, clusterv1.ConditionSeverityInfo, "")
 			return ctrl.Result{}, err
 		}
@@ -112,12 +116,13 @@ func (r *HostReconciler) reconcileNormal(ctx context.Context, byoHost *infrastru
 		err = r.bootstrapK8sNode(ctx, bootstrapScript, byoHost)
 		if err != nil {
 			logger.Error(err, "error in bootstrapping k8s node")
-			_ = r.resetNode(ctx)
+			r.Recorder.Event(byoHost, corev1.EventTypeWarning, "BootstrapK8sNodeFailed", "k8s Node Bootstrap failed")
+			_ = r.resetNode(ctx, byoHost)
 			conditions.MarkFalse(byoHost, infrastructurev1beta1.K8sNodeBootstrapSucceeded, infrastructurev1beta1.CloudInitExecutionFailedReason, clusterv1.ConditionSeverityError, "")
 			return ctrl.Result{}, err
 		}
 		logger.Info("k8s node successfully bootstrapped")
-
+		r.Recorder.Event(byoHost, corev1.EventTypeNormal, "BootstrapK8sNodeSucceeded", "k8s Node Bootstraped")
 		conditions.MarkTrue(byoHost, infrastructurev1beta1.K8sNodeBootstrapSucceeded)
 	}
 
@@ -147,17 +152,17 @@ func (r *HostReconciler) SetupWithManager(ctx context.Context, mgr manager.Manag
 }
 
 // cleanup kubeadm dir to remove any stale config on the host
-func (r HostReconciler) kubeadmDirCleanup(ctx context.Context) error {
+func (r *HostReconciler) kubeadmDirCleanup(ctx context.Context) error {
 	logger := ctrl.LoggerFrom(ctx)
 	logger.Info("cleaning up kubeadm directory")
 	const kubeadmDir = "/run/kubeadm"
 	return os.RemoveAll(kubeadmDir)
 }
 
-func (r HostReconciler) hostCleanUp(ctx context.Context, byoHost *infrastructurev1beta1.ByoHost) error {
+func (r *HostReconciler) hostCleanUp(ctx context.Context, byoHost *infrastructurev1beta1.ByoHost) error {
 	logger := ctrl.LoggerFrom(ctx)
 	logger.Info("cleaning up host")
-	err := r.resetNode(ctx)
+	err := r.resetNode(ctx, byoHost)
 	if err != nil {
 		return err
 	}
@@ -197,16 +202,17 @@ func (r HostReconciler) hostCleanUp(ctx context.Context, byoHost *infrastructure
 	return nil
 }
 
-func (r *HostReconciler) resetNode(ctx context.Context) error {
+func (r *HostReconciler) resetNode(ctx context.Context, byoHost *infrastructurev1beta1.ByoHost) error {
 	logger := ctrl.LoggerFrom(ctx)
 	logger.Info("Running kubeadm reset")
 
 	err := r.CmdRunner.RunCmd(KubeadmResetCommand)
 	if err != nil {
+		r.Recorder.Event(byoHost, corev1.EventTypeWarning, "ResetK8sNodeFailed", "k8s Node Reset failed")
 		return errors.Wrapf(err, "failed to exec kubeadm reset")
 	}
-
 	logger.Info("Kubernetes Node reset completed")
+	r.Recorder.Event(byoHost, corev1.EventTypeNormal, "ResetK8sNodeSucceeded", "k8s Node Reset completed")
 	return nil
 }
 
@@ -226,6 +232,7 @@ func (r *HostReconciler) installK8sComponents(ctx context.Context, byoHost *infr
 	// TODO: call installer.Install(k8sVersion) here
 	// if err, return err
 
+	r.Recorder.Event(byoHost, corev1.EventTypeNormal, "k8sComponentInstalled", "Successfully Installed K8s components")
 	conditions.MarkTrue(byoHost, infrastructurev1beta1.K8sComponentsInstallationSucceeded)
 	return nil
 }

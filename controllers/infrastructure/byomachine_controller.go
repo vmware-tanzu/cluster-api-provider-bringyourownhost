@@ -14,6 +14,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/selection"
+	"k8s.io/client-go/tools/record"
 	"sigs.k8s.io/cluster-api/controllers/remote"
 	"sigs.k8s.io/cluster-api/util"
 	"sigs.k8s.io/cluster-api/util/conditions"
@@ -47,8 +48,9 @@ const (
 // ByoMachineReconciler reconciles a ByoMachine object
 type ByoMachineReconciler struct {
 	client.Client
-	Scheme  *runtime.Scheme
-	Tracker *remote.ClusterCacheTracker
+	Scheme   *runtime.Scheme
+	Tracker  *remote.ClusterCacheTracker
+	Recorder record.EventRecorder
 }
 
 //+kubebuilder:rbac:groups=infrastructure.cluster.x-k8s.io,resources=byomachines,verbs=get;list;watch;create;update;patch;delete
@@ -179,6 +181,8 @@ func (r *ByoMachineReconciler) reconcileDelete(ctx context.Context, machineScope
 		}
 	}
 
+	r.Recorder.Eventf(machineScope.ByoHost, corev1.EventTypeNormal, "ByoHostReleaseSucceeded", "ByoHost Released by %s", machineScope.ByoMachine.Name)
+	r.Recorder.Eventf(machineScope.ByoMachine, corev1.EventTypeNormal, "ByoHostReleaseSucceeded", "Released ByoHost %s", machineScope.ByoHost.Name)
 	controllerutil.RemoveFinalizer(machineScope.ByoMachine, infrav1.MachineFinalizer)
 	return reconcile.Result{}, nil
 }
@@ -216,6 +220,8 @@ func (r *ByoMachineReconciler) reconcileNormal(ctx context.Context, machineScope
 		if res, err := r.attachByoHost(ctx, machineScope); err != nil {
 			return res, err
 		}
+		r.Recorder.Eventf(machineScope.ByoHost, corev1.EventTypeNormal, "ByoHostAttachSucceeded", "Attached to ByoMachine %s", machineScope.ByoMachine.Name)
+		r.Recorder.Eventf(machineScope.ByoMachine, corev1.EventTypeNormal, "ByoHostAttachSucceeded", "Attached ByoHost %s", machineScope.ByoHost.Name)
 	}
 
 	if machineScope.ByoMachine.Spec.ProviderID == "" {
@@ -230,11 +236,13 @@ func (r *ByoMachineReconciler) reconcileNormal(ctx context.Context, machineScope
 		err = r.setNodeProviderID(ctx, remoteClient, machineScope.ByoHost, providerID)
 		if err != nil {
 			logger.Error(err, "failed to set node providerID")
+			r.Recorder.Eventf(machineScope.ByoMachine, corev1.EventTypeWarning, "SetNodeProviderFailed", "Node %s does not exist", machineScope.ByoHost.Name)
 			return ctrl.Result{}, err
 		}
 		machineScope.ByoMachine.Spec.ProviderID = providerID
 		machineScope.ByoMachine.Status.Ready = true
 		conditions.MarkTrue(machineScope.ByoMachine, infrav1.BYOHostReady)
+		r.Recorder.Eventf(machineScope.ByoMachine, corev1.EventTypeNormal, "NodeProvisionedSucceeded", "Provisioned Node %s", machineScope.ByoHost.Name)
 	}
 
 	return ctrl.Result{}, nil
@@ -394,6 +402,7 @@ func (r *ByoMachineReconciler) attachByoHost(ctx context.Context, machineScope *
 	}
 	if len(hostsList.Items) == 0 {
 		logger.Info("No hosts found, waiting..")
+		r.Recorder.Eventf(machineScope.ByoMachine, corev1.EventTypeWarning, "ByoHostSelectionFailed", "No available ByoHost")
 		conditions.MarkFalse(machineScope.ByoMachine, infrav1.BYOHostReady, infrav1.BYOHostsUnavailableReason, clusterv1.ConditionSeverityInfo, "")
 		return ctrl.Result{RequeueAfter: RequeueForbyohost}, errors.New("no hosts found")
 	}

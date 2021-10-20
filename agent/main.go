@@ -143,6 +143,7 @@ func main() {
 				DefaultNetworkInterfaceName: registration.LocalHostRegistrar.ByoHostInfo.DefaultNetworkInterfaceName,
 			},
 		},
+		Recorder: mgr.GetEventRecorderFor("hostagent-controller"),
 	}
 	if err = hostReconciler.SetupWithManager(context.TODO(), mgr); err != nil {
 		klog.Errorf("unable to create controller, err=%v", err)

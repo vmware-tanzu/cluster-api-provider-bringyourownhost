@@ -87,9 +87,10 @@ func main() {
 	}
 
 	if err = (&byohcontrollers.ByoMachineReconciler{
-		Client:  mgr.GetClient(),
-		Scheme:  mgr.GetScheme(),
-		Tracker: tracker,
+		Client:   mgr.GetClient(),
+		Scheme:   mgr.GetScheme(),
+		Tracker:  tracker,
+		Recorder: mgr.GetEventRecorderFor("byomachine-controller"),
 	}).SetupWithManager(context.TODO(), mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "ByoMachine")
 		os.Exit(1)
