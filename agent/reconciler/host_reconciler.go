@@ -29,6 +29,14 @@ type HostReconciler struct {
 	CmdRunner      cloudinit.ICmdRunner
 	FileWriter     cloudinit.IFileWriter
 	TemplateParser cloudinit.ITemplateParser
+	K8sInstaller   Installer
+}
+
+//go:generate go run github.com/maxbrunsfeld/counterfeiter/v6 -generate
+//counterfeiter:generate . Installer
+type Installer interface {
+	Install(string) error
+	Uninstall(string) error
 }
 
 const (
@@ -147,20 +155,27 @@ func (r *HostReconciler) SetupWithManager(ctx context.Context, mgr manager.Manag
 }
 
 // cleanup kubeadm dir to remove any stale config on the host
-func (r HostReconciler) kubeadmDirCleanup(ctx context.Context) error {
+func (r *HostReconciler) kubeadmDirCleanup(ctx context.Context) error {
 	logger := ctrl.LoggerFrom(ctx)
 	logger.Info("cleaning up kubeadm directory")
 	const kubeadmDir = "/run/kubeadm"
 	return os.RemoveAll(kubeadmDir)
 }
 
-func (r HostReconciler) hostCleanUp(ctx context.Context, byoHost *infrastructurev1beta1.ByoHost) error {
+func (r *HostReconciler) hostCleanUp(ctx context.Context, byoHost *infrastructurev1beta1.ByoHost) error {
 	logger := ctrl.LoggerFrom(ctx)
 	logger.Info("cleaning up host")
 	err := r.resetNode(ctx)
 	if err != nil {
 		return err
 	}
+
+	k8sVersion := byoHost.GetAnnotations()[infrastructurev1beta1.K8sVersionAnnotation]
+	err = r.K8sInstaller.Uninstall(k8sVersion)
+	if err != nil {
+		return err
+	}
+	conditions.MarkFalse(byoHost, infrastructurev1beta1.K8sNodeBootstrapSucceeded, infrastructurev1beta1.K8sNodeAbsentReason, clusterv1.ConditionSeverityInfo, "")
 
 	logger.Info("Removing the bootstrap sentinel file...")
 	if _, err := os.Stat(bootstrapSentinelFile); !os.IsNotExist(err) {
@@ -222,10 +237,12 @@ func (r *HostReconciler) bootstrapK8sNode(ctx context.Context, bootstrapScript s
 func (r *HostReconciler) installK8sComponents(ctx context.Context, byoHost *infrastructurev1beta1.ByoHost) error {
 	logger := ctrl.LoggerFrom(ctx)
 	logger.Info("Installing K8s")
-	conditions.MarkFalse(byoHost, infrastructurev1beta1.K8sComponentsInstallationSucceeded, infrastructurev1beta1.K8sComponentsInstallingReason, clusterv1.ConditionSeverityInfo, "")
-	// TODO: call installer.Install(k8sVersion) here
-	// if err, return err
 
+	k8sVersion := byoHost.GetAnnotations()[infrastructurev1beta1.K8sVersionAnnotation]
+	err := r.K8sInstaller.Install(k8sVersion)
+	if err != nil {
+		return err
+	}
 	conditions.MarkTrue(byoHost, infrastructurev1beta1.K8sComponentsInstallationSucceeded)
 	return nil
 }

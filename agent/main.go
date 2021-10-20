@@ -11,6 +11,7 @@ import (
 	"strings"
 
 	"github.com/vmware-tanzu/cluster-api-provider-byoh/agent/cloudinit"
+	"github.com/vmware-tanzu/cluster-api-provider-byoh/agent/installer"
 	"github.com/vmware-tanzu/cluster-api-provider-byoh/agent/reconciler"
 	"github.com/vmware-tanzu/cluster-api-provider-byoh/agent/registration"
 	infrastructurev1beta1 "github.com/vmware-tanzu/cluster-api-provider-byoh/apis/infrastructure/v1beta1"
@@ -72,9 +73,11 @@ func (l *labelFlags) Set(value string) error {
 }
 
 var (
-	namespace string
-	scheme    *runtime.Scheme
-	labels    = make(labelFlags)
+	namespace    string
+	registry     string
+	downloadpath string
+	scheme       *runtime.Scheme
+	labels       = make(labelFlags)
 )
 
 // TODO - fix logging
@@ -82,6 +85,8 @@ var (
 func main() {
 	flag.StringVar(&namespace, "namespace", "default", "Namespace in the management cluster where you would like to register this host")
 	flag.Var(&labels, "label", "labels to attach to the ByoHost CR in the form labelname=labelVal for e.g. '--label site=apac --label cores=2'")
+	flag.StringVar(&registry, "registry", "projects.registry.vmware.com", "Any local registry from where you want to pull the k8s bundle from")
+	flag.StringVar(&downloadpath, "downloadpath", "/tmp/kubernetes/bundles", "System path to place all the downloaded bundles")
 	klog.InitFlags(nil)
 	flag.Parse()
 	scheme = runtime.NewScheme()
@@ -89,7 +94,8 @@ func main() {
 	_ = corev1.AddToScheme(scheme)
 	_ = clusterv1.AddToScheme(scheme)
 
-	ctrl.SetLogger(klogr.New())
+	logger := klogr.New()
+	ctrl.SetLogger(logger)
 	config, err := ctrl.GetConfig()
 	if err != nil {
 		klog.Errorf("error getting kubeconfig, err=%v", err)
@@ -105,6 +111,12 @@ func main() {
 	hostName, err := os.Hostname()
 	if err != nil {
 		klog.Errorf("couldn't determine hostname, err=%v", err)
+		return
+	}
+
+	k8sInstaller, err := installer.New(registry, downloadpath, logger)
+	if err != nil {
+		klog.Errorf("unable to instantiate installer, err=%v", err)
 		return
 	}
 
@@ -143,6 +155,7 @@ func main() {
 				DefaultNetworkInterfaceName: registration.LocalHostRegistrar.ByoHostInfo.DefaultNetworkInterfaceName,
 			},
 		},
+		K8sInstaller: k8sInstaller,
 	}
 	if err = hostReconciler.SetupWithManager(context.TODO(), mgr); err != nil {
 		klog.Errorf("unable to create controller, err=%v", err)

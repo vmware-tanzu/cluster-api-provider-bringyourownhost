@@ -34,10 +34,6 @@ const (
 	// This is usually set after executing kubeadm reset on the node
 	K8sNodeAbsentReason = "K8sNodeAbsent"
 
-	// K8sComponentsInstallingReason indicates that the k8s components are being
-	// downloaded and installed
-	K8sComponentsInstallingReason = "K8sComponentsInstalling"
-
 	// K8sComponentsInstallationFailedReason indicates that the installer failed to install all the
 	// k8s components on this host
 	K8sComponentsInstallationFailedReason = "K8sComponentsInstallationFailed"

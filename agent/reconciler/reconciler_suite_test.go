@@ -1,7 +1,7 @@
 // Copyright 2021 VMware, Inc. All Rights Reserved.
 // SPDX-License-Identifier: Apache-2.0
 
-package reconciler
+package reconciler_test
 
 import (
 	"go/build"
@@ -11,6 +11,8 @@ import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	"github.com/vmware-tanzu/cluster-api-provider-byoh/agent/cloudinit/cloudinitfakes"
+	"github.com/vmware-tanzu/cluster-api-provider-byoh/agent/reconciler"
+	"github.com/vmware-tanzu/cluster-api-provider-byoh/agent/reconciler/reconcilerfakes"
 	infrastructurev1beta1 "github.com/vmware-tanzu/cluster-api-provider-byoh/apis/infrastructure/v1beta1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -33,11 +35,12 @@ var (
 	k8sClient          client.Client
 	k8sManager         manager.Manager
 	patchHelper        *patch.Helper
-	reconciler         *HostReconciler
+	hostReconciler     *reconciler.HostReconciler
 	testEnv            *envtest.Environment
 	fakeCommandRunner  *cloudinitfakes.FakeICmdRunner
 	fakeFileWriter     *cloudinitfakes.FakeIFileWriter
 	fakeTemplateParser *cloudinitfakes.FakeITemplateParser
+	fakeInstaller      *reconcilerfakes.FakeInstaller
 )
 
 var _ = BeforeSuite(func() {
