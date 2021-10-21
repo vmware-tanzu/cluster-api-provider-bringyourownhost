@@ -16,18 +16,6 @@ import (
 
 var (
 	DownloadPathPermissions fs.FileMode = 0777
-	downloadErrMap                      = map[string]Error{
-		ErrDownloadBadRepo:            ErrBundleDownload,
-		ErrDownloadNameResolution:     ErrBundleDownload,
-		ErrDownloadConnectionTimedOut: ErrBundleDownload,
-		ErrDownloadOutOfSpace:         ErrBundleExtract}
-)
-
-const (
-	ErrDownloadBadRepo            = "no such host"
-	ErrDownloadConnectionTimedOut = "connection timed out"
-	ErrDownloadNameResolution     = "temporary failure in name resolution"
-	ErrDownloadOutOfSpace         = "no space left on device"
 )
 
 // bundleDownloader for downloading an OCI image.
@@ -99,12 +87,19 @@ func (bd *bundleDownloader) downloadByImgpkg(
 
 // convertError returns known errors in standardized format.
 func convertError(err error) error {
-	if err != nil {
-		errStr := strings.ToLower(err.Error())
-		for k, v := range downloadErrMap {
-			if strings.HasSuffix(errStr, k) {
-				return v
-			}
+	downloadErrMap := map[string]Error{
+		"no such host":                         ErrBundleDownload,
+		"connection timed out":                 ErrBundleDownload,
+		"temporary failure in name resolution": ErrBundleDownload,
+		"no space left on device":              ErrBundleExtract}
+
+	if err == nil {
+		return nil
+	}
+	errStr := strings.ToLower(err.Error())
+	for k, v := range downloadErrMap {
+		if strings.HasSuffix(errStr, k) {
+			return v
 		}
 	}
 	return err

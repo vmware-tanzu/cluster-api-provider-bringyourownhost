@@ -16,16 +16,12 @@ import (
 
 type mockImgpkg struct {
 	callCount int
-	err       string
+	err       error
 }
 
 func (mi *mockImgpkg) Get(_, _ string) error {
 	mi.callCount++
-	return nil
-}
-
-func (mi *mockImgpkg) GetError(_, _ string) error {
-	return errors.New(mi.err)
+	return mi.err
 }
 
 var _ = Describe("Byohost Installer Tests", func() {
@@ -93,29 +89,29 @@ var _ = Describe("Byohost Installer Tests", func() {
 			Expect(err.Error()).Should(Equal(ErrBundleDownload.Error()))
 		})
 		It("Should return error if connection timed out", func() {
-			mi.err = "Extracting image into directory: read tcp 192.168.0.1:1->1.1.1.1:1: read: connection timed out"
+			mi.err = errors.New("Extracting image into directory: read tcp 192.168.0.1:1->1.1.1.1:1: read: connection timed out")
 			err := bd.DownloadFromRepo(
 				normalizedOsVersion,
 				k8sVersion,
-				mi.GetError)
+				mi.Get)
 			Expect(err).Should((HaveOccurred()))
 			Expect(err.Error()).Should(Equal(ErrBundleDownload.Error()))
 		})
 		It("Should return error if failure in name resolution", func() {
-			mi.err = "Fetching image: Get \"a.a/\": dial tcp: lookup a.a: Temporary failure in name resolution"
+			mi.err = errors.New("Fetching image: Get \"a.a/\": dial tcp: lookup a.a: Temporary failure in name resolution")
 			err := bd.DownloadFromRepo(
 				normalizedOsVersion,
 				k8sVersion,
-				mi.GetError)
+				mi.Get)
 			Expect(err).Should((HaveOccurred()))
 			Expect(err.Error()).Should(Equal(ErrBundleDownload.Error()))
 		})
 		It("Should return error if out of space", func() {
-			mi.err = "Extracting image into directory: write /tmp/asd: no space left on device"
+			mi.err = errors.New("Extracting image into directory: write /tmp/asd: no space left on device")
 			err := bd.DownloadFromRepo(
 				normalizedOsVersion,
 				k8sVersion,
-				mi.GetError)
+				mi.Get)
 			Expect(err).Should((HaveOccurred()))
 			Expect(err.Error()).Should(Equal(ErrBundleExtract.Error()))
 		})
