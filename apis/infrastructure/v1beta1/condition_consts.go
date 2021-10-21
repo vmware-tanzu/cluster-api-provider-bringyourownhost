@@ -1,3 +1,6 @@
+// Copyright 2021 VMware, Inc. All Rights Reserved.
+// SPDX-License-Identifier: Apache-2.0
+
 package v1beta1
 
 import clusterv1 "sigs.k8s.io/cluster-api/api/v1beta1"

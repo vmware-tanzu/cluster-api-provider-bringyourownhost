@@ -1,10 +1,11 @@
+// Copyright 2021 VMware, Inc. All Rights Reserved.
+// SPDX-License-Identifier: Apache-2.0
+
 // +build tools
 
 package tools
 
 import (
-	_ "github.com/cppforlife/go-cli-ui/ui"
-	_ "github.com/k14s/imgpkg/pkg/imgpkg/cmd"
 	_ "github.com/maxbrunsfeld/counterfeiter/v6"
 )
 

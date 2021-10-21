@@ -1,3 +1,6 @@
+// Copyright 2021 VMware, Inc. All Rights Reserved.
+// SPDX-License-Identifier: Apache-2.0
+
 package reconciler
 
 import (
@@ -167,7 +170,7 @@ func (r HostReconciler) hostCleanUp(ctx context.Context, byoHost *infrastructure
 		}
 	}
 	if IP, ok := byoHost.Annotations[infrastructurev1beta1.EndPointIPAnnotation]; ok {
-		network, err := vip.NewConfig(IP, registration.LocalHostRegistrar.ByoHostInfo.DefaultNetworkName, false)
+		network, err := vip.NewConfig(IP, registration.LocalHostRegistrar.ByoHostInfo.DefaultNetworkInterfaceName, false)
 		if err == nil {
 			err := network.DeleteIP()
 			if err != nil {

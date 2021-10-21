@@ -1,3 +1,6 @@
+// Copyright 2021 VMware, Inc. All Rights Reserved.
+// SPDX-License-Identifier: Apache-2.0
+
 package reconciler
 
 import (
@@ -8,7 +11,7 @@ import (
 	. "github.com/onsi/gomega"
 	"github.com/vmware-tanzu/cluster-api-provider-byoh/agent/cloudinit/cloudinitfakes"
 	infrastructurev1beta1 "github.com/vmware-tanzu/cluster-api-provider-byoh/apis/infrastructure/v1beta1"
-	"github.com/vmware-tanzu/cluster-api-provider-byoh/common"
+	"github.com/vmware-tanzu/cluster-api-provider-byoh/test/builder"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/types"
 	clusterv1 "sigs.k8s.io/cluster-api/api/v1beta1"
@@ -53,7 +56,7 @@ var _ = Describe("Byohost Agent Tests", func() {
 
 	Context("When ByoHost exists", func() {
 		BeforeEach(func() {
-			byoHost = common.NewByoHost(hostName, ns)
+			byoHost = builder.ByoHost(ns, hostName).Build()
 			Expect(k8sClient.Create(ctx, byoHost)).NotTo(HaveOccurred(), "failed to create byohost")
 			var err error
 			patchHelper, err = patch.NewHelper(byoHost, k8sClient)
@@ -84,7 +87,7 @@ var _ = Describe("Byohost Agent Tests", func() {
 
 		Context("When MachineRef is set", func() {
 			BeforeEach(func() {
-				byoMachine = common.NewByoMachine("test-byomachine", ns, "", nil)
+				byoMachine = builder.ByoMachine(ns, "test-byomachine").Build()
 				Expect(k8sClient.Create(ctx, byoMachine)).NotTo(HaveOccurred(), "failed to create byomachine")
 				byoHost.Status.MachineRef = &corev1.ObjectReference{
 					Kind:       "ByoMachine",
@@ -138,7 +141,10 @@ var _ = Describe("Byohost Agent Tests", func() {
   content: blah
 runCmd:
 - echo 'some run command'`
-					bootstrapSecret = common.NewSecret("test-secret", secretData, ns)
+
+					bootstrapSecret = builder.Secret(ns, "test-secret").
+						WithData(secretData).
+						Build()
 					Expect(k8sClient.Create(ctx, bootstrapSecret)).NotTo(HaveOccurred())
 
 					byoHost.Spec.BootstrapSecret = &corev1.ObjectReference{
@@ -221,7 +227,7 @@ runCmd:
 
 		Context("When the ByoHost is marked for cleanup", func() {
 			BeforeEach(func() {
-				byoMachine = common.NewByoMachine("test-byomachine", ns, "", nil)
+				byoMachine = builder.ByoMachine(ns, "test-byomachine").Build()
 				Expect(k8sClient.Create(ctx, byoMachine)).NotTo(HaveOccurred(), "failed to create byomachine")
 				byoHost.Status.MachineRef = &corev1.ObjectReference{
 					Kind:       "ByoMachine",

@@ -1,3 +1,6 @@
+// Copyright 2021 VMware, Inc. All Rights Reserved.
+// SPDX-License-Identifier: Apache-2.0
+
 package main
 
 import (
@@ -137,7 +140,7 @@ func main() {
 		FileWriter: cloudinit.FileWriter{},
 		TemplateParser: cloudinit.TemplateParser{
 			Template: registration.HostInfo{
-				DefaultNetworkName: registration.LocalHostRegistrar.ByoHostInfo.DefaultNetworkName,
+				DefaultNetworkInterfaceName: registration.LocalHostRegistrar.ByoHostInfo.DefaultNetworkInterfaceName,
 			},
 		},
 	}

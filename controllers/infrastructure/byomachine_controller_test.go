@@ -1,3 +1,6 @@
+// Copyright 2021 VMware, Inc. All Rights Reserved.
+// SPDX-License-Identifier: Apache-2.0
+
 package controllers
 
 import (
@@ -8,9 +11,8 @@ import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	infrastructurev1beta1 "github.com/vmware-tanzu/cluster-api-provider-byoh/apis/infrastructure/v1beta1"
-	"github.com/vmware-tanzu/cluster-api-provider-byoh/common"
+	"github.com/vmware-tanzu/cluster-api-provider-byoh/test/builder"
 	corev1 "k8s.io/api/core/v1"
-	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/kubernetes/scheme"
 	clusterv1 "sigs.k8s.io/cluster-api/api/v1beta1"
@@ -40,13 +42,17 @@ var _ = Describe("Controllers/ByomachineController", func() {
 		k8sClientUncached, clientErr = client.New(cfg, client.Options{Scheme: scheme.Scheme})
 		Expect(clientErr).NotTo(HaveOccurred())
 
-		machine = common.NewMachine(defaultMachineName, defaultNamespace, defaultClusterName)
-		machine.Spec.Bootstrap = clusterv1.Bootstrap{
-			DataSecretName: &fakeBootstrapSecret,
-		}
+		machine = builder.Machine(defaultNamespace, defaultMachineName).
+			WithClusterName(defaultClusterName).
+			WithClusterVersion("1.22").
+			WithBootstrapDataSecret(fakeBootstrapSecret).
+			Build()
 		Expect(k8sClientUncached.Create(ctx, machine)).Should(Succeed())
 
-		byoMachine = common.NewByoMachine(defaultByoMachineName, defaultNamespace, defaultClusterName, machine)
+		byoMachine = builder.ByoMachine(defaultNamespace, defaultByoMachineName).
+			WithClusterLabel(defaultClusterName).
+			WithOwnerMachine(machine).
+			Build()
 		Expect(k8sClientUncached.Create(ctx, byoMachine)).Should(Succeed())
 
 		WaitForObjectsToBePopulatedInCache(machine, byoMachine)
@@ -62,10 +68,15 @@ var _ = Describe("Controllers/ByomachineController", func() {
 	})
 
 	It("should return error when cluster does not exist", func() {
-		machineForByoMachineWithoutCluster := common.NewMachine("machine-for-a-byomachine-without-cluster", defaultNamespace, defaultClusterName)
+		machineForByoMachineWithoutCluster := builder.Machine(defaultNamespace, "machine-for-a-byomachine-without-cluster").
+			WithClusterName(defaultClusterName).
+			Build()
 		Expect(k8sClientUncached.Create(ctx, machineForByoMachineWithoutCluster)).Should(Succeed())
 
-		byoMachineWithNonExistingCluster := common.NewByoMachine(defaultByoMachineName, defaultNamespace, "non-existent-cluster", machine)
+		byoMachineWithNonExistingCluster := builder.ByoMachine(defaultNamespace, defaultByoMachineName).
+			WithClusterLabel("non-existent-cluster").
+			WithOwnerMachine(machine).
+			Build()
 		Expect(k8sClientUncached.Create(ctx, byoMachineWithNonExistingCluster)).Should(Succeed())
 
 		WaitForObjectsToBePopulatedInCache(machineForByoMachineWithoutCluster, byoMachineWithNonExistingCluster)
@@ -90,7 +101,7 @@ var _ = Describe("Controllers/ByomachineController", func() {
 		})
 
 		It("should return error when node is not available", func() {
-			byoHost = common.NewByoHost("host-with-node-missing", defaultNamespace)
+			byoHost = builder.ByoHost(defaultNamespace, "host-with-node-missing").Build()
 			Expect(k8sClientUncached.Create(ctx, byoHost)).Should(Succeed())
 
 			WaitForObjectsToBePopulatedInCache(byoHost)
@@ -130,10 +141,11 @@ var _ = Describe("Controllers/ByomachineController", func() {
 
 		Context("When a single BYO Host is available", func() {
 			BeforeEach(func() {
-				byoHost = common.NewByoHost("single-available-default-host", defaultNamespace)
+				byoHost = builder.ByoHost(defaultNamespace, "single-available-default-host").Build()
 				Expect(k8sClientUncached.Create(ctx, byoHost)).Should(Succeed())
 
-				Expect(clientFake.Create(ctx, common.NewNode(byoHost.Name, defaultNamespace))).Should(Succeed())
+				node := builder.Node(defaultNamespace, byoHost.Name).Build()
+				Expect(clientFake.Create(ctx, node)).Should(Succeed())
 				WaitForObjectsToBePopulatedInCache(byoHost)
 
 				byoHostLookupKey = types.NamespacedName{Name: byoHost.Name, Namespace: byoHost.Namespace}
@@ -268,13 +280,20 @@ var _ = Describe("Controllers/ByomachineController", func() {
 			})
 
 			It("should mark BYOHostReady as False when cluster is paused", func() {
-				pausedCluster := common.NewCluster("paused-cluster", defaultNamespace)
-				pausedCluster.Spec.Paused = true
+				pausedCluster := builder.Cluster(defaultNamespace, "paused-cluster").
+					WithPausedField(true).
+					Build()
 				Expect(k8sClientUncached.Create(ctx, pausedCluster)).Should(Succeed())
 
-				pausedMachine := common.NewMachine("paused-machine", defaultNamespace, pausedCluster.Name)
+				pausedMachine := builder.Machine(defaultNamespace, "paused-machine").
+					WithClusterName(pausedCluster.Name).
+					Build()
 				Expect(k8sClientUncached.Create(ctx, pausedMachine)).Should(Succeed())
-				pausedByoMachine := common.NewByoMachine("paused-byo-machine", defaultNamespace, pausedCluster.Name, pausedMachine)
+
+				pausedByoMachine := builder.ByoMachine(defaultNamespace, "paused-byo-machine").
+					WithClusterLabel(pausedCluster.Name).
+					WithOwnerMachine(pausedMachine).
+					Build()
 				Expect(k8sClientUncached.Create(ctx, pausedByoMachine)).Should(Succeed())
 
 				WaitForObjectsToBePopulatedInCache(pausedCluster, pausedMachine, pausedByoMachine)
@@ -331,12 +350,16 @@ var _ = Describe("Controllers/ByomachineController", func() {
 
 		Context("When no matching BYO Hosts are available", func() {
 			BeforeEach(func() {
-				byoHost = common.NewByoHost("byohost-with-different-label", defaultNamespace)
-				byoHost.Labels = map[string]string{"CPUs": "2"}
+				byoHost = builder.ByoHost(defaultNamespace, "byohost-with-different-label").
+					WithLabels(map[string]string{"CPUs": "2"}).
+					Build()
 				Expect(k8sClientUncached.Create(ctx, byoHost)).Should(Succeed())
 
-				byoMachine = common.NewByoMachine("byomachine-with-label-selector", defaultNamespace, defaultClusterName, machine)
-				byoMachine.Spec.Selector = &v1.LabelSelector{MatchLabels: map[string]string{"CPUs": "4"}}
+				byoMachine = builder.ByoMachine(defaultNamespace, "byomachine-with-label-selector").
+					WithClusterLabel(defaultClusterName).
+					WithOwnerMachine(machine).
+					WithLabelSelector(map[string]string{"CPUs": "4"}).
+					Build()
 				Expect(k8sClientUncached.Create(ctx, byoMachine)).Should(Succeed())
 
 				WaitForObjectsToBePopulatedInCache(byoHost, byoMachine)
@@ -367,8 +390,9 @@ var _ = Describe("Controllers/ByomachineController", func() {
 
 		Context("When all ByoHost are attached", func() {
 			BeforeEach(func() {
-				byoHost = common.NewByoHost("byohost-attached-different-cluster", defaultNamespace)
-				byoHost.Labels = map[string]string{clusterv1.ClusterLabelName: capiCluster.Name}
+				byoHost = builder.ByoHost(defaultNamespace, "byohost-attached-different-cluster").
+					WithLabels(map[string]string{clusterv1.ClusterLabelName: capiCluster.Name}).
+					Build()
 				Expect(k8sClientUncached.Create(ctx, byoHost)).Should(Succeed())
 
 				WaitForObjectsToBePopulatedInCache(byoHost)
@@ -403,15 +427,15 @@ var _ = Describe("Controllers/ByomachineController", func() {
 			)
 
 			BeforeEach(func() {
-				byoHost1 = common.NewByoHost(defaultByoHostName, defaultNamespace)
+				byoHost1 = builder.ByoHost(defaultNamespace, defaultByoHostName).Build()
 				Expect(k8sClientUncached.Create(ctx, byoHost1)).Should(Succeed())
-				byoHost2 = common.NewByoHost(defaultByoHostName, defaultNamespace)
+				byoHost2 = builder.ByoHost(defaultNamespace, defaultByoHostName).Build()
 				Expect(k8sClientUncached.Create(ctx, byoHost2)).Should(Succeed())
 
 				WaitForObjectsToBePopulatedInCache(byoHost1, byoHost2)
 
-				Expect(clientFake.Create(ctx, common.NewNode(byoHost1.Name, defaultNamespace))).Should(Succeed())
-				Expect(clientFake.Create(ctx, common.NewNode(byoHost2.Name, defaultNamespace))).Should(Succeed())
+				Expect(clientFake.Create(ctx, builder.Node(defaultNamespace, byoHost1.Name).Build())).Should(Succeed())
+				Expect(clientFake.Create(ctx, builder.Node(defaultNamespace, byoHost2.Name).Build())).Should(Succeed())
 			})
 
 			It("claims one of the available host", func() {
