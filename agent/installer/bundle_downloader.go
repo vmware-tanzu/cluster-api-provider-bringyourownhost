@@ -4,7 +4,6 @@
 package installer
 
 import (
-	"errors"
 	"fmt"
 	"io/fs"
 	"os"
@@ -16,7 +15,12 @@ import (
 )
 
 var (
-	dirPermissions fs.FileMode = 0777
+	DownloadPathPermissions fs.FileMode = 0777
+	downloadErrMap                      = map[string]Error{
+		ErrDownloadBadRepo:            ErrBundleDownload,
+		ErrDownloadNameResolution:     ErrBundleDownload,
+		ErrDownloadConnectionTimedOut: ErrBundleDownload,
+		ErrDownloadOutOfSpace:         ErrBundleExtract}
 )
 
 const (
@@ -35,6 +39,8 @@ type bundleDownloader struct {
 // Download is a method that downloads the bundle from repoAddr to downloadPath.
 // It automatically downloads and extracts the given version for the current linux
 // distribution. Creates the folder where the bundle should be saved if it does not exist.
+// Download is performed in a temp directory which in case of successful download is renamed.
+// If a cache for the bundle exists, nothing is downloaded.
 func (bd *bundleDownloader) Download(
 	normalizedOsVersion,
 	k8sVersion string) error {
@@ -51,24 +57,27 @@ func (bd *bundleDownloader) DownloadFromRepo(
 	k8sVersion string,
 	downloadByTool func(string, string) error) error {
 
-	err := bd.ensureDirExist(bd.downloadPath)
+	err := ensureDirExist(bd.downloadPath)
 	if err != nil {
 		return err
 	}
 
 	bundleDirPath := bd.GetBundleDirPath(k8sVersion)
-	if bd.checkDirExist(bundleDirPath) {
+
+	// cache hit
+	if checkDirExist(bundleDirPath) {
 		return nil
 	}
 
 	dir, err := os.MkdirTemp(bd.downloadPath, "tempBundle")
+	// It is fine if the dir path does not exist.
 	defer os.RemoveAll(dir)
 	if err != nil {
 		return err
 	}
 
 	bundleAddr := bd.getBundleAddr(normalizedOsVersion, k8sVersion)
-	err = bd.filterError(downloadByTool(bundleAddr, dir))
+	err = convertError(downloadByTool(bundleAddr, dir))
 	if err != nil {
 		return err
 	}
@@ -88,18 +97,14 @@ func (bd *bundleDownloader) downloadByImgpkg(
 	return imgpkgCmd.Execute()
 }
 
-// filterError returns known errors in standardized format.
-func (bd *bundleDownloader) filterError(err error) error {
+// convertError returns known errors in standardized format.
+func convertError(err error) error {
 	if err != nil {
 		errStr := strings.ToLower(err.Error())
-		if strings.HasSuffix(errStr, ErrDownloadBadRepo) {
-			return errors.New(ErrDownloadBadRepo)
-		} else if strings.HasSuffix(errStr, ErrDownloadConnectionTimedOut) {
-			return errors.New(ErrDownloadConnectionTimedOut)
-		} else if strings.HasSuffix(errStr, ErrDownloadNameResolution) {
-			return errors.New(ErrDownloadNameResolution)
-		} else if strings.HasSuffix(errStr, ErrDownloadOutOfSpace) {
-			return errors.New(ErrDownloadOutOfSpace)
+		for k, v := range downloadErrMap {
+			if strings.HasSuffix(errStr, k) {
+				return v
+			}
 		}
 	}
 	return err
@@ -110,13 +115,18 @@ func (bd *bundleDownloader) GetBundleDirPath(k8sVersion string) string {
 	return filepath.Join(bd.downloadPath, k8sVersion)
 }
 
+// GetBundleName returns the name of the bundle in normalized format.
+func GetBundleName(normalizedOsVersion, k8sVersion string) string {
+	return strings.ToLower(fmt.Sprintf("%s_k8s_%s", normalizedOsVersion, k8sVersion))
+}
+
 // getBundleAddr returns the exact address to the bundle in the repo.
 func (bd *bundleDownloader) getBundleAddr(normalizedOsVersion, k8sVersion string) string {
-	return fmt.Sprintf("%s/%s_k8s_%s", bd.repoAddr, normalizedOsVersion, k8sVersion)
+	return fmt.Sprintf("%s/%s", bd.repoAddr, GetBundleName(normalizedOsVersion, k8sVersion))
 }
 
 // checkDirExist checks if a dirrectory exists.
-func (bd *bundleDownloader) checkDirExist(dirPath string) bool {
+func checkDirExist(dirPath string) bool {
 	if fi, err := os.Stat(dirPath); os.IsNotExist(err) || !fi.IsDir() {
 		return false
 	}
@@ -124,9 +134,6 @@ func (bd *bundleDownloader) checkDirExist(dirPath string) bool {
 }
 
 // ensureDirExist ensures that a bundle directory already exists or creates a new one recursively.
-func (bd *bundleDownloader) ensureDirExist(dirPath string) error {
-	if !bd.checkDirExist(dirPath) {
-		return os.MkdirAll(dirPath, dirPermissions)
-	}
-	return nil
+func ensureDirExist(dirPath string) error {
+	return os.MkdirAll(dirPath, DownloadPathPermissions)
 }
