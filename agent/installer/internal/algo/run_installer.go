@@ -1,10 +1,6 @@
 package algo
 
-func RunInstaller(operation string, bundlePath string, i BaseK8sInstaller) {
-
-	i.BundlePath = bundlePath
-	i.LogBuilder = LogBuilder{}
-	i.LogBuilder.Reset()
+func RunInstaller(operation string, i BaseK8sInstaller) {
 
 	switch operation {
 	case "install":

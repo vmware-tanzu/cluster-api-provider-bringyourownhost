@@ -2,7 +2,6 @@ package algo
 
 import (
 	"bytes"
-	"fmt"
 	"os/exec"
 )
 
@@ -16,31 +15,20 @@ type ShellStep struct {
 	DoCmd   string
 	UndoCmd string
 	Desc    string
+	*BaseK8sInstaller
 }
 
-const (
-	PIPE_ERR  = 0
-	PIPE_OUT  = 1
-	PIPE_INFO = 2
-)
-
-func (s *ShellStep) do(k *BaseK8sInstaller) error {
-	infoStr := "Processing install step: " + s.Desc
-	infoStr += "\nEXECUTING: " + s.DoCmd + "\n"
-	s.logStep(k, PIPE_INFO, infoStr)
-
-	return s.runStep(s.DoCmd, k)
+func (s *ShellStep) do() error {
+	s.OutputBuilder.Msg("Installing: " + s.Desc)
+	return s.runStep(s.DoCmd)
 }
 
-func (s *ShellStep) undo(k *BaseK8sInstaller) error {
-	infoStr := "Processing uninstall step: " + s.Desc
-	infoStr += "\nEXECUTING: " + s.UndoCmd + "\n"
-	s.logStep(k, PIPE_INFO, infoStr)
-
-	return s.runStep(s.UndoCmd, k)
+func (s *ShellStep) undo() error {
+	s.OutputBuilder.Msg("Uninstalling: " + s.Desc)
+	return s.runStep(s.UndoCmd)
 }
 
-func (s *ShellStep) runStep(command string, k *BaseK8sInstaller) error {
+func (s *ShellStep) runStep(command string) error {
 	var stdOut bytes.Buffer
 	var stdErr bytes.Buffer
 
@@ -48,38 +36,27 @@ func (s *ShellStep) runStep(command string, k *BaseK8sInstaller) error {
 
 	//TODO: check for exit(-1) or similar code
 	cmd := exec.Command(defaultShell, "-c", command)
+	s.OutputBuilder.Cmd(cmd.String())
+
 	cmd.Stdout = &stdOut
 	cmd.Stderr = &stdErr
 	err := cmd.Run()
 
-	if len(stdOut.String()) > 0 {
-		s.logStep(k, PIPE_OUT, stdOut.String())
-	}
-
 	if len(stdErr.String()) > 0 {
-		s.logStep(k, PIPE_ERR, stdErr.String())
+		//this is a non critical error (warning)
+		//do not return err! just log it.
+		//otherwise it will cause rollback procedure
+		s.OutputBuilder.StdErr(stdErr.String())
 	}
 
 	if err != nil {
-		fmt.Print(err.Error())
-		s.logStep(k, PIPE_ERR, err.Error())
+		s.OutputBuilder.StdErr(err.Error())
+		return err
+	}
+
+	if len(stdOut.String()) > 0 {
+		s.OutputBuilder.StdOut(stdOut.String())
 	}
 
 	return nil
-}
-
-func (s *ShellStep) logStep(k *BaseK8sInstaller, outputPipe int, msg string) {
-	switch outputPipe {
-	case PIPE_ERR:
-		k.LogBuilder.AddTimestamp(&k.LogBuilder.stdErr).AddStdErr(msg)
-	case PIPE_OUT:
-		k.LogBuilder.AddTimestamp(&k.LogBuilder.stdOut).AddStdOut(msg)
-	case PIPE_INFO:
-		k.LogBuilder.AddTimestamp(&k.LogBuilder.info).AddInfoText(msg)
-	default:
-	}
-
-	println(k.LogBuilder.GetLastInfo())
-	println(k.LogBuilder.GetLastStdOut())
-	println(k.LogBuilder.GetLastStdErr())
 }

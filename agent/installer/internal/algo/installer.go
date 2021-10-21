@@ -1,11 +1,5 @@
 package algo
 
-type OutputBuilder interface {
-	Description(string)
-	Command(string)
-	CommandOutput(string)
-}
-
 // This is a generic installer interface
 type Installer interface {
 	install() error
@@ -19,17 +13,8 @@ type Installer interface {
 # that implement the appropriate method factory #
 # overriders.                                   #
 #################################################
-*/
 
-type Step interface {
-	do(k *BaseK8sInstaller) error
-	undo(k *BaseK8sInstaller) error
-}
-
-/*
-##################
-# IMPORTANT NOTE #
-##################
+** IMPORTANT NOTE **
 
 Please note that the following steps:
 
@@ -40,30 +25,37 @@ Please note that the following steps:
 
 are required in order to:
 1) enable the kernel modules: overlay & bridge network filter
-2) create a systemwide config that will enable those modules on boot time
+2) create a systemwide config that will enable those modules at boot time
 3) enable ipv4 & ipv6 forwarding
-4) create a systemwide config that will enable the forwarding on boot time
+4) create a systemwide config that will enable the forwarding at boot time
 5) realod the sysctl with the applied config changes so the changes can take
    effect without restarting
 6) disable unattended OS updates
 */
 
+type Step interface {
+	do() error
+	undo() error
+}
+
 type K8sStepProvider interface {
 	getSteps() []Step
 
+	//os state related steps
 	swapStep() Step
 	firewallStep() Step
 	unattendedUpdStep() Step
 	kernelModsLoadStep() Step
 
-	osWideCfgUpdateStep(baseInst BaseK8sInstaller) Step
-	criToolsStep(baseInst BaseK8sInstaller) Step
-	criKubernetesStep(baseInst BaseK8sInstaller) Step
-	containerdStep(baseInst BaseK8sInstaller) Step
+	//packages related steps
+	osWideCfgUpdateStep() Step
+	criToolsStep() Step
+	criKubernetesStep() Step
+	containerdStep() Step
 	containerdDaemonStep() Step
-	kubeadmStep(baseInst BaseK8sInstaller) Step
-	kubeletStep(baseInst BaseK8sInstaller) Step
-	kubectlStep(baseInst BaseK8sInstaller) Step
+	kubeadmStep() Step
+	kubeletStep() Step
+	kubectlStep() Step
 }
 
 //This is the default k8s installer implementation
@@ -71,20 +63,18 @@ type BaseK8sInstaller struct {
 	BundlePath string
 	Installer
 	K8sStepProvider
-	LogBuilder
+	OutputBuilder
 }
 
 func (b *BaseK8sInstaller) install() error {
 	steps := b.getSteps()
 
 	for curStep := 0; curStep < len(steps); curStep++ {
-		err := steps[curStep].do(b)
+		err := steps[curStep].do()
 
 		if err != nil {
-			b.LogBuilder.AddTimestamp(&b.LogBuilder.stdErr).
-				AddStdErr("*** CRITICAL ERROR ***").
-				AddStdErr(err.Error())
-
+			b.OutputBuilder.Msg("Critical error.")
+			b.OutputBuilder.StdErr(err.Error())
 			b.rollBackInstallation(curStep)
 			return err
 		}
@@ -94,14 +84,10 @@ func (b *BaseK8sInstaller) install() error {
 }
 
 func (b *BaseK8sInstaller) rollBackInstallation(curStep int) {
-	b.LogBuilder.
-		AddTimestamp(&b.LogBuilder.stdOut).
-		AddStdOut("*** UNDOING PARTIAL INSTALLATION...")
-
 	steps := b.getSteps()
 
 	for ; curStep >= 0; curStep-- {
-		steps[curStep].undo(b)
+		steps[curStep].undo()
 	}
 }
 
@@ -110,14 +96,14 @@ func (b *BaseK8sInstaller) uninstall() error {
 	stepsCnt := len(steps)
 
 	for curStep := stepsCnt - 1; curStep >= 0; curStep-- {
-		err := steps[curStep].undo(b)
+		err := steps[curStep].undo()
 
 		if err != nil {
-			b.LogBuilder.
-				AddTimestamp(&b.LogBuilder.stdErr).
-				AddStdErr(err.Error())
+			b.OutputBuilder.StdErr(err.Error())
 
-			return err
+			//DO NOT break with error (return err) at this point
+			//this will cause the uninstallation to stop
+			//and leave leftovers behind
 		}
 	}
 
@@ -145,18 +131,18 @@ func (b *BaseK8sInstaller) getSteps() []Step {
 	*/
 
 	var steps = []Step{
-		b.K8sStepProvider.swapStep(),
-		b.K8sStepProvider.firewallStep(),
-		b.K8sStepProvider.unattendedUpdStep(),
-		b.K8sStepProvider.kernelModsLoadStep(),
-		b.K8sStepProvider.osWideCfgUpdateStep(*b),
-		b.K8sStepProvider.criToolsStep(*b),
-		b.K8sStepProvider.criKubernetesStep(*b),
-		b.K8sStepProvider.containerdStep(*b),
-		b.K8sStepProvider.containerdDaemonStep(),
-		b.K8sStepProvider.kubeletStep(*b),
-		b.K8sStepProvider.kubectlStep(*b),
-		b.K8sStepProvider.kubeadmStep(*b)}
+		b.swapStep(),
+		b.firewallStep(),
+		b.unattendedUpdStep(),
+		b.kernelModsLoadStep(),
+		b.osWideCfgUpdateStep(),
+		b.criToolsStep(),
+		b.criKubernetesStep(),
+		b.containerdStep(),
+		b.containerdDaemonStep(),
+		b.kubeletStep(),
+		b.kubectlStep(),
+		b.kubeadmStep()}
 
 	return steps
 }
