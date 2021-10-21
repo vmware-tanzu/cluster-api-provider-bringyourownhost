@@ -48,7 +48,7 @@ func (bd *bundleDownloader) Download(
 	return bd.DownloadFromRepo(
 		normalizedOsVersion,
 		k8sVersion,
-		func(a, b string) error { return bd.downloadByImgpkg(a, b) })
+		bd.downloadByImgpkg)
 }
 
 // DownloadFromRepo downloads the required bundle with the given method.
