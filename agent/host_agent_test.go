@@ -6,11 +6,13 @@ package main
 import (
 	"context"
 	"io/ioutil"
+	"net"
 	"os"
 	"os/exec"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
+	"github.com/jackpal/gateway"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	"github.com/onsi/gomega/gbytes"
@@ -136,14 +138,40 @@ var _ = Describe("Agent", func() {
 
 		It("should fetch networkstatus when register the BYOHost with the management cluster", func() {
 			byoHostLookupKey := types.NamespacedName{Name: hostName, Namespace: ns.Name}
+			defaultIP, err := gateway.DiscoverInterface()
+			Expect(err).NotTo(HaveOccurred())
 			Eventually(func() bool {
 				createdByoHost := &infrastructurev1beta1.ByoHost{}
 				err := k8sClient.Get(context.TODO(), byoHostLookupKey, createdByoHost)
 				if err != nil {
 					return false
 				}
-				if len(createdByoHost.Status.Network) != 0 {
-					return true
+				// check if default ip and networkInterfaceName is right
+				for _, item := range createdByoHost.Status.Network {
+					if item.IsDefault {
+						iface, err := net.InterfaceByName(item.NetworkInterfaceName)
+						if err != nil {
+							return false
+						}
+
+						addrs, err := iface.Addrs()
+						if err != nil {
+							return false
+						}
+
+						for _, addr := range addrs {
+							var ip net.IP
+							switch v := addr.(type) {
+							case *net.IPNet:
+								ip = v.IP
+							case *net.IPAddr:
+								ip = v.IP
+							}
+							if ip.String() == defaultIP.String() {
+								return true
+							}
+						}
+					}
 				}
 				return false
 			}).Should(BeTrue())
