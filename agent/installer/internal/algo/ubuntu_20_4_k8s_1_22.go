@@ -7,6 +7,7 @@ import (
 
 type Ubuntu_20_4_k8s_1_22 struct {
 	BaseK8sInstaller
+	AptStep
 }
 
 func (u *Ubuntu_20_4_k8s_1_22) swapStep() Step {
@@ -60,24 +61,23 @@ func (u *Ubuntu_20_4_k8s_1_22) osWideCfgUpdateStep() Step {
 }
 
 func (u *Ubuntu_20_4_k8s_1_22) criToolsStep() Step {
-	return new(AptStep).NewAptStep(&u.BaseK8sInstaller, "cri-tools.deb")
+	return u.NewAptStep(&u.BaseK8sInstaller, "cri-tools.deb")
 }
 
 func (u *Ubuntu_20_4_k8s_1_22) criKubernetesStep() Step {
-	a := AptStep{}
-	return a.NewAptStep(&u.BaseK8sInstaller, "kubernetes-cni.deb")
+	return u.NewAptStep(&u.BaseK8sInstaller, "kubernetes-cni.deb")
 }
 
 func (u *Ubuntu_20_4_k8s_1_22) kubectlStep() Step {
-	return new(AptStep).NewAptStep(&u.BaseK8sInstaller, "kubectl.deb")
+	return u.NewAptStep(&u.BaseK8sInstaller, "kubectl.deb")
 }
 
 func (u *Ubuntu_20_4_k8s_1_22) kubeadmStep() Step {
-	return new(AptStep).NewAptStep(&u.BaseK8sInstaller, "kubeadm.deb")
+	return u.NewAptStep(&u.BaseK8sInstaller, "kubeadm.deb")
 }
 
 func (u *Ubuntu_20_4_k8s_1_22) kubeletStep() Step {
-	return new(AptStep).NewAptStep(&u.BaseK8sInstaller, "kubelet.deb")
+	return u.NewAptStep(&u.BaseK8sInstaller, "kubelet.deb")
 }
 
 func (u *Ubuntu_20_4_k8s_1_22) containerdStep() Step {
