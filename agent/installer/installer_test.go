@@ -4,6 +4,7 @@
 package installer
 
 import (
+	"github.com/go-logr/logr"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 )
@@ -11,9 +12,8 @@ import (
 var _ = Describe("Byohost Installer Tests", func() {
 	Context("When installer is created", func() {
 		It("Should return error", func() {
-			_, err := New("repo", "downloadPath", nil)
-			Expect(err).ShouldNot((HaveOccurred()))
+			_, err := New("repo", "downloadPath", logr.Discard())
+			Expect(err).Should((HaveOccurred()))
 		})
 	})
-
 })
