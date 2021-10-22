@@ -10,9 +10,10 @@ type AptStep struct {
 	ShellStep
 }
 
-func (a *AptStep) create(k *BaseK8sInstaller, aptPkg string) Step {
+func (a *AptStep) NewAptStep(k *BaseK8sInstaller, aptPkg string) Step {
 	pkgName := strings.Split(aptPkg, ".")[0]
 	pkgAbsolutePath := filepath.Join(k.BundlePath, aptPkg)
+
 	return &ShellStep{
 		BaseK8sInstaller: k,
 		Desc:             pkgName,

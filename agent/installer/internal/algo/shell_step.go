@@ -43,19 +43,31 @@ func (s *ShellStep) runStep(command string) error {
 	err := cmd.Run()
 
 	if len(stdErr.String()) > 0 {
-		//this is a non critical error (warning)
-		//do not return err! just log it.
-		//otherwise it will cause rollback procedure
-		s.OutputBuilder.StdErr(stdErr.String())
+		/*
+			this is a non critical error
+			the installer is still running properly
+			but some package stderrored.
+			e.g.:
+				  - swap is already off;
+				  - apt tells us it is installing from a local pkg
+				    and cannot confirm the repository
+
+			do not return err! just log it.
+			otherwise it will cause execution of the rollback procedure
+
+			we only return error if the shellExec
+			cannot be executed due to erroneous shell command, etc.
+		*/
+		s.OutputBuilder.Err(stdErr.String())
 	}
 
 	if err != nil {
-		s.OutputBuilder.StdErr(err.Error())
+		s.OutputBuilder.Err(err.Error())
 		return err
 	}
 
 	if len(stdOut.String()) > 0 {
-		s.OutputBuilder.StdOut(stdOut.String())
+		s.OutputBuilder.Out(stdOut.String())
 	}
 
 	return nil

@@ -1,8 +1,8 @@
 package algo
 
 type OutputBuilder interface {
-	StdOut(string)
-	StdErr(string)
+	Out(string)
+	Err(string)
 	Cmd(string)
 	Desc(string)
 	Msg(string)

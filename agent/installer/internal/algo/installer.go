@@ -2,8 +2,8 @@ package algo
 
 // This is a generic installer interface
 type Installer interface {
-	install() error
-	uninstall() error
+	Install() error
+	Uninstall() error
 }
 
 /*
@@ -66,16 +66,14 @@ type BaseK8sInstaller struct {
 	OutputBuilder
 }
 
-func (b *BaseK8sInstaller) install() error {
+func (b *BaseK8sInstaller) Install() error {
 	steps := b.getSteps()
 
 	for curStep := 0; curStep < len(steps); curStep++ {
 		err := steps[curStep].do()
 
 		if err != nil {
-			b.OutputBuilder.Msg("Critical error.")
-			b.OutputBuilder.StdErr(err.Error())
-			b.rollBackInstallation(curStep)
+			b.rollback(curStep)
 			return err
 		}
 	}
@@ -83,31 +81,27 @@ func (b *BaseK8sInstaller) install() error {
 	return nil
 }
 
-func (b *BaseK8sInstaller) rollBackInstallation(curStep int) {
-	steps := b.getSteps()
+func (b *BaseK8sInstaller) Uninstall() error {
+	lastStepIdx := len(b.getSteps()) - 1
+	b.rollback(lastStepIdx)
 
-	for ; curStep >= 0; curStep-- {
-		steps[curStep].undo()
-	}
+	return nil
 }
 
-func (b *BaseK8sInstaller) uninstall() error {
+func (b *BaseK8sInstaller) rollback(currentStep int) {
 	steps := b.getSteps()
-	stepsCnt := len(steps)
 
-	for curStep := stepsCnt - 1; curStep >= 0; curStep-- {
-		err := steps[curStep].undo()
+	for ; currentStep >= 0; currentStep-- {
+		err := steps[currentStep].undo()
 
 		if err != nil {
-			b.OutputBuilder.StdErr(err.Error())
+			b.OutputBuilder.Err(err.Error())
 
 			//DO NOT break with error (return err) at this point
 			//this will cause the uninstallation to stop
 			//and leave leftovers behind
 		}
 	}
-
-	return nil
 }
 
 func (b *BaseK8sInstaller) getSteps() []Step {
