@@ -20,11 +20,23 @@ type ShellStep struct {
 
 func (s *ShellStep) do() error {
 	s.OutputBuilder.Msg("Installing: " + s.Desc)
+
+	if s.BundlePath == "" {
+		s.OutputBuilder.Out(s.DoCmd)
+		return nil
+	}
+
 	return s.runStep(s.DoCmd)
 }
 
 func (s *ShellStep) undo() error {
 	s.OutputBuilder.Msg("Uninstalling: " + s.Desc)
+
+	if s.BundlePath == "" {
+		s.OutputBuilder.Out(s.UndoCmd)
+		return nil
+	}
+
 	return s.runStep(s.UndoCmd)
 }
 
