@@ -64,7 +64,8 @@ func (u *Ubuntu_20_4_k8s_1_22) criToolsStep() Step {
 }
 
 func (u *Ubuntu_20_4_k8s_1_22) criKubernetesStep() Step {
-	return new(AptStep).NewAptStep(&u.BaseK8sInstaller, "kubernetes-cni.deb")
+	a := AptStep{}
+	return a.NewAptStep(&u.BaseK8sInstaller, "kubernetes-cni.deb")
 }
 
 func (u *Ubuntu_20_4_k8s_1_22) kubectlStep() Step {
