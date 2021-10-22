@@ -6,11 +6,7 @@ import (
 	"strings"
 )
 
-type AptStep struct {
-	ShellStep
-}
-
-func (a *AptStep) NewAptStep(k *BaseK8sInstaller, aptPkg string) Step {
+func NewAptStep(k *BaseK8sInstaller, aptPkg string) Step {
 	pkgName := strings.Split(aptPkg, ".")[0]
 	pkgAbsolutePath := filepath.Join(k.BundlePath, aptPkg)
 
