@@ -2,7 +2,7 @@
 
 ## As a Developer
 ### Fork and branch
-Local development has to be done in the forked repo of [cluster-api-provider-byoh](https://github.com/vmware-tanzu/cluster-api-provider-byoh). Here are some examples of meaningful branch names
+Local development has to be done in the forked repo of [cluster-api-provider-bringyourownhost](https://github.com/vmware-tanzu/cluster-api-provider-bringyourownhost). Here are some examples of meaningful branch names
 * add-host-reservation-logic
 * update-readme
 * fix-byomachine-controller-flakes
@@ -16,19 +16,32 @@ To learn more about how to write a good commit message, refer to this article - 
 At the minimum,
 * the first line of the message should be concise and clear on the intent (this becomes the title of your PR)
 * write (at least) another couple of lines explaining why the commit is necessary or what is the reasoning behind certain code logic
-* should be authored and signed-off by username@vmware.com
 
 ### Raising a PR
-Before you raise a PR, kindly run the test suite in your local environment and make sure everything is GREEN !!!
-* all PRs should be raised against the main branch of [cluster-api-provider-byoh](https://github.com/vmware-tanzu/cluster-api-provider-byoh)
-* folks can request reviews on the PR, but are also requested to post PRs in slack so that the entire team is aware and has a chance to review code
+* all PRs should be raised against the main branch of [cluster-api-provider-bringyourownhost](https://github.com/vmware-tanzu/cluster-api-provider-bringyourownhost)
+
+### Contributor License Agreement
+All contributors to this project must have a signed Contributor License
+Agreement (**"CLA"**) on file with us. The CLA grants us the permissions we
+need to use and redistribute your contributions as part of the project; you or
+your employer retain the copyright to your contribution. Before a PR can pass
+all required checks, our CLA action will prompt you to accept the agreement.
+Head over to [https://cla.vmware.com/](https://cla.vmware.com/) to see your
+current agreement(s) on file or to sign a new one.
+
+We generally only need you (or your employer) to sign our CLA once and once
+signed, you should be able to submit contributions to any VMware project.
+
+Note: if you would like to submit an "_obvious fix_" for something like a typo,
+formatting issue or spelling mistake, you may not need to sign the CLA.
 
 ---
+
 ## As a Code Reviewer
-All the members of the team are encouraged to review the code. If you are lacking context, please ask the author to better explain the change in the description or chat with them to understand the issue / feature.
+We encourage code reviews by non-maintainers as well. If you are lacking context, please ask the author to better explain the change in the description.
 
 Look for things like
-* Is the code well designed? Is it consistent with Cluster API contract / rest of the providers ?
+* Is the code well designed? Is it consistent with Cluster API contract?
 * Are there ways to write simpler code? If so, please suggest
 * Is the code well covered by unit / integration / e2e tests?
 * Does the naming convention (variables / functions / types / methods) make sense?
