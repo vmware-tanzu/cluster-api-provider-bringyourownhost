@@ -20,23 +20,11 @@ type ShellStep struct {
 
 func (s *ShellStep) do() error {
 	s.OutputBuilder.Msg("Installing: " + s.Desc)
-
-	if s.BundlePath == "" {
-		s.OutputBuilder.Out(s.DoCmd)
-		return nil
-	}
-
 	return s.runStep(s.DoCmd)
 }
 
 func (s *ShellStep) undo() error {
 	s.OutputBuilder.Msg("Uninstalling: " + s.Desc)
-
-	if s.BundlePath == "" {
-		s.OutputBuilder.Out(s.UndoCmd)
-		return nil
-	}
-
 	return s.runStep(s.UndoCmd)
 }
 
@@ -49,6 +37,10 @@ func (s *ShellStep) runStep(command string) error {
 	//TODO: check for exit(-1) or similar code
 	cmd := exec.Command(defaultShell, "-c", command)
 	s.OutputBuilder.Cmd(cmd.String())
+
+	if s.BundlePath == "" {
+		return nil
+	}
 
 	cmd.Stdout = &stdOut
 	cmd.Stderr = &stdErr
