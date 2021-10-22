@@ -1,7 +1,7 @@
 {
   "name": "byoh",
   "config": {
-    "image": "gcr.io/k8s-staging-cluster-api/caph-manager", 
+    "image": "gcr.io/k8s-staging-cluster-api/cluster-api-byoh-controller",
     "live_reload_deps": [
       "main.go",
       "go.mod",

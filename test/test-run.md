@@ -20,7 +20,7 @@ git clone git@github.com:vmware-tanzu/cluster-api-provider-bringyourownhost.git
 __Build image__
 ```shell
 cd cluster-api-provider-bringyourownhost
-make prepare-byoh-image
+make prepare-byoh-docker-host-image
 ```
 
 ## Setting up the management cluster

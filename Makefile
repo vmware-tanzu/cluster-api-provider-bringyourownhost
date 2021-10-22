@@ -4,7 +4,7 @@ SHELL:=/usr/bin/env bash
 # Define registries
 STAGING_REGISTRY ?= gcr.io/k8s-staging-cluster-api
 
-IMAGE_NAME ?= caph-manager
+IMAGE_NAME ?= cluster-api-byoh-controller
 TAG ?= dev
 
 # Image URL to use all building/pushing image targets
@@ -30,8 +30,6 @@ TOOLS_BIN_DIR := $(TOOLS_DIR)/$(BIN_DIR)
 GINKGO := $(TOOLS_BIN_DIR)/ginkgo
 
 BYOH_TEMPLATES := $(REPO_ROOT)/test/e2e/data/infrastructure-provider-byoh
-DOCKER_TEMPLATES := $(REPO_ROOT)/../cluster-api/test/e2e/data/infrastructure-docker
-
 
 
 # Get the currently used golang install path (in GOPATH/bin, unless GOBIN is set)
@@ -49,11 +47,13 @@ SHELL = /usr/bin/env bash -o pipefail
 
 all: build
 
+HOST_AGENT_DIR ?= agent
+
 # Run tests
 test: generate fmt vet manifests controller-test agent-test webhook-test
 
 agent-test:
-	source ./scripts/fetch_ext_bins.sh; fetch_tools; setup_envs; ginkgo --randomizeAllSpecs -r agent -coverprofile cover.out
+	source ./scripts/fetch_ext_bins.sh; fetch_tools; setup_envs; ginkgo --randomizeAllSpecs -r $(HOST_AGENT_DIR) -coverprofile cover.out
 
 controller-test:
 	source ./scripts/fetch_ext_bins.sh; fetch_tools; setup_envs; ginkgo --randomizeAllSpecs controllers/infrastructure -coverprofile cover.out
@@ -105,10 +105,10 @@ docker-build: ## Build docker image with the manager.
 docker-push: ## Push docker image with the manager.
 	docker push ${IMG}
 
-prepare-byoh-image:
+prepare-byoh-docker-host-image:
 	docker build test/e2e -f test/e2e/BYOHDockerFile -t ${BYOH_BASE_IMG}
 
-test-e2e: docker-build prepare-byoh-image $(GINKGO) cluster-templates ## Run the end-to-end tests
+test-e2e: docker-build prepare-byoh-docker-host-image $(GINKGO) cluster-templates ## Run the end-to-end tests
 	$(GINKGO) -v -trace -tags=e2e -focus="$(GINKGO_FOCUS)" $(_SKIP_ARGS) -nodes=$(GINKGO_NODES) --noColor=$(GINKGO_NOCOLOR) $(GINKGO_ARGS) test/e2e -- \
 	    -e2e.artifacts-folder="$(ARTIFACTS)" \
 	    -e2e.config="$(E2E_CONF_FILE)" \
@@ -132,14 +132,14 @@ uninstall: manifests kustomize ## Uninstall CRDs from the K8s cluster specified 
 	$(KUSTOMIZE) build config/crd | kubectl delete -f -
 
 deploy: manifests kustomize ## Deploy controller to the K8s cluster specified in ~/.kube/config.
-	cd config/manager && $(KUSTOMIZE) edit set image gcr.io/k8s-staging-cluster-api/caph-manager=${IMG}
+	cd config/manager && $(KUSTOMIZE) edit set image gcr.io/k8s-staging-cluster-api/cluster-api-byoh-controller=${IMG}
 	$(KUSTOMIZE) build config/default | kubectl apply -f -
 
 undeploy: ## Undeploy controller from the K8s cluster specified in ~/.kube/config.
 	$(KUSTOMIZE) build config/default | kubectl delete -f -
 
 publish-infra-yaml:kustomize # Generate infrastructure-components.yaml for the provider
-	cd config/manager && $(KUSTOMIZE) edit set image gcr.io/k8s-staging-cluster-api/caph-manager=${IMG}
+	cd config/manager && $(KUSTOMIZE) edit set image gcr.io/k8s-staging-cluster-api/cluster-api-byoh-controller=${IMG}
 	$(KUSTOMIZE) build config/default > infrastructure-components.yaml
 
 CONTROLLER_GEN = $(shell pwd)/bin/controller-gen
@@ -151,7 +151,7 @@ kustomize: ## Download kustomize locally if necessary.
 	$(call go-get-tool,$(KUSTOMIZE),sigs.k8s.io/kustomize/kustomize/v3@v3.9.1)
 
 host-agent-binaries: ## Builds the binaries for the host-agent
-	RELEASE_BINARY=./agent GOOS=linux GOARCH=amd64 $(MAKE) host-agent-binary
+	RELEASE_BINARY=./byoh-hostagent GOOS=linux GOARCH=amd64 HOST_AGENT_DIR=./$(HOST_AGENT_DIR) $(MAKE) host-agent-binary
 
 host-agent-binary: $(RELEASE_DIR)
 	docker run \
@@ -163,7 +163,7 @@ host-agent-binary: $(RELEASE_DIR)
 		-w /workspace \
 		golang:1.16.6 \
 		go build -a -ldflags "$(LDFLAGS) -extldflags '-static'" \
-		-o ./bin/$(notdir $(RELEASE_BINARY))-$(GOOS)-$(GOARCH) $(RELEASE_BINARY)
+		-o ./bin/$(notdir $(RELEASE_BINARY))-$(GOOS)-$(GOARCH) $(HOST_AGENT_DIR)
 
 
 # go-get-tool will 'go get' any package $2 and install it to $1.
