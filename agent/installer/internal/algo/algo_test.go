@@ -5,34 +5,34 @@ import (
 	. "github.com/onsi/gomega"
 )
 
-type LogPrinterCounter struct {
+type OutputBuilderCounter struct {
 	LogCalledCnt int
 }
 
-func (c *LogPrinterCounter) Out(str string) {
+func (c *OutputBuilderCounter) Out(str string) {
 	c.LogCalledCnt++
 }
 
-func (c *LogPrinterCounter) Err(str string) {
+func (c *OutputBuilderCounter) Err(str string) {
 	c.LogCalledCnt++
 }
 
-func (c *LogPrinterCounter) Cmd(str string) {
+func (c *OutputBuilderCounter) Cmd(str string) {
 	c.LogCalledCnt++
 }
 
-func (c *LogPrinterCounter) Desc(str string) {
+func (c *OutputBuilderCounter) Desc(str string) {
 	c.LogCalledCnt++
 }
 
-func (c *LogPrinterCounter) Msg(str string) {
+func (c *OutputBuilderCounter) Msg(str string) {
 	c.LogCalledCnt++
 }
 
 var _ = Describe("Installer Algo Tests", func() {
 	var (
-		installer         *BaseK8sInstaller
-		logPrinterCounter LogPrinterCounter
+		installer            *BaseK8sInstaller
+		outputBuilderCounter OutputBuilderCounter
 	)
 
 	const (
@@ -52,28 +52,28 @@ var _ = Describe("Installer Algo Tests", func() {
 			the value with the expected steps count.
 		*/
 
-		logPrinterCounter = LogPrinterCounter{}
+		outputBuilderCounter = OutputBuilderCounter{}
 
 		ubuntu := Ubuntu_20_4_k8s_1_22{}
-		ubuntu.OutputBuilder = &logPrinterCounter
+		ubuntu.OutputBuilder = &outputBuilderCounter
 		ubuntu.BundlePath = ""
 
 		installer = &BaseK8sInstaller{
 			K8sStepProvider: &ubuntu,
-			OutputBuilder:   &logPrinterCounter}
+			OutputBuilder:   &outputBuilderCounter}
 	})
 	Context("When Installation is executed", func() {
 		It("Should count each step", func() {
 			err := installer.Install()
 			Expect(err).ShouldNot((HaveOccurred()))
-			Expect(logPrinterCounter.LogCalledCnt).Should(Equal(STEPS_NUM))
+			Expect(outputBuilderCounter.LogCalledCnt).Should(Equal(STEPS_NUM))
 		})
 	})
 	Context("When Uninstallation is executed", func() {
 		It("Should count each step", func() {
 			err := installer.Uninstall()
 			Expect(err).ShouldNot((HaveOccurred()))
-			Expect(logPrinterCounter.LogCalledCnt).Should(Equal(STEPS_NUM))
+			Expect(outputBuilderCounter.LogCalledCnt).Should(Equal(STEPS_NUM))
 		})
 	})
 })
