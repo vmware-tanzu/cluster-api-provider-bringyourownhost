@@ -31,7 +31,7 @@ type installer struct {
 	bundleDownloader
 }
 
-// Preview mode executes everything escept the actual commands
+// Preview mode executes everything except the actual commands
 var previewMode = true
 
 // getSupportedRegistry returns a registry with installers for the supported OS and K8s
