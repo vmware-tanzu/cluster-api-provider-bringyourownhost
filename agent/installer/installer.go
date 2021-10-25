@@ -57,11 +57,11 @@ func getSupportedRegistry(downloadPath string, logger logr.Logger) registry {
 			bundlePath = bd.GetBundleDirPath(t.k8s)
 		}
 
-		algo := algo.BaseK8sInstaller{
+		a := algo.BaseK8sInstaller{
 			K8sStepProvider: t.algo,
 			BundlePath: bundlePath,
 			OutputBuilder:   &lp}
-		reg.Add(t.os, t.k8s, algo)
+		reg.Add(t.os, t.k8s, a)
 	}
 
 	return reg
@@ -72,10 +72,10 @@ func getSupportedRegistry(downloadPath string, logger logr.Logger) registry {
 // if it does not exist.
 func New(bundleRepo, downloadPath string, logger logr.Logger) (*installer, error) {
 	if bundleRepo == "" {
-		return nil, fmt.Errorf("Empty bundle repo")
+		return nil, fmt.Errorf("empty bundle repo")
 	}
 	if downloadPath == "" {
-		return nil, fmt.Errorf("Empty download path")
+		return nil, fmt.Errorf("empty download path")
 	}
 
 	osDetector := osDetector{}
