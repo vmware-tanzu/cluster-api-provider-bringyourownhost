@@ -5,34 +5,34 @@ import (
 	. "github.com/onsi/gomega"
 )
 
-type CountingLogPrinter struct {
+type LogPrinterCounter struct {
 	LogCalledCnt int
 }
 
-func (c *CountingLogPrinter) Out(str string) {
+func (c *LogPrinterCounter) Out(str string) {
 	c.LogCalledCnt++
 }
 
-func (c *CountingLogPrinter) Err(str string) {
+func (c *LogPrinterCounter) Err(str string) {
 	c.LogCalledCnt++
 }
 
-func (c *CountingLogPrinter) Cmd(str string) {
+func (c *LogPrinterCounter) Cmd(str string) {
 	c.LogCalledCnt++
 }
 
-func (c *CountingLogPrinter) Desc(str string) {
+func (c *LogPrinterCounter) Desc(str string) {
 	c.LogCalledCnt++
 }
 
-func (c *CountingLogPrinter) Msg(str string) {
+func (c *LogPrinterCounter) Msg(str string) {
 	c.LogCalledCnt++
 }
 
 var _ = Describe("Installer Algo Tests", func() {
 	var (
-		installer            *BaseK8sInstaller
-		outputBuilderCounter CountingLogPrinter
+		installer         *BaseK8sInstaller
+		logPrinterCounter LogPrinterCounter
 	)
 
 	const (
@@ -40,26 +40,40 @@ var _ = Describe("Installer Algo Tests", func() {
 	)
 
 	BeforeEach(func() {
-		outputBuilderCounter = *new(CountingLogPrinter)
+		/*
+			Initialize a new log printer counter each time a
+			context is started to be used as a standard output device/pipe.
+
+			Also initialize a new installer and set this
+			log printer counter as its default logging system.
+
+			The test will count the number of logged steps performed by the
+			installer during installation/uninstallation and compare
+			the value with the expected steps count.
+		*/
+
+		logPrinterCounter = LogPrinterCounter{}
 
 		ubuntu := Ubuntu_20_4_k8s_1_22{}
-		ubuntu.OutputBuilder = &outputBuilderCounter
+		ubuntu.OutputBuilder = &logPrinterCounter
 		ubuntu.BundlePath = ""
 
 		installer = &BaseK8sInstaller{
 			K8sStepProvider: &ubuntu,
-			OutputBuilder:   &outputBuilderCounter}
+			OutputBuilder:   &logPrinterCounter}
 	})
 	Context("When Installation is executed", func() {
 		It("Should count each step", func() {
-			installer.Install()
-			Expect(outputBuilderCounter.LogCalledCnt).Should(Equal(STEPS_NUM))
+			err := installer.Install()
+			Expect(err).ShouldNot((HaveOccurred()))
+			Expect(logPrinterCounter.LogCalledCnt).Should(Equal(STEPS_NUM))
 		})
 	})
 	Context("When Uninstallation is executed", func() {
 		It("Should count each step", func() {
-			installer.Uninstall()
-			Expect(outputBuilderCounter.LogCalledCnt).Should(Equal(STEPS_NUM))
+			err := installer.Uninstall()
+			Expect(err).ShouldNot((HaveOccurred()))
+			Expect(logPrinterCounter.LogCalledCnt).Should(Equal(STEPS_NUM))
 		})
 	})
 })
