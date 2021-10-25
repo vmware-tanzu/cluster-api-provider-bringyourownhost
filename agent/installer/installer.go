@@ -41,7 +41,7 @@ func getSupportedRegistry(downloadPath string, logger logr.Logger) registry {
 		k8s  string
 		algo algo.K8sStepProvider
 	}{
-		{"Ubuntu_20.04.1_x86-64", "1_22", &algo.Ubuntu_20_4_k8s_1_22{}},
+		{"Ubuntu_20.04.1_x86-64", "1_22", &algo.Ubuntu20_4K8s1_22{}},
 		/*
 		 * ADD HERE to add support for new os or k8s
 		 * You may map new versions to old classes if they do the job
