@@ -41,13 +41,13 @@ type Step interface {
 type K8sStepProvider interface {
 	getSteps() []Step
 
-	//os state related steps
+	// os state related steps
 	swapStep() Step
 	firewallStep() Step
 	unattendedUpdStep() Step
 	kernelModsLoadStep() Step
 
-	//packages related steps
+	// packages related steps
 	osWideCfgUpdateStep() Step
 	criToolsStep() Step
 	criKubernetesStep() Step
@@ -58,7 +58,7 @@ type K8sStepProvider interface {
 	kubectlStep() Step
 }
 
-//This is the default k8s installer implementation
+// This is the default k8s installer implementation
 type BaseK8sInstaller struct {
 	BundlePath string
 	Installer
@@ -97,9 +97,11 @@ func (b *BaseK8sInstaller) rollback(currentStep int) {
 		if err != nil {
 			b.OutputBuilder.Err(err.Error())
 
-			//DO NOT break with error (return err) at this point
-			//this will cause the uninstallation to stop
-			//and leave leftovers behind
+			/*
+				DO NOT break with error (return err) at this point
+				this will cause the uninstallation to stop
+				and leave leftovers behind
+			*/
 		}
 	}
 }

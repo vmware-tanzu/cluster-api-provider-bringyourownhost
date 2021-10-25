@@ -34,7 +34,7 @@ func (s *ShellStep) runStep(command string) error {
 
 	const defaultShell = "bash"
 
-	//TODO: check for exit(-1) or similar code
+	// TODO: check for exit(-1) or similar code
 	cmd := exec.Command(defaultShell, "-c", command)
 	s.OutputBuilder.Cmd(cmd.String())
 
