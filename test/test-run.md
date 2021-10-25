@@ -20,7 +20,7 @@ git clone git@github.com:vmware-tanzu/cluster-api-provider-bringyourownhost.git
 __Build image__
 ```shell
 cd cluster-api-provider-bringyourownhost
-make prepare-byoh-image
+make prepare-byoh-docker-host-image
 ```
 
 ## Setting up the management cluster
@@ -105,18 +105,18 @@ do
 echo "Creating docker container host $i"
 docker run --detach --tty --hostname host$i --name host$i --privileged --security-opt seccomp=unconfined --tmpfs /tmp --tmpfs /run --volume /var --volume /lib/modules:/lib/modules:ro --network kind byoh/node:v1.22.0
 echo "Copy agent binary to host $i"
-docker cp bin/agent-linux-amd64 host$i:/agent
+docker cp bin/byoh-hostagent-linux-amd64 host$i:/byoh-hostagent
 echo "Copy kubeconfig to host $i"
 docker cp ~/.kube/management-cluster.conf host$i:/management-cluster.conf
 done
 ```
 
-Start the agent on the host and keep it running
+Start the host agent on the host and keep it running
 
 ```shell
 docker exec -it $HOST_NAME bin/bash
 
-./agent --kubeconfig management-cluster.conf
+./byoh-hostagent --kubeconfig management-cluster.conf
 ```
 
 Repeat the same steps with by changing the `HOST_NAME` env variable for all the hosts that you created.
@@ -173,7 +173,7 @@ Check the workload cluster
 kubectl --kubeconfig $CLUSTER_NAME-kubeconfig get nodes
 ```
 
-Or peek at the agent logs.
+Or peek at the host agent logs.
 ## Cleanup
 
 ```shell

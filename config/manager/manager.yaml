@@ -28,7 +28,7 @@ spec:
         args:
         - --enable-leader-election
         - "--metrics-bind-addr=127.0.0.1:8080"
-        image: gcr.io/k8s-staging-cluster-api/caph-manager:latest
+        image: gcr.io/k8s-staging-cluster-api/cluster-api-byoh-controller:latest
         name: manager
         resources:
           limits:

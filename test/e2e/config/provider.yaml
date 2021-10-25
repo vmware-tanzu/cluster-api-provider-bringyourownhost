@@ -15,7 +15,7 @@ images:
     loadBehavior: tryLoad
   - name: gcr.io/k8s-staging-cluster-api/capd-manager-amd64:dev
     loadBehavior: tryLoad
-  - name: gcr.io/k8s-staging-cluster-api/caph-manager:dev
+  - name: gcr.io/k8s-staging-cluster-api/cluster-api-byoh-controller:dev
     loadBehavior: tryLoad
   - name: quay.io/jetstack/cert-manager-cainjector:v1.1.0
     loadBehavior: tryLoad
@@ -79,8 +79,8 @@ providers:
         value: ../../../config/default
         type: kustomize
         replacements:
-          - old: gcr.io/k8s-staging-cluster-api/caph-manager:latest
-            new: gcr.io/k8s-staging-cluster-api/caph-manager:dev
+          - old: gcr.io/k8s-staging-cluster-api/cluster-api-byoh-controller:latest
+            new: gcr.io/k8s-staging-cluster-api/cluster-api-byoh-controller:dev
           - old: "imagePullPolicy: Always"
             new: "imagePullPolicy: IfNotPresent"
 
