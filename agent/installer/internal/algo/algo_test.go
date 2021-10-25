@@ -5,59 +5,61 @@ import (
 	. "github.com/onsi/gomega"
 )
 
-type ConsoleLogPrinter struct {
+type CountingLogPrinter struct {
 	LogCalledCnt int
 }
 
-func (c *ConsoleLogPrinter) Out(str string) {
+func (c *CountingLogPrinter) Out(str string) {
 	c.LogCalledCnt++
 }
 
-func (c *ConsoleLogPrinter) Err(str string) {
+func (c *CountingLogPrinter) Err(str string) {
 	c.LogCalledCnt++
 }
 
-func (c *ConsoleLogPrinter) Cmd(str string) {
+func (c *CountingLogPrinter) Cmd(str string) {
 	c.LogCalledCnt++
 }
 
-func (c *ConsoleLogPrinter) Desc(str string) {
+func (c *CountingLogPrinter) Desc(str string) {
 	c.LogCalledCnt++
 }
 
-func (c *ConsoleLogPrinter) Msg(str string) {
+func (c *CountingLogPrinter) Msg(str string) {
 	c.LogCalledCnt++
 }
 
 var _ = Describe("Installer Algo Tests", func() {
 	var (
-		installer     *BaseK8sInstaller
-		outputBuilder ConsoleLogPrinter
+		installer            *BaseK8sInstaller
+		outputBuilderCounter CountingLogPrinter
 	)
 
 	const (
-		INSTALL_CNT = 24
+		STEPS_NUM = 24
 	)
 
 	BeforeEach(func() {
+		outputBuilderCounter = *new(CountingLogPrinter)
+
 		ubuntu := Ubuntu_20_4_k8s_1_22{}
-		ubuntu.OutputBuilder = &outputBuilder
+		ubuntu.OutputBuilder = &outputBuilderCounter
 		ubuntu.BundlePath = ""
 
 		installer = &BaseK8sInstaller{
 			K8sStepProvider: &ubuntu,
-			OutputBuilder:   &outputBuilder}
+			OutputBuilder:   &outputBuilderCounter}
 	})
 	Context("When Installation is executed", func() {
-		It("Should print each step", func() {
+		It("Should count each step", func() {
 			installer.Install()
-			Expect(outputBuilder.LogCalledCnt).Should(Equal(INSTALL_CNT))
+			Expect(outputBuilderCounter.LogCalledCnt).Should(Equal(STEPS_NUM))
 		})
 	})
 	Context("When Uninstallation is executed", func() {
-		It("Should print each step", func() {
+		It("Should count each step", func() {
 			installer.Uninstall()
-			Expect(outputBuilder.LogCalledCnt).Should(Equal(INSTALL_CNT * 2))
+			Expect(outputBuilderCounter.LogCalledCnt).Should(Equal(STEPS_NUM))
 		})
 	})
 })
