@@ -40,18 +40,6 @@ var _ = Describe("Installer Algo Tests", func() {
 	)
 
 	BeforeEach(func() {
-		/*
-			Initialize a new log printer counter each time a
-			context is started to be used as a standard output device/pipe.
-
-			Also initialize a new installer and set this
-			log printer counter as its default logging system.
-
-			The test will count the number of logged steps performed by the
-			installer during installation/uninstallation and compare
-			the value with the expected steps count.
-		*/
-
 		outputBuilderCounter = OutputBuilderCounter{}
 
 		ubuntu := Ubuntu_20_4_k8s_1_22{}
