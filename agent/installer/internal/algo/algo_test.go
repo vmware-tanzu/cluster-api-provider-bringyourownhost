@@ -36,7 +36,7 @@ var _ = Describe("Installer Algo Tests", func() {
 	)
 
 	const (
-		STEPS_NUM = 24
+		steps_num = 24
 	)
 
 	BeforeEach(func() {
@@ -54,14 +54,14 @@ var _ = Describe("Installer Algo Tests", func() {
 		It("Should count each step", func() {
 			err := installer.Install()
 			Expect(err).ShouldNot((HaveOccurred()))
-			Expect(outputBuilderCounter.LogCalledCnt).Should(Equal(STEPS_NUM))
+			Expect(outputBuilderCounter.LogCalledCnt).Should(Equal(steps_num))
 		})
 	})
 	Context("When Uninstallation is executed", func() {
 		It("Should count each step", func() {
 			err := installer.Uninstall()
 			Expect(err).ShouldNot((HaveOccurred()))
-			Expect(outputBuilderCounter.LogCalledCnt).Should(Equal(STEPS_NUM))
+			Expect(outputBuilderCounter.LogCalledCnt).Should(Equal(steps_num))
 		})
 	})
 })
