@@ -31,6 +31,9 @@ type installer struct {
 	bundleDownloader
 }
 
+// Preview mode executes everything escept the actual commands
+var previewMode = true
+
 // getSupportedRegistry returns a registry with installers for the supported OS and K8s
 func getSupportedRegistry(downloadPath string, logger logr.Logger) registry {
 	var supportedOsK8s = []struct {
@@ -49,9 +52,14 @@ func getSupportedRegistry(downloadPath string, logger logr.Logger) registry {
 	lp := logPrinter{logger}
 	bd := bundleDownloader{downloadPath: downloadPath}
 	for _, t := range supportedOsK8s {
+		var bundlePath string
+		if !previewMode {
+			bundlePath = bd.GetBundleDirPath(t.k8s)
+		}
+
 		algo := algo.BaseK8sInstaller{
 			K8sStepProvider: t.algo,
-			BundlePath:      bd.GetBundleDirPath(t.k8s),
+			BundlePath: bundlePath,
 			OutputBuilder:   &lp}
 		reg.Add(t.os, t.k8s, algo)
 	}
