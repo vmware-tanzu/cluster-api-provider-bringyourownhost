@@ -5,7 +5,7 @@ go 1.16
 replace sigs.k8s.io/cluster-api => sigs.k8s.io/cluster-api v1.0.0
 
 require (
-	github.com/containerd/containerd v1.5.4 // indirect
+	github.com/containerd/containerd v1.5.7 // indirect
 	github.com/cppforlife/go-cli-ui v0.0.0-20200716203538-1e47f820817f
 	github.com/docker/cli v20.10.7+incompatible
 	github.com/docker/docker v20.10.7+incompatible
