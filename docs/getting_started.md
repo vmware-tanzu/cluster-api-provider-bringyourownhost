@@ -70,7 +70,7 @@ On each BYOH host
 2. Save the management cluster kubeconfig file as management.conf
 3. Start the agent 
 ```shell
-./byoh-hostagent -kubeconfig management.conf > byoh-agent.log 2>&1 &
+./byoh-hostagent-linux-amd64 -kubeconfig management.conf > byoh-agent.log 2>&1 &
 ```
 
 ### Create workload cluster
