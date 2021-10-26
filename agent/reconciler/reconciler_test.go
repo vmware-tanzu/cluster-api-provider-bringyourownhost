@@ -12,8 +12,8 @@ import (
 	. "github.com/onsi/gomega"
 	"github.com/vmware-tanzu/cluster-api-provider-byoh/agent/cloudinit/cloudinitfakes"
 	infrastructurev1beta1 "github.com/vmware-tanzu/cluster-api-provider-byoh/apis/infrastructure/v1beta1"
-	"github.com/vmware-tanzu/cluster-api-provider-byoh/common"
 	"github.com/vmware-tanzu/cluster-api-provider-byoh/test/builder"
+	eventutils "github.com/vmware-tanzu/cluster-api-provider-byoh/test/utils/events"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/tools/record"
@@ -139,7 +139,7 @@ var _ = Describe("Byohost Agent Tests", func() {
 				Expect(reconcilerErr).To(MatchError("secrets \"non-existent\" not found"))
 
 				// assert events
-				events := common.CollectEvents(recorder.Events)
+				events := eventutils.CollectEvents(recorder.Events)
 				Expect(events).Should(ConsistOf([]string{
 					fmt.Sprintf("Warning ReadBootstrapSecretFailed bootstrap secret %s not found", byoHost.Spec.BootstrapSecret.Name),
 				}))
@@ -190,7 +190,7 @@ runCmd:
 					}))
 
 					// assert events
-					events := common.CollectEvents(recorder.Events)
+					events := eventutils.CollectEvents(recorder.Events)
 					Expect(events).Should(ConsistOf([]string{
 						"Normal k8sComponentInstalled Successfully Installed K8s components",
 						"Warning BootstrapK8sNodeFailed k8s Node Bootstrap failed",
@@ -220,7 +220,7 @@ runCmd:
 					}))
 
 					// assert events
-					events := common.CollectEvents(recorder.Events)
+					events := eventutils.CollectEvents(recorder.Events)
 					Expect(events).Should(ConsistOf([]string{
 						"Normal k8sComponentInstalled Successfully Installed K8s components",
 						"Normal BootstrapK8sNodeSucceeded k8s Node Bootstraped",
@@ -300,7 +300,7 @@ runCmd:
 				}))
 
 				// assert events
-				events := common.CollectEvents(recorder.Events)
+				events := eventutils.CollectEvents(recorder.Events)
 				Expect(events).Should(ConsistOf([]string{
 					"Normal ResetK8sNodeSucceeded k8s Node Reset completed",
 				}))
@@ -326,7 +326,7 @@ runCmd:
 				}))
 
 				// assert events
-				events := common.CollectEvents(recorder.Events)
+				events := eventutils.CollectEvents(recorder.Events)
 				Expect(events).Should(ConsistOf([]string{
 					"Warning ResetK8sNodeFailed k8s Node Reset failed",
 				}))

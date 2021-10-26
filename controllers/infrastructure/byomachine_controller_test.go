@@ -11,8 +11,9 @@ import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	infrastructurev1beta1 "github.com/vmware-tanzu/cluster-api-provider-byoh/apis/infrastructure/v1beta1"
-	"github.com/vmware-tanzu/cluster-api-provider-byoh/common"
+
 	"github.com/vmware-tanzu/cluster-api-provider-byoh/test/builder"
+	eventutils "github.com/vmware-tanzu/cluster-api-provider-byoh/test/utils/events"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/kubernetes/scheme"
@@ -61,7 +62,7 @@ var _ = Describe("Controllers/ByomachineController", func() {
 	})
 
 	AfterEach(func() {
-		common.DrainEvents(recorder.Events)
+		eventutils.DrainEvents(recorder.Events)
 	})
 
 	It("should ignore byomachine if it is not found", func() {
@@ -133,7 +134,7 @@ var _ = Describe("Controllers/ByomachineController", func() {
 				}))
 
 				// assert events
-				events := common.CollectEvents(recorder.Events)
+				events := eventutils.CollectEvents(recorder.Events)
 				Expect(events).Should(ConsistOf([]string{
 					"Warning ByoHostSelectionFailed No available ByoHost",
 				}))
@@ -198,7 +199,7 @@ var _ = Describe("Controllers/ByomachineController", func() {
 				}))
 
 				// assert events
-				events := common.CollectEvents(recorder.Events)
+				events := eventutils.CollectEvents(recorder.Events)
 				Expect(events).Should(ConsistOf([]string{
 					fmt.Sprintf("Normal ByoHostAttachSucceeded Attached to ByoMachine %s", createdByoMachine.Name),
 					fmt.Sprintf("Normal NodeProvisionedSucceeded Provisioned Node %s", createdByoHost.Name),
@@ -262,7 +263,7 @@ var _ = Describe("Controllers/ByomachineController", func() {
 						Expect(err).NotTo(HaveOccurred())
 
 						// assert events
-						events := common.CollectEvents(recorder.Events)
+						events := eventutils.CollectEvents(recorder.Events)
 						Expect(events).Should(ConsistOf([]string{
 							fmt.Sprintf("Normal ByoHostReleaseSucceeded Released ByoHost %s", byoHost.Name),
 							fmt.Sprintf("Normal ByoHostReleaseSucceeded ByoHost Released by %s", deletedByoMachine.Name),
@@ -414,7 +415,7 @@ var _ = Describe("Controllers/ByomachineController", func() {
 				}))
 
 				// assert events
-				events := common.CollectEvents(recorder.Events)
+				events := eventutils.CollectEvents(recorder.Events)
 				Expect(events).Should(ConsistOf([]string{
 					"Warning ByoHostSelectionFailed No available ByoHost",
 				}))
@@ -452,7 +453,7 @@ var _ = Describe("Controllers/ByomachineController", func() {
 				}))
 
 				// assert events
-				events := common.CollectEvents(recorder.Events)
+				events := eventutils.CollectEvents(recorder.Events)
 				Expect(events).Should(ConsistOf([]string{
 					"Warning ByoHostSelectionFailed No available ByoHost",
 				}))
@@ -494,7 +495,7 @@ var _ = Describe("Controllers/ByomachineController", func() {
 				}))
 
 				// assert events
-				events := common.CollectEvents(recorder.Events)
+				events := eventutils.CollectEvents(recorder.Events)
 				Expect(len(events)).Should(Equal(3))
 
 				node1 := corev1.Node{}
@@ -543,7 +544,7 @@ var _ = Describe("Controllers/ByomachineController", func() {
 				}))
 
 				// assert events
-				events := common.CollectEvents(recorder.Events)
+				events := eventutils.CollectEvents(recorder.Events)
 				Expect(len(events)).Should(Equal(3))
 
 				node := corev1.Node{}
@@ -590,7 +591,7 @@ var _ = Describe("Controllers/ByomachineController", func() {
 			}))
 
 			// assert events
-			events := common.CollectEvents(recorder.Events)
+			events := eventutils.CollectEvents(recorder.Events)
 			Expect(len(events)).Should(Equal(0))
 		})
 	})
