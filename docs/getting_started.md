@@ -66,7 +66,7 @@ clusterctl init --infrastructure byoh
 
 On each BYOH host
 
-1. Download the [byoh-hostagent](https://github.com/vmware-tanzu/cluster-api-provider-bringyourownhost/releases/latest) 
+1. Download the [byoh-hostagent-linux-amd64](https://github.com/vmware-tanzu/cluster-api-provider-bringyourownhost/releases/latest) 
 2. Save the management cluster kubeconfig file as management.conf
 3. Start the agent 
 ```shell
