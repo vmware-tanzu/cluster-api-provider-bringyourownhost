@@ -6,14 +6,17 @@ package reconciler
 import (
 	"context"
 	"errors"
+	"fmt"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	"github.com/vmware-tanzu/cluster-api-provider-byoh/agent/cloudinit/cloudinitfakes"
 	infrastructurev1beta1 "github.com/vmware-tanzu/cluster-api-provider-byoh/apis/infrastructure/v1beta1"
+	"github.com/vmware-tanzu/cluster-api-provider-byoh/common"
 	"github.com/vmware-tanzu/cluster-api-provider-byoh/test/builder"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/client-go/tools/record"
 	clusterv1 "sigs.k8s.io/cluster-api/api/v1beta1"
 	"sigs.k8s.io/cluster-api/util/conditions"
 	"sigs.k8s.io/cluster-api/util/patch"
@@ -30,18 +33,20 @@ var _ = Describe("Byohost Agent Tests", func() {
 		byoMachine       *infrastructurev1beta1.ByoMachine
 		byoHostLookupKey types.NamespacedName
 		bootstrapSecret  *corev1.Secret
+		recorder         *record.FakeRecorder
 	)
 
 	BeforeEach(func() {
 		fakeCommandRunner = &cloudinitfakes.FakeICmdRunner{}
 		fakeFileWriter = &cloudinitfakes.FakeIFileWriter{}
 		fakeTemplateParser = &cloudinitfakes.FakeITemplateParser{}
-
+		recorder = record.NewFakeRecorder(32)
 		reconciler = &HostReconciler{
 			Client:         k8sClient,
 			CmdRunner:      fakeCommandRunner,
 			FileWriter:     fakeFileWriter,
 			TemplateParser: fakeTemplateParser,
+			Recorder:       recorder,
 		}
 	})
 
@@ -132,6 +137,12 @@ var _ = Describe("Byohost Agent Tests", func() {
 				})
 				Expect(result).To(Equal(controllerruntime.Result{}))
 				Expect(reconcilerErr).To(MatchError("secrets \"non-existent\" not found"))
+
+				// assert events
+				events := common.CollectEvents(recorder.Events)
+				Expect(events).Should(ConsistOf([]string{
+					fmt.Sprintf("Warning ReadBootstrapSecretFailed bootstrap secret %s not found", byoHost.Spec.BootstrapSecret.Name),
+				}))
 			})
 
 			Context("When bootstrap secret is ready", func() {
@@ -177,6 +188,15 @@ runCmd:
 						Reason:   infrastructurev1beta1.CloudInitExecutionFailedReason,
 						Severity: clusterv1.ConditionSeverityError,
 					}))
+
+					// assert events
+					events := common.CollectEvents(recorder.Events)
+					Expect(events).Should(ConsistOf([]string{
+						"Normal k8sComponentInstalled Successfully Installed K8s components",
+						"Warning BootstrapK8sNodeFailed k8s Node Bootstrap failed",
+						// TODO: improve test to remove this event
+						"Warning ResetK8sNodeFailed k8s Node Reset failed",
+					}))
 				})
 
 				It("should set K8sNodeBootstrapSucceeded to True if the boostrap execution succeeds", func() {
@@ -197,6 +217,13 @@ runCmd:
 					Expect(*k8sNodeBootstrapSucceeded).To(conditions.MatchCondition(clusterv1.Condition{
 						Type:   infrastructurev1beta1.K8sNodeBootstrapSucceeded,
 						Status: corev1.ConditionTrue,
+					}))
+
+					// assert events
+					events := common.CollectEvents(recorder.Events)
+					Expect(events).Should(ConsistOf([]string{
+						"Normal k8sComponentInstalled Successfully Installed K8s components",
+						"Normal BootstrapK8sNodeSucceeded k8s Node Bootstraped",
 					}))
 				})
 
@@ -271,6 +298,12 @@ runCmd:
 					Reason:   infrastructurev1beta1.K8sNodeAbsentReason,
 					Severity: clusterv1.ConditionSeverityInfo,
 				}))
+
+				// assert events
+				events := common.CollectEvents(recorder.Events)
+				Expect(events).Should(ConsistOf([]string{
+					"Normal ResetK8sNodeSucceeded k8s Node Reset completed",
+				}))
 			})
 
 			It("should return error if host cleanup failed", func() {
@@ -290,6 +323,12 @@ runCmd:
 				Expect(*k8sNodeBootstrapSucceeded).To(conditions.MatchCondition(clusterv1.Condition{
 					Type:   infrastructurev1beta1.K8sNodeBootstrapSucceeded,
 					Status: corev1.ConditionTrue,
+				}))
+
+				// assert events
+				events := common.CollectEvents(recorder.Events)
+				Expect(events).Should(ConsistOf([]string{
+					"Warning ResetK8sNodeFailed k8s Node Reset failed",
 				}))
 			})
 		})

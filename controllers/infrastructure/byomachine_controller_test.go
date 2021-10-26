@@ -11,6 +11,7 @@ import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	infrastructurev1beta1 "github.com/vmware-tanzu/cluster-api-provider-byoh/apis/infrastructure/v1beta1"
+	"github.com/vmware-tanzu/cluster-api-provider-byoh/common"
 	"github.com/vmware-tanzu/cluster-api-provider-byoh/test/builder"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/types"
@@ -57,6 +58,10 @@ var _ = Describe("Controllers/ByomachineController", func() {
 
 		WaitForObjectsToBePopulatedInCache(machine, byoMachine)
 		byoMachineLookupKey = types.NamespacedName{Name: byoMachine.Name, Namespace: byoMachine.Namespace}
+	})
+
+	AfterEach(func() {
+		common.DrainEvents(recorder.Events)
 	})
 
 	It("should ignore byomachine if it is not found", func() {
@@ -126,6 +131,12 @@ var _ = Describe("Controllers/ByomachineController", func() {
 					Reason:   infrastructurev1beta1.BYOHostsUnavailableReason,
 					Severity: clusterv1.ConditionSeverityInfo,
 				}))
+
+				// assert events
+				events := common.CollectEvents(recorder.Events)
+				Expect(events).Should(ConsistOf([]string{
+					"Warning ByoHostSelectionFailed No available ByoHost",
+				}))
 			})
 
 			It("should add MachineFinalizer on ByoMachine", func() {
@@ -186,6 +197,14 @@ var _ = Describe("Controllers/ByomachineController", func() {
 					Status: corev1.ConditionTrue,
 				}))
 
+				// assert events
+				events := common.CollectEvents(recorder.Events)
+				Expect(events).Should(ConsistOf([]string{
+					fmt.Sprintf("Normal ByoHostAttachSucceeded Attached to ByoMachine %s", createdByoMachine.Name),
+					fmt.Sprintf("Normal NodeProvisionedSucceeded Provisioned Node %s", createdByoHost.Name),
+					fmt.Sprintf("Normal ByoHostAttachSucceeded Attached ByoHost %s", createdByoHost.Name),
+				}))
+
 				node := corev1.Node{}
 				err = clientFake.Get(ctx, types.NamespacedName{Name: byoHost.Name, Namespace: defaultNamespace}, &node)
 				Expect(err).NotTo(HaveOccurred())
@@ -241,6 +260,14 @@ var _ = Describe("Controllers/ByomachineController", func() {
 						Expect(k8sClientUncached.Get(ctx, byoMachineLookupKey, deletedByoMachine)).Should(Not(HaveOccurred()))
 						_, err := reconciler.Reconcile(ctx, reconcile.Request{NamespacedName: byoMachineLookupKey})
 						Expect(err).NotTo(HaveOccurred())
+
+						// assert events
+						events := common.CollectEvents(recorder.Events)
+						Expect(events).Should(ConsistOf([]string{
+							fmt.Sprintf("Normal ByoHostReleaseSucceeded Released ByoHost %s", byoHost.Name),
+							fmt.Sprintf("Normal ByoHostReleaseSucceeded ByoHost Released by %s", deletedByoMachine.Name),
+						}))
+
 						// assert ByoMachine does not exists
 						err = k8sClientUncached.Get(ctx, byoMachineLookupKey, deletedByoMachine)
 						Expect(err).To(MatchError(fmt.Sprintf("byomachines.infrastructure.cluster.x-k8s.io \"%s\" not found", byoMachineLookupKey.Name)))
@@ -385,6 +412,12 @@ var _ = Describe("Controllers/ByomachineController", func() {
 					Reason:   infrastructurev1beta1.BYOHostsUnavailableReason,
 					Severity: clusterv1.ConditionSeverityInfo,
 				}))
+
+				// assert events
+				events := common.CollectEvents(recorder.Events)
+				Expect(events).Should(ConsistOf([]string{
+					"Warning ByoHostSelectionFailed No available ByoHost",
+				}))
 			})
 		})
 
@@ -416,6 +449,12 @@ var _ = Describe("Controllers/ByomachineController", func() {
 					Status:   corev1.ConditionFalse,
 					Reason:   infrastructurev1beta1.BYOHostsUnavailableReason,
 					Severity: clusterv1.ConditionSeverityInfo,
+				}))
+
+				// assert events
+				events := common.CollectEvents(recorder.Events)
+				Expect(events).Should(ConsistOf([]string{
+					"Warning ByoHostSelectionFailed No available ByoHost",
 				}))
 			})
 		})
@@ -453,6 +492,10 @@ var _ = Describe("Controllers/ByomachineController", func() {
 					Type:   infrastructurev1beta1.BYOHostReady,
 					Status: corev1.ConditionTrue,
 				}))
+
+				// assert events
+				events := common.CollectEvents(recorder.Events)
+				Expect(len(events)).Should(Equal(3))
 
 				node1 := corev1.Node{}
 				err = clientFake.Get(ctx, types.NamespacedName{Name: byoHost1.Name, Namespace: defaultNamespace}, &node1)
@@ -499,6 +542,10 @@ var _ = Describe("Controllers/ByomachineController", func() {
 					Status: corev1.ConditionTrue,
 				}))
 
+				// assert events
+				events := common.CollectEvents(recorder.Events)
+				Expect(len(events)).Should(Equal(3))
+
 				node := corev1.Node{}
 				err = clientFake.Get(ctx, types.NamespacedName{Name: byoHost1.Name, Namespace: defaultNamespace}, &node)
 				Expect(err).NotTo(HaveOccurred())
@@ -541,7 +588,10 @@ var _ = Describe("Controllers/ByomachineController", func() {
 				Reason:   infrastructurev1beta1.WaitingForClusterInfrastructureReason,
 				Severity: clusterv1.ConditionSeverityInfo,
 			}))
-		})
 
+			// assert events
+			events := common.CollectEvents(recorder.Events)
+			Expect(len(events)).Should(Equal(0))
+		})
 	})
 })
