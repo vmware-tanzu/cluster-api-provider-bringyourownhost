@@ -5,7 +5,7 @@ CONFIG_PATH=$2
 
 set -e
 
-echo Preparing bundle payload...
+echo Building bundle...
 
 echo Ingredients $INGREDIENTS_PATH
 ls -l $INGREDIENTS_PATH
@@ -25,5 +25,12 @@ ls -l $CONFIG_PATH
 
 echo Add configuration under well-known name
 tar -cvf conf.tar -C $CONFIG_PATH .
+
+echo Running kbld
+mkdir .imgpkg
+kbld --imgpkg-lock-output .imgpkg/images.yml
+
+echo Creating bundle tar
+tar -cvf /bundle/bundle.tar .
 
 echo Done
