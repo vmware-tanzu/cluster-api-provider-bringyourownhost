@@ -16,9 +16,8 @@ __BYOH__ is a Cluster API v1beta1 Infrastructure Provider for already-provisione
 
 This project is currently a work-in-progress, in an Alpha state, so it may not be production ready. There is no backwards-compatibility guarantee at this point. For more details on the roadmap and upcoming features, check out [the project's issue tracker on GitHub][issue].
 
-## Launching a Kubernetes cluster using BYOH
-
-Check out the [test guide](./test/test-run.md) for launching a cluster on Docker.
+## Documents
+- [Getting Started](docs/getting_started.md) 
 
 ## Features
 
@@ -45,6 +44,10 @@ Check out the [test guide](./test/test-run.md) for launching a cluster on Docker
 
 
 ## Getting involved and contributing
+
+### Launching a Kubernetes cluster using BYOH source code
+
+Check out the [test guide](./test/test-run.md) for launching a cluster on Docker.
 
 More about development and contributing practices can be found in [`CONTRIBUTING.md`](./CONTRIBUTING.md).
 
