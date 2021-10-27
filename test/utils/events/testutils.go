@@ -1,7 +1,7 @@
 // Copyright 2021 VMware, Inc. All Rights Reserved.
 // SPDX-License-Identifier: Apache-2.0
 
-package common
+package events
 
 // CollectEvents returns a slice of string consisting
 // all the events from the record.FakeRecorder.Events Chan
