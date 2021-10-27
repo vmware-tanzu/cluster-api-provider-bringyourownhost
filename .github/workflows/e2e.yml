@@ -23,5 +23,8 @@ jobs:
     - name: turn off swap
       run: sudo swapoff -a
 
+    - name: Set netfilter conntrack max
+      run: sudo sysctl -w net.netfilter.nf_conntrack_max=131072
+
     - name: run e2e test
       run: make test-e2e

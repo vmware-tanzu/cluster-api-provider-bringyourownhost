@@ -13,8 +13,6 @@ images:
     loadBehavior: tryLoad
   - name: gcr.io/k8s-staging-cluster-api/kubeadm-control-plane-controller-amd64:dev
     loadBehavior: tryLoad
-  - name: gcr.io/k8s-staging-cluster-api/capd-manager-amd64:dev
-    loadBehavior: tryLoad
   - name: gcr.io/k8s-staging-cluster-api/cluster-api-byoh-controller:dev
     loadBehavior: tryLoad
   - name: quay.io/jetstack/cert-manager-cainjector:v1.1.0
@@ -62,15 +60,6 @@ providers:
         files:
           - sourcePath: "../data/shared/metadata.yaml"
 
-  - name: docker
-    type: InfrastructureProvider
-    versions:
-      - name: v1.0.0 # next; use manifest from source files
-        value: "https://github.com/kubernetes-sigs/cluster-api/releases/download/v1.0.0/infrastructure-components-development.yaml"
-        type: "url"
-        files:
-          - sourcePath: "../data/shared/metadata.yaml"
-
   - name: byoh
     type: InfrastructureProvider
     versions:
@@ -83,7 +72,6 @@ providers:
             new: gcr.io/k8s-staging-cluster-api/cluster-api-byoh-controller:dev
           - old: "imagePullPolicy: Always"
             new: "imagePullPolicy: IfNotPresent"
-
         files:
           # Add a cluster template
           - sourcePath: "../data/infrastructure-provider-byoh/v1beta1/cluster-template.yaml"
