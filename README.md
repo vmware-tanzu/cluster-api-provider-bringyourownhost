@@ -16,14 +16,19 @@ __BYOH__ is a Cluster API v1beta1 Infrastructure Provider for already-provisione
 
 This project is currently a work-in-progress, in an Alpha state, so it may not be production ready. There is no backwards-compatibility guarantee at this point. For more details on the roadmap and upcoming features, check out [the project's issue tracker on GitHub][issue].
 
-## Documents
-- [Getting Started](docs/getting_started.md) 
-
 ## Features
 
 - Native Kubernetes manifests and API
 - Support for single and multi-node control plane clusters
-- Support already provisioned Linux VMs with Ubuntu 18.04 and 20.04
+- Support already provisioned Linux VMs with Ubuntu 20.04
+
+## Getting involved and contributing
+
+### Launching a Kubernetes cluster using BYOH source code
+
+Check out the [developer guide](./docs/local_dev.md) for launching a BYOH cluster consisting of Docker containers as hosts.
+
+More about development and contributing practices can be found in [`CONTRIBUTING.md`](./CONTRIBUTING.md).
 
 ------
 
@@ -43,13 +48,7 @@ This project is currently a work-in-progress, in an Alpha state, so it may not b
 |BYOH Provider v1alpha1 (v0.1.0)|||✓|
 
 
-## Getting involved and contributing
 
-### Launching a Kubernetes cluster using BYOH source code
-
-Check out the [test guide](./test/test-run.md) for launching a cluster on Docker.
-
-More about development and contributing practices can be found in [`CONTRIBUTING.md`](./CONTRIBUTING.md).
 
 <!-- References -->
 
