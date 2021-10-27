@@ -149,6 +149,30 @@ var _ = Describe("Controllers/ByomachineController", func() {
 				Expect(err).ToNot(HaveOccurred())
 				Expect(controllerutil.ContainsFinalizer(updatedByoMachine, infrastructurev1beta1.MachineFinalizer)).To(BeTrue())
 			})
+
+			It("should be able to delete ByoMachine", func() {
+				ph, err := patch.NewHelper(byoMachine, k8sClientUncached)
+				Expect(err).ShouldNot(HaveOccurred())
+				controllerutil.AddFinalizer(byoMachine, infrastructurev1beta1.MachineFinalizer)
+				Expect(ph.Patch(ctx, byoMachine, patch.WithStatusObservedGeneration{})).Should(Succeed())
+
+				Expect(k8sClientUncached.Delete(ctx, byoMachine)).Should(Succeed())
+				WaitForObjectToBeUpdatedInCache(byoMachine, func(object client.Object) bool {
+					return !object.(*infrastructurev1beta1.ByoMachine).ObjectMeta.DeletionTimestamp.IsZero()
+				})
+				_, err = reconciler.Reconcile(ctx, reconcile.Request{NamespacedName: byoMachineLookupKey})
+				Expect(err).ToNot(HaveOccurred())
+
+				// assert events
+				events := eventutils.CollectEvents(recorder.Events)
+				Expect(len(events)).Should(Equal(0))
+
+				// assert ByoMachine does not exists
+				deletedByoMachine := &infrastructurev1beta1.ByoMachine{}
+				err = k8sClientUncached.Get(ctx, byoMachineLookupKey, deletedByoMachine)
+				Expect(err).To(MatchError(fmt.Sprintf("byomachines.infrastructure.cluster.x-k8s.io \"%s\" not found", byoMachineLookupKey.Name)))
+
+			})
 		})
 
 		Context("When a single BYO Host is available", func() {
