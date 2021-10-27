@@ -1,3 +1,6 @@
+# Copyright 2021 VMware, Inc. All Rights Reserved.
+# SPDX-License-Identifier: Apache-2.0
+
 # Build and push (opt-in) a BYOH bundle to repository
 #
 # 1. Download bundle ingredients. See ingredients/deb/download.sh

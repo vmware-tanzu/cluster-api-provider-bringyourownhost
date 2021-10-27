@@ -1,5 +1,8 @@
 #!/bin/bash
 
+# Copyright 2021 VMware, Inc. All Rights Reserved.
+# SPDX-License-Identifier: Apache-2.0
+
 set -e
 
 echo  Update the apt package index and install packages needed to use the Kubernetes apt repository
