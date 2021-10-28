@@ -63,11 +63,13 @@ func (u *Ubuntu20_4K8s1_22) osWideCfgUpdateStep() Step {
 }
 
 func (u *Ubuntu20_4K8s1_22) criToolsStep() Step {
-	return NewAptStep(&u.BaseK8sInstaller, "cri-tools.deb")
+	// Not available upstream
+	return NewAptStepOptional(&u.BaseK8sInstaller, "cri-tools.deb")
 }
 
 func (u *Ubuntu20_4K8s1_22) criKubernetesStep() Step {
-	return NewAptStep(&u.BaseK8sInstaller, "kubernetes-cni.deb")
+	// Not available upstream
+	return NewAptStepOptional(&u.BaseK8sInstaller, "kubernetes-cni.deb")
 }
 
 func (u *Ubuntu20_4K8s1_22) kubectlStep() Step {
