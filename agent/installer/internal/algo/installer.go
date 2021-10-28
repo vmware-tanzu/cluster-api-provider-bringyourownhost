@@ -42,23 +42,23 @@ type Step interface {
 }
 
 type K8sStepProvider interface {
-	getSteps() []Step
+	getSteps(*BaseK8sInstaller) []Step
 
 	// os state related steps
-	swapStep() Step
-	firewallStep() Step
-	unattendedUpdStep() Step
-	kernelModsLoadStep() Step
+	swapStep(*BaseK8sInstaller) Step
+	firewallStep(*BaseK8sInstaller) Step
+	unattendedUpdStep(*BaseK8sInstaller) Step
+	kernelModsLoadStep(*BaseK8sInstaller) Step
 
 	// packages related steps
-	osWideCfgUpdateStep() Step
-	criToolsStep() Step
-	criKubernetesStep() Step
-	containerdStep() Step
-	containerdDaemonStep() Step
-	kubeadmStep() Step
-	kubeletStep() Step
-	kubectlStep() Step
+	osWideCfgUpdateStep(*BaseK8sInstaller) Step
+	criToolsStep(*BaseK8sInstaller) Step
+	criKubernetesStep(*BaseK8sInstaller) Step
+	containerdStep(*BaseK8sInstaller) Step
+	containerdDaemonStep(*BaseK8sInstaller) Step
+	kubeadmStep(*BaseK8sInstaller) Step
+	kubeletStep(*BaseK8sInstaller) Step
+	kubectlStep(*BaseK8sInstaller) Step
 }
 
 // This is the default k8s installer implementation
@@ -70,7 +70,7 @@ type BaseK8sInstaller struct {
 }
 
 func (b *BaseK8sInstaller) Install() error {
-	steps := b.getSteps()
+	steps := b.getSteps(b)
 
 	for curStep := 0; curStep < len(steps); curStep++ {
 		err := steps[curStep].do()
@@ -85,14 +85,14 @@ func (b *BaseK8sInstaller) Install() error {
 }
 
 func (b *BaseK8sInstaller) Uninstall() error {
-	lastStepIdx := len(b.getSteps()) - 1
+	lastStepIdx := len(b.getSteps(b)) - 1
 	b.rollback(lastStepIdx)
 
 	return nil
 }
 
 func (b *BaseK8sInstaller) rollback(currentStep int) {
-	steps := b.getSteps()
+	steps := b.getSteps(b)
 
 	for ; currentStep >= 0; currentStep-- {
 		err := steps[currentStep].undo()
@@ -109,7 +109,7 @@ func (b *BaseK8sInstaller) rollback(currentStep int) {
 	}
 }
 
-func (b *BaseK8sInstaller) getSteps() []Step {
+func (b *BaseK8sInstaller) getSteps(bki *BaseK8sInstaller) []Step {
 	/*
 		##################
 		# IMPORTANT NOTE #
@@ -130,18 +130,18 @@ func (b *BaseK8sInstaller) getSteps() []Step {
 	*/
 
 	var steps = []Step{
-		b.swapStep(),
-		b.firewallStep(),
-		b.unattendedUpdStep(),
-		b.kernelModsLoadStep(),
-		b.osWideCfgUpdateStep(),
-		b.criToolsStep(),
-		b.criKubernetesStep(),
-		b.containerdStep(),
-		b.containerdDaemonStep(),
-		b.kubeletStep(),
-		b.kubectlStep(),
-		b.kubeadmStep()}
+		b.swapStep(bki),
+		b.firewallStep(bki),
+		b.unattendedUpdStep(bki),
+		b.kernelModsLoadStep(bki),
+		b.osWideCfgUpdateStep(bki),
+		b.criToolsStep(bki),
+		b.criKubernetesStep(bki),
+		b.containerdStep(bki),
+		b.containerdDaemonStep(bki),
+		b.kubeletStep(bki),
+		b.kubectlStep(bki),
+		b.kubeadmStep(bki)}
 
 	return steps
 }
