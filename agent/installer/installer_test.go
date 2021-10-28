@@ -87,7 +87,7 @@ var _ = Describe("Byohost Installer Tests", func() {
 })
 
 func NewPreviewInstaller(os string, ob algo.OutputBuilder) *installer {
-	i, err := newInt(os, "", "", logr.Discard(), ob)
+	i, err := newUnchecked(os, "", "", logr.Discard(), ob)
 	if err != nil {
 		panic(err)
 	}

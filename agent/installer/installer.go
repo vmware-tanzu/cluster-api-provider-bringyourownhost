@@ -47,7 +47,7 @@ func getSupportedRegistry(bd *bundleDownloader, ob algo.OutputBuilder) registry 
 	for _, t := range supportedOsK8s {
 		a := &algo.BaseK8sInstaller{
 			K8sStepProvider: t.algo,
-			BundlePath:      bd.getBundlePathDirOrPreview(t.k8s), /* empty means previde mode */
+			BundlePath:      bd.getBundlePathDirOrPreview(t.k8s), /* empty means preview mode */
 			OutputBuilder:   ob}
 		reg.Add(t.os, t.k8s, a)
 	}
@@ -82,8 +82,8 @@ func New(bundleRepo, downloadPath string, logger logr.Logger) (*installer, error
 		return nil, fmt.Errorf("empty download path")
 	}
 
-	osDetector := osDetector{}
-	os, err := osDetector.Detect()
+	osd := osDetector{}
+	os, err := osd.Detect()
 	logger.Info("Detected", "OS", os)
 	if err != nil {
 		return nil, ErrDetectOs
@@ -93,13 +93,13 @@ func New(bundleRepo, downloadPath string, logger logr.Logger) (*installer, error
 	downloadPath = ""
 	bundleRepo = ""
 
-	return newInt(os, bundleRepo, downloadPath, logger, &logPrinter{logger})
+	return newUnchecked(os, bundleRepo, downloadPath, logger, &logPrinter{logger})
 }
 
-// newInt returns an installer bypassing os detection and checks of bundleRepo and downloadPath.
+// newUnchecked returns an installer bypassing os detection and checks of bundleRepo and downloadPath.
 // If they are empty, returned installer will runs in preview mode, i.e.
 // executes everything except the actual commands.
-func newInt(currentOs, bundleRepo, downloadPath string, logger logr.Logger, outputBuilder algo.OutputBuilder) (*installer, error) {
+func newUnchecked(currentOs, bundleRepo, downloadPath string, logger logr.Logger, outputBuilder algo.OutputBuilder) (*installer, error) {
 	bd := bundleDownloader{repoAddr: bundleRepo, downloadPath: downloadPath}
 
 	reg := getSupportedRegistry(&bd, outputBuilder)
