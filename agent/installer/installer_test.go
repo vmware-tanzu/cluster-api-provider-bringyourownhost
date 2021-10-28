@@ -29,17 +29,21 @@ var _ = Describe("Byohost Installer Tests", func() {
 			Expect(err).Should((HaveOccurred()))
 		})
 	})
-	Context("When all supported installers are created", func() {
+	Context("When installer is created", func() {
 		It("Install/uninstall should return error for unsupported k8s", func() {
 			for _, os := range ListSupportedOS() {
 				i := NewPreviewInstaller(os, nil)
+
 				err := i.Install("unsupported-k8s")
+				Expect(err).Should((HaveOccurred()))
+
+				err = i.Uninstall("unsupported-k8s")
 				Expect(err).Should((HaveOccurred()))
 			}
 		})
 	})
-	Context("When all installers are created in preview mode", func() {
-		It("Install/uninstall should call only output builder", func() {
+	Context("When installer is created", func() {
+		It("Install/uninstall should call only the output builder", func() {
 			for _, os := range ListSupportedOS() {
 				for _, k8s := range ListSupportedK8s(os) {
 					{
