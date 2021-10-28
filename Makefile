@@ -1,11 +1,14 @@
 # Ensure Make is run with bash shell as some syntax below is bash-specific
 SHELL:=/usr/bin/env bash
 
-# Define registries
-STAGING_REGISTRY ?= gcr.io/k8s-staging-cluster-api
-
 IMAGE_NAME ?= cluster-api-byoh-controller
 TAG ?= dev
+RELEASE_DIR := out
+
+# Define registries
+RELEASE_REGISTRY := projects.registry.mware.com/cluster_api_provider_bringyourownhost
+RELEASE_CONTROLLER_IMG := $(RELEASE_REGISTRY)/$(IMAGE_NAME)
+STAGING_REGISTRY ?= gcr.io/k8s-staging-cluster-api
 
 # Image URL to use all building/pushing image targets
 IMG ?= ${STAGING_REGISTRY}/${IMAGE_NAME}:${TAG}
@@ -140,9 +143,18 @@ deploy: manifests kustomize ## Deploy controller to the K8s cluster specified in
 undeploy: ## Undeploy controller from the K8s cluster specified in ~/.kube/config.
 	$(KUSTOMIZE) build config/default | kubectl delete -f -
 
+publish-cluster-templates: cluster-templates
+	cp $(BYOH_TEMPLATES)/v1beta1/cluster-template.yaml $(RELEASE_DIR)/cluster-template.yaml
+
 publish-infra-yaml:kustomize # Generate infrastructure-components.yaml for the provider
 	cd config/manager && $(KUSTOMIZE) edit set image gcr.io/k8s-staging-cluster-api/cluster-api-byoh-controller=${IMG}
-	$(KUSTOMIZE) build config/default > infrastructure-components.yaml
+	$(KUSTOMIZE) build config/default > $(RELEASE_DIR)/infrastructure-components.yaml
+
+publish-metadata-yaml:
+	cp metadata.yaml $(RELEASE_DIR)/metadata.yaml
+
+publish-host-agent-binary: host-agent-binaries
+	cp bin/byoh-hostagent-linux-amd64 $(RELEASE_DIR)/byoh-hostagent-linux-amd64
 
 CONTROLLER_GEN = $(shell pwd)/bin/controller-gen
 controller-gen: ## Download controller-gen locally if necessary.
