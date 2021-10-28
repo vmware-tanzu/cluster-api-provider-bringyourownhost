@@ -96,6 +96,10 @@ func runInstaller(install bool) {
 		fmt.Println(err)
 	}
 
+	//Override preview mode
+	i.downloadPath = "."
+	i.repoAddr = *bundleRepoFlag
+
 	if install {
 		err = i.Install(*k8sFlag)
 	} else {
