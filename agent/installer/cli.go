@@ -11,13 +11,15 @@ import (
 )
 
 var (
-	listFlag        = flag.Bool("list", false, "List all supported OS and Kubernetes versions")
-	listBundlesFlag = flag.Bool("listbundles", false, "List the BYOH Bundle names for all supported OS and Kubernetes versions")
-	detectOSFlag    = flag.Bool("detect", false, "Detects the current operating system")
-	installFlag     = flag.Bool("install", false, "Install a BYOH Bundle")
-	uninstallFlag   = flag.Bool("uninstall", false, "Unnstall a BYOH Bundle")
-	bundleRepoFlag  = flag.String("bundleRepo", "https://projects.registry.vmware.com", "BYOH Bundle Repository. If not set, will look for bundles locally")
-	k8sFlag         = flag.String("k8sVer", "1.22.1", "Kubernetes version to install")
+	listFlag             = flag.Bool("list", false, "List all supported OS and Kubernetes versions")
+	listBundlesFlag      = flag.Bool("listbundles", false, "List the BYOH Bundle names for all supported OS and Kubernetes versions")
+	detectOSFlag         = flag.Bool("detect", false, "Detects the current operating system")
+	installFlag          = flag.Bool("install", false, "Install a BYOH Bundle")
+	uninstallFlag        = flag.Bool("uninstall", false, "Unnstall a BYOH Bundle")
+	bundleRepoFlag       = flag.String("bundleRepo", "https://projects.registry.vmware.com", "BYOH Bundle Repository. If not set, will look for bundles locally")
+	k8sFlag              = flag.String("k8s", "1.22.1", "Kubernetes version")
+	osFlag               = flag.String("os", "", "OS")
+	previewOSChangesFlag = flag.Bool("previewOSChanges", false, "Preview the install and uninstall changes for the specified OS")
 )
 
 const (
@@ -46,6 +48,10 @@ func Main() {
 
 	if *uninstallFlag {
 		runInstaller(doUninstall)
+	}
+
+	if *previewOSChangesFlag {
+		previewOSChanges()
 	}
 }
 
@@ -98,4 +104,15 @@ func runInstaller(install bool) {
 	if err != nil {
 		fmt.Println(err)
 	}
+}
+
+func previewOSChanges() {
+	installChanges, uninstallChanges, err := PreviewChanges(*osFlag, *k8sFlag)
+	if err != nil {
+		fmt.Printf("Error previewing changes for os '%s' k8s '%s' %s", *osFlag, *k8sFlag, err)
+		return
+	}
+
+	fmt.Printf("Install changes:\n%s\n\n", installChanges)
+	fmt.Printf("Uninstall changes:\n%s", uninstallChanges)
 }
