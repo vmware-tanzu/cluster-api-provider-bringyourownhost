@@ -143,7 +143,10 @@ deploy: manifests kustomize ## Deploy controller to the K8s cluster specified in
 undeploy: ## Undeploy controller from the K8s cluster specified in ~/.kube/config.
 	$(KUSTOMIZE) build config/default | kubectl delete -f -
 
-publish-cluster-templates: cluster-templates
+$(RELEASE_DIR):
+	mkdir -p $(RELEASE_DIR)
+
+publish-cluster-templates: $(RELEASE_DIR) cluster-templates
 	cp $(BYOH_TEMPLATES)/v1beta1/cluster-template.yaml $(RELEASE_DIR)/cluster-template.yaml
 
 publish-infra-yaml:kustomize # Generate infrastructure-components.yaml for the provider
