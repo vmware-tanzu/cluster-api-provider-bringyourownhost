@@ -61,7 +61,6 @@ var _ = Describe("Byohost Installer Tests", func() {
 						Expect(err).ShouldNot((HaveOccurred()))
 						Expect(ob.LogCalledCnt).Should(Equal(24))
 					}
-
 				}
 			}
 		})
