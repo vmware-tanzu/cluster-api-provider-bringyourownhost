@@ -7,6 +7,7 @@ import (
 	"github.com/go-logr/logr"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+	"github.com/vmware-tanzu/cluster-api-provider-byoh/agent/installer/internal/algo"
 )
 
 var _ = Describe("Byohost Installer Tests", func() {
@@ -28,5 +29,67 @@ var _ = Describe("Byohost Installer Tests", func() {
 			Expect(err).Should((HaveOccurred()))
 		})
 	})
+	Context("When all supported installers are created", func() {
+		It("Install/uninstall should return error for unsupported k8s", func() {
+			for _, os := range ListSupportedOS() {
+				i := NewPreviewInstaller(os, nil)
+				err := i.Install("unsupported-k8s")
+				Expect(err).Should((HaveOccurred()))
+			}
+		})
+	})
+	Context("When all installers are created in preview mode", func() {
+		It("Install/uninstall should call only output builder", func() {
+			for _, os := range ListSupportedOS() {
+				for _, k8s := range ListSupportedK8s(os) {
+					{
+						ob := algo.OutputBuilderCounter{}
+						i := NewPreviewInstaller(os, &ob)
+						err := i.Install(k8s)
+						Expect(err).ShouldNot((HaveOccurred()))
+						Expect(ob.LogCalledCnt).Should(Equal(24))
+					}
 
+					{
+						ob := algo.OutputBuilderCounter{}
+						i := NewPreviewInstaller(os, &ob)
+						err := i.Uninstall(k8s)
+						Expect(err).ShouldNot((HaveOccurred()))
+						Expect(ob.LogCalledCnt).Should(Equal(24))
+					}
+
+				}
+			}
+		})
+	})
+	Context("When ListSupportedOS is called", func() {
+		It("Should return non-empty result", func() {
+			Expect(ListSupportedOS()).ShouldNot(BeEmpty())
+		})
+	})
+	Context("When ListSupportedK8s is called for all supported OSes", func() {
+		It("Should return non-empty result", func() {
+			for _, os := range ListSupportedOS() {
+				Expect(ListSupportedK8s(os)).ShouldNot(BeEmpty())
+			}
+		})
+	})
+	Context("When PreviewChanges is called for all supported os and k8s", func() {
+		It("Should not return error", func() {
+			for _, os := range ListSupportedOS() {
+				for _, k8s := range ListSupportedK8s(os) {
+					_, _, err := PreviewChanges(os, k8s)
+					Expect(err).ShouldNot((HaveOccurred()))
+				}
+			}
+		})
+	})
 })
+
+func NewPreviewInstaller(os string, ob algo.OutputBuilder) *installer {
+	i, err := newInt(os, "", "", logr.Discard(), ob)
+	if err != nil {
+		panic(err)
+	}
+	return i
+}

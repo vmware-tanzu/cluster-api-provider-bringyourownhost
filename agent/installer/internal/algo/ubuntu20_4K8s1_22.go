@@ -12,39 +12,39 @@ type Ubuntu20_4K8s1_22 struct {
 	BaseK8sInstaller
 }
 
-func (u *Ubuntu20_4K8s1_22) swapStep() Step {
+func (u *Ubuntu20_4K8s1_22) swapStep(bki *BaseK8sInstaller) Step {
 	return &ShellStep{
-		BaseK8sInstaller: &u.BaseK8sInstaller,
+		BaseK8sInstaller: bki,
 		Desc:             "SWAP",
 		DoCmd:            `swapoff -a && sed -ri '/\sswap\s/s/^#?/#/' /etc/fstab`,
 		UndoCmd:          `swapon -a && sed -ri '/\sswap\s/s/^#?//' /etc/fstab`}
 }
 
-func (u *Ubuntu20_4K8s1_22) firewallStep() Step {
+func (u *Ubuntu20_4K8s1_22) firewallStep(bki *BaseK8sInstaller) Step {
 	return &ShellStep{
-		BaseK8sInstaller: &u.BaseK8sInstaller,
+		BaseK8sInstaller: bki,
 		Desc:             "FIREWALL",
 		DoCmd:            "ufw disable",
 		UndoCmd:          "ufw enable"}
 }
 
-func (u *Ubuntu20_4K8s1_22) kernelModsLoadStep() Step {
+func (u *Ubuntu20_4K8s1_22) kernelModsLoadStep(bki *BaseK8sInstaller) Step {
 	return &ShellStep{
-		BaseK8sInstaller: &u.BaseK8sInstaller,
+		BaseK8sInstaller: bki,
 		Desc:             "KERNEL MODULES",
 		DoCmd:            "modprobe overlay && modprobe br_netfilter",
 		UndoCmd:          "modprobe -r overlay && modprobe -r br_netfilter"}
 }
 
-func (u *Ubuntu20_4K8s1_22) unattendedUpdStep() Step {
+func (u *Ubuntu20_4K8s1_22) unattendedUpdStep(bki *BaseK8sInstaller) Step {
 	return &ShellStep{
-		BaseK8sInstaller: &u.BaseK8sInstaller,
+		BaseK8sInstaller: bki,
 		Desc:             "AUTO OS UPGRADES",
 		DoCmd:            "sed -ri 's/1/0/g' /etc/apt/apt.conf.d/20auto-upgrades",
 		UndoCmd:          "sed -ri 's/0/1/g' /etc/apt/apt.conf.d/20auto-upgrades"}
 }
 
-func (u *Ubuntu20_4K8s1_22) osWideCfgUpdateStep() Step {
+func (u *Ubuntu20_4K8s1_22) osWideCfgUpdateStep(bki *BaseK8sInstaller) Step {
 	confAbsolutePath := filepath.Join(u.BundlePath, "conf.tar")
 
 	doCmd := fmt.Sprintf(
@@ -56,35 +56,35 @@ func (u *Ubuntu20_4K8s1_22) osWideCfgUpdateStep() Step {
 		confAbsolutePath)
 
 	return &ShellStep{
-		BaseK8sInstaller: &u.BaseK8sInstaller,
+		BaseK8sInstaller: bki,
 		Desc:             "OS CONFIGURATION",
 		DoCmd:            doCmd,
 		UndoCmd:          undoCmd}
 }
 
-func (u *Ubuntu20_4K8s1_22) criToolsStep() Step {
-	// Not available upstream
-	return NewAptStepOptional(&u.BaseK8sInstaller, "cri-tools.deb")
+func (u *Ubuntu20_4K8s1_22) criToolsStep(bki *BaseK8sInstaller) Step {
+	// Not available upstream^M
+        return NewAptStepOptional(bki, "cri-tools.deb")
 }
 
-func (u *Ubuntu20_4K8s1_22) criKubernetesStep() Step {
-	// Not available upstream
-	return NewAptStepOptional(&u.BaseK8sInstaller, "kubernetes-cni.deb")
+func (u *Ubuntu20_4K8s1_22) criKubernetesStep(bki *BaseK8sInstaller) Step {
+	// Not available upstream^M
+        return NewAptStepOptional(bki, "kubernetes-cni.deb")^M
 }
 
-func (u *Ubuntu20_4K8s1_22) kubectlStep() Step {
-	return NewAptStep(&u.BaseK8sInstaller, "kubectl.deb")
+func (u *Ubuntu20_4K8s1_22) kubectlStep(bki *BaseK8sInstaller) Step {
+	return NewAptStep(bki, "kubectl.deb")
 }
 
-func (u *Ubuntu20_4K8s1_22) kubeadmStep() Step {
-	return NewAptStep(&u.BaseK8sInstaller, "kubeadm.deb")
+func (u *Ubuntu20_4K8s1_22) kubeadmStep(bki *BaseK8sInstaller) Step {
+	return NewAptStep(bki, "kubeadm.deb")
 }
 
-func (u *Ubuntu20_4K8s1_22) kubeletStep() Step {
-	return NewAptStep(&u.BaseK8sInstaller, "kubelet.deb")
+func (u *Ubuntu20_4K8s1_22) kubeletStep(bki *BaseK8sInstaller) Step {
+	return NewAptStep(bki, "kubelet.deb")
 }
 
-func (u *Ubuntu20_4K8s1_22) containerdStep() Step {
+func (u *Ubuntu20_4K8s1_22) containerdStep(bki *BaseK8sInstaller) Step {
 	containerdAbsPath := filepath.Join(u.BundlePath, "containerd.tar")
 
 	cmdRmDirs := "rm -rf /opt/cni/ && rm -rf /opt/containerd/ && "
@@ -96,15 +96,15 @@ func (u *Ubuntu20_4K8s1_22) containerdStep() Step {
 	undoCmd := cmdRmDirs + cmdListTar + cmdConcatPathSlash + cmdRmFilesOnly
 
 	return &ShellStep{
-		BaseK8sInstaller: &u.BaseK8sInstaller,
+		BaseK8sInstaller: bki,
 		Desc:             "CONTAINERD",
 		DoCmd:            doCmd,
 		UndoCmd:          undoCmd}
 }
 
-func (u *Ubuntu20_4K8s1_22) containerdDaemonStep() Step {
+func (u *Ubuntu20_4K8s1_22) containerdDaemonStep(bki *BaseK8sInstaller) Step {
 	return &ShellStep{
-		BaseK8sInstaller: &u.BaseK8sInstaller,
+		BaseK8sInstaller: bki,
 		Desc:             "CONTAINERD SERVICE",
 		DoCmd:            "systemctl daemon-reload && systemctl enable containerd && systemctl start containerd",
 		UndoCmd:          "systemctl stop containerd && systemctl disable containerd && systemctl daemon-reload"}

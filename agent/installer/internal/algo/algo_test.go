@@ -8,30 +8,6 @@ import (
 	. "github.com/onsi/gomega"
 )
 
-type OutputBuilderCounter struct {
-	LogCalledCnt int
-}
-
-func (c *OutputBuilderCounter) Out(str string) {
-	c.LogCalledCnt++
-}
-
-func (c *OutputBuilderCounter) Err(str string) {
-	c.LogCalledCnt++
-}
-
-func (c *OutputBuilderCounter) Cmd(str string) {
-	c.LogCalledCnt++
-}
-
-func (c *OutputBuilderCounter) Desc(str string) {
-	c.LogCalledCnt++
-}
-
-func (c *OutputBuilderCounter) Msg(str string) {
-	c.LogCalledCnt++
-}
-
 var _ = Describe("Installer Algo Tests", func() {
 	var (
 		installer            *BaseK8sInstaller
