@@ -112,7 +112,7 @@ func (bd *bundleDownloader) GetBundleDirPath(k8sVersion string) string {
 
 // GetBundleName returns the name of the bundle in normalized format.
 func GetBundleName(normalizedOsVersion, k8sVersion string) string {
-	return strings.ToLower(fmt.Sprintf("%s_k8s_%s", normalizedOsVersion, k8sVersion))
+	return strings.ToLower(fmt.Sprintf("byoh-bundle-%s_k8s_%s", normalizedOsVersion, k8sVersion))
 }
 
 // getBundleAddr returns the exact address to the bundle in the repo.
