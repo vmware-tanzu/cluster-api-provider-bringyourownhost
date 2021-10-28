@@ -1,9 +1,8 @@
-# How to test the BYO Host provider
+# How to test the Bring Your Own Host Provider locally
 
-This doc provides instructions about how to test BYO Host provider on a local workstation using:
+This doc provides instructions about how to test Bring Your Own Host Provider on a local workstation using:
 
 - [Kind](https://kind.sigs.k8s.io/docs/user/quick-start/#installation) for provisioning a management cluster
-- [CAPD](https://github.com/kubernetes-sigs/cluster-api/tree/master/test/infrastructure/docker) provider for creating a workload cluster with control plane nodes only
 - [Docker](https://docs.docker.com/engine/install/) run for creating hosts to be used as a capacity for BYO Host machines
 - [BYOH](https://github.com/vmware-tanzu/cluster-api-provider-bringyourownhost) provider to add the above hosts to the aforemention workload cluster
 - [Tilt](https://docs.tilt.dev/install.html) for faster iterative development
