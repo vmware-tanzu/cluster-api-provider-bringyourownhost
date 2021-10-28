@@ -12,7 +12,7 @@ import (
 
 var (
 	listFlag             = flag.Bool("list", false, "List all supported OS and Kubernetes versions")
-	listBundlesFlag      = flag.Bool("listbundles", false, "List the BYOH Bundle names for all supported OS and Kubernetes versions")
+	listBundlesFlag      = flag.Bool("listBundles", false, "List the BYOH Bundle names for all supported OS and Kubernetes versions")
 	detectOSFlag         = flag.Bool("detect", false, "Detects the current operating system")
 	installFlag          = flag.Bool("install", false, "Install a BYOH Bundle")
 	uninstallFlag        = flag.Bool("uninstall", false, "Unnstall a BYOH Bundle")
