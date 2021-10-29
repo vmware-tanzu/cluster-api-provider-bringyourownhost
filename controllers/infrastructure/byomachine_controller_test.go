@@ -11,7 +11,6 @@ import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	infrastructurev1beta1 "github.com/vmware-tanzu/cluster-api-provider-byoh/apis/infrastructure/v1beta1"
-
 	"github.com/vmware-tanzu/cluster-api-provider-byoh/test/builder"
 	eventutils "github.com/vmware-tanzu/cluster-api-provider-byoh/test/utils/events"
 	corev1 "k8s.io/api/core/v1"
@@ -248,6 +247,10 @@ var _ = Describe("Controllers/ByomachineController", func() {
 						UID:        byoMachine.UID,
 						APIVersion: byoHost.APIVersion,
 					}
+					if byoHost.Labels == nil {
+						byoHost.Labels = make(map[string]string)
+					}
+					byoHost.Labels[infrastructurev1beta1.ByoMachineLabelName] = byoMachine.Namespace + "." + byoMachine.Name
 					Expect(ph.Patch(ctx, byoHost, patch.WithStatusObservedGeneration{})).Should(Succeed())
 
 					WaitForObjectToBeUpdatedInCache(byoHost, func(object client.Object) bool {

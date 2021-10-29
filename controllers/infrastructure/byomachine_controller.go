@@ -122,18 +122,11 @@ func (r *ByoMachineReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 	}()
 
 	// Fetch the BYOHost which is referencing this machine, if any
-	hostsList := &infrav1.ByoHostList{}
-	err = r.Client.List(
-		ctx,
-		hostsList,
-		client.MatchingFields{hostMachineRefIndex: fmt.Sprintf("%s/%s", byoMachine.Namespace, byoMachine.Name)},
-	)
+	refByoHost, err := r.FetchAttachedByoHost(ctx, byoMachine.Name, byoMachine.Namespace)
 	if err != nil {
 		return ctrl.Result{}, err
 	}
-	var refByoHost *infrav1.ByoHost
-	if len(hostsList.Items) == 1 {
-		refByoHost = &hostsList.Items[0]
+	if refByoHost != nil {
 		logger = logger.WithValues("BYOHost", refByoHost.Name)
 	}
 
@@ -168,6 +161,30 @@ func (r *ByoMachineReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 
 	// Handle non-deleted machines
 	return r.reconcileNormal(ctx, machineScope)
+}
+
+func (r *ByoMachineReconciler) FetchAttachedByoHost(ctx context.Context, byomachineName, byomachineNamespace string) (*infrav1.ByoHost, error) {
+	logger := log.FromContext(ctx)
+	logger.Info("Fetching an attached ByoHost")
+
+	selector := labels.NewSelector()
+	byohostLabels, _ := labels.NewRequirement(infrav1.ByoMachineLabelName, selection.Equals, []string{byomachineNamespace + "." + byomachineName})
+	selector = selector.Add(*byohostLabels)
+	hostsList := &infrav1.ByoHostList{}
+	err := r.Client.List(
+		ctx,
+		hostsList,
+		&client.ListOptions{LabelSelector: selector},
+	)
+	if err != nil {
+		return nil, err
+	}
+	var refByoHost *infrav1.ByoHost = nil
+	if len(hostsList.Items) == 1 {
+		refByoHost = &hostsList.Items[0]
+		logger.Info("Successfully to fetch an attached Byohost", "byohost", refByoHost.Name)
+	}
+	return refByoHost, nil
 }
 
 func (r *ByoMachineReconciler) reconcileDelete(ctx context.Context, machineScope *byoMachineScope) (reconcile.Result, error) {
@@ -427,6 +444,7 @@ func (r *ByoMachineReconciler) attachByoHost(ctx context.Context, machineScope *
 		hostLabels = make(map[string]string)
 	}
 	hostLabels[clusterv1.ClusterLabelName] = machineScope.ByoMachine.Labels[clusterv1.ClusterLabelName]
+	hostLabels[infrav1.ByoMachineLabelName] = machineScope.ByoMachine.Namespace + "." + machineScope.ByoMachine.Name
 	host.Labels = hostLabels
 
 	host.Spec.BootstrapSecret = &corev1.ObjectReference{
