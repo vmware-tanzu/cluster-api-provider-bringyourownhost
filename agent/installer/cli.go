@@ -96,7 +96,7 @@ func runInstaller(install bool) {
 		fmt.Println(err)
 	}
 
-	//Override preview mode
+	// Override preview mode
 	i.downloadPath = "."
 	i.repoAddr = *bundleRepoFlag
 
