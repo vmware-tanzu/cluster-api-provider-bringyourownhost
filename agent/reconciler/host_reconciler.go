@@ -193,7 +193,7 @@ func (r *HostReconciler) hostCleanUp(ctx context.Context, byoHost *infrastructur
 	delete(byoHost.Labels, clusterv1.ClusterLabelName)
 
 	// Remove Byomachine-name label
-	delete(byoHost.Labels, infrastructurev1beta1.ByoMachineLabelName)
+	delete(byoHost.Labels, infrastructurev1beta1.AttachedByoMachineName)
 
 	// Remove the EndPointIP annotation
 	delete(byoHost.Annotations, infrastructurev1beta1.EndPointIPAnnotation)

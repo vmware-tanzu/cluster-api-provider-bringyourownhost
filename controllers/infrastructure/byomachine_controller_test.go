@@ -250,7 +250,7 @@ var _ = Describe("Controllers/ByomachineController", func() {
 					if byoHost.Labels == nil {
 						byoHost.Labels = make(map[string]string)
 					}
-					byoHost.Labels[infrastructurev1beta1.ByoMachineLabelName] = byoMachine.Namespace + "." + byoMachine.Name
+					byoHost.Labels[infrastructurev1beta1.AttachedByoMachineName] = byoMachine.Namespace + "." + byoMachine.Name
 					Expect(ph.Patch(ctx, byoHost, patch.WithStatusObservedGeneration{})).Should(Succeed())
 
 					WaitForObjectToBeUpdatedInCache(byoHost, func(object client.Object) bool {
