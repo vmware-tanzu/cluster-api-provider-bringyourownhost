@@ -191,15 +191,16 @@ func PreviewChanges(os, k8sVer string) (install, uninstall string, err error) {
 	if err != nil {
 		return
 	}
-	//install = strings.Join(stepPreviewer.steps, "\n")
 	install = stepPreviewer.String()
 	stepPreviewer.steps = nil
 	err = installer.Uninstall()
 	if err != nil {
 		return
 	}
-	//uninstall = strings.Join(stepPreviewer.steps, "\n")
 	uninstall = stepPreviewer.String()
+	println(install)
+	println()
+	println(uninstall)
 	return
 }
 
