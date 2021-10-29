@@ -41,7 +41,6 @@ import (
 const (
 	providerIDPrefix       = "byoh://"
 	providerIDSuffixLength = 6
-	hostMachineRefIndex    = "status.machineref"
 	RequeueForbyohost      = 10 * time.Second
 )
 
@@ -122,18 +121,11 @@ func (r *ByoMachineReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 	}()
 
 	// Fetch the BYOHost which is referencing this machine, if any
-	hostsList := &infrav1.ByoHostList{}
-	err = r.Client.List(
-		ctx,
-		hostsList,
-		client.MatchingFields{hostMachineRefIndex: fmt.Sprintf("%s/%s", byoMachine.Namespace, byoMachine.Name)},
-	)
+	refByoHost, err := r.FetchAttachedByoHost(ctx, byoMachine.Name, byoMachine.Namespace)
 	if err != nil {
 		return ctrl.Result{}, err
 	}
-	var refByoHost *infrav1.ByoHost
-	if len(hostsList.Items) == 1 {
-		refByoHost = &hostsList.Items[0]
+	if refByoHost != nil {
 		logger = logger.WithValues("BYOHost", refByoHost.Name)
 	}
 
@@ -168,6 +160,34 @@ func (r *ByoMachineReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 
 	// Handle non-deleted machines
 	return r.reconcileNormal(ctx, machineScope)
+}
+
+func (r *ByoMachineReconciler) FetchAttachedByoHost(ctx context.Context, byomachineName, byomachineNamespace string) (*infrav1.ByoHost, error) {
+	logger := log.FromContext(ctx)
+	logger.Info("Fetching an attached ByoHost")
+
+	selector := labels.NewSelector()
+	byohostLabels, _ := labels.NewRequirement(infrav1.AttachedByoMachineLabel, selection.Equals, []string{byomachineNamespace + "." + byomachineName})
+	selector = selector.Add(*byohostLabels)
+	hostsList := &infrav1.ByoHostList{}
+	err := r.Client.List(
+		ctx,
+		hostsList,
+		&client.ListOptions{LabelSelector: selector},
+	)
+	if err != nil {
+		return nil, err
+	}
+	var refByoHost *infrav1.ByoHost = nil
+	if len(hostsList.Items) > 0 {
+		refByoHost = &hostsList.Items[0]
+		logger.Info("Successfully fetched an attached Byohost", "byohost", refByoHost.Name)
+		if len(hostsList.Items) > 1 {
+			errMsg := "more than one Byohost object attached to this Byomachine object. Only take one of it, please take care of the rest manually"
+			logger.Error(errors.New(errMsg), errMsg)
+		}
+	}
+	return refByoHost, nil
 }
 
 func (r *ByoMachineReconciler) reconcileDelete(ctx context.Context, machineScope *byoMachineScope) (reconcile.Result, error) {
@@ -257,14 +277,6 @@ func (r *ByoMachineReconciler) SetupWithManager(ctx context.Context, mgr ctrl.Ma
 	)
 	logger := ctrl.LoggerFrom(ctx)
 	ClusterToByoMachines := r.ClusterToByoMachines(logger)
-
-	// Add index to BYOHost for listing by Machine reference
-	if err := mgr.GetCache().IndexField(context.Background(), &infrav1.ByoHost{},
-		hostMachineRefIndex,
-		r.indexByoHostByMachineRef,
-	); err != nil {
-		return err
-	}
 
 	return ctrl.NewControllerManagedBy(mgr).
 		For(controlledType).
@@ -427,6 +439,7 @@ func (r *ByoMachineReconciler) attachByoHost(ctx context.Context, machineScope *
 		hostLabels = make(map[string]string)
 	}
 	hostLabels[clusterv1.ClusterLabelName] = machineScope.ByoMachine.Labels[clusterv1.ClusterLabelName]
+	hostLabels[infrav1.AttachedByoMachineLabel] = machineScope.ByoMachine.Namespace + "." + machineScope.ByoMachine.Name
 	host.Labels = hostLabels
 
 	host.Spec.BootstrapSecret = &corev1.ObjectReference{
@@ -491,17 +504,4 @@ func (r *ByoMachineReconciler) markHostForCleanup(ctx context.Context, machineSc
 
 	// Issue the patch for byohost
 	return helper.Patch(ctx, machineScope.ByoHost)
-}
-
-func (r *ByoMachineReconciler) indexByoHostByMachineRef(o client.Object) []string {
-	host, ok := o.(*infrav1.ByoHost)
-	if !ok {
-		log.Log.Error(errors.New("incorrect type"), "expected a BYOHost", "type", fmt.Sprintf("%T", o))
-		return nil
-	}
-
-	if host.Status.MachineRef != nil {
-		return []string{fmt.Sprintf("%s/%s", host.Status.MachineRef.Namespace, host.Status.MachineRef.Name)}
-	}
-	return nil
 }
