@@ -179,9 +179,13 @@ func (r *ByoMachineReconciler) FetchAttachedByoHost(ctx context.Context, byomach
 		return nil, err
 	}
 	var refByoHost *infrav1.ByoHost = nil
-	if len(hostsList.Items) == 1 {
+	if len(hostsList.Items) > 0 {
 		refByoHost = &hostsList.Items[0]
 		logger.Info("Successfully fetched an attached Byohost", "byohost", refByoHost.Name)
+		if len(hostsList.Items) > 1 {
+			errMsg := "more than one Byohost object attached to this Byomachine object. Only take one of it, please take care of the rest manually"
+			logger.Error(errors.New(errMsg), errMsg)
+		}
 	}
 	return refByoHost, nil
 }
