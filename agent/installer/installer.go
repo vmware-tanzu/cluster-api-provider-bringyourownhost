@@ -175,12 +175,12 @@ func ListSupportedK8s(os string) []string {
 }
 
 // getSupportedRegistryDescription returns a description registry of supported OS and k8s.
-// It can be invoked on a non-supported OS.
+// It that can only by queried for OS and k8s but cannot be used for install/uninstall.
 func getSupportedRegistryDescription() registry {
 	return getSupportedRegistry(nil, nil)
 }
 
-// PreviewChanges returns the install and uninstall changes without applying them.
+// PreviewChanges describes the changes to install and uninstall K8s on OS without actually applying them.
 // It returns the install and uninstall changes
 // Can be invoked on a non-supported OS
 func PreviewChanges(os, k8sVer string) (install, uninstall string, err error) {

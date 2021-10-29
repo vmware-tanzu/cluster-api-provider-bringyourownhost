@@ -93,8 +93,10 @@ var _ = Describe("Byohost Installer Tests", func() {
 			k8s := ListSupportedK8s(os)[0]
 			install, uninstall, err := PreviewChanges(os, k8s)
 			Expect(err).ShouldNot((HaveOccurred()))
-			Expect(install).ShouldNot(Equal(""))
-			Expect(uninstall).ShouldNot(Equal(""))
+			Expect(install).Should(ContainSubstring("Installing"))
+			Expect(install).ShouldNot(ContainSubstring("Uninstalling"))
+			Expect(uninstall).Should(ContainSubstring("Uninstalling"))
+			Expect(uninstall).ShouldNot(ContainSubstring("Installing"))
 		})
 	})
 })
