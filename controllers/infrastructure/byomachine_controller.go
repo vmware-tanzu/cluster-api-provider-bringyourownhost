@@ -41,7 +41,6 @@ import (
 const (
 	providerIDPrefix       = "byoh://"
 	providerIDSuffixLength = 6
-	hostMachineRefIndex    = "status.machineref"
 	RequeueForbyohost      = 10 * time.Second
 )
 
@@ -275,14 +274,6 @@ func (r *ByoMachineReconciler) SetupWithManager(ctx context.Context, mgr ctrl.Ma
 	logger := ctrl.LoggerFrom(ctx)
 	ClusterToByoMachines := r.ClusterToByoMachines(logger)
 
-	// Add index to BYOHost for listing by Machine reference
-	if err := mgr.GetCache().IndexField(context.Background(), &infrav1.ByoHost{},
-		hostMachineRefIndex,
-		r.indexByoHostByMachineRef,
-	); err != nil {
-		return err
-	}
-
 	return ctrl.NewControllerManagedBy(mgr).
 		For(controlledType).
 		Watches(
@@ -509,17 +500,4 @@ func (r *ByoMachineReconciler) markHostForCleanup(ctx context.Context, machineSc
 
 	// Issue the patch for byohost
 	return helper.Patch(ctx, machineScope.ByoHost)
-}
-
-func (r *ByoMachineReconciler) indexByoHostByMachineRef(o client.Object) []string {
-	host, ok := o.(*infrav1.ByoHost)
-	if !ok {
-		log.Log.Error(errors.New("incorrect type"), "expected a BYOHost", "type", fmt.Sprintf("%T", o))
-		return nil
-	}
-
-	if host.Status.MachineRef != nil {
-		return []string{fmt.Sprintf("%s/%s", host.Status.MachineRef.Namespace, host.Status.MachineRef.Name)}
-	}
-	return nil
 }
