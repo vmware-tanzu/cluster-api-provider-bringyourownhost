@@ -198,9 +198,6 @@ func PreviewChanges(os, k8sVer string) (install, uninstall string, err error) {
 		return
 	}
 	uninstall = stepPreviewer.String()
-	println(install)
-	println()
-	println(uninstall)
 	return
 }
 
