@@ -168,7 +168,7 @@ func (r *ByoMachineReconciler) FetchAttachedByoHost(ctx context.Context, byomach
 	logger.Info("Fetching an attached ByoHost")
 
 	selector := labels.NewSelector()
-	byohostLabels, _ := labels.NewRequirement(infrav1.AttachedByoMachineName, selection.Equals, []string{byomachineNamespace + "." + byomachineName})
+	byohostLabels, _ := labels.NewRequirement(infrav1.AttachedByoMachineLabel, selection.Equals, []string{byomachineNamespace + "." + byomachineName})
 	selector = selector.Add(*byohostLabels)
 	hostsList := &infrav1.ByoHostList{}
 	err := r.Client.List(
@@ -444,7 +444,7 @@ func (r *ByoMachineReconciler) attachByoHost(ctx context.Context, machineScope *
 		hostLabels = make(map[string]string)
 	}
 	hostLabels[clusterv1.ClusterLabelName] = machineScope.ByoMachine.Labels[clusterv1.ClusterLabelName]
-	hostLabels[infrav1.AttachedByoMachineName] = machineScope.ByoMachine.Namespace + "." + machineScope.ByoMachine.Name
+	hostLabels[infrav1.AttachedByoMachineLabel] = machineScope.ByoMachine.Namespace + "." + machineScope.ByoMachine.Name
 	host.Labels = hostLabels
 
 	host.Spec.BootstrapSecret = &corev1.ObjectReference{

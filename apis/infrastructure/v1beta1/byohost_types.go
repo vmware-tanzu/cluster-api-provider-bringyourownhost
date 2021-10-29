@@ -10,9 +10,9 @@ import (
 )
 
 const (
-	HostCleanupAnnotation  = "byoh.infrastructure.cluster.x-k8s.io/unregistering"
-	EndPointIPAnnotation   = "byoh.infrastructure.cluster.x-k8s.io/endpointip"
-	K8sVersionAnnotation   = "byoh.infrastructure.cluster.x-k8s.io/k8sversion"
+	HostCleanupAnnotation   = "byoh.infrastructure.cluster.x-k8s.io/unregistering"
+	EndPointIPAnnotation    = "byoh.infrastructure.cluster.x-k8s.io/endpointip"
+	K8sVersionAnnotation    = "byoh.infrastructure.cluster.x-k8s.io/k8sversion"
 	AttachedByoMachineLabel = "byoh.infrastructure.cluster.x-k8s.io/byomachine-name"
 )
 
