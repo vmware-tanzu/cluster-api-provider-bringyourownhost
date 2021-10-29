@@ -2,10 +2,10 @@
 apiVersion: cluster.x-k8s.io/v1beta1
 kind: Cluster
 metadata:
-  name: ${CLUSTER_NAME}
   labels:
     cni: ${CLUSTER_NAME}-crs-0
     crs: "true"
+  name: ${CLUSTER_NAME}
 spec:
   clusterNetwork:
     services:
@@ -13,14 +13,14 @@ spec:
     pods:
       cidrBlocks: ["192.168.0.0/16"]
     serviceDomain: "cluster.local"
+  controlPlaneRef:
+    apiVersion: controlplane.cluster.x-k8s.io/v1beta1
+    kind: KubeadmControlPlane
+    name: "${CLUSTER_NAME}-control-plane"
   infrastructureRef:
     apiVersion: infrastructure.cluster.x-k8s.io/v1beta1
     kind: ByoCluster
     name: ${CLUSTER_NAME}
-  controlPlaneRef:
-    kind: KubeadmControlPlane
-    apiVersion: controlplane.cluster.x-k8s.io/v1beta1
-    name: "${CLUSTER_NAME}-control-plane"
 ---
 apiVersion: infrastructure.cluster.x-k8s.io/v1beta1
 kind: ByoCluster
@@ -28,7 +28,7 @@ metadata:
   name: ${CLUSTER_NAME}
 spec:
   controlPlaneEndpoint:
-    host: 172.18.10.10
+    host: ${CONTROL_PLANE_ENDPOINT}
     port: 6443
 ---
 apiVersion: infrastructure.cluster.x-k8s.io/v1beta1
@@ -39,26 +39,31 @@ spec:
   template:
     spec: {}
 ---
-kind: KubeadmControlPlane
+apiVersion: infrastructure.cluster.x-k8s.io/v1beta1
+kind: ByoMachineTemplate
+metadata:
+  name: "${CLUSTER_NAME}-md-0"
+spec:
+  template:
+    spec: {}
+---
 apiVersion: controlplane.cluster.x-k8s.io/v1beta1
+kind: KubeadmControlPlane
 metadata:
   name: "${CLUSTER_NAME}-control-plane"
-  labels:
-    nodepool: "pool0"
 spec:
   replicas: ${CONTROL_PLANE_MACHINE_COUNT}
-  machineTemplate:
-    infrastructureRef:
-      kind: ByoMachineTemplate
-      apiVersion: infrastructure.cluster.x-k8s.io/v1beta1
-      name: "${CLUSTER_NAME}-control-plane"
-      namespace: "${NAMESPACE}"
   kubeadmConfigSpec:
     clusterConfiguration:
-      controllerManager:
-        extraArgs: {enable-hostpath-provisioner: 'true'}
+      kubernetesVersion: ${KUBERNETES_VERSION}
       apiServer:
-        certSANs: [localhost, 127.0.0.1, 0.0.0.0, host.docker.internal]
+        certSANs:
+        - localhost
+        - 127.0.0.1
+        - 0.0.0.0
+      controllerManager:
+        extraArgs:
+          enable-hostpath-provisioner: "true"
     files:
     - content: |
         apiVersion: v1
@@ -77,7 +82,7 @@ spec:
             - name: vip_leaderelection
               value: "true"
             - name: vip_address
-              value: 172.18.10.10
+              value: ${CONTROL_PLANE_ENDPOINT}
             - name: vip_interface
               value: {{ .DefaultNetworkInterfaceName }}
             - name: vip_leaseduration
@@ -109,22 +114,64 @@ spec:
       path: /etc/kubernetes/manifests/kube-vip.yaml
     initConfiguration:
       nodeRegistration:
-        ignorePreflightErrors:
-        - Swap
-        - DirAvailable--etc-kubernetes-manifests
-        - FileAvailable--etc-kubernetes-kubelet.conf
         criSocket: /var/run/containerd/containerd.sock
         kubeletExtraArgs:
-          cgroup-driver: cgroupfs
           eviction-hard: nodefs.available<0%,nodefs.inodesFree<0%,imagefs.available<0%
     joinConfiguration:
       nodeRegistration:
-        ignorePreflightErrors:
-        - Swap
-        - DirAvailable--etc-kubernetes-manifests
-        - FileAvailable--etc-kubernetes-kubelet.conf
         criSocket: /var/run/containerd/containerd.sock
         kubeletExtraArgs:
-          cgroup-driver: cgroupfs
           eviction-hard: nodefs.available<0%,nodefs.inodesFree<0%,imagefs.available<0%
+    useExperimentalRetryJoin: true
+  machineTemplate:
+    infrastructureRef:
+      apiVersion: infrastructure.cluster.x-k8s.io/v1beta1
+      kind: ByoMachineTemplate
+      name: "${CLUSTER_NAME}-control-plane"
+      namespace: "${NAMESPACE}"
   version: ${KUBERNETES_VERSION}
+---
+apiVersion: bootstrap.cluster.x-k8s.io/v1beta1
+kind: KubeadmConfigTemplate
+metadata:
+  name: ${CLUSTER_NAME}-md-0
+  namespace: default
+spec:
+  template:
+    spec:
+      joinConfiguration:
+        nodeRegistration:
+          criSocket: /var/run/containerd/containerd.sock
+          kubeletExtraArgs:
+            cgroup-driver: cgroupfs
+            eviction-hard: nodefs.available<0%,nodefs.inodesFree<0%,imagefs.available<0%
+---
+apiVersion: cluster.x-k8s.io/v1beta1
+kind: MachineDeployment
+metadata:
+  name: ${CLUSTER_NAME}-md-0
+spec:
+  clusterName: ${CLUSTER_NAME}
+  replicas: ${WORKER_MACHINE_COUNT}
+  selector:
+    matchLabels: {}
+  template:
+    metadata: {}
+    spec:
+      bootstrap:
+        configRef:
+          apiVersion: bootstrap.cluster.x-k8s.io/v1beta1
+          kind: KubeadmConfigTemplate
+          name: ${CLUSTER_NAME}-md-0
+      clusterName: ${CLUSTER_NAME}
+      infrastructureRef:
+        apiVersion: infrastructure.cluster.x-k8s.io/v1beta1
+        kind: ByoMachineTemplate
+        name: ${CLUSTER_NAME}-md-0
+      version: ${KUBERNETES_VERSION}
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: cpi-manifests
+  namespace: default

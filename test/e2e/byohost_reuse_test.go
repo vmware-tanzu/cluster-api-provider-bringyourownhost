@@ -13,35 +13,29 @@ import (
 	"github.com/docker/docker/client"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+	infrastructurev1beta1 "github.com/vmware-tanzu/cluster-api-provider-byoh/apis/infrastructure/v1beta1"
 	corev1 "k8s.io/api/core/v1"
+	k8stypes "k8s.io/apimachinery/pkg/types"
 	"k8s.io/utils/pointer"
+	clusterv1 "sigs.k8s.io/cluster-api/api/v1beta1"
+	"sigs.k8s.io/cluster-api/test/framework"
 	"sigs.k8s.io/cluster-api/test/framework/clusterctl"
 	"sigs.k8s.io/cluster-api/util"
 )
 
-const (
-	KubernetesVersion = "KUBERNETES_VERSION"
-	CNIPath           = "CNI"
-	CNIResources      = "CNI_RESOURCES"
-	IPFamily          = "IP_FAMILY"
-)
-
-// creating a workload cluster
-// This test is meant to provide a first, fast signal to detect regression; it is recommended to use it as a PR blocker test.
-var _ = Describe("When BYOH joins existing cluster [PR-Blocking]", func() {
+var _ = Describe("When BYO Host rejoins the capacity pool", func() {
 
 	var (
 		ctx                 context.Context
-		specName            = "quick-start"
+		specName            = "byohost-reuse"
 		namespace           *corev1.Namespace
-		clusterName         string
 		cancelWatches       context.CancelFunc
 		clusterResources    *clusterctl.ApplyClusterTemplateAndWaitResult
 		dockerClient        *client.Client
 		err                 error
 		byohostContainerIDs []string
 		agentLogFile1       = "/tmp/host-agent1.log"
-		agentLogFile2       = "/tmp/host-agent2.log"
+		agentLogFile2       = "/tmp/host-agent-reuse.log"
 	)
 
 	BeforeEach(func() {
@@ -61,10 +55,10 @@ var _ = Describe("When BYOH joins existing cluster [PR-Blocking]", func() {
 		clusterResources = new(clusterctl.ApplyClusterTemplateAndWaitResult)
 	})
 
-	It("Should create a workload cluster with single BYOH host", func() {
-		clusterName = fmt.Sprintf("%s-%s", specName, util.RandomString(6))
-		byoHostName1 := "byohost1"
-		byoHostName2 := "byohost2"
+	It("Should reuse the same BYO Host after it is reset", func() {
+		clusterName := fmt.Sprintf("%s-%s", specName, util.RandomString(6))
+		byoHostName1 := "byohost-1"
+		byoHostName2 := "byohost-for-reuse"
 
 		dockerClient, err = client.NewClientWithOpts(client.FromEnv)
 		Expect(err).NotTo(HaveOccurred())
@@ -86,6 +80,7 @@ var _ = Describe("When BYOH joins existing cluster [PR-Blocking]", func() {
 		f = WriteDockerLog(output, agentLogFile2)
 		defer f.Close()
 
+		By("Creating a cluster")
 		clusterctl.ApplyClusterTemplateAndWait(ctx, clusterctl.ApplyClusterTemplateAndWaitInput{
 			ClusterProxy: bootstrapClusterProxy,
 			ConfigCluster: clusterctl.ConfigClusterInput{
@@ -104,6 +99,55 @@ var _ = Describe("When BYOH joins existing cluster [PR-Blocking]", func() {
 			WaitForControlPlaneIntervals: e2eConfig.GetIntervals(specName, "wait-control-plane"),
 			WaitForMachineDeployments:    e2eConfig.GetIntervals(specName, "wait-worker-nodes"),
 		}, clusterResources)
+
+		// Assert on byohost cluster label to match clusterName
+		byoHostLookupKey := k8stypes.NamespacedName{Name: byoHostName2, Namespace: namespace.Name}
+		byoHostToBeReused := &infrastructurev1beta1.ByoHost{}
+		Expect(bootstrapClusterProxy.GetClient().Get(ctx, byoHostLookupKey, byoHostToBeReused)).Should(Succeed())
+		cluster, ok := byoHostToBeReused.Labels[clusterv1.ClusterLabelName]
+		Expect(ok).To(BeTrue())
+		Expect(cluster).To(Equal(clusterName))
+
+		By("Delete the cluster and freeing the ByoHosts")
+		framework.DeleteAllClustersAndWait(ctx, framework.DeleteAllClustersAndWaitInput{
+			Client:    bootstrapClusterProxy.GetClient(),
+			Namespace: namespace.Name,
+		}, e2eConfig.GetIntervals(specName, "wait-delete-cluster")...)
+
+		// Assert if cluster label is removed
+		// This verifies that the byohost has rejoined the capacity pool
+		byoHostToBeReused = &infrastructurev1beta1.ByoHost{}
+		Expect(bootstrapClusterProxy.GetClient().Get(ctx, byoHostLookupKey, byoHostToBeReused)).Should(Succeed())
+		_, ok = byoHostToBeReused.Labels[clusterv1.ClusterLabelName]
+		Expect(ok).To(BeFalse())
+
+		By("Creating a new cluster")
+		clusterName = fmt.Sprintf("%s-%s", specName, util.RandomString(6))
+		clusterctl.ApplyClusterTemplateAndWait(ctx, clusterctl.ApplyClusterTemplateAndWaitInput{
+			ClusterProxy: bootstrapClusterProxy,
+			ConfigCluster: clusterctl.ConfigClusterInput{
+				LogFolder:                filepath.Join(artifactFolder, "clusters", bootstrapClusterProxy.GetName()),
+				ClusterctlConfigPath:     clusterctlConfigPath,
+				KubeconfigPath:           bootstrapClusterProxy.GetKubeconfigPath(),
+				InfrastructureProvider:   clusterctl.DefaultInfrastructureProvider,
+				Flavor:                   clusterctl.DefaultFlavor,
+				Namespace:                namespace.Name,
+				ClusterName:              clusterName,
+				KubernetesVersion:        e2eConfig.GetVariable(KubernetesVersion),
+				ControlPlaneMachineCount: pointer.Int64Ptr(1),
+				WorkerMachineCount:       pointer.Int64Ptr(1),
+			},
+			WaitForClusterIntervals:      e2eConfig.GetIntervals(specName, "wait-cluster"),
+			WaitForControlPlaneIntervals: e2eConfig.GetIntervals(specName, "wait-control-plane"),
+			WaitForMachineDeployments:    e2eConfig.GetIntervals(specName, "wait-worker-nodes"),
+		}, clusterResources)
+
+		// Assert on byohost cluster label to match clusterName
+		byoHostToBeReused = &infrastructurev1beta1.ByoHost{}
+		Expect(bootstrapClusterProxy.GetClient().Get(ctx, byoHostLookupKey, byoHostToBeReused)).Should(Succeed())
+		cluster, ok = byoHostToBeReused.Labels[clusterv1.ClusterLabelName]
+		Expect(ok).To(BeTrue())
+		Expect(cluster).To(Equal(clusterName))
 
 	})
 
