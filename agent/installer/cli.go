@@ -18,7 +18,7 @@ var (
 	uninstallFlag        = flag.Bool("uninstall", false, "Unnstall a BYOH Bundle")
 	bundleRepoFlag       = flag.String("bundleRepo", "https://projects.registry.vmware.com", "BYOH Bundle Repository. If not set, will look for bundles locally")
 	k8sFlag              = flag.String("k8s", "1.22.1", "Kubernetes version")
-	osFlag               = flag.String("os", "", "OS")
+	osFlag               = flag.String("os", "", "OS. If used with install/uninstall, skip os detection")
 	previewOSChangesFlag = flag.Bool("previewOSChanges", false, "Preview the install and uninstall changes for the specified OS")
 )
 
@@ -83,22 +83,34 @@ func detectOS() {
 }
 
 func runInstaller(install bool) {
+	klog.InitFlags(nil)
+	klogger := klogr.New()
+
 	if *bundleRepoFlag == "" {
 		bd := bundleDownloader{"", "."}
 		fmt.Printf("Bundle repo not specified. Provide bundle contents in %s\n", bd.GetBundleDirPath(*k8sFlag))
 	}
 
-	klog.InitFlags(nil)
-	klogr.New()
+	var i *installer
+	var err error
+	if *osFlag != "" {
+		// Override current OS detection
+		i, err = newUnchecked(*osFlag, *bundleRepoFlag, ".", klogger, &logPrinter{klogger})
+		if err != nil {
+			fmt.Println(err)
+			return
+		}
+	} else {
+		i, err = New("norepo", ".", klogger)
+		if err != nil {
+			fmt.Println(err)
+			return
+		}
 
-	i, err := New("norepo", ".", klogr.New())
-	if err != nil {
-		fmt.Println(err)
+		// Override preview mode
+		i.downloadPath = "."
+		i.repoAddr = *bundleRepoFlag
 	}
-
-	// Override preview mode
-	i.downloadPath = "."
-	i.repoAddr = *bundleRepoFlag
 
 	if install {
 		err = i.Install(*k8sFlag)
