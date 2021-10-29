@@ -5,6 +5,8 @@ package installer
 
 import (
 	"fmt"
+	"strings"
+
 	"github.com/go-logr/logr"
 	"github.com/vmware-tanzu/cluster-api-provider-byoh/agent/installer/internal/algo"
 )
@@ -182,7 +184,21 @@ func getSupportedRegistryDescription() registry {
 // It returns the install and uninstall changes
 // Can be invoked on a non-supported OS
 func PreviewChanges(os, k8sVer string) (install, uninstall string, err error) {
-	return "", "", nil
+	stepPreviewer := outputBuilderPreview{}
+	reg := getSupportedRegistry(&bundleDownloader{}, &stepPreviewer)
+	installer := reg.GetInstaller(os, k8sVer).(algo.Installer)
+	err = installer.Install()
+	if err != nil {
+		return "", "", err
+	}
+	install = strings.Join(stepPreviewer.steps, "\n")
+	stepPreviewer.steps = nil
+	err = installer.Uninstall()
+	if err != nil {
+		return "", "", err
+	}
+	uninstall = strings.Join(stepPreviewer.steps, "\n")
+	return install, uninstall, nil
 }
 
 // logPrinter is an adapter of OutputBilder to logr.Logger
@@ -195,3 +211,14 @@ func (lp *logPrinter) Cmd(s string)  { lp.logger.Info(s) }
 func (lp *logPrinter) Out(s string)  { lp.logger.Info(s) }
 func (lp *logPrinter) Err(s string)  { lp.logger.Info(s) }
 func (lp *logPrinter) Msg(s string)  { lp.logger.Info(s) }
+
+// outputBuilderPreview is an adapter of OutputBuilder to string
+type outputBuilderPreview struct {
+	steps []string
+}
+
+func (obp *outputBuilderPreview) Desc(s string) { obp.steps = append(obp.steps, s) }
+func (obp *outputBuilderPreview) Cmd(s string)  { obp.steps = append(obp.steps, s) }
+func (obp *outputBuilderPreview) Out(s string)  { obp.steps = append(obp.steps, s) }
+func (obp *outputBuilderPreview) Err(s string)  { obp.steps = append(obp.steps, s) }
+func (obp *outputBuilderPreview) Msg(s string)  { obp.steps = append(obp.steps, s) }

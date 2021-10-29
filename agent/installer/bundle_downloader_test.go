@@ -8,7 +8,6 @@ import (
 	"log"
 	"os"
 	"path/filepath"
-	"time"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -77,7 +76,6 @@ var _ = Describe("Byohost Installer Tests", func() {
 				normalizedOsVersion,
 				k8sVersion,
 				mi.Get)
-			time.Sleep(8 * time.Second)
 			Expect(err).ShouldNot((HaveOccurred()))
 		})
 	})
