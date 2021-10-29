@@ -34,10 +34,10 @@ var _ = Describe("Byohost Installer Tests", func() {
 			for _, os := range ListSupportedOS() {
 				i := NewPreviewInstaller(os, nil)
 
-				err := i.Install("unsupported-k8s")
+				err := i.Install("unsupported-k8s", "0.1.0")
 				Expect(err).Should((HaveOccurred()))
 
-				err = i.Uninstall("unsupported-k8s")
+				err = i.Uninstall("unsupported-k8s", "0.1.0")
 				Expect(err).Should((HaveOccurred()))
 			}
 		})
@@ -49,7 +49,7 @@ var _ = Describe("Byohost Installer Tests", func() {
 					{
 						ob := algo.OutputBuilderCounter{}
 						i := NewPreviewInstaller(os, &ob)
-						err := i.Install(k8s)
+						err := i.Install(k8s, "0.1.0")
 						Expect(err).ShouldNot((HaveOccurred()))
 						Expect(ob.LogCalledCnt).Should(Equal(24))
 					}
@@ -57,7 +57,7 @@ var _ = Describe("Byohost Installer Tests", func() {
 					{
 						ob := algo.OutputBuilderCounter{}
 						i := NewPreviewInstaller(os, &ob)
-						err := i.Uninstall(k8s)
+						err := i.Uninstall(k8s, "0.1.0")
 						Expect(err).ShouldNot((HaveOccurred()))
 						Expect(ob.LogCalledCnt).Should(Equal(24))
 					}

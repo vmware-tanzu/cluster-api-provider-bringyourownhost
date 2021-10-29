@@ -60,6 +60,7 @@ var _ = Describe("Byohost Installer Tests", func() {
 			err := bd.DownloadFromRepo(
 				normalizedOsVersion,
 				k8sVersion,
+				"v0.1.0",
 				mi.Get)
 			Expect(err).ShouldNot((HaveOccurred()))
 
@@ -67,6 +68,7 @@ var _ = Describe("Byohost Installer Tests", func() {
 			err = bd.DownloadFromRepo(
 				normalizedOsVersion,
 				k8sVersion,
+				"v0.1.0",
 				mi.Get)
 			Expect(err).ShouldNot((HaveOccurred()))
 			Expect(mi.callCount).Should(Equal(1))
@@ -76,6 +78,7 @@ var _ = Describe("Byohost Installer Tests", func() {
 			err := bd.DownloadFromRepo(
 				normalizedOsVersion,
 				k8sVersion,
+				"0.1.0",
 				mi.Get)
 			Expect(err).ShouldNot((HaveOccurred()))
 		})
@@ -95,6 +98,7 @@ var _ = Describe("Byohost Installer Tests", func() {
 			err := bd.DownloadFromRepo(
 				normalizedOsVersion,
 				k8sVersion,
+				"0.1.0",
 				mi.Get)
 			Expect(err).Should((HaveOccurred()))
 			Expect(err.Error()).Should(Equal(ErrBundleDownload.Error()))
@@ -104,6 +108,7 @@ var _ = Describe("Byohost Installer Tests", func() {
 			err := bd.DownloadFromRepo(
 				normalizedOsVersion,
 				k8sVersion,
+				"0.1.0",
 				mi.Get)
 			Expect(err).Should((HaveOccurred()))
 			Expect(err.Error()).Should(Equal(ErrBundleDownload.Error()))
@@ -113,6 +118,7 @@ var _ = Describe("Byohost Installer Tests", func() {
 			err := bd.DownloadFromRepo(
 				normalizedOsVersion,
 				k8sVersion,
+				"0.1.0",
 				mi.Get)
 			Expect(err).Should((HaveOccurred()))
 			Expect(err.Error()).Should(Equal(ErrBundleExtract.Error()))
