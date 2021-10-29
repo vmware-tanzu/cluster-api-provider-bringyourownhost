@@ -88,8 +88,10 @@ var _ = Describe("Byohost Installer Tests", func() {
 		})
 	})
 	Context("When PreviewChanges is called for supported os and k8s", func() {
-		It("Should not return non-empty result", func() {
-			install, uninstall, err := PreviewChanges("Ubuntu_20.04.1_x86-64", "1_22")
+		It("Should return non-empty result", func() {
+			os := ListSupportedOS()[0]
+			k8s := ListSupportedK8s(os)[0]
+			install, uninstall, err := PreviewChanges(os, k8s)
 			Expect(err).ShouldNot((HaveOccurred()))
 			Expect(install).ShouldNot(Equal(""))
 			Expect(uninstall).ShouldNot(Equal(""))

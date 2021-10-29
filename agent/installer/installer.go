@@ -175,12 +175,12 @@ func ListSupportedK8s(os string) []string {
 }
 
 // getSupportedRegistryDescription returns a description registry of supported OS and k8s.
-// It that can only by queried for OS and k8s but cannot be used for install/uninstall.
+// It can be invoked on a non-supported OS.
 func getSupportedRegistryDescription() registry {
 	return getSupportedRegistry(nil, nil)
 }
 
-// PreviewChanges describes the changes to install and uninstall K8s on OS without actually applying them.
+// PreviewChanges returns the install and uninstall changes without applying them.
 // It returns the install and uninstall changes
 // Can be invoked on a non-supported OS
 func PreviewChanges(os, k8sVer string) (install, uninstall string, err error) {
@@ -214,21 +214,15 @@ func (lp *logPrinter) Msg(s string)  { lp.logger.Info(s) }
 
 // stringPrinter is an adapter of OutputBuilder to string
 type stringPrinter struct {
-	steps   []string
-	descFmt string
-	cmdFmt  string
-	outFmt  string
-	errFmt  string
-	msgFmt  string
+	steps      []string
+	descFmt    string
+	cmdFmt     string
+	outFmt     string
+	errFmt     string
+	msgFmt     string
+	strDivider string
 }
 
-// applyFmt applies a given format to a string or returns the string if format is empty
-func applyFmt(stepFmt, s string) string {
-	if stepFmt == "" {
-		stepFmt = "%s"
-	}
-	return fmt.Sprintf(stepFmt, s)
-}
 func (obp *stringPrinter) Desc(s string) { obp.steps = append(obp.steps, applyFmt(obp.descFmt, s)) }
 func (obp *stringPrinter) Cmd(s string)  { obp.steps = append(obp.steps, applyFmt(obp.cmdFmt, s)) }
 func (obp *stringPrinter) Out(s string)  { obp.steps = append(obp.steps, applyFmt(obp.outFmt, s)) }
@@ -238,5 +232,16 @@ func (obp *stringPrinter) Msg(s string)  { obp.steps = append(obp.steps, applyFm
 // String implements the Stringer interface
 // It joins the string array by adding new lines between the strings and returns it as a single string
 func (obp *stringPrinter) String() string {
-	return strings.Join(obp.steps, "\n")
+	if obp.strDivider == "" {
+		obp.strDivider = "\n"
+	}
+	return strings.Join(obp.steps, obp.strDivider)
+}
+
+// applyFmt applies a given format to a string or returns the string if format is empty
+func applyFmt(stepFmt, s string) string {
+	if stepFmt == "" {
+		stepFmt = "%s"
+	}
+	return fmt.Sprintf(stepFmt, s)
 }
