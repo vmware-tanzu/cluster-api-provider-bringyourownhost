@@ -181,7 +181,7 @@ func (r *ByoMachineReconciler) FetchAttachedByoHost(ctx context.Context, byomach
 	var refByoHost *infrav1.ByoHost = nil
 	if len(hostsList.Items) == 1 {
 		refByoHost = &hostsList.Items[0]
-		logger.Info("Successfully to fetch an attached Byohost", "byohost", refByoHost.Name)
+		logger.Info("Successfully fetched an attached Byohost", "byohost", refByoHost.Name)
 	}
 	return refByoHost, nil
 }
