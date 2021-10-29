@@ -5,6 +5,7 @@ package reconciler
 
 import (
 	"context"
+	"fmt"
 	"os"
 
 	"github.com/pkg/errors"
@@ -107,9 +108,9 @@ func (r *HostReconciler) reconcileNormal(ctx context.Context, byoHost *infrastru
 			return ctrl.Result{}, err
 		}
 
-		err = r.kubeadmDirCleanup(ctx)
+		err = r.dirClean(ctx)
 		if err != nil {
-			logger.Error(err, "error cleaning up kubeadm directory, please delete it manually for reconcile to proceed.")
+			logger.Error(err, "error cleaning up dirClean directory, please delete it manually for reconcile to proceed.")
 			return ctrl.Result{}, err
 		}
 
@@ -151,12 +152,22 @@ func (r *HostReconciler) SetupWithManager(ctx context.Context, mgr manager.Manag
 		Complete(r)
 }
 
-// cleanup kubeadm dir to remove any stale config on the host
-func (r *HostReconciler) kubeadmDirCleanup(ctx context.Context) error {
+// cleanup some dirs to remove any stale config on the host
+func (r *HostReconciler) dirClean(ctx context.Context) error {
 	logger := ctrl.LoggerFrom(ctx)
-	logger.Info("cleaning up kubeadm directory")
-	const kubeadmDir = "/run/kubeadm"
-	return os.RemoveAll(kubeadmDir)
+
+	dirs := []string{
+		"/run/kubeadm",
+		"/et/cni/net.d",
+	}
+	for _, dir := range dirs {
+		logger.Info(fmt.Sprintf("cleaning up directory %s", dir))
+		if err := os.RemoveAll(dir); err != nil {
+			logger.Error(err, fmt.Sprintf("failed to clean up directory %s", dir))
+			return err
+		}
+	}
+	return nil
 }
 
 func (r *HostReconciler) hostCleanUp(ctx context.Context, byoHost *infrastructurev1beta1.ByoHost) error {
