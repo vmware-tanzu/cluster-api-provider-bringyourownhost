@@ -75,6 +75,7 @@ var (
 	namespace string
 	scheme    *runtime.Scheme
 	labels    = make(labelFlags)
+	metricsbindaddress string
 )
 
 // TODO - fix logging
@@ -82,6 +83,7 @@ var (
 func main() {
 	flag.StringVar(&namespace, "namespace", "default", "Namespace in the management cluster where you would like to register this host")
 	flag.Var(&labels, "label", "labels to attach to the ByoHost CR in the form labelname=labelVal for e.g. '--label site=apac --label cores=2'")
+	flag.StringVar(&metricsbindaddress,"metricsbindaddress",":8080","metricsbindaddress is the TCP address that the controller should bind to for serving prometheus metrics.It can be set to \"0\" to disable the metrics serving")
 	klog.InitFlags(nil)
 	flag.Parse()
 	scheme = runtime.NewScheme()
@@ -128,6 +130,7 @@ func main() {
 			},
 		},
 		),
+		MetricsBindAddress: metricsbindaddress,
 	})
 	if err != nil {
 		klog.Errorf("unable to start manager, err=%v", err)
