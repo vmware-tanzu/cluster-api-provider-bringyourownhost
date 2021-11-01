@@ -5,11 +5,13 @@ package reconciler
 
 import (
 	"context"
+	"fmt"
 	"os"
 
 	"github.com/pkg/errors"
 	"github.com/vmware-tanzu/cluster-api-provider-byoh/agent/cloudinit"
 	"github.com/vmware-tanzu/cluster-api-provider-byoh/agent/registration"
+	"github.com/vmware-tanzu/cluster-api-provider-byoh/utils"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/tools/record"
@@ -107,9 +109,11 @@ func (r *HostReconciler) reconcileNormal(ctx context.Context, byoHost *infrastru
 			return ctrl.Result{}, err
 		}
 
-		err = r.kubeadmDirCleanup(ctx)
+		err = r.cleank8sdirectories(ctx)
 		if err != nil {
-			logger.Error(err, "error cleaning up kubeadm directory, please delete it manually for reconcile to proceed.")
+			logger.Error(err, "error in cleaning up k8s directories, please delete it manually for reconcile to proceed.")
+			r.Recorder.Event(byoHost, corev1.EventTypeWarning, "CleanK8sDirectoriesFailed", "clean k8s directories failed")
+			conditions.MarkFalse(byoHost, infrastructurev1beta1.K8sNodeBootstrapSucceeded, infrastructurev1beta1.CleanK8sDirectoriesFailedReason, clusterv1.ConditionSeverityError, "")
 			return ctrl.Result{}, err
 		}
 
@@ -151,12 +155,31 @@ func (r *HostReconciler) SetupWithManager(ctx context.Context, mgr manager.Manag
 		Complete(r)
 }
 
-// cleanup kubeadm dir to remove any stale config on the host
-func (r *HostReconciler) kubeadmDirCleanup(ctx context.Context) error {
+// cleanup /run/kubeadm, /et/cni/net.d dirs to remove any stale config on the host
+func (r *HostReconciler) cleank8sdirectories(ctx context.Context) error {
 	logger := ctrl.LoggerFrom(ctx)
-	logger.Info("cleaning up kubeadm directory")
-	const kubeadmDir = "/run/kubeadm"
-	return os.RemoveAll(kubeadmDir)
+
+	dirs := []string{
+		"/run/kubeadm",
+		"/et/cni/net.d",
+	}
+
+	errList := []error{}
+	for _, dir := range dirs {
+		logger.Info(fmt.Sprintf("cleaning up directory %s", dir))
+		if err := os.RemoveAll(dir); err != nil {
+			utils.PrintObj(fmt.Sprintf("failed to clean up directory %s, err=%v", dir, err), nil, utils.EmptyType)
+			logger.Error(err, fmt.Sprintf("failed to clean up directory %s", dir))
+			errList = append(errList, err)
+		} else {
+			utils.PrintObj(fmt.Sprintf("success to clean up directory %s.", dir), nil, utils.EmptyType)
+		}
+	}
+
+	if len(errList) > 0 {
+		return errors.New("not all k8s directories are cleaned up")
+	}
+	return nil
 }
 
 func (r *HostReconciler) hostCleanUp(ctx context.Context, byoHost *infrastructurev1beta1.ByoHost) error {

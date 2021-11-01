@@ -26,6 +26,9 @@ const (
 	// This secret is available on byohost.Spec.BootstrapSecret field
 	BootstrapDataSecretUnavailableReason = "BootstrapDataSecretUnavailable"
 
+	// CleanK8sDirectoriesFailedReason indicates that clean k8s directories failed for some reason
+	CleanK8sDirectoriesFailedReason = "cleanK8sDirectoriesFailed"
+
 	// CloudInitExecutionFailedReason indicates that cloudinit failed to parse and execute the directives
 	// that are part of the cloud-config file
 	CloudInitExecutionFailedReason = "CloudInitExecutionFailed"
