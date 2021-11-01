@@ -110,7 +110,7 @@ func (r *HostReconciler) reconcileNormal(ctx context.Context, byoHost *infrastru
 
 		err = r.cleank8sdirectories(ctx)
 		if err != nil {
-			logger.Error(err, "error cleaning up cleank8sdirectories directory, please delete it manually for reconcile to proceed.")
+			logger.Error(err, "error cleaning up k8s directories, please delete it manually for reconcile to proceed.")
 			return ctrl.Result{}, err
 		}
 
