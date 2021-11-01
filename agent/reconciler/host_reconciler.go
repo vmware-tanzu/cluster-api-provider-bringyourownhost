@@ -108,9 +108,9 @@ func (r *HostReconciler) reconcileNormal(ctx context.Context, byoHost *infrastru
 			return ctrl.Result{}, err
 		}
 
-		err = r.dirClean(ctx)
+		err = r.cleank8sdirectories(ctx)
 		if err != nil {
-			logger.Error(err, "error cleaning up dirClean directory, please delete it manually for reconcile to proceed.")
+			logger.Error(err, "error cleaning up cleank8sdirectories directory, please delete it manually for reconcile to proceed.")
 			return ctrl.Result{}, err
 		}
 
@@ -153,19 +153,25 @@ func (r *HostReconciler) SetupWithManager(ctx context.Context, mgr manager.Manag
 }
 
 // cleanup some dirs to remove any stale config on the host
-func (r *HostReconciler) dirClean(ctx context.Context) error {
+func (r *HostReconciler) cleank8sdirectories(ctx context.Context) error {
 	logger := ctrl.LoggerFrom(ctx)
 
 	dirs := []string{
 		"/run/kubeadm",
 		"/et/cni/net.d",
 	}
+
+	errList := []error{}
 	for _, dir := range dirs {
 		logger.Info(fmt.Sprintf("cleaning up directory %s", dir))
 		if err := os.RemoveAll(dir); err != nil {
 			logger.Error(err, fmt.Sprintf("failed to clean up directory %s", dir))
-			return err
+			errList = append(errList, err)
 		}
+	}
+
+	if len(errList) > 0 {
+		return errors.New("not all k8s directories are cleaned up")
 	}
 	return nil
 }
