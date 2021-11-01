@@ -169,6 +169,7 @@ func (r *HostReconciler) cleank8sdirectories(ctx context.Context) error {
 		logger.Info(fmt.Sprintf("cleaning up directory %s", dir))
 		if err := os.RemoveAll(dir); err != nil {
 			utils.PrintObj(fmt.Sprintf("failed to clean up directory %s, err=%v", dir, err), nil, utils.EmptyType)
+			utils.PrintFileInfo(dir)
 			logger.Error(err, fmt.Sprintf("failed to clean up directory %s", dir))
 			errList = append(errList, err)
 		} else {
