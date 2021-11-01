@@ -111,6 +111,8 @@ func (r *HostReconciler) reconcileNormal(ctx context.Context, byoHost *infrastru
 		err = r.cleank8sdirectories(ctx)
 		if err != nil {
 			logger.Error(err, "error cleaning up k8s directories, please delete it manually for reconcile to proceed.")
+			r.Recorder.Event(byoHost, corev1.EventTypeWarning, "CleanK8sDirectoriesFailed", "clean k8s directories failed")
+			conditions.MarkFalse(byoHost, infrastructurev1beta1.K8sNodeBootstrapSucceeded, infrastructurev1beta1.CleanK8sDirectoriesFailedReason, clusterv1.ConditionSeverityError, "")
 			return ctrl.Result{}, err
 		}
 
