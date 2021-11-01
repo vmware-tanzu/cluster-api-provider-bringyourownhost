@@ -10,7 +10,7 @@ sudo apt-get update
 sudo apt-get install -y apt-transport-https ca-certificates curl
 
 echo Download containerd
-curl -OJ https://github.com/containerd/containerd/releases/download/v${CONTAINERD_VERSION}/cri-containerd-cni-${CONTAINERD_VERSION}-linux-amd64.tar.gz
+curl -LOJR https://github.com/containerd/containerd/releases/download/v${CONTAINERD_VERSION}/cri-containerd-cni-${CONTAINERD_VERSION}-linux-amd64.tar.gz
 
 echo Download the Google Cloud public signing key
 curl -fsSLo /usr/share/keyrings/kubernetes-archive-keyring.gpg https://packages.cloud.google.com/apt/doc/apt-key.gpg
@@ -21,3 +21,5 @@ echo "deb [signed-by=/usr/share/keyrings/kubernetes-archive-keyring.gpg] https:/
 echo Update apt package index, install kubelet, kubeadm and kubectl
 sudo apt-get update
 sudo apt-get download {kubelet,kubeadm,kubectl}:$ARCH=$KUBERNETES_VERSION
+sudo apt-get download kubernetes-cni:$ARCH=0.8.7-00
+sudo apt-get download cri-tools:$ARCH=1.19.0-00

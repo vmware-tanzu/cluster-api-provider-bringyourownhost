@@ -19,16 +19,20 @@ func NewAptStepOptional(k *BaseK8sInstaller, aptPkg string) Step {
 }
 
 func NewAptStepEx(k *BaseK8sInstaller, aptPkg string, optional bool) Step {
-	pkgName := strings.Split(aptPkg, ".")[0]
+	pkgName := strings.Split(aptPkg, ".")[0] // strip deb
 	pkgAbsolutePath := filepath.Join(k.BundlePath, aptPkg)
-	pkgCheck := ""
+
+	condCmd := "%s"
 	if optional {
-		pkgCheck = fmt.Sprintf("test -e %s && ", pkgAbsolutePath)
+		condCmd = fmt.Sprintf("if [ -f %s ]; then %%s; fi", pkgAbsolutePath)
 	}
+
+	doCmd := fmt.Sprintf("dpkg --install '%s'", pkgAbsolutePath)
+	undoCmd :=fmt.Sprintf("dpkg --purge %s", pkgName)
 
 	return &ShellStep{
 		BaseK8sInstaller: k,
 		Desc:             pkgName,
-		DoCmd:            fmt.Sprintf("%sapt install -y '%s'", pkgCheck, pkgAbsolutePath),
-		UndoCmd:          fmt.Sprintf("%sapt remove -y %s", pkgCheck, pkgName)}
+		DoCmd:            fmt.Sprintf(condCmd, doCmd),
+		UndoCmd:          fmt.Sprintf(condCmd, undoCmd)}
 }

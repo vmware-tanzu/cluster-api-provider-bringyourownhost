@@ -28,13 +28,14 @@ echo Configuration $CONFIG_PATH
 ls -l $CONFIG_PATH
 
 echo Add configuration under well-known name
-tar -cvf conf.tar -C $CONFIG_PATH .
+(cd $CONFIG_PATH && tar -cvf conf.tar *)
+cp $CONFIG_PATH/conf.tar .
 
 echo Running kbld
 mkdir .imgpkg
 kbld --imgpkg-lock-output .imgpkg/images.yml
 
 echo Creating bundle tar
-tar -cvf /bundle/bundle.tar .
+tar -cvf /bundle/bundle.tar *
 
 echo Done

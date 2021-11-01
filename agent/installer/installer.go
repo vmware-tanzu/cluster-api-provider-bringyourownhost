@@ -91,10 +91,6 @@ func New(bundleRepo, downloadPath string, logger logr.Logger) (*installer, error
 		return nil, ErrDetectOs
 	}
 
-	// Run in preview mode until we can run the e2e test
-	downloadPath = ""
-	bundleRepo = ""
-
 	return newUnchecked(os, bundleRepo, downloadPath, logger, &logPrinter{logger})
 }
 
