@@ -35,7 +35,7 @@ jobs:
         run: sudo apt-get install golang-ginkgo-dev
 
       - name: clean up directory
-        run: sudo chmod -R 777 /etc/cni/net.d
+        run: sudo chmod -R 777 /etc
 
       - name: test agent
         run: make agent-test
