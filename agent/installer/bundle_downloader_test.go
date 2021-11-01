@@ -81,8 +81,11 @@ var _ = Describe("Byohost Installer Tests", func() {
 	})
 	Context("When there is error during download", func() {
 		It("Should return error if given bad repo", func() {
-			bd.repoAddr = "a.a"
-			err := bd.Download(normalizedOsVersion, k8sVersion)
+			mi.err = errors.New("Fetching image: Get \"a.a.com/\": dial tcp: lookup a.a.com: no such host")
+			err := bd.DownloadFromRepo(
+				normalizedOsVersion,
+				k8sVersion,
+				mi.Get)
 			Expect(err).Should((HaveOccurred()))
 			Expect(err.Error()).Should(Equal(ErrBundleDownload.Error()))
 		})
