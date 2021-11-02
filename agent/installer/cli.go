@@ -11,16 +11,16 @@ import (
 )
 
 var (
-	listSupportedFlag    = flag.Bool("listSupported", false, "List all supported OS and Kubernetes versions")
-	listBundlesFlag      = flag.Bool("listBundles", false, "List the BYOH Bundle names for all supported OS and Kubernetes versions")
+	listSupportedFlag    = flag.Bool("list-supported", false, "List all supported OS and Kubernetes versions")
+	listBundlesFlag      = flag.Bool("list-bundles", false, "List the BYOH Bundle names for all supported OS and Kubernetes versions")
 	detectOSFlag         = flag.Bool("detect", false, "Detects the current operating system")
 	installFlag          = flag.Bool("install", false, "Install a BYOH Bundle")
 	uninstallFlag        = flag.Bool("uninstall", false, "Unnstall a BYOH Bundle")
-	bundleRepoFlag       = flag.String("bundleRepo", "projects.registry.vmware.com", "BYOH Bundle Repository")
-	cachePathFlag        = flag.String("cachePath", ".", "Path to the local bundle cache")
+	bundleRepoFlag       = flag.String("bundle-repo", "projects.registry.vmware.com", "BYOH Bundle Repository")
+	cachePathFlag        = flag.String("cache-path", ".", "Path to the local bundle cache")
 	k8sFlag              = flag.String("k8s", "1.22.1", "Kubernetes version")
 	osFlag               = flag.String("os", "", "OS. If used with install/uninstall, override os detection")
-	previewOSChangesFlag = flag.Bool("previewOSChanges", false, "Preview the install and uninstall changes for the specified OS")
+	previewOSChangesFlag = flag.Bool("preview-os-changes", false, "Preview the install and uninstall changes for the specified OS")
 )
 
 const (

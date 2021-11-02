@@ -19,7 +19,7 @@ func NewAptStepOptional(k *BaseK8sInstaller, aptPkg string) Step {
 }
 
 func NewAptStepEx(k *BaseK8sInstaller, aptPkg string, optional bool) Step {
-	pkgName := strings.Split(aptPkg, ".")[0] // strip deb
+	pkgName := strings.Split(aptPkg, ".")[0] // leave only pkg name, strip .deb
 	pkgAbsolutePath := filepath.Join(k.BundlePath, aptPkg)
 
 	condCmd := "%s"
