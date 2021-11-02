@@ -33,7 +33,8 @@ type bundleDownloader struct {
 // If a cache for the bundle exists, nothing is downloaded.
 func (bd *bundleDownloader) Download(
 	normalizedOsVersion,
-	k8sVersion, tag string) error {
+	k8sVersion string,
+	tag string) error {
 
 	return bd.DownloadFromRepo(
 		normalizedOsVersion,
@@ -45,7 +46,8 @@ func (bd *bundleDownloader) Download(
 // DownloadFromRepo downloads the required bundle with the given method.
 func (bd *bundleDownloader) DownloadFromRepo(
 	normalizedOsVersion,
-	k8sVersion, tag string,
+	k8sVersion string,
+	tag string,
 	downloadByTool func(string, string) error) error {
 
 	err := ensureDirExist(bd.downloadPath)
