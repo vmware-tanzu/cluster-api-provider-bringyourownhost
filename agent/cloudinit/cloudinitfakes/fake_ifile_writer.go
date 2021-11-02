@@ -4,7 +4,7 @@ package cloudinitfakes
 import (
 	"sync"
 
-	"github.com/vmware-tanzu/cluster-api-provider-byoh/agent/cloudinit"
+	"github.com/vmware-tanzu/cluster-api-provider-bringyourownhost/agent/cloudinit"
 )
 
 type FakeIFileWriter struct {

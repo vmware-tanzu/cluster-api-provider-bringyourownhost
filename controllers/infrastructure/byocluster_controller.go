@@ -19,7 +19,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/source"
 
 	"github.com/pkg/errors"
-	infrav1 "github.com/vmware-tanzu/cluster-api-provider-byoh/apis/infrastructure/v1beta1"
+	infrav1 "github.com/vmware-tanzu/cluster-api-provider-bringyourownhost/apis/infrastructure/v1beta1"
 	clusterv1 "sigs.k8s.io/cluster-api/api/v1beta1"
 
 	clusterutilv1 "sigs.k8s.io/cluster-api/util"
