@@ -16,12 +16,6 @@ __Clone BYOH Repo__
 git clone git@github.com:vmware-tanzu/cluster-api-provider-bringyourownhost.git
 ```
 
-__Build image__
-```shell
-cd cluster-api-provider-bringyourownhost
-make prepare-byoh-docker-host-image
-```
-
 ## Setting up the management cluster
 
 ### Creates the Kubernetes cluster
@@ -97,7 +91,12 @@ Generate host-agent binaries
 make host-agent-binaries
 ```
 
-Create n docker hosts, where ```n>1```
+### Create docker hosts
+```shell
+cd cluster-api-provider-bringyourownhost
+make prepare-byoh-docker-host-image
+```
+Run the following to create n hosts, where ```n>1```
 ```shell
 for i in {1..n}
 do
