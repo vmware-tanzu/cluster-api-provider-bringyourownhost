@@ -99,6 +99,16 @@ var _ = Describe("Byohost Installer Tests", func() {
 			Expect(uninstall).ShouldNot(ContainSubstring("Installing"))
 		})
 	})
+	Context("When PreviewChanges is called for non-supported os and k8s", func() {
+		It("Should return empty result", func() {
+			os := "a"
+			k8s := "a"
+			install, uninstall, err := PreviewChanges(os, k8s)
+			Expect(err).ShouldNot((HaveOccurred()))
+			Expect(install).Should(Equal(""))
+			Expect(uninstall).Should(Equal(""))
+		})
+	})
 })
 
 func NewPreviewInstaller(os string, ob algo.OutputBuilder) *installer {

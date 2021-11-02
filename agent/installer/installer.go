@@ -186,14 +186,18 @@ func getSupportedRegistryDescription() registry {
 func PreviewChanges(os, k8sVer string) (install, uninstall string, err error) {
 	stepPreviewer := stringPrinter{msgFmt: "# %s"}
 	reg := getSupportedRegistry(&bundleDownloader{}, &stepPreviewer)
-	installer := reg.GetInstaller(os, k8sVer).(algo.Installer)
-	err = installer.Install()
+	installer := reg.GetInstaller(os, k8sVer)
+	if installer == nil {
+		return
+	}
+	algoInstaller := installer.(algo.Installer)
+	err = algoInstaller.Install()
 	if err != nil {
 		return
 	}
 	install = stepPreviewer.String()
 	stepPreviewer.steps = nil
-	err = installer.Uninstall()
+	err = algoInstaller.Uninstall()
 	if err != nil {
 		return
 	}
