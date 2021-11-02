@@ -35,6 +35,8 @@ var _ = Describe("Byohost Installer Tests", func() {
 		k8sVersion          string
 	)
 
+	const testTag = "test-tag"
+
 	BeforeEach(func() {
 		normalizedOsVersion = "Ubuntu_20.04.3_x64"
 		k8sVersion = "1.22"
@@ -54,12 +56,12 @@ var _ = Describe("Byohost Installer Tests", func() {
 		}
 	})
 	Context("When given correct arguments", func() {
-
 		It("Should download bundle", func() {
 			// Test download on cache missing
 			err := bd.DownloadFromRepo(
 				normalizedOsVersion,
 				k8sVersion,
+				testTag,
 				mi.Get)
 			Expect(err).ShouldNot((HaveOccurred()))
 
@@ -67,6 +69,7 @@ var _ = Describe("Byohost Installer Tests", func() {
 			err = bd.DownloadFromRepo(
 				normalizedOsVersion,
 				k8sVersion,
+				testTag,
 				mi.Get)
 			Expect(err).ShouldNot((HaveOccurred()))
 			Expect(mi.callCount).Should(Equal(1))
@@ -76,6 +79,7 @@ var _ = Describe("Byohost Installer Tests", func() {
 			err := bd.DownloadFromRepo(
 				normalizedOsVersion,
 				k8sVersion,
+				testTag,
 				mi.Get)
 			Expect(err).ShouldNot((HaveOccurred()))
 		})
@@ -86,6 +90,7 @@ var _ = Describe("Byohost Installer Tests", func() {
 			err := bd.DownloadFromRepo(
 				normalizedOsVersion,
 				k8sVersion,
+				testTag,
 				mi.Get)
 			Expect(err).Should((HaveOccurred()))
 			Expect(err.Error()).Should(Equal(ErrBundleDownload.Error()))
@@ -95,6 +100,7 @@ var _ = Describe("Byohost Installer Tests", func() {
 			err := bd.DownloadFromRepo(
 				normalizedOsVersion,
 				k8sVersion,
+				testTag,
 				mi.Get)
 			Expect(err).Should((HaveOccurred()))
 			Expect(err.Error()).Should(Equal(ErrBundleDownload.Error()))
@@ -104,6 +110,7 @@ var _ = Describe("Byohost Installer Tests", func() {
 			err := bd.DownloadFromRepo(
 				normalizedOsVersion,
 				k8sVersion,
+				testTag,
 				mi.Get)
 			Expect(err).Should((HaveOccurred()))
 			Expect(err.Error()).Should(Equal(ErrBundleDownload.Error()))
@@ -113,6 +120,7 @@ var _ = Describe("Byohost Installer Tests", func() {
 			err := bd.DownloadFromRepo(
 				normalizedOsVersion,
 				k8sVersion,
+				testTag,
 				mi.Get)
 			Expect(err).Should((HaveOccurred()))
 			Expect(err.Error()).Should(Equal(ErrBundleExtract.Error()))

@@ -33,11 +33,13 @@ type bundleDownloader struct {
 // If a cache for the bundle exists, nothing is downloaded.
 func (bd *bundleDownloader) Download(
 	normalizedOsVersion,
-	k8sVersion string) error {
+	k8sVersion string,
+	tag string) error {
 
 	return bd.DownloadFromRepo(
 		normalizedOsVersion,
 		k8sVersion,
+		tag,
 		bd.downloadByImgpkg)
 }
 
@@ -45,6 +47,7 @@ func (bd *bundleDownloader) Download(
 func (bd *bundleDownloader) DownloadFromRepo(
 	normalizedOsVersion,
 	k8sVersion string,
+	tag string,
 	downloadByTool func(string, string) error) error {
 
 	err := ensureDirExist(bd.downloadPath)
@@ -52,7 +55,7 @@ func (bd *bundleDownloader) DownloadFromRepo(
 		return err
 	}
 
-	bundleDirPath := bd.GetBundleDirPath(k8sVersion)
+	bundleDirPath := bd.GetBundleDirPath(k8sVersion, tag)
 
 	// cache hit
 	if checkDirExist(bundleDirPath) {
@@ -69,7 +72,7 @@ func (bd *bundleDownloader) DownloadFromRepo(
 		return err
 	}
 
-	bundleAddr := bd.getBundleAddr(normalizedOsVersion, k8sVersion)
+	bundleAddr := bd.getBundleAddr(normalizedOsVersion, k8sVersion, tag)
 	err = convertError(downloadByTool(bundleAddr, dir))
 	if err != nil {
 		return err
@@ -113,8 +116,11 @@ func convertError(err error) error {
 }
 
 // GetBundleDirPath returns the path to directory containing the required bundle.
-func (bd *bundleDownloader) GetBundleDirPath(k8sVersion string) string {
-	return filepath.Join(bd.downloadPath, k8sVersion)
+func (bd *bundleDownloader) GetBundleDirPath(k8sVersion, tag string) string {
+	// Not storing tag as a subdir of k8s because we can't atomically move
+	// the temp bundle dir to a non-existing dir.
+	// Using "-" instead of ":" because Windows doesn't like the latter
+	return fmt.Sprintf("%s-%s", filepath.Join(bd.downloadPath, k8sVersion), tag)
 }
 
 // GetBundleName returns the name of the bundle in normalized format.
@@ -123,8 +129,8 @@ func GetBundleName(normalizedOsVersion, k8sVersion string) string {
 }
 
 // getBundleAddr returns the exact address to the bundle in the repo.
-func (bd *bundleDownloader) getBundleAddr(normalizedOsVersion, k8sVersion string) string {
-	return fmt.Sprintf("%s/%s", bd.repoAddr, GetBundleName(normalizedOsVersion, k8sVersion))
+func (bd *bundleDownloader) getBundleAddr(normalizedOsVersion, k8sVersion, tag string) string {
+	return fmt.Sprintf("%s/%s:%s", bd.repoAddr, GetBundleName(normalizedOsVersion, k8sVersion), tag)
 }
 
 // checkDirExist checks if a dirrectory exists.
