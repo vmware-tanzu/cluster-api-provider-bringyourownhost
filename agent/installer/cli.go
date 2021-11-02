@@ -20,6 +20,7 @@ var (
 	cachePathFlag        = flag.String("cache-path", ".", "Path to the local bundle cache")
 	k8sFlag              = flag.String("k8s", "1.22.1", "Kubernetes version")
 	osFlag               = flag.String("os", "", "OS. If used with install/uninstall, override os detection")
+	tagFlag              = flag.String("tag", "", "BYOH Bundle tag")
 	previewOSChangesFlag = flag.Bool("preview-os-changes", false, "Preview the install and uninstall changes for the specified OS")
 )
 
@@ -116,9 +117,9 @@ func runInstaller(install bool) {
 	}
 
 	if install {
-		err = i.Install(*k8sFlag)
+		err = i.Install(*k8sFlag, *tagFlag)
 	} else {
-		err = i.Uninstall(*k8sFlag)
+		err = i.Uninstall(*k8sFlag, *tagFlag)
 	}
 	if err != nil {
 		klogger.Error(err, "error installing/uninstalling")
