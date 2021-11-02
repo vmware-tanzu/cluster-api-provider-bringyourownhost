@@ -1,6 +1,6 @@
 # Kubernetes Cluster API Provider BYOH(Bring your own host)
-[![lint](https://github.com/vmware-tanzu/cluster-api-provider-byoh/actions/workflows/lint.yml/badge.svg)](https://github.com/vmware-tanzu/cluster-api-provider-byoh/actions/workflows/lint.yml)
-[![test](https://github.com/vmware-tanzu/cluster-api-provider-byoh/actions/workflows/main.yml/badge.svg)](https://github.com/vmware-tanzu/cluster-api-provider-byoh/actions/workflows/main.yml)
+[![lint](https://github.com/vmware-tanzu/cluster-api-provider-bringyourownhost/actions/workflows/lint.yml/badge.svg)](https://github.com/vmware-tanzu/cluster-api-provider-bringyourownhost/actions/workflows/lint.yml)
+[![test](https://github.com/vmware-tanzu/cluster-api-provider-bringyourownhost/actions/workflows/main.yml/badge.svg)](https://github.com/vmware-tanzu/cluster-api-provider-bringyourownhost/actions/workflows/main.yml)
 
 ------
 
@@ -56,4 +56,4 @@ More about development and contributing practices can be found in [`CONTRIBUTING
 <!-- References -->
 
 [cluster_api]: https://github.com/kubernetes-sigs/cluster-api
-[issue]: https://github.com/vmware-tanzu/cluster-api-provider-byoh/issues
+[issue]: https://github.com/vmware-tanzu/cluster-api-provider-bringyourownhost/issues
