@@ -11,6 +11,7 @@ import (
 	"github.com/pkg/errors"
 	"github.com/vmware-tanzu/cluster-api-provider-byoh/agent/cloudinit"
 	"github.com/vmware-tanzu/cluster-api-provider-byoh/agent/registration"
+	"github.com/vmware-tanzu/cluster-api-provider-byoh/common"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/tools/record"
@@ -159,14 +160,14 @@ func (r *HostReconciler) cleank8sdirectories(ctx context.Context) error {
 	logger := ctrl.LoggerFrom(ctx)
 
 	dirs := []string{
-		"/run/kubeadm",
-		"/etc/cni/net.d",
+		"/run/kubeadm/*",
+		"/etc/cni/net.d/*",
 	}
 
 	errList := []error{}
 	for _, dir := range dirs {
 		logger.Info(fmt.Sprintf("cleaning up directory %s", dir))
-		if err := os.RemoveAll(dir); err != nil {
+		if err := common.RemoveGlob(dir); err != nil {
 			logger.Error(err, fmt.Sprintf("failed to clean up directory %s", dir))
 			errList = append(errList, err)
 		}
