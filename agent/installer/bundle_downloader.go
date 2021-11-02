@@ -11,6 +11,7 @@ import (
 	"strings"
 
 	"github.com/cppforlife/go-cli-ui/ui"
+	"github.com/go-logr/logr"
 	"github.com/k14s/imgpkg/pkg/imgpkg/cmd"
 )
 
@@ -22,6 +23,7 @@ var (
 type bundleDownloader struct {
 	repoAddr     string
 	downloadPath string
+	logger       logr.Logger
 }
 
 // Download is a method that downloads the bundle from repoAddr to downloadPath.
@@ -54,8 +56,11 @@ func (bd *bundleDownloader) DownloadFromRepo(
 
 	// cache hit
 	if checkDirExist(bundleDirPath) {
+		bd.logger.Info("Cache hit", "path", bundleDirPath)
 		return nil
 	}
+
+	bd.logger.Info("Cache miss", "path", bundleDirPath)
 
 	dir, err := os.MkdirTemp(bd.downloadPath, "tempBundle")
 	// It is fine if the dir path does not exist.
@@ -76,6 +81,8 @@ func (bd *bundleDownloader) DownloadFromRepo(
 func (bd *bundleDownloader) downloadByImgpkg(
 	bundleAddr,
 	bundleDirPath string) error {
+
+	bd.logger.Info("Downloading bundle", "from", bundleAddr)
 
 	var confUI = ui.NewConfUI(ui.NewNoopLogger())
 	defer confUI.Flush()

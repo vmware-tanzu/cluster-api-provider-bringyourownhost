@@ -67,6 +67,7 @@ func (bd *bundleDownloader) getBundlePathDirOrPreview(k8s string) string {
 
 func (bd *bundleDownloader) DownloadOrPreview(os, k8s string) error {
 	if bd == nil || bd.downloadPath == "" {
+		bd.logger.Info("Running in preview mode, skip bundle download")
 		return nil
 	}
 
@@ -98,7 +99,7 @@ func New(bundleRepo, downloadPath string, logger logr.Logger) (*installer, error
 // If they are empty, returned installer will runs in preview mode, i.e.
 // executes everything except the actual commands.
 func newUnchecked(currentOs, bundleRepo, downloadPath string, logger logr.Logger, outputBuilder algo.OutputBuilder) (*installer, error) {
-	bd := bundleDownloader{repoAddr: bundleRepo, downloadPath: downloadPath}
+	bd := bundleDownloader{repoAddr: bundleRepo, downloadPath: downloadPath, logger: logger}
 
 	reg := getSupportedRegistry(&bd, outputBuilder)
 	if len(reg.ListK8s(currentOs)) == 0 {
@@ -182,14 +183,20 @@ func getSupportedRegistryDescription() registry {
 func PreviewChanges(os, k8sVer string) (install, uninstall string, err error) {
 	stepPreviewer := stringPrinter{msgFmt: "# %s"}
 	reg := getSupportedRegistry(&bundleDownloader{}, &stepPreviewer)
-	installer := reg.GetInstaller(os, k8sVer).(algo.Installer)
-	err = installer.Install()
+	installer := reg.GetInstaller(os, k8sVer)
+
+	if installer == nil {
+		err = ErrOsK8sNotSupported
+		return
+	}
+
+	err = installer.(algo.Installer).Install()
 	if err != nil {
 		return
 	}
 	install = stepPreviewer.String()
 	stepPreviewer.steps = nil
-	err = installer.Uninstall()
+	err = installer.(algo.Installer).Uninstall()
 	if err != nil {
 		return
 	}

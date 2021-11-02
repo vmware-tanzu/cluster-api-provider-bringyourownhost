@@ -9,6 +9,7 @@ import (
 	"os"
 	"path/filepath"
 
+	"github.com/go-logr/logr"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 )
@@ -43,7 +44,7 @@ var _ = Describe("Byohost Installer Tests", func() {
 		if err != nil {
 			log.Fatal(err)
 		}
-		bd = &bundleDownloader{repoAddr, downloadPath}
+		bd = &bundleDownloader{repoAddr, downloadPath, logr.Discard()}
 		mi = &mockImgpkg{}
 	})
 	AfterEach(func() {
