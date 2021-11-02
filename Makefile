@@ -109,7 +109,7 @@ prepare-byoh-docker-host-image:
 	docker build test/e2e -f test/e2e/BYOHDockerFile -t ${BYOH_BASE_IMG}
 
 test-e2e: docker-build prepare-byoh-docker-host-image $(GINKGO) cluster-templates ## Run the end-to-end tests
-	$(GINKGO) -v -trace -tags=e2e -focus="$(GINKGO_FOCUS)" $(_SKIP_ARGS) -nodes=$(GINKGO_NODES) --noColor=$(GINKGO_NOCOLOR) $(GINKGO_ARGS) test/e2e -- \
+	CONTROL_PLANE_ENDPOINT_IP=172.18.10.151 $(GINKGO) -v -trace -tags=e2e -focus="$(GINKGO_FOCUS)" $(_SKIP_ARGS) -nodes=$(GINKGO_NODES) --noColor=$(GINKGO_NOCOLOR) $(GINKGO_ARGS) test/e2e -- \
 	    -e2e.artifacts-folder="$(ARTIFACTS)" \
 	    -e2e.config="$(E2E_CONF_FILE)" \
 	    -e2e.skip-resource-cleanup=$(SKIP_RESOURCE_CLEANUP) -e2e.use-existing-cluster=$(USE_EXISTING_CLUSTER) \
