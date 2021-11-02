@@ -35,7 +35,7 @@ jobs:
         run: sudo apt-get install golang-ginkgo-dev
 
       - name: make sure it has permission to clean up directory
-        run: sudo chmod -R 777 /etc
+        run: sudo chmod -R 755 /etc
 
       - name: test agent
         run: make agent-test

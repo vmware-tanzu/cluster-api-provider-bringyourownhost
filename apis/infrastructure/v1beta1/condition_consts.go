@@ -26,7 +26,9 @@ const (
 	// This secret is available on byohost.Spec.BootstrapSecret field
 	BootstrapDataSecretUnavailableReason = "BootstrapDataSecretUnavailable"
 
-	// CleanK8sDirectoriesFailedReason indicates that clean k8s directories failed for some reason
+	// CleanK8sDirectoriesFailedReason indicates that clean k8s directories failed for some reason, please
+	// delete it manually for reconcile to proceed.
+	// The cleaned directories are /run/kubeadm and /etc/cni/net.d
 	CleanK8sDirectoriesFailedReason = "CleanK8sDirectoriesFailed"
 
 	// CloudInitExecutionFailedReason indicates that cloudinit failed to parse and execute the directives
