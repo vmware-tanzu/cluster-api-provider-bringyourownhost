@@ -37,21 +37,28 @@ func getSupportedRegistry(bd *bundleDownloader, ob algo.OutputBuilder) registry 
 		os   string
 		k8s  string
 		algo algo.K8sStepProvider
+		osFilter string
 	}{
-		{"Ubuntu_20.04.1_x86-64", "v1.22.1", &algo.Ubuntu20_4K8s1_22{}},
+		// Ubuntu support
+		{os: "Ubuntu_20.04.1_x86-64", k8s: "v1.22.1", algo: &algo.Ubuntu20_4K8s1_22{}},
+		// Ubuntu Same-As Map. Any Ubuntu that matches osFilter is treated like os
+		{osFilter: "Ubuntu_20.04.*_x86-64", os: "Ubuntu_20.04.1_x86-64"},
 		/*
 		 * ADD HERE to add support for new os or k8s
-		 * You may map new versions to old classes if they do the job
 		 */
 	}
 
 	reg := NewRegistry()
 	for _, t := range supportedOsK8s {
-		a := &algo.BaseK8sInstaller{
-			K8sStepProvider: t.algo,
-			/*BundlePath: will be set when tag is known */
-			OutputBuilder: ob}
-		reg.Add(t.os, t.k8s, a)
+		if t.osFilter == "" {
+			a := &algo.BaseK8sInstaller{
+                        K8sStepProvider: t.algo,
+                        /*BundlePath: will be set when tag is known */
+                        OutputBuilder: ob}
+	                reg.Add(t.os, t.k8s, a)
+		} else {
+			reg.AddOSAlias(t.osFilter, t.os)
+		}
 	}
 
 	return reg
@@ -163,7 +170,7 @@ func (i *installer) getAlgoInstallerWithBundle(k8sVer, tag string) (osk8sInstall
 }
 
 // ListSupportedOS() returns the list of all supported OS-es. Can be invoked on a non-supported OS.
-func ListSupportedOS() []string {
+func ListSupportedOS() ([]string, map[string]string) {
 	srd := getSupportedRegistryDescription()
 	return srd.ListOS()
 }

@@ -6,13 +6,14 @@ package installer
 import (
 	"flag"
 	"fmt"
+	"os"
+	"text/tabwriter"
 	"github.com/go-logr/logr"
 	"k8s.io/klog/klogr"
 )
 
 var (
-	listSupportedFlag    = flag.Bool("list-supported", false, "List all supported OS and Kubernetes versions")
-	listBundlesFlag      = flag.Bool("list-bundles", false, "List the BYOH Bundle names for all supported OS and Kubernetes versions")
+	listSupportedFlag    = flag.Bool("list-supported", false, "List all supported OS, Kubernetes versions and BYOH Bundle names")
 	detectOSFlag         = flag.Bool("detect", false, "Detects the current operating system")
 	installFlag          = flag.Bool("install", false, "Install a BYOH Bundle")
 	uninstallFlag        = flag.Bool("uninstall", false, "Unnstall a BYOH Bundle")
@@ -43,11 +44,6 @@ func Main() {
 		return
 	}
 
-	if *listBundlesFlag {
-		listBundles()
-		return
-	}
-
 	if *detectOSFlag {
 		detectOS()
 		return
@@ -72,18 +68,26 @@ func Main() {
 }
 
 func listSupported() {
-	for _, os := range ListSupportedOS() {
+	w := new(tabwriter.Writer)
+	// minwidth, tabwidth, padding, padchar, flags
+	w.Init(os.Stdout, 8, 8, 0, '\t', 0)
+	defer w.Flush()
+
+	fmt.Fprintf(w, "%s\t%s\t%s\n", "OS",  "K8S Version", "BYOH Bundle Name")
+	fmt.Fprintf(w, "%s\t%s\t%s\n", "---", "-----------", "----------------")
+
+	osList, aliasMap := ListSupportedOS()
+
+	for _, os := range osList {
 		for _, k8s := range ListSupportedK8s(os) {
-			fmt.Printf("%s %s\n", os, k8s)
+			fmt.Fprintf(w, "%s\t %s\t%s\n", os, k8s, GetBundleName(os, k8s))
 		}
 	}
-}
 
-func listBundles() {
-	for _, os := range ListSupportedOS() {
-		for _, k8s := range ListSupportedK8s(os) {
-			fmt.Println(GetBundleName(os, k8s))
-		}
+	for a, o := range aliasMap {
+		for _, k8s := range ListSupportedK8s(o) {
+                        fmt.Fprintf(w, "%s\t %s\t%s\n", a, k8s, GetBundleName(o, k8s))
+                }
 	}
 }
 
