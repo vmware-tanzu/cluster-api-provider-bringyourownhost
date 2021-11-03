@@ -154,7 +154,7 @@ func setupByoDockerHost(ctx context.Context, clusterConName, byoHostName, namesp
 
 	Expect(dockerClient.ContainerStart(ctx, byohost.ID, types.ContainerStartOptions{})).NotTo(HaveOccurred())
 
-	pathToHostAgentBinary, err := gexec.Build("github.com/vmware-tanzu/cluster-api-provider-byoh/agent")
+	pathToHostAgentBinary, err := gexec.Build("github.com/vmware-tanzu/cluster-api-provider-bringyourownhost/agent")
 	Expect(err).NotTo(HaveOccurred())
 
 	config := cpConfig{

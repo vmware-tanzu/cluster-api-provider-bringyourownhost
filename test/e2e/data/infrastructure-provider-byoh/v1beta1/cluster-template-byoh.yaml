@@ -82,7 +82,7 @@ spec:
             - name: vip_leaderelection
               value: "true"
             - name: vip_address
-              value: ${CONTROL_PLANE_ENDPOINT}
+              value: ${CONTROL_PLANE_ENDPOINT_IP}
             - name: vip_interface
               value: {{ .DefaultNetworkInterfaceName }}
             - name: vip_leaseduration

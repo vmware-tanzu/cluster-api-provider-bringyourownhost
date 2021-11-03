@@ -8,6 +8,8 @@ import (
 	"compress/gzip"
 	"io"
 	"math/rand"
+	"os"
+	"path/filepath"
 	"time"
 
 	"github.com/pkg/errors"
@@ -62,4 +64,18 @@ func GunzipData(data []byte) ([]byte, error) {
 	}
 
 	return resB.Bytes(), nil
+}
+
+func RemoveGlob(path string) error {
+	contents, err := filepath.Glob(path)
+	if err != nil {
+		return err
+	}
+	for _, item := range contents {
+		err = os.RemoveAll(item)
+		if err != nil {
+			return err
+		}
+	}
+	return nil
 }

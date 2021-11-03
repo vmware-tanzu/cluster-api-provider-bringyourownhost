@@ -119,7 +119,7 @@ spec:
             - name: vip_leaderelection
               value: "true"
             - name: vip_address
-              value: 172.18.10.10
+              value: ${CONTROL_PLANE_ENDPOINT_IP}
             - name: vip_interface
               value: {{ .DefaultNetworkInterfaceName }}
             - name: vip_leaseduration
@@ -184,7 +184,7 @@ metadata:
   name: ${CLUSTER_NAME}
 spec:
   controlPlaneEndpoint:
-    host: 172.18.10.10
+    host: ${CONTROL_PLANE_ENDPOINT_IP}
     port: 6443
 ---
 apiVersion: infrastructure.cluster.x-k8s.io/v1beta1

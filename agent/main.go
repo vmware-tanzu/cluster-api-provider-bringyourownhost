@@ -10,10 +10,10 @@ import (
 	"os"
 	"strings"
 
-	"github.com/vmware-tanzu/cluster-api-provider-byoh/agent/cloudinit"
-	"github.com/vmware-tanzu/cluster-api-provider-byoh/agent/reconciler"
-	"github.com/vmware-tanzu/cluster-api-provider-byoh/agent/registration"
-	infrastructurev1beta1 "github.com/vmware-tanzu/cluster-api-provider-byoh/apis/infrastructure/v1beta1"
+	"github.com/vmware-tanzu/cluster-api-provider-bringyourownhost/agent/cloudinit"
+	"github.com/vmware-tanzu/cluster-api-provider-bringyourownhost/agent/reconciler"
+	"github.com/vmware-tanzu/cluster-api-provider-bringyourownhost/agent/registration"
+	infrastructurev1beta1 "github.com/vmware-tanzu/cluster-api-provider-bringyourownhost/apis/infrastructure/v1beta1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/fields"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -72,9 +72,9 @@ func (l *labelFlags) Set(value string) error {
 }
 
 var (
-	namespace string
-	scheme    *runtime.Scheme
-	labels    = make(labelFlags)
+	namespace          string
+	scheme             *runtime.Scheme
+	labels             = make(labelFlags)
 	metricsbindaddress string
 )
 
@@ -83,7 +83,7 @@ var (
 func main() {
 	flag.StringVar(&namespace, "namespace", "default", "Namespace in the management cluster where you would like to register this host")
 	flag.Var(&labels, "label", "labels to attach to the ByoHost CR in the form labelname=labelVal for e.g. '--label site=apac --label cores=2'")
-	flag.StringVar(&metricsbindaddress,"metricsbindaddress",":8080","metricsbindaddress is the TCP address that the controller should bind to for serving prometheus metrics.It can be set to \"0\" to disable the metrics serving")
+	flag.StringVar(&metricsbindaddress, "metricsbindaddress", ":8080", "metricsbindaddress is the TCP address that the controller should bind to for serving prometheus metrics.It can be set to \"0\" to disable the metrics serving")
 	klog.InitFlags(nil)
 	flag.Parse()
 	scheme = runtime.NewScheme()

@@ -4,7 +4,7 @@
 package main
 
 import (
-	"github.com/vmware-tanzu/cluster-api-provider-byoh/agent/installer"
+	"github.com/vmware-tanzu/cluster-api-provider-bringyourownhost/agent/installer"
 )
 
 func main() {
