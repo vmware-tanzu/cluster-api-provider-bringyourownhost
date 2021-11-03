@@ -6,20 +6,22 @@ package installer
 import (
 	"flag"
 	"fmt"
-	"k8s.io/klog"
+	"github.com/go-logr/logr"
 	"k8s.io/klog/klogr"
 )
 
 var (
-	listFlag             = flag.Bool("list", false, "List all supported OS and Kubernetes versions")
-	listBundlesFlag      = flag.Bool("listBundles", false, "List the BYOH Bundle names for all supported OS and Kubernetes versions")
+	listSupportedFlag    = flag.Bool("list-supported", false, "List all supported OS and Kubernetes versions")
+	listBundlesFlag      = flag.Bool("list-bundles", false, "List the BYOH Bundle names for all supported OS and Kubernetes versions")
 	detectOSFlag         = flag.Bool("detect", false, "Detects the current operating system")
 	installFlag          = flag.Bool("install", false, "Install a BYOH Bundle")
 	uninstallFlag        = flag.Bool("uninstall", false, "Unnstall a BYOH Bundle")
-	bundleRepoFlag       = flag.String("bundleRepo", "https://projects.registry.vmware.com", "BYOH Bundle Repository. If not set, will look for bundles locally")
+	bundleRepoFlag       = flag.String("bundle-repo", "projects.registry.vmware.com", "BYOH Bundle Repository")
+	cachePathFlag        = flag.String("cache-path", ".", "Path to the local bundle cache")
 	k8sFlag              = flag.String("k8s", "1.22.1", "Kubernetes version")
-	osFlag               = flag.String("os", "", "OS. If used with install/uninstall, skip os detection")
-	previewOSChangesFlag = flag.Bool("previewOSChanges", false, "Preview the install and uninstall changes for the specified OS")
+	osFlag               = flag.String("os", "", "OS. If used with install/uninstall, override os detection")
+	tagFlag              = flag.String("tag", "", "BYOH Bundle tag")
+	previewOSChangesFlag = flag.Bool("preview-os-changes", false, "Preview the install and uninstall changes for the specified OS")
 )
 
 const (
@@ -27,35 +29,49 @@ const (
 	doUninstall = false
 )
 
+var (
+	klogger logr.Logger
+)
+
 func Main() {
+	klogger = klogr.New()
+
 	flag.Parse()
 
-	if *listFlag {
-		list()
+	if *listSupportedFlag {
+		listSupported()
+		return
 	}
 
 	if *listBundlesFlag {
 		listBundles()
+		return
 	}
 
 	if *detectOSFlag {
 		detectOS()
+		return
 	}
 
 	if *installFlag {
 		runInstaller(doInstall)
+		return
 	}
 
 	if *uninstallFlag {
 		runInstaller(doUninstall)
+		return
 	}
 
 	if *previewOSChangesFlag {
 		previewOSChanges()
+		return
 	}
+
+	fmt.Println("No flag set. See --help")
 }
 
-func list() {
+func listSupported() {
 	for _, os := range ListSupportedOS() {
 		for _, k8s := range ListSupportedK8s(os) {
 			fmt.Printf("%s %s\n", os, k8s)
@@ -75,7 +91,7 @@ func detectOS() {
 	osd := osDetector{}
 	os, err := osd.Detect()
 	if err != nil {
-		fmt.Printf("Error detecting OS %s", err)
+		klogger.Error(err, "Error detecting OS")
 		return
 	}
 
@@ -83,49 +99,37 @@ func detectOS() {
 }
 
 func runInstaller(install bool) {
-	klog.InitFlags(nil)
-	klogger := klogr.New()
-
-	if *bundleRepoFlag == "" {
-		bd := bundleDownloader{"", "."}
-		fmt.Printf("Bundle repo not specified. Provide bundle contents in %s\n", bd.GetBundleDirPath(*k8sFlag))
-	}
-
 	var i *installer
 	var err error
 	if *osFlag != "" {
 		// Override current OS detection
-		i, err = newUnchecked(*osFlag, *bundleRepoFlag, ".", klogger, &logPrinter{klogger})
+		i, err = newUnchecked(*osFlag, *bundleRepoFlag, *cachePathFlag, klogger, &logPrinter{klogger})
 		if err != nil {
-			fmt.Println(err)
+			klogger.Error(err, "unable to create installer")
 			return
 		}
 	} else {
-		i, err = New("norepo", ".", klogger)
+		i, err = New(*bundleRepoFlag, *cachePathFlag, klogger)
 		if err != nil {
-			fmt.Println(err)
+			klogger.Error(err, "unable to create installer")
 			return
 		}
-
-		// Override preview mode
-		i.downloadPath = "."
-		i.repoAddr = *bundleRepoFlag
 	}
 
 	if install {
-		err = i.Install(*k8sFlag)
+		err = i.Install(*k8sFlag, *tagFlag)
 	} else {
-		err = i.Uninstall(*k8sFlag)
+		err = i.Uninstall(*k8sFlag, *tagFlag)
 	}
 	if err != nil {
-		fmt.Println(err)
+		klogger.Error(err, "error installing/uninstalling")
 	}
 }
 
 func previewOSChanges() {
 	installChanges, uninstallChanges, err := PreviewChanges(*osFlag, *k8sFlag)
 	if err != nil {
-		fmt.Printf("Error previewing changes for os '%s' k8s '%s' %s", *osFlag, *k8sFlag, err)
+		klogger.Error(err, "error previewing changes for os", "os", osFlag, "k8s", *k8sFlag)
 		return
 	}
 

@@ -11,6 +11,7 @@ import (
 	"strings"
 
 	"github.com/cppforlife/go-cli-ui/ui"
+	"github.com/go-logr/logr"
 	"github.com/k14s/imgpkg/pkg/imgpkg/cmd"
 )
 
@@ -22,6 +23,7 @@ var (
 type bundleDownloader struct {
 	repoAddr     string
 	downloadPath string
+	logger       logr.Logger
 }
 
 // Download is a method that downloads the bundle from repoAddr to downloadPath.
@@ -31,11 +33,13 @@ type bundleDownloader struct {
 // If a cache for the bundle exists, nothing is downloaded.
 func (bd *bundleDownloader) Download(
 	normalizedOsVersion,
-	k8sVersion string) error {
+	k8sVersion string,
+	tag string) error {
 
 	return bd.DownloadFromRepo(
 		normalizedOsVersion,
 		k8sVersion,
+		tag,
 		bd.downloadByImgpkg)
 }
 
@@ -43,6 +47,7 @@ func (bd *bundleDownloader) Download(
 func (bd *bundleDownloader) DownloadFromRepo(
 	normalizedOsVersion,
 	k8sVersion string,
+	tag string,
 	downloadByTool func(string, string) error) error {
 
 	err := ensureDirExist(bd.downloadPath)
@@ -50,12 +55,15 @@ func (bd *bundleDownloader) DownloadFromRepo(
 		return err
 	}
 
-	bundleDirPath := bd.GetBundleDirPath(k8sVersion)
+	bundleDirPath := bd.GetBundleDirPath(k8sVersion, tag)
 
 	// cache hit
 	if checkDirExist(bundleDirPath) {
+		bd.logger.Info("Cache hit", "path", bundleDirPath)
 		return nil
 	}
+
+	bd.logger.Info("Cache miss", "path", bundleDirPath)
 
 	dir, err := os.MkdirTemp(bd.downloadPath, "tempBundle")
 	// It is fine if the dir path does not exist.
@@ -64,7 +72,7 @@ func (bd *bundleDownloader) DownloadFromRepo(
 		return err
 	}
 
-	bundleAddr := bd.getBundleAddr(normalizedOsVersion, k8sVersion)
+	bundleAddr := bd.getBundleAddr(normalizedOsVersion, k8sVersion, tag)
 	err = convertError(downloadByTool(bundleAddr, dir))
 	if err != nil {
 		return err
@@ -76,6 +84,8 @@ func (bd *bundleDownloader) DownloadFromRepo(
 func (bd *bundleDownloader) downloadByImgpkg(
 	bundleAddr,
 	bundleDirPath string) error {
+
+	bd.logger.Info("Downloading bundle", "from", bundleAddr)
 
 	var confUI = ui.NewConfUI(ui.NewNoopLogger())
 	defer confUI.Flush()
@@ -106,8 +116,11 @@ func convertError(err error) error {
 }
 
 // GetBundleDirPath returns the path to directory containing the required bundle.
-func (bd *bundleDownloader) GetBundleDirPath(k8sVersion string) string {
-	return filepath.Join(bd.downloadPath, k8sVersion)
+func (bd *bundleDownloader) GetBundleDirPath(k8sVersion, tag string) string {
+	// Not storing tag as a subdir of k8s because we can't atomically move
+	// the temp bundle dir to a non-existing dir.
+	// Using "-" instead of ":" because Windows doesn't like the latter
+	return fmt.Sprintf("%s-%s", filepath.Join(bd.downloadPath, k8sVersion), tag)
 }
 
 // GetBundleName returns the name of the bundle in normalized format.
@@ -116,8 +129,8 @@ func GetBundleName(normalizedOsVersion, k8sVersion string) string {
 }
 
 // getBundleAddr returns the exact address to the bundle in the repo.
-func (bd *bundleDownloader) getBundleAddr(normalizedOsVersion, k8sVersion string) string {
-	return fmt.Sprintf("%s/%s", bd.repoAddr, GetBundleName(normalizedOsVersion, k8sVersion))
+func (bd *bundleDownloader) getBundleAddr(normalizedOsVersion, k8sVersion, tag string) string {
+	return fmt.Sprintf("%s/%s:%s", bd.repoAddr, GetBundleName(normalizedOsVersion, k8sVersion), tag)
 }
 
 // checkDirExist checks if a dirrectory exists.

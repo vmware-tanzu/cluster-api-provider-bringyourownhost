@@ -26,7 +26,7 @@ WORKDIR /bundle-builder
 COPY *.sh ./
 RUN chmod a+x *.sh
 #Default config
-COPY config/ubuntu/20_04/k8s/ /config/
+COPY config/ubuntu/20_04/k8s/1_22 /config/
 
 RUN mkdir /ingredients && mkdir /bundle
 ENV PATH="/bundle-builder:${PATH}"

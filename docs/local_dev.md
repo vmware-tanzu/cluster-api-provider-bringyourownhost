@@ -134,7 +134,7 @@ export NAMESPACE="default"
 export KUBERNETES_VERSION="v1.22.0"
 export CONTROL_PLANE_MACHINE_COUNT=1
 export WORKER_MACHINE_COUNT=1
-export CONTROL_PLANE_ENDPOINT=<static IP from the subnet where the containers are running>
+export CONTROL_PLANE_ENDPOINT_IP=<static IP from the subnet where the containers are running>
 ```
 
 From ```cluster-api-provider-bringyourownhost``` folder
