@@ -50,17 +50,18 @@ var _ = Describe("Installer Algo Tests", func() {
 		BeforeEach(func() {
 			mockUbuntu = MockUbuntuWithError{}
 			mockUbuntu.errorOnStep = 5
-			mockUbuntu.OutputBuilder = &outputBuilderCounter
 
 			installer = &BaseK8sInstaller{
-				K8sStepProvider: &mockUbuntu,
-				OutputBuilder:   &outputBuilderCounter}
+				K8sStepProvider: &mockUbuntu}
 		})
 		It("Should rollback all applied steps", func() {
 			err := installer.Install()
 			Expect(err).Should((HaveOccurred()))
-			Expect(mockUbuntu.doCnt).Should(Equal(mockUbuntu.errorOnStep))
-			Expect(mockUbuntu.undoCnt).Should(Equal(mockUbuntu.errorOnStep))
+			Expect(len(mockUbuntu.doSteps)).Should(Equal(mockUbuntu.errorOnStep))
+			Expect(len(mockUbuntu.undoSteps)).Should(Equal(mockUbuntu.errorOnStep))
+			for i, sz := 0, len(mockUbuntu.doSteps); i < sz; i++ {
+				Expect(mockUbuntu.doSteps[i]).Should(Equal(mockUbuntu.undoSteps[sz-i-1]))
+			}
 		})
 	})
 })

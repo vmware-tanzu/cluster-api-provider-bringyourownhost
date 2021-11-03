@@ -7,22 +7,19 @@ import "errors"
 
 type mockStep struct {
 	Step
-	Desc    string
-	Err     error
-	doCnt   *int
-	undoCnt *int
+	Desc string
+	Err  error
 	*BaseK8sInstaller
+	*MockUbuntuWithError
 }
 
 func (s *mockStep) do() error {
-	s.OutputBuilder.Msg("Installing: " + s.Desc)
-	*s.doCnt++
+	s.doSteps = append(s.doSteps, s.Desc)
 	return s.Err
 }
 
 func (s *mockStep) undo() error {
-	s.OutputBuilder.Msg("Uninstalling: " + s.Desc)
-	*s.undoCnt++
+	s.undoSteps = append(s.undoSteps, s.Desc)
 	return s.Err
 }
 
@@ -30,8 +27,8 @@ type MockUbuntuWithError struct {
 	BaseK8sInstaller
 	errorOnStep int
 	curStep     int
-	doCnt       int
-	undoCnt     int
+	doSteps     []string
+	undoSteps   []string
 }
 
 func (u *MockUbuntuWithError) getEmptyStep(desc string, bki *BaseK8sInstaller) Step {
@@ -41,11 +38,10 @@ func (u *MockUbuntuWithError) getEmptyStep(desc string, bki *BaseK8sInstaller) S
 		err = errors.New("error")
 	}
 	return &mockStep{
-		BaseK8sInstaller: bki,
-		Desc:             desc,
-		Err:              err,
-		doCnt:            &u.doCnt,
-		undoCnt:          &u.undoCnt}
+		BaseK8sInstaller:    bki,
+		Desc:                desc,
+		Err:                 err,
+		MockUbuntuWithError: u}
 }
 
 func (u *MockUbuntuWithError) swapStep(bki *BaseK8sInstaller) Step {
