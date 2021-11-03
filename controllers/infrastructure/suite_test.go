@@ -40,6 +40,7 @@ var (
 	clientFake            client.Client
 	reconciler            *ByoMachineReconciler
 	recorder              *record.FakeRecorder
+	byoCluster            *infrastructurev1beta1.ByoCluster
 	capiCluster           *clusterv1.Cluster
 	defaultClusterName    string = "my-cluster"
 	defaultNodeName       string = "my-host"
@@ -95,7 +96,13 @@ var _ = BeforeSuite(func() {
 	})
 	Expect(err).NotTo(HaveOccurred())
 
-	capiCluster = builder.Cluster(defaultNamespace, defaultClusterName).Build()
+	byoCluster = builder.ByoCluster(defaultNamespace, defaultClusterName).
+		WithBundleBaseRegistry("projects.registry.vmware.com/cluster_api_provider_bringyourownhost").
+		WithBundleTag("1.0").
+		Build()
+	Expect(k8sManager.GetClient().Create(context.Background(), byoCluster)).Should(Succeed())
+
+	capiCluster = builder.Cluster(defaultNamespace, defaultClusterName).WithInfrastructureRef(byoCluster).Build()
 	Expect(k8sManager.GetClient().Create(context.Background(), capiCluster)).Should(Succeed())
 
 	node := builder.Node(defaultNamespace, defaultNodeName).Build()

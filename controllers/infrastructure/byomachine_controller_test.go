@@ -207,7 +207,10 @@ var _ = Describe("Controllers/ByomachineController", func() {
 				// Assert annotations on byohost
 				testClusterVersion := "1.22"
 				createdByoHostAnnotations := createdByoHost.GetAnnotations()
+
 				Expect(createdByoHostAnnotations[infrastructurev1beta1.K8sVersionAnnotation]).To(Equal(testClusterVersion))
+				Expect(createdByoHostAnnotations[infrastructurev1beta1.BundleLookupBaseRegistryAnnotation]).To(Equal(byoCluster.Spec.BundleLookupBaseRegistry))
+				Expect(createdByoHostAnnotations[infrastructurev1beta1.BundleLookupTagAnnotation]).To(Equal(byoCluster.Spec.BundleLookupTag))
 
 				createdByoMachine := &infrastructurev1beta1.ByoMachine{}
 				err = k8sClientUncached.Get(ctx, byoMachineLookupKey, createdByoMachine)
@@ -337,6 +340,7 @@ var _ = Describe("Controllers/ByomachineController", func() {
 			It("should mark BYOHostReady as False when cluster is paused", func() {
 				pausedCluster := builder.Cluster(defaultNamespace, "paused-cluster").
 					WithPausedField(true).
+					WithInfrastructureRef(byoCluster).
 					Build()
 				Expect(k8sClientUncached.Create(ctx, pausedCluster)).Should(Succeed())
 
