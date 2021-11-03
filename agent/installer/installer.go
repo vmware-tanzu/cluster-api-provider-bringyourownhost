@@ -188,16 +188,16 @@ func PreviewChanges(os, k8sVer string) (install, uninstall string, err error) {
 	reg := getSupportedRegistry(&bundleDownloader{}, &stepPreviewer)
 	installer := reg.GetInstaller(os, k8sVer)
 	if installer == nil {
+		err = ErrOsK8sNotSupported
 		return
 	}
-	algoInstaller := installer.(algo.Installer)
-	err = algoInstaller.Install()
+	err = installer.(algo.Installer).Install()
 	if err != nil {
 		return
 	}
 	install = stepPreviewer.String()
 	stepPreviewer.steps = nil
-	err = algoInstaller.Uninstall()
+	err = installer.(algo.Installer).Uninstall()
 	if err != nil {
 		return
 	}

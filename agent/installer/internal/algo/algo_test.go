@@ -4,9 +4,6 @@
 package algo
 
 import (
-	"log"
-	"os"
-
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 )
@@ -48,36 +45,22 @@ var _ = Describe("Installer Algo Tests", func() {
 	})
 	Context("When error occurs during installation", func() {
 		var (
-			err        error
 			mockUbuntu MockUbuntuWithError
-		)
-		const (
-			stepWhenError    = 5
-			obcExpectedTotal = stepWhenError*4 + 2
 		)
 		BeforeEach(func() {
 			mockUbuntu = MockUbuntuWithError{}
+			mockUbuntu.errorOnStep = 5
 			mockUbuntu.OutputBuilder = &outputBuilderCounter
-			mockUbuntu.BundlePath, err = os.MkdirTemp("", "algoErrTest")
-			if err != nil {
-				log.Fatal(err)
-			}
 
 			installer = &BaseK8sInstaller{
-				BundlePath:      mockUbuntu.BundlePath,
 				K8sStepProvider: &mockUbuntu,
 				OutputBuilder:   &outputBuilderCounter}
 		})
-		AfterEach(func() {
-			err = os.RemoveAll(mockUbuntu.BundlePath)
-			if err != nil {
-				log.Fatal(err)
-			}
-		})
 		It("Should rollback all applied steps", func() {
-			err = installer.Install()
+			err := installer.Install()
 			Expect(err).Should((HaveOccurred()))
-			Expect(outputBuilderCounter.LogCalledCnt).Should(Equal(obcExpectedTotal))
+			Expect(mockUbuntu.doCnt).Should(Equal(mockUbuntu.errorOnStep))
+			Expect(mockUbuntu.undoCnt).Should(Equal(mockUbuntu.errorOnStep))
 		})
 	})
 })
