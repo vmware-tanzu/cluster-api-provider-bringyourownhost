@@ -73,7 +73,7 @@ type ByoMachineReconciler struct {
 // - https://pkg.go.dev/sigs.k8s.io/controller-runtime@v0.8.3/pkg/reconcile
 
 // Reconcile handles ByoMachine events
-// nolint: gocyclo
+// nolint: gocyclo, funlen
 func (r *ByoMachineReconciler) Reconcile(ctx context.Context, req ctrl.Request) (_ ctrl.Result, reterr error) {
 	logger := log.FromContext(ctx)
 	logger.Info("Reconcile request received")
@@ -114,13 +114,12 @@ func (r *ByoMachineReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 	logger = logger.WithValues("cluster", cluster.Name)
 
 	byoCluster := &infrav1.ByoCluster{}
-
 	infraClusterName := client.ObjectKey{
 		Namespace: byoMachine.Namespace,
 		Name:      cluster.Spec.InfrastructureRef.Name,
 	}
 
-	if err := r.Client.Get(ctx, infraClusterName, byoCluster); err != nil {
+	if err = r.Client.Get(ctx, infraClusterName, byoCluster); err != nil {
 		logger.Error(err, "failed to get infra cluster")
 		return ctrl.Result{}, nil
 	}
