@@ -6,10 +6,10 @@ package installer
 import (
 	"flag"
 	"fmt"
-	"os"
-	"text/tabwriter"
 	"github.com/go-logr/logr"
 	"k8s.io/klog/klogr"
+	"os"
+	"text/tabwriter"
 )
 
 var (
@@ -70,36 +70,35 @@ func Main() {
 func listSupported() {
 	w := new(tabwriter.Writer)
 	// minwidth, tabwidth, padding, padchar, flags
-	w.Init(os.Stdout, 8, 8, 0, '\t', 0)
+	const (
+		minwidth = 8
+		tabwidth = 8
+		padding  = 0
+		flags    = 0
+	)
+	w.Init(os.Stdout, minwidth, tabwidth, padding, '\t', flags)
 	defer w.Flush()
 
-	fmt.Fprintf(w, "%s\t%s\t%s\n", "OS",  "K8S Version", "BYOH Bundle Name")
+	fmt.Fprintf(w, "%s\t%s\t%s\n", "OS", "K8S Version", "BYOH Bundle Name")
 	fmt.Fprintf(w, "%s\t%s\t%s\n", "---", "-----------", "----------------")
 
-	osList, aliasMap := ListSupportedOS()
-
-	for _, os := range osList {
-		for _, k8s := range ListSupportedK8s(os) {
-			fmt.Fprintf(w, "%s\t %s\t%s\n", os, k8s, GetBundleName(os, k8s))
+	osFilters, osBundles := ListSupportedOS()
+	for i := range osFilters {
+		for _, k8s := range ListSupportedK8s(osBundles[i]) {
+			fmt.Fprintf(w, "%s\t %s\t%s\n", osFilters[i], k8s, GetBundleName(osBundles[i], k8s))
 		}
-	}
-
-	for a, o := range aliasMap {
-		for _, k8s := range ListSupportedK8s(o) {
-                        fmt.Fprintf(w, "%s\t %s\t%s\n", a, k8s, GetBundleName(o, k8s))
-                }
 	}
 }
 
 func detectOS() {
 	osd := osDetector{}
-	os, err := osd.Detect()
+	detectedOs, err := osd.Detect()
 	if err != nil {
 		klogger.Error(err, "Error detecting OS")
 		return
 	}
 
-	fmt.Printf("Detected OS as: %s", os)
+	fmt.Printf("Detected OS as: %s", detectedOs)
 }
 
 func runInstaller(install bool) {

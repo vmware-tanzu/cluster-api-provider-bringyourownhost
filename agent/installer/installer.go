@@ -33,33 +33,37 @@ type installer struct {
 
 // getSupportedRegistry returns a registry with installers for the supported OS and K8s
 func getSupportedRegistry(bd *bundleDownloader, ob algo.OutputBuilder) registry {
-	var supportedOsK8s = []struct {
-		os   string
-		k8s  string
-		algo algo.K8sStepProvider
-		osFilter string
-	}{
-		// Ubuntu support
-		{os: "Ubuntu_20.04.1_x86-64", k8s: "v1.22.1", algo: &algo.Ubuntu20_4K8s1_22{}},
-		// Ubuntu Same-As Map. Any Ubuntu that matches osFilter is treated like os
-		{osFilter: "Ubuntu_20.04.*_x86-64", os: "Ubuntu_20.04.1_x86-64"},
+	reg := newRegistry()
+
+	addBundleInstaller := func(osBundle, k8sBundle string, stepProvider algo.K8sStepProvider) {
+		a := algo.BaseK8sInstaller{
+			K8sStepProvider: stepProvider,
+			/* BundlePath: will be set when tag is known */
+			OutputBuilder: ob}
+
+		reg.AddBundleInstaller(osBundle, k8sBundle, &a)
+	}
+
+	{
+		// Ubuntu
+
+		// BYOH Bundle Repository. Associate bundle with installer
+		linuxDistro := "Ubuntu_20.04.1_x86-64"
+		addBundleInstaller(linuxDistro, "v1.22.1", &algo.Ubuntu20_4K8s1_22{})
 		/*
-		 * ADD HERE to add support for new os or k8s
+		 * PLACEHOLDER - ADD MORE K8S VERSIONS HERE
+		 */
+
+		// Match os versions to repository os version
+		reg.AddOsFilter("Ubuntu_20.04.*_x86-64", linuxDistro)
+		/*
+		 * PLACEHOLDER - POINT MORE DISTRO VERSIONS TO THE SAME BUNDLE AND INSTALLER HERE
 		 */
 	}
 
-	reg := NewRegistry()
-	for _, t := range supportedOsK8s {
-		if t.osFilter == "" {
-			a := &algo.BaseK8sInstaller{
-                        K8sStepProvider: t.algo,
-                        /*BundlePath: will be set when tag is known */
-                        OutputBuilder: ob}
-	                reg.Add(t.os, t.k8s, a)
-		} else {
-			reg.AddOSAlias(t.osFilter, t.os)
-		}
-	}
+	/*
+	 * PLACEHOLDER - ADD MORE OS HERE
+	 */
 
 	return reg
 }
@@ -170,7 +174,7 @@ func (i *installer) getAlgoInstallerWithBundle(k8sVer, tag string) (osk8sInstall
 }
 
 // ListSupportedOS() returns the list of all supported OS-es. Can be invoked on a non-supported OS.
-func ListSupportedOS() ([]string, map[string]string) {
+func ListSupportedOS() (osFilters, osBundles []string) {
 	srd := getSupportedRegistryDescription()
 	return srd.ListOS()
 }

@@ -33,7 +33,7 @@ var _ = Describe("Byohost Installer Tests", func() {
 	})
 	Context("When installer is created", func() {
 		It("Install/uninstall should return error for unsupported k8s", func() {
-			osList,_ := ListSupportedOS()
+			_, osList := ListSupportedOS()
 			for _, os := range osList {
 				i := NewPreviewInstaller(os, nil)
 
@@ -47,8 +47,8 @@ var _ = Describe("Byohost Installer Tests", func() {
 	})
 	Context("When installer is created", func() {
 		It("Install/uninstall should call only the output builder", func() {
-			osList,_ := ListSupportedOS()
-                        for _, os := range osList {
+			_, osList := ListSupportedOS()
+			for _, os := range osList {
 				for _, k8s := range ListSupportedK8s(os) {
 					{
 						ob := algo.OutputBuilderCounter{}
@@ -71,22 +71,22 @@ var _ = Describe("Byohost Installer Tests", func() {
 	})
 	Context("When ListSupportedOS is called", func() {
 		It("Should return non-empty result", func() {
-			osList,_ := ListSupportedOS()
+			_, osList := ListSupportedOS()
 			Expect(osList).ShouldNot(BeEmpty())
 		})
 	})
 	Context("When ListSupportedK8s is called for all supported OSes", func() {
 		It("Should return non-empty result", func() {
-			osList,_ := ListSupportedOS()
-                        for _, os := range osList {
+			_, osList := ListSupportedOS()
+			for _, os := range osList {
 				Expect(ListSupportedK8s(os)).ShouldNot(BeEmpty())
 			}
 		})
 	})
 	Context("When PreviewChanges is called for all supported os and k8s", func() {
 		It("Should not return error", func() {
-			osList,_ := ListSupportedOS()
-                        for _, os := range osList {
+			_, osList := ListSupportedOS()
+			for _, os := range osList {
 				for _, k8s := range ListSupportedK8s(os) {
 					_, _, err := PreviewChanges(os, k8s)
 					Expect(err).ShouldNot((HaveOccurred()))
@@ -96,7 +96,7 @@ var _ = Describe("Byohost Installer Tests", func() {
 	})
 	Context("When PreviewChanges is called for supported os and k8s", func() {
 		It("Should return non-empty result", func() {
-			osList,_ := ListSupportedOS()
+			_, osList := ListSupportedOS()
 			os := osList[0]
 			k8s := ListSupportedK8s(os)[0]
 			install, uninstall, err := PreviewChanges(os, k8s)

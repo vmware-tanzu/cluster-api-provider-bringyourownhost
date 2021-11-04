@@ -11,19 +11,25 @@ import (
 type osk8sInstaller interface{}
 type k8sInstallerMap map[string]osk8sInstaller
 type osk8sInstallerMap map[string]k8sInstallerMap
-type aliasOSMap map[string]string
+type filterBundlePair struct {
+	osFilter string
+	osBundle string
+}
+type filterBundleList []filterBundlePair
 
-// Registry associates a (OS,K8sVersion) pair with an installer
+// Registry associates a (OS,K8sVersion) pair with an installer:
+// 1. Add a bundle and installer
+// 2. Point os filters to them
 type registry struct {
 	osk8sInstallerMap
-	aliasOSMap
+	filterBundleList
 }
 
-func NewRegistry() registry {
-	return registry{make(osk8sInstallerMap), make(aliasOSMap)}
+func newRegistry() registry {
+	return registry{osk8sInstallerMap: make(osk8sInstallerMap)}
 }
 
-func (r *registry) Add(os, k8sVer string, installer osk8sInstaller) {
+func (r *registry) AddBundleInstaller(os, k8sVer string, installer osk8sInstaller) {
 	if _, ok := r.osk8sInstallerMap[os]; !ok {
 		r.osk8sInstallerMap[os] = make(k8sInstallerMap)
 	}
@@ -35,49 +41,41 @@ func (r *registry) Add(os, k8sVer string, installer osk8sInstaller) {
 	r.osk8sInstallerMap[os][k8sVer] = installer
 }
 
-func (r *registry) AddOSAlias(osFilter, os string) {
-	if _, alreadyExist := r.aliasOSMap[osFilter]; alreadyExist {
-                panic(fmt.Sprintf("alias %v already exists", osFilter))
-        }
-
-	r.aliasOSMap[osFilter] = os
+func (r *registry) AddOsFilter(osFilter, osBundle string) {
+	r.filterBundleList = append(r.filterBundleList, filterBundlePair{osFilter: osFilter, osBundle: osBundle})
 }
 
-func (r *registry) ListOS() ([]string, aliasOSMap) {
-	result := make([]string, 0, len(r.osk8sInstallerMap))
+func (r *registry) ListOS() (osFilter, osBundle []string) {
+	osFilter = make([]string, 0, len(r.filterBundleList))
+	osBundle = make([]string, 0, len(r.filterBundleList))
 
-	for os := range(r.osk8sInstallerMap) {
-		result = append(result, os)
+	for _, fbp := range r.filterBundleList {
+		osFilter = append(osFilter, fbp.osFilter)
+		osBundle = append(osBundle, fbp.osBundle)
 	}
 
-	return result, r.aliasOSMap
+	return
 }
 
-func (r *registry) ListK8s(os string) []string {
-	result := make([]string, 0, len(r.osk8sInstallerMap[os]))
-	for k8s := range(r.resolveK8sInstallerMap(os)) {
+func (r *registry) ListK8s(osBundle string) []string {
+	result := make([]string, 0, len(r.osk8sInstallerMap[osBundle]))
+	for k8s := range r.osk8sInstallerMap[osBundle] {
 		result = append(result, k8s)
 	}
 	return result
 }
 
-func (r *registry) GetInstaller(os, k8sVer string) osk8sInstaller {
-	return r.resolveK8sInstallerMap(os)[k8sVer]
+func (r *registry) GetInstaller(osHost, k8sVer string) osk8sInstaller {
+	return r.osk8sInstallerMap[r.resolveOsToOsBundle(osHost)][k8sVer]
 }
 
-func (r* registry) resolveK8sInstallerMap(os string) k8sInstallerMap {
-	if res, ok := r.osk8sInstallerMap[os]; ok {
-		// There is direct match for the os
-		return res
-	}
-
-	// Try to find os using the alias map
-	for k,v := range r.aliasOSMap {
-		matched, _ := regexp.MatchString(k, os)
+func (r *registry) resolveOsToOsBundle(os string) string {
+	for _, fbp := range r.filterBundleList {
+		matched, _ := regexp.MatchString(fbp.osFilter, os)
 		if matched {
-			return r.osk8sInstallerMap[v]
+			return fbp.osBundle
 		}
 	}
 
-	return nil
+	return ""
 }
