@@ -23,7 +23,7 @@ var _ = Describe("When BYOH joins existing cluster [PR-Blocking]", func() {
 	var (
 		caseContextData *CaseContext        = nil
 		collectInfoData *CollectInfoContext = nil
-		byoHostPoolData *ByoHostPoolInput   = nil
+		byoHostPoolData *ByoHostPoolContext = nil
 	)
 
 	BeforeEach(func() {
@@ -49,7 +49,7 @@ var _ = Describe("When BYOH joins existing cluster [PR-Blocking]", func() {
 		// Setup a Namespace where to host objects for this spec and create a watcher for the namespace events.
 		setupSpecNamespace(caseContextData, artifactFolder)
 
-		byoHostPoolData = new(ByoHostPoolInput)
+		byoHostPoolData = new(ByoHostPoolContext)
 		Expect(byoHostPoolData).NotTo(BeNil())
 		byoHostPoolData.Capacity = 2
 

@@ -37,7 +37,7 @@ type cpConfig struct {
 	container  string
 }
 
-type ByoHostPoolInput struct {
+type ByoHostPoolContext struct {
 	Capacity     int
 	ContainerIDs []string
 	dockerClient *client.Client
@@ -155,7 +155,7 @@ func createDockerContainer(ctx context.Context, byoHostName string, dockerClient
 		nil, byoHostName)
 }
 
-func setupByoDockerHost(caseContextData *CaseContext, byoHostPoolData *ByoHostPoolInput, byoHostName string) (types.HijackedResponse, error) {
+func setupByoDockerHost(caseContextData *CaseContext, byoHostPoolData *ByoHostPoolContext, byoHostName string) (types.HijackedResponse, error) {
 	ctx := caseContextData.ctx
 	clusterConName := caseContextData.ClusterConName
 	namespace := caseContextData.Namespace.Name
@@ -217,7 +217,7 @@ func setupByoDockerHost(caseContextData *CaseContext, byoHostPoolData *ByoHostPo
 	return output, err
 }
 
-func setupByohostPool(caseContextData *CaseContext, collectInfoData *CollectInfoContext, byoHostPoolData *ByoHostPoolInput) []*os.File {
+func setupByohostPool(caseContextData *CaseContext, collectInfoData *CollectInfoContext, byoHostPoolData *ByoHostPoolContext) []*os.File {
 	var fileList []*os.File
 	var err error
 	caseName := caseContextData.CaseName
@@ -241,7 +241,7 @@ func setupByohostPool(caseContextData *CaseContext, collectInfoData *CollectInfo
 	return fileList
 }
 
-func cleanByohostPool(caseContextData *CaseContext, byoHostPoolData *ByoHostPoolInput) {
+func cleanByohostPool(caseContextData *CaseContext, byoHostPoolData *ByoHostPoolContext) {
 	if byoHostPoolData.dockerClient != nil && len(byoHostPoolData.ContainerIDs) != 0 {
 		for _, byohostContainerID := range byoHostPoolData.ContainerIDs {
 			err := byoHostPoolData.dockerClient.ContainerStop(caseContextData.ctx, byohostContainerID, nil)
