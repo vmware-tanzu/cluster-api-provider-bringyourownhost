@@ -7,10 +7,12 @@ import (
 	"github.com/go-logr/logr"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-	"github.com/vmware-tanzu/cluster-api-provider-byoh/agent/installer/internal/algo"
+	"github.com/vmware-tanzu/cluster-api-provider-bringyourownhost/agent/installer/internal/algo"
 )
 
 var _ = Describe("Byohost Installer Tests", func() {
+	const testTag = "test-tag"
+
 	Context("When installer is created for unsupported OS", func() {
 		It("Should return error", func() {
 			_, err := New("repo", "downloadPath", logr.Discard())
@@ -34,10 +36,10 @@ var _ = Describe("Byohost Installer Tests", func() {
 			for _, os := range ListSupportedOS() {
 				i := NewPreviewInstaller(os, nil)
 
-				err := i.Install("unsupported-k8s")
+				err := i.Install("unsupported-k8s", testTag)
 				Expect(err).Should((HaveOccurred()))
 
-				err = i.Uninstall("unsupported-k8s")
+				err = i.Uninstall("unsupported-k8s", testTag)
 				Expect(err).Should((HaveOccurred()))
 			}
 		})
@@ -49,7 +51,7 @@ var _ = Describe("Byohost Installer Tests", func() {
 					{
 						ob := algo.OutputBuilderCounter{}
 						i := NewPreviewInstaller(os, &ob)
-						err := i.Install(k8s)
+						err := i.Install(k8s, testTag)
 						Expect(err).ShouldNot((HaveOccurred()))
 						Expect(ob.LogCalledCnt).Should(Equal(24))
 					}
@@ -57,7 +59,7 @@ var _ = Describe("Byohost Installer Tests", func() {
 					{
 						ob := algo.OutputBuilderCounter{}
 						i := NewPreviewInstaller(os, &ob)
-						err := i.Uninstall(k8s)
+						err := i.Uninstall(k8s, testTag)
 						Expect(err).ShouldNot((HaveOccurred()))
 						Expect(ob.LogCalledCnt).Should(Equal(24))
 					}
@@ -97,6 +99,15 @@ var _ = Describe("Byohost Installer Tests", func() {
 			Expect(install).ShouldNot(ContainSubstring("Uninstalling"))
 			Expect(uninstall).Should(ContainSubstring("Uninstalling"))
 			Expect(uninstall).ShouldNot(ContainSubstring("Installing"))
+		})
+	})
+	Context("When PreviewChanges is called for non-supported os and k8s", func() {
+		It("Should return error", func() {
+			os := "a"
+			k8s := "a"
+			_, _, err := PreviewChanges(os, k8s)
+			Expect(err).Should((HaveOccurred()))
+			Expect(err).Should(Equal(ErrOsK8sNotSupported))
 		})
 	})
 })

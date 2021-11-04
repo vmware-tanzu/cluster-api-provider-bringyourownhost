@@ -45,7 +45,7 @@ func (u *Ubuntu20_4K8s1_22) unattendedUpdStep(bki *BaseK8sInstaller) Step {
 }
 
 func (u *Ubuntu20_4K8s1_22) osWideCfgUpdateStep(bki *BaseK8sInstaller) Step {
-	confAbsolutePath := filepath.Join(u.BundlePath, "conf.tar")
+	confAbsolutePath := filepath.Join(bki.BundlePath, "conf.tar")
 
 	doCmd := fmt.Sprintf(
 		"tar -C / -xvf '%s' && sysctl --system",
@@ -85,7 +85,7 @@ func (u *Ubuntu20_4K8s1_22) kubeletStep(bki *BaseK8sInstaller) Step {
 }
 
 func (u *Ubuntu20_4K8s1_22) containerdStep(bki *BaseK8sInstaller) Step {
-	containerdAbsPath := filepath.Join(u.BundlePath, "containerd.tar")
+	containerdAbsPath := filepath.Join(bki.BundlePath, "containerd.tar")
 
 	cmdRmDirs := "rm -rf /opt/cni/ && rm -rf /opt/containerd/ && "
 	cmdListTar := fmt.Sprintf("tar tf '%s'", containerdAbsPath)

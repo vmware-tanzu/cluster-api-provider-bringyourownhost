@@ -8,7 +8,7 @@ import (
 	"strings"
 
 	"github.com/go-logr/logr"
-	"github.com/vmware-tanzu/cluster-api-provider-byoh/agent/installer/internal/algo"
+	"github.com/vmware-tanzu/cluster-api-provider-bringyourownhost/agent/installer/internal/algo"
 )
 
 type Error string
@@ -49,28 +49,29 @@ func getSupportedRegistry(bd *bundleDownloader, ob algo.OutputBuilder) registry 
 	for _, t := range supportedOsK8s {
 		a := &algo.BaseK8sInstaller{
 			K8sStepProvider: t.algo,
-			BundlePath:      bd.getBundlePathDirOrPreview(t.k8s), /* empty means preview mode */
-			OutputBuilder:   ob}
+			/*BundlePath: will be set when tag is known */
+			OutputBuilder: ob}
 		reg.Add(t.os, t.k8s, a)
 	}
 
 	return reg
 }
 
-func (bd *bundleDownloader) getBundlePathDirOrPreview(k8s string) string {
+func (bd *bundleDownloader) getBundlePathDirOrPreview(k8s, tag string) string {
 	if bd == nil || bd.downloadPath == "" {
 		return ""
 	}
 
-	return bd.GetBundleDirPath(k8s)
+	return bd.GetBundleDirPath(k8s, tag)
 }
 
-func (bd *bundleDownloader) DownloadOrPreview(os, k8s string) error {
+func (bd *bundleDownloader) DownloadOrPreview(os, k8s, tag string) error {
 	if bd == nil || bd.downloadPath == "" {
+		bd.logger.Info("Running in preview mode, skip bundle download")
 		return nil
 	}
 
-	return bd.Download(os, k8s)
+	return bd.Download(os, k8s, tag)
 }
 
 // New returns an installer that downloads bundles for the current OS from OCI repository with
@@ -91,10 +92,6 @@ func New(bundleRepo, downloadPath string, logger logr.Logger) (*installer, error
 		return nil, ErrDetectOs
 	}
 
-	// Run in preview mode until we can run the e2e test
-	downloadPath = ""
-	bundleRepo = ""
-
 	return newUnchecked(os, bundleRepo, downloadPath, logger, &logPrinter{logger})
 }
 
@@ -102,7 +99,7 @@ func New(bundleRepo, downloadPath string, logger logr.Logger) (*installer, error
 // If they are empty, returned installer will runs in preview mode, i.e.
 // executes everything except the actual commands.
 func newUnchecked(currentOs, bundleRepo, downloadPath string, logger logr.Logger, outputBuilder algo.OutputBuilder) (*installer, error) {
-	bd := bundleDownloader{repoAddr: bundleRepo, downloadPath: downloadPath}
+	bd := bundleDownloader{repoAddr: bundleRepo, downloadPath: downloadPath, logger: logger}
 
 	reg := getSupportedRegistry(&bd, outputBuilder)
 	if len(reg.ListK8s(currentOs)) == 0 {
@@ -117,8 +114,8 @@ func newUnchecked(currentOs, bundleRepo, downloadPath string, logger logr.Logger
 }
 
 // Install installs the specified k8s version on the current OS
-func (i *installer) Install(k8sVer string) error {
-	algoInst, err := i.getAlgoInstallerWithBundle(k8sVer)
+func (i *installer) Install(k8sVer, tag string) error {
+	algoInst, err := i.getAlgoInstallerWithBundle(k8sVer, tag)
 	if err != nil {
 		return err
 	}
@@ -131,8 +128,8 @@ func (i *installer) Install(k8sVer string) error {
 }
 
 // Uninstal uninstalls the specified k8s version on the current OS
-func (i *installer) Uninstall(k8sVer string) error {
-	algoInst, err := i.getAlgoInstallerWithBundle(k8sVer)
+func (i *installer) Uninstall(k8sVer, tag string) error {
+	algoInst, err := i.getAlgoInstallerWithBundle(k8sVer, tag)
 	if err != nil {
 		return err
 	}
@@ -145,20 +142,24 @@ func (i *installer) Uninstall(k8sVer string) error {
 }
 
 // getAlgoInstallerWithBundle returns an algo.Installer instance and downloads its bundle
-func (i *installer) getAlgoInstallerWithBundle(k8sVer string) (osk8sInstaller, error) {
+func (i *installer) getAlgoInstallerWithBundle(k8sVer, tag string) (osk8sInstaller, error) {
 	// This OS supports at least 1 k8s version. See New.
 
 	algoInst := i.algoRegistry.GetInstaller(i.detectedOs, k8sVer)
 	if algoInst == nil {
 		return nil, ErrOsK8sNotSupported
 	}
+	// copy installer from registry and set BundlePath including tag
+	// empty means preview mode
+	algoInstCopy := *algoInst.(*algo.BaseK8sInstaller)
+	algoInstCopy.BundlePath = i.bundleDownloader.getBundlePathDirOrPreview(k8sVer, tag)
 
-	bdErr := i.bundleDownloader.DownloadOrPreview(i.detectedOs, k8sVer)
+	bdErr := i.bundleDownloader.DownloadOrPreview(i.detectedOs, k8sVer, tag)
 	if bdErr != nil {
 		return nil, bdErr
 	}
 
-	return algoInst, nil
+	return &algoInstCopy, nil
 }
 
 // ListSupportedOS() returns the list of all supported OS-es. Can be invoked on a non-supported OS.
@@ -186,14 +187,20 @@ func getSupportedRegistryDescription() registry {
 func PreviewChanges(os, k8sVer string) (install, uninstall string, err error) {
 	stepPreviewer := stringPrinter{msgFmt: "# %s"}
 	reg := getSupportedRegistry(&bundleDownloader{}, &stepPreviewer)
-	installer := reg.GetInstaller(os, k8sVer).(algo.Installer)
-	err = installer.Install()
+	installer := reg.GetInstaller(os, k8sVer)
+
+	if installer == nil {
+		err = ErrOsK8sNotSupported
+		return
+	}
+
+	err = installer.(algo.Installer).Install()
 	if err != nil {
 		return
 	}
 	install = stepPreviewer.String()
 	stepPreviewer.steps = nil
-	err = installer.Uninstall()
+	err = installer.(algo.Installer).Uninstall()
 	if err != nil {
 		return
 	}

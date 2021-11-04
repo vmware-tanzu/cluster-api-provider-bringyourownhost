@@ -28,7 +28,7 @@ metadata:
   name: ${CLUSTER_NAME}
 spec:
   controlPlaneEndpoint:
-    host: 172.18.10.10
+    host: ${CONTROL_PLANE_ENDPOINT_IP}
     port: 6443
 ---
 apiVersion: infrastructure.cluster.x-k8s.io/v1beta1
@@ -77,7 +77,7 @@ spec:
             - name: vip_leaderelection
               value: "true"
             - name: vip_address
-              value: 172.18.10.10
+              value: ${CONTROL_PLANE_ENDPOINT_IP}
             - name: vip_interface
               value: {{ .DefaultNetworkInterfaceName }}
             - name: vip_leaseduration
@@ -86,7 +86,7 @@ spec:
               value: "10"
             - name: vip_retryperiod
               value: "2"
-            image: projects.registry.vmware.com/tkg/kube-vip:v0.3.3_vmware.1
+            image: ghcr.io/kube-vip/kube-vip:v0.3.5
             imagePullPolicy: IfNotPresent
             name: kube-vip
             resources: {}

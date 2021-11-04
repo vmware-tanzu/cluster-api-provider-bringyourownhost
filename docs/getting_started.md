@@ -37,7 +37,7 @@ be set in `~/.cluster-api/clusterctl.yaml` as the following:
 providers:
   - name: byoh
     url: https://github.com/vmware-tanzu/cluster-api-provider-bringyourownhost/releases/latest/infrastructure-components.yaml
-    type: InfrastructureProvider                                                              
+    type: InfrastructureProvider
 ```
 
 
@@ -63,10 +63,11 @@ clusterctl init --infrastructure byoh
 ## Creating a BYOH workload cluster
 
 ### Register BYOH host to management cluster.
+Refer to [local-dev.md](https://github.com/vmware-tanzu/cluster-api-provider-bringyourownhost/blob/main/docs/local_dev.md) if you want to create container hosts
 
 On each BYOH host
 
-1. Download the [byoh-hostagent-linux-amd64](https://github.com/vmware-tanzu/cluster-api-provider-bringyourownhost/releases/latest) 
+1. Download the [byoh-hostagent-linux-amd64](https://github.com/vmware-tanzu/cluster-api-provider-bringyourownhost/releases/download/v0.1.0-alpha.1/byoh-hostagent-linux-amd64)
 2. Save the management cluster kubeconfig file as management.conf
 3. Start the agent 
 ```shell
@@ -81,7 +82,7 @@ Running the following command(on the host where you execute clusterctl in previo
 ```shell
 $ CONTROL_PLANE_ENDPOINT_IP=10.10.10.10 clusterctl generate cluster byoh-cluster \
     --infrastructure byoh \
-    --kubernetes-version v1.21.2+vmware.1 \
+    --kubernetes-version v1.22.0 \
     --control-plane-machine-count 1 \
     --worker-machine-count 3 > cluster.yaml
 
