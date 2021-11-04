@@ -54,10 +54,10 @@ func getSupportedRegistry(bd *bundleDownloader, ob algo.OutputBuilder) registry 
 		 * PLACEHOLDER - ADD MORE K8S VERSIONS HERE
 		 */
 
-		// Match os versions to repository os version
+		// Match concrete os version to repository os version
 		reg.AddOsFilter("Ubuntu_20.04.*_x86-64", linuxDistro)
 		/*
-		 * PLACEHOLDER - POINT MORE DISTRO VERSIONS TO THE SAME BUNDLE AND INSTALLER HERE
+		 * PLACEHOLDER - POINT MORE DISTRO VERSIONS
 		 */
 	}
 

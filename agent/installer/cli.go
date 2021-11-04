@@ -69,7 +69,6 @@ func Main() {
 
 func listSupported() {
 	w := new(tabwriter.Writer)
-	// minwidth, tabwidth, padding, padchar, flags
 	const (
 		minwidth = 8
 		tabwidth = 8

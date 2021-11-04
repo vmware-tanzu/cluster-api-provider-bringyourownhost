@@ -17,9 +17,9 @@ type filterBundlePair struct {
 }
 type filterBundleList []filterBundlePair
 
-// Registry associates a (OS,K8sVersion) pair with an installer:
-// 1. Add a bundle and installer
-// 2. Point os filters to them
+// Registry contains
+// 1. Entries associating BYOH Bundle i.e. (OS,K8sVersion) in the Repository with Installer in Host Agent
+// 2. Entries that match a concrete OS to a BYOH Bundle OS from the Repository
 type registry struct {
 	osk8sInstallerMap
 	filterBundleList
