@@ -47,7 +47,6 @@ type K8sStepProvider interface {
 	// os state related steps
 	swapStep(*BaseK8sInstaller) Step
 	firewallStep(*BaseK8sInstaller) Step
-	unattendedUpdStep(*BaseK8sInstaller) Step
 	kernelModsLoadStep(*BaseK8sInstaller) Step
 
 	// packages related steps
@@ -132,7 +131,6 @@ func (b *BaseK8sInstaller) getSteps(bki *BaseK8sInstaller) []Step {
 	var steps = []Step{
 		b.swapStep(bki),
 		b.firewallStep(bki),
-		b.unattendedUpdStep(bki),
 		b.kernelModsLoadStep(bki),
 		b.osWideCfgUpdateStep(bki),
 		b.criToolsStep(bki),

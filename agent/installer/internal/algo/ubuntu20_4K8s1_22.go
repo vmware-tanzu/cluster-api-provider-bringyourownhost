@@ -36,14 +36,6 @@ func (u *Ubuntu20_4K8s1_22) kernelModsLoadStep(bki *BaseK8sInstaller) Step {
 		UndoCmd:          "modprobe -r overlay && modprobe -r br_netfilter"}
 }
 
-func (u *Ubuntu20_4K8s1_22) unattendedUpdStep(bki *BaseK8sInstaller) Step {
-	return &ShellStep{
-		BaseK8sInstaller: bki,
-		Desc:             "AUTO OS UPGRADES",
-		DoCmd:            "sed -ri 's/1/0/g' /etc/apt/apt.conf.d/20auto-upgrades",
-		UndoCmd:          "sed -ri 's/0/1/g' /etc/apt/apt.conf.d/20auto-upgrades"}
-}
-
 func (u *Ubuntu20_4K8s1_22) osWideCfgUpdateStep(bki *BaseK8sInstaller) Step {
 	confAbsolutePath := filepath.Join(bki.BundlePath, "conf.tar")
 

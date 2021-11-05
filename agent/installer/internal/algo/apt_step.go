@@ -27,8 +27,8 @@ func NewAptStepEx(k *BaseK8sInstaller, aptPkg string, optional bool) Step {
 		condCmd = fmt.Sprintf("if [ -f %s ]; then %%s; fi", pkgAbsolutePath)
 	}
 
-	doCmd := fmt.Sprintf("dpkg --install '%s'", pkgAbsolutePath)
-	undoCmd :=fmt.Sprintf("dpkg --purge %s", pkgName)
+	doCmd := fmt.Sprintf("dpkg --install '%s' && apt-mark hold %s", pkgAbsolutePath, pkgName)
+	undoCmd := fmt.Sprintf("apt-mark unhold %s && dpkg --purge %s", pkgName, pkgName)
 
 	return &ShellStep{
 		BaseK8sInstaller: k,

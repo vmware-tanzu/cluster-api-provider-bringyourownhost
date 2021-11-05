@@ -53,7 +53,7 @@ var _ = Describe("Byohost Installer Tests", func() {
 						i := NewPreviewInstaller(os, &ob)
 						err := i.Install(k8s, testTag)
 						Expect(err).ShouldNot((HaveOccurred()))
-						Expect(ob.LogCalledCnt).Should(Equal(24))
+						Expect(ob.LogCalledCnt).Should(Equal(22))
 					}
 
 					{
@@ -61,7 +61,7 @@ var _ = Describe("Byohost Installer Tests", func() {
 						i := NewPreviewInstaller(os, &ob)
 						err := i.Uninstall(k8s, testTag)
 						Expect(err).ShouldNot((HaveOccurred()))
-						Expect(ob.LogCalledCnt).Should(Equal(24))
+						Expect(ob.LogCalledCnt).Should(Equal(22))
 					}
 				}
 			}
