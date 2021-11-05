@@ -36,6 +36,6 @@ mkdir .imgpkg
 kbld --imgpkg-lock-output .imgpkg/images.yml
 
 echo Creating bundle tar
-tar -cvf /bundle/bundle.tar *
+tar -cvf /bundle/bundle.tar * .imgpkg
 
 echo Done
