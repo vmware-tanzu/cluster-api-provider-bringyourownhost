@@ -130,6 +130,58 @@ type MachineBuilder struct {
 	bootstrapDataSecret string
 }
 
+// ClusterBuilder holds the variables and objects required to build a clusterv1.Cluster
+type ByoClusterBuilder struct {
+	namespace      string
+	name           string
+	bundleRegistry string
+	bundleTag      string
+}
+
+// Cluster returns a ByoClusterBuilder with the given name and namespace
+func ByoCluster(namespace, name string) *ByoClusterBuilder {
+	return &ByoClusterBuilder{
+		namespace: namespace,
+		name:      name,
+	}
+}
+
+// WithPausedField adds the passed paused value to the ByoClusterBuilder
+func (c *ByoClusterBuilder) WithBundleBaseRegistry(registry string) *ByoClusterBuilder {
+	c.bundleRegistry = registry
+	return c
+}
+
+// WithPausedField adds the passed paused value to the ByoClusterBuilder
+func (c *ByoClusterBuilder) WithBundleTag(tag string) *ByoClusterBuilder {
+	c.bundleTag = tag
+	return c
+}
+
+// Build returns a Cluster with the attributes added to the ByoClusterBuilder
+func (c *ByoClusterBuilder) Build() *infrastructurev1beta1.ByoCluster {
+	cluster := &infrastructurev1beta1.ByoCluster{
+		TypeMeta: metav1.TypeMeta{
+			Kind:       "ByoCluster",
+			APIVersion: clusterv1.GroupVersion.String(),
+		},
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      c.name,
+			Namespace: c.namespace,
+		},
+		Spec: infrastructurev1beta1.ByoClusterSpec{},
+	}
+
+	if c.bundleRegistry != "" {
+		cluster.Spec.BundleLookupBaseRegistry = c.bundleRegistry
+	}
+	if c.bundleTag != "" {
+		cluster.Spec.BundleLookupTag = c.bundleTag
+	}
+
+	return cluster
+}
+
 // Machine returns a MachineBuilder with the given name and namespace
 func Machine(namespace, name string) *MachineBuilder {
 	return &MachineBuilder{
@@ -183,9 +235,10 @@ func (m *MachineBuilder) Build() *clusterv1.Machine {
 
 // ClusterBuilder holds the variables and objects required to build a clusterv1.Cluster
 type ClusterBuilder struct {
-	namespace string
-	name      string
-	paused    bool
+	namespace  string
+	name       string
+	paused     bool
+	byoCluster *infrastructurev1beta1.ByoCluster
 }
 
 // Cluster returns a ClusterBuilder with the given name and namespace
@@ -199,6 +252,12 @@ func Cluster(namespace, name string) *ClusterBuilder {
 // WithPausedField adds the passed paused value to the ClusterBuilder
 func (c *ClusterBuilder) WithPausedField(paused bool) *ClusterBuilder {
 	c.paused = paused
+	return c
+}
+
+// WithPausedField adds the passed paused value to the ClusterBuilder
+func (c *ClusterBuilder) WithInfrastructureRef(byoCluster *infrastructurev1beta1.ByoCluster) *ClusterBuilder {
+	c.byoCluster = byoCluster
 	return c
 }
 
@@ -217,6 +276,15 @@ func (c *ClusterBuilder) Build() *clusterv1.Cluster {
 	}
 	if c.paused {
 		cluster.Spec.Paused = c.paused
+	}
+
+	if c.byoCluster != nil {
+		cluster.Spec.InfrastructureRef = &corev1.ObjectReference{
+			Kind:      "ByoCluster",
+			Namespace: c.byoCluster.Namespace,
+			Name:      c.byoCluster.Name,
+			UID:       c.byoCluster.UID,
+		}
 	}
 
 	return cluster

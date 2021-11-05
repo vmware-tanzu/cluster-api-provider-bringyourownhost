@@ -38,6 +38,14 @@ spec:
           spec:
             description: ByoClusterSpec defines the desired state of ByoCluster
             properties:
+              bundleLookupBaseRegistry:
+                description: BundleLookupBaseRegistry is the base Registry URL that
+                  is used for pulling byoh bundle images, if not set, the default
+                  will be set to https://projects.registry.vmware.com/cluster_api_provider_bringyourownhost
+                type: string
+              bundleLookupTag:
+                description: BundleLookupTag is the tag of the BYOH bundle to be used
+                type: string
               controlPlaneEndpoint:
                 description: ControlPlaneEndpoint represents the endpoint used to
                   communicate with the control plane.
