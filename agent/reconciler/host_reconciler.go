@@ -32,6 +32,7 @@ type HostReconciler struct {
 	CmdRunner      cloudinit.ICmdRunner
 	FileWriter     cloudinit.IFileWriter
 	TemplateParser cloudinit.ITemplateParser
+	K8sInstaller   Installer
 	Recorder       record.EventRecorder
 }
 
@@ -39,6 +40,13 @@ const (
 	bootstrapSentinelFile = "/run/cluster-api/bootstrap-success.complete"
 	KubeadmResetCommand   = "kubeadm reset --force"
 )
+
+//go:generate go run github.com/maxbrunsfeld/counterfeiter/v6 -generate
+//counterfeiter:generate . Installer
+type Installer interface {
+	Install(string, string, string) error
+	Uninstall(string, string, string) error
+}
 
 // Reconcile handles events for the ByoHost that is registered by this agent process
 func (r *HostReconciler) Reconcile(ctx context.Context, req ctrl.Request) (_ ctrl.Result, reterr error) {
@@ -101,12 +109,14 @@ func (r *HostReconciler) reconcileNormal(ctx context.Context, byoHost *infrastru
 			return ctrl.Result{}, err
 		}
 
-		err = r.installK8sComponents(ctx, byoHost)
-		if err != nil {
-			logger.Error(err, "error in installing k8s components")
-			r.Recorder.Event(byoHost, corev1.EventTypeWarning, "InstallK8sComponentFailed", "k8s component installation failed")
-			conditions.MarkFalse(byoHost, infrastructurev1beta1.K8sComponentsInstallationSucceeded, infrastructurev1beta1.K8sComponentsInstallationFailedReason, clusterv1.ConditionSeverityInfo, "")
-			return ctrl.Result{}, err
+		if r.K8sInstaller != nil {
+			err = r.installK8sComponents(ctx, byoHost)
+			if err != nil {
+				logger.Error(err, "error in installing k8s components")
+				r.Recorder.Event(byoHost, corev1.EventTypeWarning, "InstallK8sComponentFailed", "k8s component installation failed")
+				conditions.MarkFalse(byoHost, infrastructurev1beta1.K8sComponentsInstallationSucceeded, infrastructurev1beta1.K8sComponentsInstallationFailedReason, clusterv1.ConditionSeverityInfo, "")
+				return ctrl.Result{}, err
+			}
 		}
 
 		err = r.cleank8sdirectories(ctx)
@@ -187,6 +197,18 @@ func (r *HostReconciler) hostCleanUp(ctx context.Context, byoHost *infrastructur
 		return err
 	}
 
+	if r.K8sInstaller != nil {
+		bundleRegistry := byoHost.GetAnnotations()[infrastructurev1beta1.BundleLookupBaseRegistryAnnotation]
+		k8sVersion := byoHost.GetAnnotations()[infrastructurev1beta1.K8sVersionAnnotation]
+		byohBundleTag := byoHost.GetAnnotations()[infrastructurev1beta1.BundleLookupTagAnnotation]
+		err = r.K8sInstaller.Uninstall(bundleRegistry, k8sVersion, byohBundleTag)
+		if err != nil {
+			return err
+		}
+	}
+
+	conditions.MarkFalse(byoHost, infrastructurev1beta1.K8sNodeBootstrapSucceeded, infrastructurev1beta1.K8sNodeAbsentReason, clusterv1.ConditionSeverityInfo, "")
+
 	logger.Info("Removing the bootstrap sentinel file...")
 	if _, err := os.Stat(bootstrapSentinelFile); !os.IsNotExist(err) {
 		err := os.Remove(bootstrapSentinelFile)
@@ -254,9 +276,14 @@ func (r *HostReconciler) bootstrapK8sNode(ctx context.Context, bootstrapScript s
 func (r *HostReconciler) installK8sComponents(ctx context.Context, byoHost *infrastructurev1beta1.ByoHost) error {
 	logger := ctrl.LoggerFrom(ctx)
 	logger.Info("Installing K8s")
-	conditions.MarkFalse(byoHost, infrastructurev1beta1.K8sComponentsInstallationSucceeded, infrastructurev1beta1.K8sComponentsInstallingReason, clusterv1.ConditionSeverityInfo, "")
-	// TODO: call installer.Install(k8sVersion) here
-	// if err, return err
+
+	bundleRegistry := byoHost.GetAnnotations()[infrastructurev1beta1.BundleLookupBaseRegistryAnnotation]
+	k8sVersion := byoHost.GetAnnotations()[infrastructurev1beta1.K8sVersionAnnotation]
+	byohBundleTag := byoHost.GetAnnotations()[infrastructurev1beta1.BundleLookupTagAnnotation]
+	err := r.K8sInstaller.Install(bundleRegistry, k8sVersion, byohBundleTag)
+	if err != nil {
+		return err
+	}
 
 	r.Recorder.Event(byoHost, corev1.EventTypeNormal, "k8sComponentInstalled", "Successfully Installed K8s components")
 	conditions.MarkTrue(byoHost, infrastructurev1beta1.K8sComponentsInstallationSucceeded)

@@ -27,11 +27,12 @@ var _ = Describe("Agent", func() {
 
 	Context("When the host is unable to register with the API server", func() {
 		var (
-			ns              *corev1.Namespace
-			err             error
-			hostName        string
-			fakedKubeConfig = "fake-kubeconfig-path"
-			session         *gexec.Session
+			ns               *corev1.Namespace
+			err              error
+			hostName         string
+			fakedKubeConfig  = "fake-kubeconfig-path"
+			fakeDownloadPath = "fake-download-path"
+			session          *gexec.Session
 		)
 
 		BeforeEach(func() {
@@ -65,7 +66,7 @@ var _ = Describe("Agent", func() {
 			}
 			Expect(k8sClient.Create(context.TODO(), byoHost)).NotTo(HaveOccurred())
 
-			command := exec.Command(pathToHostAgentBinary, "--kubeconfig", kubeconfigFile.Name(), "--namespace", ns.Name)
+			command := exec.Command(pathToHostAgentBinary, "--kubeconfig", kubeconfigFile.Name(), "--namespace", ns.Name, "--downloadpath", fakeDownloadPath)
 			session, err = gexec.Start(command, GinkgoWriter, GinkgoWriter)
 			Expect(err).NotTo(HaveOccurred())
 			Consistently(session).ShouldNot(gexec.Exit(0))
@@ -82,11 +83,12 @@ var _ = Describe("Agent", func() {
 	Context("When the host agent is able to connect to API Server", func() {
 
 		var (
-			ns       *corev1.Namespace
-			session  *gexec.Session
-			err      error
-			workDir  string
-			hostName string
+			ns               *corev1.Namespace
+			session          *gexec.Session
+			err              error
+			workDir          string
+			hostName         string
+			fakeDownloadPath = "fake-download-path"
 		)
 
 		BeforeEach(func() {
@@ -96,7 +98,7 @@ var _ = Describe("Agent", func() {
 			hostName, err = os.Hostname()
 			Expect(err).NotTo(HaveOccurred())
 
-			command := exec.Command(pathToHostAgentBinary, "--kubeconfig", kubeconfigFile.Name(), "--namespace", ns.Name, "--label", "site=apac")
+			command := exec.Command(pathToHostAgentBinary, "--kubeconfig", kubeconfigFile.Name(), "--namespace", ns.Name, "--label", "site=apac", "--downloadpath", fakeDownloadPath)
 
 			session, err = gexec.Start(command, GinkgoWriter, GinkgoWriter)
 			Expect(err).NotTo(HaveOccurred())
@@ -183,6 +185,19 @@ var _ = Describe("Agent", func() {
 			Expect(k8sClient.Create(context.TODO(), byoHost)).NotTo(HaveOccurred(), "failed to create byohost")
 
 			Consistently(session.Err, "10s").ShouldNot(gbytes.Say(byoHost.Name))
+		})
+	})
+	Context("When the host agent skips k8s installation", func() {
+		It("should inform the operator that we will not install k8s", func() {
+			ns := builder.Namespace("testns").Build()
+			Expect(k8sClient.Create(context.TODO(), ns)).NotTo(HaveOccurred(), "failed to create test namespace")
+
+			command := exec.Command(pathToHostAgentBinary, "--kubeconfig", kubeconfigFile.Name(), "--namespace", ns.Name, "--skip-installation")
+
+			session, err := gexec.Start(command, GinkgoWriter, GinkgoWriter)
+			Expect(err).NotTo(HaveOccurred())
+
+			Eventually(session.Err, "5s").Should(gbytes.Say("Skipping installation of k8s components"))
 		})
 	})
 })

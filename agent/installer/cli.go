@@ -6,10 +6,11 @@ package installer
 import (
 	"flag"
 	"fmt"
-	"github.com/go-logr/logr"
-	"k8s.io/klog/klogr"
 	"os"
 	"text/tabwriter"
+
+	"github.com/go-logr/logr"
+	"k8s.io/klog/klogr"
 )
 
 var (
@@ -105,13 +106,13 @@ func runInstaller(install bool) {
 	var err error
 	if *osFlag != "" {
 		// Override current OS detection
-		i, err = newUnchecked(*osFlag, *bundleRepoFlag, *cachePathFlag, klogger, &logPrinter{klogger})
+		i, err = newUnchecked(*osFlag, *cachePathFlag, klogger, &logPrinter{klogger})
 		if err != nil {
 			klogger.Error(err, "unable to create installer")
 			return
 		}
 	} else {
-		i, err = New(*bundleRepoFlag, *cachePathFlag, klogger)
+		i, err = New(*cachePathFlag, klogger)
 		if err != nil {
 			klogger.Error(err, "unable to create installer")
 			return
@@ -119,9 +120,9 @@ func runInstaller(install bool) {
 	}
 
 	if install {
-		err = i.Install(*k8sFlag, *tagFlag)
+		err = i.Install(*bundleRepoFlag, *k8sFlag, *tagFlag)
 	} else {
-		err = i.Uninstall(*k8sFlag, *tagFlag)
+		err = i.Uninstall(*bundleRepoFlag, *k8sFlag, *tagFlag)
 	}
 	if err != nil {
 		klogger.Error(err, "error installing/uninstalling")
