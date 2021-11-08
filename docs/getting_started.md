@@ -1,6 +1,6 @@
 # Getting Started
 
-This is a guide on how to get started with Cluster API Provider BringYourOwnHost(`BYOH`). To learn more about cluster API in more
+This is a guide on how to get started with Cluster API Provider BringYourOwnHost(BYOH). To learn more about cluster API in more
 depth, check out the the [Cluster API book][cluster-api-book].
 
 
