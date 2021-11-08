@@ -1,6 +1,6 @@
 # Getting Started
 
-This is a guide on how to get started with Cluster API Provider BringYourOwnHost. To learn more about cluster API in more
+This is a guide on how to get started with Cluster API Provider BringYourOwnHost(`BYOH`). To learn more about cluster API in more
 depth, check out the the [Cluster API book][cluster-api-book].
 
 
@@ -13,7 +13,7 @@ depth, check out the the [Cluster API book][cluster-api-book].
 
 
 ## Create a management cluster
-BringYourOwnHost Cluster API Provider requires an existing Kubernetes cluster accessible via `kubectl`.
+Cluster API Provider BringYourOwnHost requires an existing Kubernetes cluster accessible via `kubectl`.
 ### Existing cluster
 If you already have a Kubernetes cluster, appropriate backup procedures should be in place before your take any actions.
 ```shell
@@ -30,7 +30,7 @@ kind create cluster
 
 ## Configuring and installing BringYourOwnHost provider in a management cluster
 
-To initialize Cluster API Provider BringYourOwnHost, clusterctl requires the following settings, which should
+To initialize Cluster API Provider BringYourOwnHost, `clusterctl` requires the following settings, which should
 be set in `~/.cluster-api/clusterctl.yaml` as the following:
 
 ``` yaml
@@ -43,7 +43,7 @@ providers:
 
 running `clusterctl config repositories`.
 
-You should be able to see the new BYOH provider there.
+You should be able to see the new `BYOH` provider there.
 ```shell
 clusterctl config repositories
 NAME           TYPE                     URL                                                                                          FILE
@@ -54,7 +54,7 @@ byoh           InfrastructureProvider   https://github.com/vmware-tanzu/cluster-
 vsphere        InfrastructureProvider   https://github.com/kubernetes-sigs/cluster-api-provider-vsphere/releases/latest/             infrastructure-components.yaml
 ```
 
-Install the BYOH provider
+Install the `BYOH` provider
 
 ```shell
 clusterctl init --infrastructure byoh
@@ -65,19 +65,19 @@ clusterctl init --infrastructure byoh
 ### Register BYOH host to management cluster.
 Refer to [local-dev.md](https://github.com/vmware-tanzu/cluster-api-provider-bringyourownhost/blob/main/docs/local_dev.md) if you want to create container hosts
 
-On each BYOH host
+On each `BYOH` host
 
 1. Download the [byoh-hostagent-linux-amd64](https://github.com/vmware-tanzu/cluster-api-provider-bringyourownhost/releases/download/v0.1.0-alpha.1/byoh-hostagent-linux-amd64)
-2. Save the management cluster kubeconfig file as management.conf
+2. Save the management cluster `kubeconfig` file as `management.conf`
 3. Start the agent 
 ```shell
 ./byoh-hostagent-linux-amd64 -kubeconfig management.conf > byoh-agent.log 2>&1 &
 ```
 
 ### Create workload cluster
-Running the following command(on the host where you execute clusterctl in previous steps)
+Running the following command(on the host where you execute `clusterctl` in previous steps)
 
-**NOTE:** The CONTROL_PLANE_ENDPOINT_IP is an IP that must be an IP on the same subnet as the control plane machines, it should be also an IP that is not part of your DHCP range
+**NOTE:** The `CONTROL_PLANE_ENDPOINT_IP` is an IP that must be an IP on the same subnet as the control plane machines, it should be also an IP that is not part of your DHCP range
 
 ```shell
 $ CONTROL_PLANE_ENDPOINT_IP=10.10.10.10 clusterctl generate cluster byoh-cluster \
@@ -96,7 +96,7 @@ $ kubectl apply -f cluster.yaml
 
 ## Accessing the workload cluster
 
-The kubeconfig for the workload cluster will be stored in a secret, which can
+The `kubeconfig` for the workload cluster will be stored in a secret, which can
 be retrieved using:
 
 ``` shell
@@ -117,7 +117,7 @@ after that you should see your nodes turn into ready:
 ```shell
 $ KUBECONFIG=byoh-cluster.kubeconfig kubectl get nodes
 NAME                                                          STATUS     ROLES    AGE   VERSION
-byoh-cluster-8siai8                                      Ready      master   5m   v1.21.2
+byoh-cluster-8siai8                                           Ready      master   5m   v1.21.2
 
 ```
 
