@@ -28,7 +28,7 @@ func NewAptStepEx(k *BaseK8sInstaller, aptPkg string, optional bool) Step {
 	}
 
 	doCmd := fmt.Sprintf("dpkg --install '%s'", pkgAbsolutePath)
-	undoCmd :=fmt.Sprintf("dpkg --purge %s", pkgName)
+	undoCmd := fmt.Sprintf("dpkg --purge %s", pkgName)
 
 	return &ShellStep{
 		BaseK8sInstaller: k,
