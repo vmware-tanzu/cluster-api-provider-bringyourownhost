@@ -34,6 +34,7 @@ var _ = Describe("Controllers/ByomachineController", func() {
 		machine             *clusterv1.Machine
 		k8sClientUncached   client.Client
 		byoHost             *infrastructurev1beta1.ByoHost
+		testClusterVersion  = "v1.22.1_xyz"
 	)
 
 	BeforeEach(func() {
@@ -45,7 +46,7 @@ var _ = Describe("Controllers/ByomachineController", func() {
 
 		machine = builder.Machine(defaultNamespace, defaultMachineName).
 			WithClusterName(defaultClusterName).
-			WithClusterVersion("1.22").
+			WithClusterVersion(testClusterVersion).
 			WithBootstrapDataSecret(fakeBootstrapSecret).
 			Build()
 		Expect(k8sClientUncached.Create(ctx, machine)).Should(Succeed())
@@ -204,11 +205,8 @@ var _ = Describe("Controllers/ByomachineController", func() {
 				createdByoHostLabels := createdByoHost.GetLabels()
 				Expect(createdByoHostLabels[clusterv1.ClusterLabelName]).To(Equal(capiCluster.Name))
 
-				// Assert annotations on byohost
-				testClusterVersion := "1.22"
 				createdByoHostAnnotations := createdByoHost.GetAnnotations()
-
-				Expect(createdByoHostAnnotations[infrastructurev1beta1.K8sVersionAnnotation]).To(Equal(testClusterVersion))
+				Expect(createdByoHostAnnotations[infrastructurev1beta1.K8sVersionAnnotation]).To(Equal(strings.Split(testClusterVersion, "_")[0]))
 				Expect(createdByoHostAnnotations[infrastructurev1beta1.BundleLookupBaseRegistryAnnotation]).To(Equal(byoCluster.Spec.BundleLookupBaseRegistry))
 				Expect(createdByoHostAnnotations[infrastructurev1beta1.BundleLookupTagAnnotation]).To(Equal(byoCluster.Spec.BundleLookupTag))
 
