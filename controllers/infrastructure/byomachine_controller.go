@@ -8,6 +8,7 @@ import (
 	"errors"
 	"fmt"
 	"reflect"
+	"strings"
 	"time"
 
 	"k8s.io/apimachinery/pkg/labels"
@@ -464,7 +465,7 @@ func (r *ByoMachineReconciler) attachByoHost(ctx context.Context, machineScope *
 		host.Annotations = make(map[string]string)
 	}
 	host.Annotations[infrav1.EndPointIPAnnotation] = machineScope.Cluster.Spec.ControlPlaneEndpoint.Host
-	host.Annotations[infrav1.K8sVersionAnnotation] = *machineScope.Machine.Spec.Version
+	host.Annotations[infrav1.K8sVersionAnnotation] = strings.Split(*machineScope.Machine.Spec.Version, "_")[0]
 	host.Annotations[infrav1.BundleLookupBaseRegistryAnnotation] = machineScope.ByoCluster.Spec.BundleLookupBaseRegistry
 	host.Annotations[infrav1.BundleLookupTagAnnotation] = machineScope.ByoCluster.Spec.BundleLookupTag
 

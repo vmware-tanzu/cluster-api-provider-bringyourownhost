@@ -130,7 +130,7 @@ type MachineBuilder struct {
 	bootstrapDataSecret string
 }
 
-// ClusterBuilder holds the variables and objects required to build a clusterv1.Cluster
+// ByoClusterBuilder holds the variables and objects required to build a infrastructurev1beta1.ByoCluster
 type ByoClusterBuilder struct {
 	namespace      string
 	name           string
@@ -138,7 +138,7 @@ type ByoClusterBuilder struct {
 	bundleTag      string
 }
 
-// Cluster returns a ByoClusterBuilder with the given name and namespace
+// ByoCluster returns a ByoClusterBuilder with the given name and namespace
 func ByoCluster(namespace, name string) *ByoClusterBuilder {
 	return &ByoClusterBuilder{
 		namespace: namespace,
