@@ -187,17 +187,4 @@ var _ = Describe("Agent", func() {
 			Consistently(session.Err, "10s").ShouldNot(gbytes.Say(byoHost.Name))
 		})
 	})
-	Context("When the host agent skips k8s installation", func() {
-		It("should inform the operator that we will not install k8s", func() {
-			ns := builder.Namespace("testns").Build()
-			Expect(k8sClient.Create(context.TODO(), ns)).NotTo(HaveOccurred(), "failed to create test namespace")
-
-			command := exec.Command(pathToHostAgentBinary, "--kubeconfig", kubeconfigFile.Name(), "--namespace", ns.Name, "--skip-installation")
-
-			session, err := gexec.Start(command, GinkgoWriter, GinkgoWriter)
-			Expect(err).NotTo(HaveOccurred())
-
-			Eventually(session.Err, "5s").Should(gbytes.Say("Skipping installation of k8s components"))
-		})
-	})
 })
