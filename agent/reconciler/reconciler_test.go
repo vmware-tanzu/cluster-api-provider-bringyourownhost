@@ -372,6 +372,8 @@ runCmd:
 				Expect(updatedByoHost.Annotations).NotTo(HaveKey(infrastructurev1beta1.HostCleanupAnnotation))
 				Expect(updatedByoHost.Annotations).NotTo(HaveKey(infrastructurev1beta1.EndPointIPAnnotation))
 				Expect(updatedByoHost.Annotations).NotTo(HaveKey(infrastructurev1beta1.K8sVersionAnnotation))
+				Expect(updatedByoHost.Annotations).NotTo(HaveKey(infrastructurev1beta1.BundleLookupBaseRegistryAnnotation))
+				Expect(updatedByoHost.Annotations).NotTo(HaveKey(infrastructurev1beta1.BundleLookupTagAnnotation))
 
 				k8sNodeBootstrapSucceeded := conditions.Get(updatedByoHost, infrastructurev1beta1.K8sNodeBootstrapSucceeded)
 				Expect(*k8sNodeBootstrapSucceeded).To(conditions.MatchCondition(clusterv1.Condition{
