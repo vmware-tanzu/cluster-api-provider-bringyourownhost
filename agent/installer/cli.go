@@ -20,7 +20,7 @@ var (
 	uninstallFlag        = flag.Bool("uninstall", false, "Unnstall a BYOH Bundle")
 	bundleRepoFlag       = flag.String("bundle-repo", "projects.registry.vmware.com", "BYOH Bundle Repository")
 	cachePathFlag        = flag.String("cache-path", ".", "Path to the local bundle cache")
-	k8sFlag              = flag.String("k8s", "1.22.1", "Kubernetes version")
+	k8sFlag              = flag.String("k8s", "1.22.3", "Kubernetes version")
 	osFlag               = flag.String("os", "", "OS. If used with install/uninstall, override os detection")
 	tagFlag              = flag.String("tag", "", "BYOH Bundle tag")
 	previewOSChangesFlag = flag.Bool("preview-os-changes", false, "Preview the install and uninstall changes for the specified OS")
