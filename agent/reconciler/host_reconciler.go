@@ -246,6 +246,12 @@ func (r *HostReconciler) hostCleanUp(ctx context.Context, byoHost *infrastructur
 	// Remove the cluster version annotation
 	delete(byoHost.Annotations, infrastructurev1beta1.K8sVersionAnnotation)
 
+	// Remove the bundle registry annotation
+	delete(byoHost.Annotations, infrastructurev1beta1.BundleLookupBaseRegistryAnnotation)
+
+	// Remove the bundle tag annotation
+	delete(byoHost.Annotations, infrastructurev1beta1.BundleLookupTagAnnotation)
+
 	conditions.MarkFalse(byoHost, infrastructurev1beta1.K8sNodeBootstrapSucceeded, infrastructurev1beta1.K8sNodeAbsentReason, clusterv1.ConditionSeverityInfo, "")
 	return nil
 }
