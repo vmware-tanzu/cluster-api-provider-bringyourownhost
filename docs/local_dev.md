@@ -179,3 +179,83 @@ kubectl delete cluster $CLUSTER_NAME
 docker rm -f $HOST_NAME
 kind delete cluster
 ```
+
+# Host Agent Installer
+The installer is responsible for detecting the BYOH OS, downloading a BYOH bundle and installing/uninstalling it.
+
+## Creating a BYOH Bundle
+### Upstream Ingredients
+Optional. This step describes downloading upstream k8s host components for Debian.
+```shell
+#Build docker image
+(cd agent/installer/bundle_builder/ingredients/deb/ && docker build -t byoh-ingredients-deb .)
+
+#Create a directory for the ingredients and download to it
+(mkdir -p byoh-ingredients-download && docker run --rm -v `pwd`/byoh-ingredients-download:/ingredients byoh-ingredients-deb)
+```
+### Downstream Ingredients
+This step describes providing custom k8s host components. They can be copied to to byoh-ingredients-download. Files must match the following globs:
+```shell
+*containerd*.tar
+*kubeadm*.deb
+*kubelet*.deb
+*kubectl*.deb
+*cri-tools*.deb
+*kubernetes-cni*.deb
+```
+
+## Building a BYOH Bundle
+```shell
+#Build docker image
+(cd agent/installer/bundle_builder/ && docker build -t byoh-build-push-bundle .)
+```
+
+```shell
+#Build a BYOH bundle and publish it to an OCI-compliant repo
+docker run --rm -v `pwd`/byoh-ingredients-download:/ingredients --env BUILD_ONLY=0 build-push-bundle <REPO>/<BYOH Bundle name>
+```
+
+The bundle name must match one reported by ./cli --list-supported.
+
+```shell
+#You can also build a tarball of the bundle without publishing. This will create a bundler.tar in the current directory
+docker run --rm -v `pwd`/byoh-ingredients-download:/ingredients -v`pwd`:/bundle --env BUILD_ONLY=1 build-push-bundle
+```
+
+```shell
+#Optionally, additional configuration can be included in the bundle by mounting a local path under /config of the container. It will be placed on top of any drop-in configuration created by the packages and tars in the bundle
+docker run --rm -v `pwd`/byoh-ingredients-download:/ingredients -v`pwd`:/bundle -v`pwd`/agent/installer/bundle_builder/config/ubuntu/20_04/k8s/1_22 --env BUILD_ONLY=1 build-push-bundle
+```
+
+## CLI
+The installer CLI exposes the installer package as a command line tool. For a list of all commands, run
+
+```shell
+./cli --help
+```
+
+Some examples:
+```shell
+#Will return if/how the current OS is detected
+./cli --detect
+```
+
+```shell
+#Will return tuples of OS, K8S Version, BYOH Bundle Name. Installer will use this bundle for these OS-es and k8s versions.
+./cli --list-supported
+```
+
+```shell
+#Will return the OS changes that installer will make during install and uninstall without actually doing them.
+./cli --preview-os-changes --os Ubuntu_20.04.*_x86-64 --k8s v1.22.3
+```
+
+```shell
+#Will detect the current OS and install BYOH bundle with k8s v1.22.3 from the default repo
+sudo ./cli --install --k8s v1.22.3
+```
+
+```shell
+#Will override the OS detection and will use custom repo
+sudo ./cli --install --os Ubuntu_20.04.1_x86-64 --bundle-repo 10.26.226.219:5000/repo --k8s v1.22.3
+```
