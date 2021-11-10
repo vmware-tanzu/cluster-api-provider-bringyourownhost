@@ -91,7 +91,7 @@ func (bd *bundleDownloader) downloadByImgpkg(
 	defer confUI.Flush()
 
 	imgpkgCmd := cmd.NewDefaultImgpkgCmd(confUI)
-	imgpkgCmd.SetArgs([]string{"pull", "--recursive", "-b", bundleAddr, "-o", bundleDirPath})
+	imgpkgCmd.SetArgs([]string{"pull", "--recursive", "-i", bundleAddr, "-o", bundleDirPath})
 	return imgpkgCmd.Execute()
 }
 
