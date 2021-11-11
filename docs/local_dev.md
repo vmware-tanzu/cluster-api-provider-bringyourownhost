@@ -183,15 +183,21 @@ kind delete cluster
 # Host Agent Installer
 The installer is responsible for detecting the BYOH OS, downloading a BYOH bundle and installing/uninstalling it.
 
-## Supported OS and kubernetes
-The current list of supported tuples of OS, kubernetes Version, BYOH Bundle Name can be retrieved like this:
+## Supported OS and Kubernetes
+The current list of supported tuples of OS, kubernetes Version, BYOH Bundle Name can be retrieved with:
 ```shell
 ./cli --list-supported
+```
+An example output looks like:
+```
+OS			                K8S Version	      BYOH Bundle Name
+---			                -----------	      ----------------
+Ubuntu_20.04.*_x86-64       v1.22.3	          byoh-bundle-ubuntu_20.04.1_x86-64_k8s_v1.22.3
 ```
 
 ## Creating a BYOH Bundle
 ### Kubernetes Ingredients
-Optional. This step describes downloading upstream kubernetes host components for Debian.
+Optional. This step describes downloading kubernetes host components for Debian.
 ```shell
 # Build docker image
 (cd agent/installer/bundle_builder/ingredients/deb/ && docker build -t byoh-ingredients-deb .)
@@ -221,12 +227,10 @@ This step describes providing custom kubernetes host components. They can be cop
 docker run --rm -v `pwd`/byoh-ingredients-download:/ingredients --env BUILD_ONLY=0 build-push-bundle <REPO>/<BYOH Bundle name>
 ```
 
-The bundle name must match one reported by ./cli --list-supported.
-[Custom foo description](## Supported OS and kubernetes)
+The specified above BYOH Bundle name must match one of the [Supported OS and kubernetes BYOH bundle names](##supported-OS-and-kubernetes)
 
 ```shell
-# You can also build a tarball of the bundle without publishing. This will create a bundler.tar in the current directory
-# This can be used for custom pushing
+# You can also build a tarball of the bundle without publishing. This will create a bundler.tar in the current directory and can be used for custom pushing
 docker run --rm -v `pwd`/byoh-ingredients-download:/ingredients -v`pwd`:/bundle --env BUILD_ONLY=1 build-push-bundle
 ```
 
@@ -249,7 +253,7 @@ Some examples:
 ```
 
 ```shell
-# Will return the OS changes that installer will make during install and uninstall without actually doing them.
+# Will return the OS changes that installer will make during install and uninstall without actually doing them
 ./cli --preview-os-changes --os Ubuntu_20.04.*_x86-64 --k8s v1.22.3
 ```
 
@@ -259,11 +263,11 @@ sudo ./cli --install --k8s v1.22.3
 ```
 
 ```shell
-# Will override the OS detection and will use custom repo
+# Will override the OS detection and will use the specified repo
 sudo ./cli --install --os Ubuntu_20.04.1_x86-64 --bundle-repo 10.26.226.219:5000/repo --k8s v1.22.3
 ```
 
 ```shell
-# Will override the OS detection, use custom repo and uninstall
+# Will override the OS detection, use the specified repo and uninstall
 sudo ./cli --uninstall --os Ubuntu_20.04.1_x86-64 --bundle-repo 10.26.226.219:5000/repo --k8s v1.22.3
 ```
