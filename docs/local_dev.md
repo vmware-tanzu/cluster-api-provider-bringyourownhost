@@ -203,6 +203,16 @@ An example output looks like:
 </table>
 The '*' in OS means that all Ubuntu 20.04 patches will be handled by this BYOH bundle.
 
+## Pre-requisites
+As of writing this, the following packages must be pre-installed on the BYOH host:
+- socat
+- ebtables
+- ethtool
+- conntrack
+```shell
+sudo apt-get install socat ebtables ethtool conntrack
+```
+
 ## Creating a BYOH Bundle
 ### Kubernetes Ingredients
 Optional. This step describes downloading kubernetes host components for Debian.
