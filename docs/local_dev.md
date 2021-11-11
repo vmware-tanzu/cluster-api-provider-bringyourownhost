@@ -224,7 +224,7 @@ Optional. This step describes downloading kubernetes host components for Debian.
 (mkdir -p byoh-ingredients-download && docker run --rm -v `pwd`/byoh-ingredients-download:/ingredients byoh-ingredients-deb)
 ```
 ### Custom Ingredients
-This step describes providing custom kubernetes host components. They can be copied to to byoh-ingredients-download. Files must match the following globs:
+This step describes providing custom kubernetes host components. They can be copied to `byoh-ingredients-download`. Files must match the following globs:
 ```shell
 *containerd*.tar
 *kubeadm*.deb
