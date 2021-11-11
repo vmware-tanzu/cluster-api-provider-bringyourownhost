@@ -189,11 +189,19 @@ The current list of supported tuples of OS, kubernetes Version, BYOH Bundle Name
 ./cli --list-supported
 ```
 An example output looks like:
-```
-OS			                K8S Version	      BYOH Bundle Name
----			                -----------	      ----------------
-Ubuntu_20.04.*_x86-64       v1.22.3	          byoh-bundle-ubuntu_20.04.1_x86-64_k8s_v1.22.3
-```
+<table>
+    <tr>
+        <td>OS</td>
+        <td>K8S Version</td>
+        <td>BYOH Bundle Name</td>
+    </tr>
+    <tr>
+        <td>Ubuntu_20.04.*_x86-64</td>
+        <td>v1.22.3</td>
+        <td>byoh-bundle-ubuntu_20.04.1_x86-64_k8s_v1.22.3</td>
+    </tr>
+</table>
+The '*' in OS means that all Ubuntu 20.04 patches will be handled by this BYOH bundle.
 
 ## Creating a BYOH Bundle
 ### Kubernetes Ingredients
@@ -246,7 +254,9 @@ The installer CLI exposes the installer package as a command line tool. For a li
 ./cli --help
 ```
 
-Some examples:
+In the following examples, the os and k8s flags, must match one of the [Supported OS and kubernetes BYOH bundle names](##supported-OS-and-kubernetes)
+
+Examples:
 ```shell
 # Will return if/how the current OS is detected
 ./cli --detect
