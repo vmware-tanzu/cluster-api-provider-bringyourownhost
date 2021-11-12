@@ -6,8 +6,8 @@
 <a href="https://github.com/vmware-tanzu/cluster-api-provider-bringyourownhost/actions/workflows/main.yml" width="160x">
 <img src="https://github.com/vmware-tanzu/cluster-api-provider-bringyourownhost/actions/workflows/main.yml/badge.svg" width="200x"></a>
 <!-- go doc / reference card -->
-<a href="https://pkg.go.dev/github.com/vmware-tanzu/cluster-api-provider-byoh"  width="160x">
-<img src="https://pkg.go.dev/badge/github.com/vmware-tanzu/cluster-api-provider-byoh.svg"  width="100x"></a>
+<a href="https://pkg.go.dev/github.com/vmware-tanzu/cluster-api-provider-bringyourownhost"  width="160x">
+<img src="https://pkg.go.dev/badge/github.com/vmware-tanzu/cluster-api-provider-bringyourownhost.svg"  width="100x"></a>
 </p>
 
 ------
