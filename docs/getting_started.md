@@ -77,7 +77,7 @@ Once the management cluster is ready, you will need to create a few hosts that t
 
 If you already have hosts (these could be bare metal servers / VMs / containers) ready, then please skip to [Register BYOH host to management cluster](#register-byoh-host-to-management-cluster)
 
-If not, you could create containers to deploy you workload clusters on. We have a `make` task that will create a docker image for you locally to start. 
+If not, you could create containers to deploy your workload clusters on. We have a `make` task that will create a docker image for you locally to start. 
 
 ```shell
 cd cluster-api-provider-bringyourownhost
