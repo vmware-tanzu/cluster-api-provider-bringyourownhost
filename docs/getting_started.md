@@ -73,7 +73,7 @@ clusterctl init --infrastructure byoh
 
 ## Creating a BYOH workload cluster
  
-Once the management cluster is ready, you will need to create a few hosts that that the BringYourOwnHost provider can use, before you can create your first workload cluster.
+Once the management cluster is ready, you will need to create a few hosts that the `BringYourOwnHost` provider can use, before you can create your first workload cluster.
 
 If you already have hosts (these could be bare metal servers / VMs / containers) ready, then please skip to [Register BYOH host to management cluster](#register-byoh-host-to-management-cluster)
 
