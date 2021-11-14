@@ -113,7 +113,7 @@ cp ~/.kube/config ~/.kube/management-cluster.conf
 export KIND_IP=$(docker inspect -f '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' kind-control-plane)
 sed -i 's/    server\:.*/    server\: https\:\/\/'"$KIND_IP"'\:6443/g' ~/.kube/management-cluster.conf
 ```
-Assuming you have downloaded the `byoh-hostagent-linux-amd64` into your working directory, you can use use the following script to start the agent on the containers.
+Assuming you have downloaded the `byoh-hostagent-linux-amd64` into your working directory, you can use the following script to start the agent on the containers.
 
 ```shell
 for i in {1..2}
