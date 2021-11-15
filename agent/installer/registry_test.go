@@ -41,9 +41,17 @@ var _ = Describe("Byohost Installer Tests", func() {
 			r.AddOsFilter("ubuntu.*", "ubuntu")
 			r.AddOsFilter("rhel.*", "rhel")
 
-			Expect(r.GetInstaller("ubuntu-1", "1.22")).To(Equal(dummy122))
-			Expect(r.GetInstaller("ubuntu-2", "1.23")).To(Equal(dummy123))
-			Expect(r.GetInstaller("rhel-1", "1.24")).To(Equal(dummy124))
+			inst, osBundle := r.GetInstaller("ubuntu-1", "1.22")
+			Expect(inst).To(Equal(dummy122))
+			Expect(osBundle).To(Equal("ubuntu"))
+
+			inst, osBundle = r.GetInstaller("ubuntu-2", "1.23")
+			Expect(inst).To(Equal(dummy123))
+			Expect(osBundle).To(Equal("ubuntu"))
+
+			inst, osBundle = r.GetInstaller("rhel-1", "1.24")
+			Expect(inst).To(Equal(dummy124))
+			Expect(osBundle).To(Equal("rhel"))
 
 			osFilters, osBundles := r.ListOS()
 			Expect(osFilters).To(ContainElements("rhel.*", "ubuntu.*"))
@@ -64,6 +72,29 @@ var _ = Describe("Byohost Installer Tests", func() {
 			Expect(osBundles).To(ContainElements("rhel", "ubuntu"))
 			Expect(osBundles).To(HaveLen(2))
 
+		})
+		It("Should decouple host os from bundle os", func() {
+			// Bundle OS does not match filter OS
+			r.AddBundleInstaller("UBUNTU", "1.22", dummy122)
+			r.AddOsFilter("ubuntu.*", "UBUNTU")
+
+			inst, osBundle := r.GetInstaller("ubuntu-1", "1.22")
+			Expect(inst).To(Equal(dummy122))
+			Expect(osBundle).To(Equal("UBUNTU"))
+
+			// ListOS should return only bundle OS
+			_, osBundles := r.ListOS()
+			Expect(osBundles).To(ContainElements("UBUNTU"))
+			Expect(osBundles).To(HaveLen(1))
+
+			// ListK8s should work with both
+			osBundleResult := r.ListK8s("UBUNTU")
+			Expect(osBundleResult).To(ContainElements("1.22"))
+			Expect(osBundleResult).To(HaveLen(1))
+
+			osHostResult := r.ListK8s("ubuntu-20-04")
+			Expect(osHostResult).To(ContainElements("1.22"))
+			Expect(osHostResult).To(HaveLen(1))
 		})
 		It("Should panic on duplicate installers", func() {
 			/*
