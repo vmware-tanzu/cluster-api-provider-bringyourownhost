@@ -6,8 +6,6 @@ TAG ?= dev
 RELEASE_DIR := out
 
 # Define registries
-RELEASE_REGISTRY := projects.registry.mware.com/cluster_api_provider_bringyourownhost
-RELEASE_CONTROLLER_IMG := $(RELEASE_REGISTRY)/$(IMAGE_NAME)
 STAGING_REGISTRY ?= gcr.io/k8s-staging-cluster-api
 
 # Image URL to use all building/pushing image targets
