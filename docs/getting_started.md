@@ -1,34 +1,45 @@
 # Getting Started
 
-This is a guide on how to get started with Cluster API Provider BringYourOwnHost(BYOH). To learn more about cluster API in more
-depth, check out the the [Cluster API book][cluster-api-book].
-
-
+This is a guide on how to get started with Cluster API Provider BringYourOwnHost(BYOH). To learn more about Cluster API in more depth, check out the [Cluster API book][cluster-api-book].
 
 ## Install Requirements
-
 - clusterctl, which can be downloaded from the latest [release][releases] of Cluster API (CAPI) on GitHub.
 - [Kind][kind] can be used  to provide an initial management cluster for testing.
 - [kubectl][kubectl] is required to access your workload clusters.
 
-
 ## Create a management cluster
-Cluster API Provider BringYourOwnHost requires an existing Kubernetes cluster accessible via `kubectl`.
-### Existing cluster
-If you already have a Kubernetes cluster, appropriate backup procedures should be in place before your take any actions.
-```shell
-export KUBECONFIG=<...>
+Cluster API requires an existing Kubernetes cluster accessible via kubectl. During the installation process the
+Kubernetes cluster will be transformed into a [management cluster](https://cluster-api.sigs.k8s.io/reference/glossary.html#management-cluster) by installing the Cluster API [provider components](https://cluster-api.sigs.k8s.io/reference/glossary.html#provider-components), so it is recommended to keep it separated from any application workload.
 
-````
-### Kind cluster
+**Choose one of the options below:**
+
+1. **Existing Management Cluster**
+
+   For production use-cases a "real" Kubernetes cluster should be used with appropriate backup and DR policies and procedures in place. The Kubernetes cluster must be at least v1.19.1.
+
+   ```bash
+   export KUBECONFIG=<...>
+   ```
+**OR**
+
+2. **Kind**
+
 If you are testing locally, you can use [Kind][kind] create a cluster with the following command:
 
-[Docker][docker] is required for using `kind`.
 ```shell
 kind create cluster
 ```
 
-## Configuring and installing BringYourOwnHost provider in a management cluster
+---
+[kind] is not designed for production use.
+
+**Minimum [kind] supported version**: v0.9.0
+
+Note for macOS users: you may need to [increase the memory available](https://docs.docker.com/docker-for-mac/#resources) for containers (recommend 6Gb for CAPD).
+
+---
+
+## Initialize the management cluster and install the BringYourOwnHost provider
 
 To initialize Cluster API Provider BringYourOwnHost, `clusterctl` requires the following settings, which should
 be set in `~/.cluster-api/clusterctl.yaml` as the following:
@@ -39,7 +50,6 @@ providers:
     url: https://github.com/vmware-tanzu/cluster-api-provider-bringyourownhost/releases/latest/infrastructure-components.yaml
     type: InfrastructureProvider
 ```
-
 
 running `clusterctl config repositories`.
 
@@ -54,24 +64,82 @@ byoh           InfrastructureProvider   https://github.com/vmware-tanzu/cluster-
 vsphere        InfrastructureProvider   https://github.com/kubernetes-sigs/cluster-api-provider-vsphere/releases/latest/             infrastructure-components.yaml
 ```
 
-Install the `BYOH` provider
+Now that we've got clusterctl installed and all the prerequisites in place, let's transform the Kubernetes cluster
+into a management cluster by using `clusterctl init`.
 
 ```shell
 clusterctl init --infrastructure byoh
 ```
 
 ## Creating a BYOH workload cluster
+ 
+Once the management cluster is ready, you will need to create a few hosts that the `BringYourOwnHost` provider can use, before you can create your first workload cluster.
 
-### Register BYOH host to management cluster.
-Refer to [local-dev.md](https://github.com/vmware-tanzu/cluster-api-provider-bringyourownhost/blob/main/docs/local_dev.md) if you want to create container hosts
+If you already have hosts (these could be bare metal servers / VMs / containers) ready, then please skip to [Register BYOH host to management cluster](#register-byoh-host-to-management-cluster)
 
-On each `BYOH` host
+If not, you could create containers to deploy your workload clusters on. We have a `make` task that will create a docker image for you locally to start. 
 
+```shell
+cd cluster-api-provider-bringyourownhost
+make prepare-byoh-docker-host-image
+```
+
+Once the image is ready, lets start 2 docker containers for our deployment. One for the control plane, and one for the worker. (you could of course run more)
+
+```shell
+for i in {1..2}
+do
+  echo "Creating docker container named host$i"
+  docker run --detach --tty --hostname host$i --name host$i --privileged --security-opt seccomp=unconfined --tmpfs /tmp --tmpfs /run --volume /var --volume /lib/modules:/lib/modules:ro --network kind byoh/node:v1.22.0
+done
+```
+
+### Register BYOH host to management cluster
+
+---
+If you are trying this on your own hosts, then for each host
 1. Download the [byoh-hostagent-linux-amd64](https://github.com/vmware-tanzu/cluster-api-provider-bringyourownhost/releases/download/v0.1.0-alpha.1/byoh-hostagent-linux-amd64)
-2. Save the management cluster `kubeconfig` file as `management.conf`
+2. Copy the management cluster `kubeconfig` file as `management.conf`
 3. Start the agent 
 ```shell
 ./byoh-hostagent-linux-amd64 -kubeconfig management.conf > byoh-agent.log 2>&1 &
+```
+
+---
+If you are trying this using the docker containers we started above, then we would first need to prep the kubeconfig to be used from the docker containers. By default, the kubeconfig states that the server is at `127.0.0.1`. We need to swap this out with the kind container IP. 
+
+```shell
+cp ~/.kube/config ~/.kube/management-cluster.conf
+export KIND_IP=$(docker inspect -f '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' kind-control-plane)
+sed -i 's/    server\:.*/    server\: https\:\/\/'"$KIND_IP"'\:6443/g' ~/.kube/management-cluster.conf
+```
+Assuming you have downloaded the `byoh-hostagent-linux-amd64` into your working directory, you can use the following script to start the agent on the containers.
+
+```shell
+for i in {1..2}
+do
+echo "Copy agent binary to host $i"
+docker cp byoh-hostagent-linux-amd64 host$i:/byoh-hostagent
+echo "Copy kubeconfig to host $i"
+docker cp ~/.kube/management-cluster.conf host$i:/management-cluster.conf
+done
+```
+Start the host agent on each of the hosts and keep it running
+
+```shell
+export HOST_NAME=host1
+docker exec -it $HOST_NAME sh -c "chmod +x byoh-hostagent && ./byoh-hostagent --kubeconfig management-cluster.conf"
+
+# do the same for host2 in a separate tab
+export HOST_NAME=host2
+docker exec -it $HOST_NAME sh -c "chmod +x byoh-hostagent && ./byoh-hostagent --kubeconfig management-cluster.conf"
+```
+---
+
+You should be able to view your registered hosts using
+
+```shell
+kubectl get byohosts
 ```
 
 ### Create workload cluster
@@ -84,7 +152,7 @@ $ CONTROL_PLANE_ENDPOINT_IP=10.10.10.10 clusterctl generate cluster byoh-cluster
     --infrastructure byoh \
     --kubernetes-version v1.22.0 \
     --control-plane-machine-count 1 \
-    --worker-machine-count 3 > cluster.yaml
+    --worker-machine-count 1 > cluster.yaml
 
 # Inspect and make any changes
 $ vi cluster.yaml
@@ -92,7 +160,6 @@ $ vi cluster.yaml
 # Create the workload cluster in the current namespace on the management cluster
 $ kubectl apply -f cluster.yaml
 ```
-
 
 ## Accessing the workload cluster
 
@@ -109,7 +176,7 @@ $ kubectl get secret/byoh-cluster-kubeconfig -o json \
 The kubeconfig can then be used to apply a CNI for networking, for example, Calico:
 
 ```shell
-KUBECONFIG=byoh-cluster.kubeconfig kubectl apply -f https://docs.projectcalico.org/manifests/calico.yaml
+KUBECONFIG=byoh-cluster.kubeconfig kubectl apply -f https://docs.projectcalico.org/v3.20/manifests/calico.yaml
 ```
 
 after that you should see your nodes turn into ready:
