@@ -1,0 +1,36 @@
+area/docs:
+- "docs/**/*"
+- "**/*.md"
+
+area/config:
+- "config/*"
+- "config/**/*"
+
+area/installer:
+- "poc-installer/**/*"
+
+area/apis:
+- "apis/*"
+- "apis/**/*"
+
+area/test-release:
+- "hack/**/*"
+- "test/**/*"
+- "go.mod"
+- "Makefile"
+
+area:
+- "apis"
+- "docs"
+- "test-release"
+- "installer"
+- "config"
+
+kind:
+- "bug"
+- "feature"
+- "enhancement"
+- "docs"
+- "test-release"
+- "feedback"
+- "config"

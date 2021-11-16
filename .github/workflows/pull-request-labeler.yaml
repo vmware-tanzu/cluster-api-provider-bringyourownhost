@@ -1,0 +1,16 @@
+# Automatically label new pull requests based on the paths of files being changed
+name: Pull Request Labeler
+
+on:
+  pull_request_target:
+    types: [opened, reopened, synchronize, ready_for_review]
+
+jobs:
+  triage:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Label pull requests based on the file paths
+        uses: actions/labeler@v3
+        with:
+          repo-token: "${{ secrets.GITHUB_TOKEN }}"
+          configuration-path: .github/labeler.yaml
