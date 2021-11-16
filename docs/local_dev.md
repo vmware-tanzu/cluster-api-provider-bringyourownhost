@@ -179,3 +179,115 @@ kubectl delete cluster $CLUSTER_NAME
 docker rm -f $HOST_NAME
 kind delete cluster
 ```
+
+# Host Agent Installer
+The installer is responsible for detecting the BYOH OS, downloading a BYOH bundle and installing/uninstalling it.
+
+## Supported OS and Kubernetes
+The current list of supported tuples of OS, kubernetes Version, BYOH Bundle Name can be retrieved with:
+```shell
+./cli --list-supported
+```
+An example output looks like:
+<table>
+    <tr>
+        <td>OS</td>
+        <td>K8S Version</td>
+        <td>BYOH Bundle Name</td>
+    </tr>
+    <tr>
+        <td>Ubuntu_20.04.*_x86-64</td>
+        <td>v1.22.3</td>
+        <td>byoh-bundle-ubuntu_20.04.1_x86-64_k8s_v1.22.3</td>
+    </tr>
+</table>
+The '*' in OS means that all Ubuntu 20.04 patches will be handled by this BYOH bundle.
+
+## Pre-requisites
+As of writing this, the following packages must be pre-installed on the BYOH host:
+- socat
+- ebtables
+- ethtool
+- conntrack
+```shell
+sudo apt-get install socat ebtables ethtool conntrack
+```
+
+## Creating a BYOH Bundle
+### Kubernetes Ingredients
+Optional. This step describes downloading kubernetes host components for Debian.
+```shell
+# Build docker image
+(cd agent/installer/bundle_builder/ingredients/deb/ && docker build -t byoh-ingredients-deb .)
+
+# Create a directory for the ingredients and download to it
+(mkdir -p byoh-ingredients-download && docker run --rm -v `pwd`/byoh-ingredients-download:/ingredients byoh-ingredients-deb)
+```
+### Custom Ingredients
+This step describes providing custom kubernetes host components. They can be copied to `byoh-ingredients-download`. Files must match the following globs:
+```shell
+*containerd*.tar
+*kubeadm*.deb
+*kubelet*.deb
+*kubectl*.deb
+*cri-tools*.deb
+*kubernetes-cni*.deb
+```
+
+## Building a BYOH Bundle
+```shell
+#Build docker image
+(cd agent/installer/bundle_builder/ && docker build -t byoh-build-push-bundle .)
+```
+
+```shell
+# Build a BYOH bundle and publish it to an OCI-compliant repo
+docker run --rm -v `pwd`/byoh-ingredients-download:/ingredients --env BUILD_ONLY=0 build-push-bundle <REPO>/<BYOH Bundle name>
+```
+
+The specified above BYOH Bundle name must match one of the [Supported OS and kubernetes BYOH bundle names](##supported-OS-and-kubernetes)
+
+```shell
+# You can also build a tarball of the bundle without publishing. This will create a bundler.tar in the current directory and can be used for custom pushing
+docker run --rm -v `pwd`/byoh-ingredients-download:/ingredients -v`pwd`:/bundle --env BUILD_ONLY=1 build-push-bundle
+```
+
+```shell
+# Optionally, additional configuration can be included in the bundle by mounting a local path under /config of the container. It will be placed on top of any drop-in configuration created by the packages and tars in the bundle
+docker run --rm -v `pwd`/byoh-ingredients-download:/ingredients -v`pwd`:/bundle -v`pwd`/agent/installer/bundle_builder/config/ubuntu/20_04/k8s/1_22 --env BUILD_ONLY=1 build-push-bundle
+```
+
+## CLI
+The installer CLI exposes the installer package as a command line tool. For a list of all commands, run
+
+```shell
+./cli --help
+```
+
+In the following examples, the os and k8s flags, must match one of the [Supported OS and kubernetes BYOH bundle names](##supported-OS-and-kubernetes)
+
+Examples:
+```shell
+# Will return if/how the current OS is detected
+./cli --detect
+```
+
+```shell
+# Will return the OS changes that installer will make during install and uninstall without actually doing them
+./cli --preview-os-changes --os Ubuntu_20.04.*_x86-64 --k8s v1.22.3
+```
+
+```shell
+# Will detect the current OS and install BYOH bundle with kubernetes v1.22.3 from the default repo
+sudo ./cli --install --k8s v1.22.3
+```
+
+```shell
+# Will override the OS detection and will use the specified repo
+sudo ./cli --install --os Ubuntu_20.04.1_x86-64 --bundle-repo 10.26.226.219:5000/repo --k8s v1.22.3
+```
+
+```shell
+# Will override the OS detection, use the specified repo and uninstall
+sudo ./cli --uninstall --os Ubuntu_20.04.1_x86-64 --bundle-repo 10.26.226.219:5000/repo --k8s v1.22.3
+```
