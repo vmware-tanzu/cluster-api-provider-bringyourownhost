@@ -15,7 +15,7 @@ var _ = Describe("Byohost Installer Tests", func() {
 
 	Context("When installer is created for unsupported OS", func() {
 		It("Should return error", func() {
-			_, err := New("repo", "downloadPath", logr.Discard())
+			_, err := newUnchecked("Ubuntu_99.04.3_x86-64", "", "", logr.Discard(), nil)
 			Expect(err).Should((HaveOccurred()))
 		})
 	})
