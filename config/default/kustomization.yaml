@@ -10,7 +10,7 @@ namePrefix: byoh-
 
 # Labels to add to all resources and selectors.
 #commonLabels:
-#  someName: someValue
+cluster.x-k8s.io/provider: "infrastructure-byoh"
 
 bases:
 - ../crd
