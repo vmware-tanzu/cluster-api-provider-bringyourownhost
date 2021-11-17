@@ -8,6 +8,9 @@
 <!-- go doc / reference card -->
 <a href="https://pkg.go.dev/github.com/vmware-tanzu/cluster-api-provider-bringyourownhost"  width="160x">
 <img src="https://pkg.go.dev/badge/github.com/vmware-tanzu/cluster-api-provider-bringyourownhost.svg"  width="100x"></a>
+<!-- goreportcard badge -->
+<a href="https://goreportcard.com/report/github.com/vmware-tanzu/cluster-api-provider-bringyourownhost"  width="160x">
+<img src="https://goreportcard.com/badge/github.com/vmware-tanzu/cluster-api-provider-bringyourownhost"  width="100x"></a>
 </p>
 
 ------
