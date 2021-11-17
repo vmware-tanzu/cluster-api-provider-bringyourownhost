@@ -76,6 +76,8 @@ var (
 	scheme             *runtime.Scheme
 	labels             = make(labelFlags)
 	metricsbindaddress string
+	downloadpath       string
+	skipInstallation   bool
 )
 
 // TODO - fix logging
@@ -84,6 +86,8 @@ func main() {
 	flag.StringVar(&namespace, "namespace", "default", "Namespace in the management cluster where you would like to register this host")
 	flag.Var(&labels, "label", "labels to attach to the ByoHost CR in the form labelname=labelVal for e.g. '--label site=apac --label cores=2'")
 	flag.StringVar(&metricsbindaddress, "metricsbindaddress", ":8080", "metricsbindaddress is the TCP address that the controller should bind to for serving prometheus metrics.It can be set to \"0\" to disable the metrics serving")
+	flag.StringVar(&downloadpath, "downloadpath", "/var/lib/byoh/bundles", "File System path to keep the downloads")
+	flag.BoolVar(&skipInstallation, "skip-installation", false, "If you want to skip installation of the kubernetes component binaries")
 	klog.InitFlags(nil)
 	flag.Parse()
 	scheme = runtime.NewScheme()
@@ -91,29 +95,30 @@ func main() {
 	_ = corev1.AddToScheme(scheme)
 	_ = clusterv1.AddToScheme(scheme)
 
-	ctrl.SetLogger(klogr.New())
+	logger := klogr.New()
+	ctrl.SetLogger(logger)
 	config, err := ctrl.GetConfig()
 	if err != nil {
-		klog.Errorf("error getting kubeconfig, err=%v", err)
+		logger.Error(err, "error getting kubeconfig")
 		return
 	}
 
 	k8sClient, err := client.New(config, client.Options{Scheme: scheme})
 	if err != nil {
-		klog.Errorf("error creating a new k8s client, err=%v", err)
+		logger.Error(err, "error creating a new k8s client")
 		return
 	}
 
 	hostName, err := os.Hostname()
 	if err != nil {
-		klog.Errorf("couldn't determine hostname, err=%v", err)
+		logger.Error(err, "could not determine hostname")
 		return
 	}
 
 	registration.LocalHostRegistrar = &registration.HostRegistrar{K8sClient: k8sClient}
 	err = registration.LocalHostRegistrar.Register(hostName, namespace, labels)
 	if err != nil {
-		klog.Errorf("error registering host %s registration in namespace %s, err=%v", hostName, namespace, err)
+		logger.Error(err, "error registering host %s registration in namespace %s", hostName, namespace)
 		return
 	}
 
@@ -133,7 +138,7 @@ func main() {
 		MetricsBindAddress: metricsbindaddress,
 	})
 	if err != nil {
-		klog.Errorf("unable to start manager, err=%v", err)
+		logger.Error(err, "unable to start manager")
 		return
 	}
 
@@ -146,15 +151,17 @@ func main() {
 				DefaultNetworkInterfaceName: registration.LocalHostRegistrar.ByoHostInfo.DefaultNetworkInterfaceName,
 			},
 		},
-		Recorder: mgr.GetEventRecorderFor("hostagent-controller"),
+		SkipInstallation: skipInstallation,
+		DownloadPath:     downloadpath,
+		Recorder:         mgr.GetEventRecorderFor("hostagent-controller"),
 	}
 	if err = hostReconciler.SetupWithManager(context.TODO(), mgr); err != nil {
-		klog.Errorf("unable to create controller, err=%v", err)
+		logger.Error(err, "unable to create controller")
 		return
 	}
 
 	if err := mgr.Start(ctrl.SetupSignalHandler()); err != nil {
-		klog.Errorf("problem running manager, err=%v", err)
+		logger.Error(err, "problem running manager")
 		return
 	}
 }

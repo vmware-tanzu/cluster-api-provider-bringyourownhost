@@ -15,7 +15,7 @@ var _ = Describe("Byohost Installer Tests", func() {
 
 	Context("When installer is created for unsupported OS", func() {
 		It("Should return error", func() {
-			_, err := New("repo", "downloadPath", logr.Discard())
+			_, err := newUnchecked("Ubuntu_99.04.3_x86-64", "", "", logr.Discard(), nil)
 			Expect(err).Should((HaveOccurred()))
 		})
 	})
@@ -33,7 +33,8 @@ var _ = Describe("Byohost Installer Tests", func() {
 	})
 	Context("When installer is created", func() {
 		It("Install/uninstall should return error for unsupported k8s", func() {
-			for _, os := range ListSupportedOS() {
+			_, osList := ListSupportedOS()
+			for _, os := range osList {
 				i := NewPreviewInstaller(os, nil)
 
 				err := i.Install("unsupported-k8s", testTag)
@@ -46,7 +47,8 @@ var _ = Describe("Byohost Installer Tests", func() {
 	})
 	Context("When installer is created", func() {
 		It("Install/uninstall should call only the output builder", func() {
-			for _, os := range ListSupportedOS() {
+			_, osList := ListSupportedOS()
+			for _, os := range osList {
 				for _, k8s := range ListSupportedK8s(os) {
 					{
 						ob := algo.OutputBuilderCounter{}
@@ -69,19 +71,27 @@ var _ = Describe("Byohost Installer Tests", func() {
 	})
 	Context("When ListSupportedOS is called", func() {
 		It("Should return non-empty result", func() {
-			Expect(ListSupportedOS()).ShouldNot(BeEmpty())
+			_, osList := ListSupportedOS()
+			Expect(osList).ShouldNot(BeEmpty())
 		})
 	})
-	Context("When ListSupportedK8s is called for all supported OSes", func() {
+	Context("When ListSupportedK8s is called for all supported bundle OSes", func() {
 		It("Should return non-empty result", func() {
-			for _, os := range ListSupportedOS() {
-				Expect(ListSupportedK8s(os)).ShouldNot(BeEmpty())
+			_, osList := ListSupportedOS()
+			for _, osBundle := range osList {
+				Expect(ListSupportedK8s(osBundle)).ShouldNot(BeEmpty())
 			}
+		})
+	})
+	Context("When ListSupportedK8s is called for supported host OS", func() {
+		It("Should return non-empty result", func() {
+			Expect(ListSupportedK8s("Ubuntu_20.04.3_x86-64")).ShouldNot(BeEmpty())
 		})
 	})
 	Context("When PreviewChanges is called for all supported os and k8s", func() {
 		It("Should not return error", func() {
-			for _, os := range ListSupportedOS() {
+			_, osList := ListSupportedOS()
+			for _, os := range osList {
 				for _, k8s := range ListSupportedK8s(os) {
 					_, _, err := PreviewChanges(os, k8s)
 					Expect(err).ShouldNot((HaveOccurred()))
@@ -91,7 +101,8 @@ var _ = Describe("Byohost Installer Tests", func() {
 	})
 	Context("When PreviewChanges is called for supported os and k8s", func() {
 		It("Should return non-empty result", func() {
-			os := ListSupportedOS()[0]
+			_, osList := ListSupportedOS()
+			os := osList[0]
 			k8s := ListSupportedK8s(os)[0]
 			install, uninstall, err := PreviewChanges(os, k8s)
 			Expect(err).ShouldNot((HaveOccurred()))
@@ -108,6 +119,12 @@ var _ = Describe("Byohost Installer Tests", func() {
 			_, _, err := PreviewChanges(os, k8s)
 			Expect(err).Should((HaveOccurred()))
 			Expect(err).Should(Equal(ErrOsK8sNotSupported))
+		})
+	})
+	Context("When installer is created", func() {
+		It("Should be possible to do so using host os or bundle os ", func() {
+			Expect(func() { NewPreviewInstaller("Ubuntu_20.04.1_x86-64", nil) }).NotTo(Panic())
+			Expect(func() { NewPreviewInstaller("Ubuntu_20.04.3_x86-64", nil) }).NotTo(Panic())
 		})
 	})
 })

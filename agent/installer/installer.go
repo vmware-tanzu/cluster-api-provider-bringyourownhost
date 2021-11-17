@@ -33,26 +33,37 @@ type installer struct {
 
 // getSupportedRegistry returns a registry with installers for the supported OS and K8s
 func getSupportedRegistry(bd *bundleDownloader, ob algo.OutputBuilder) registry {
-	var supportedOsK8s = []struct {
-		os   string
-		k8s  string
-		algo algo.K8sStepProvider
-	}{
-		{"Ubuntu_20.04.1_x86-64", "v1.22.1", &algo.Ubuntu20_4K8s1_22{}},
+	reg := newRegistry()
+
+	addBundleInstaller := func(osBundle, k8sBundle string, stepProvider algo.K8sStepProvider) {
+		a := algo.BaseK8sInstaller{
+			K8sStepProvider: stepProvider,
+			/* BundlePath: will be set when tag is known */
+			OutputBuilder: ob}
+
+		reg.AddBundleInstaller(osBundle, k8sBundle, &a)
+	}
+
+	{
+		// Ubuntu
+
+		// BYOH Bundle Repository. Associate bundle with installer
+		linuxDistro := "Ubuntu_20.04.1_x86-64"
+		addBundleInstaller(linuxDistro, "v1.22.3", &algo.Ubuntu20_4K8s1_22{})
 		/*
-		 * ADD HERE to add support for new os or k8s
-		 * You may map new versions to old classes if they do the job
+		 * PLACEHOLDER - ADD MORE K8S VERSIONS HERE
+		 */
+
+		// Match concrete os version to repository os version
+		reg.AddOsFilter("Ubuntu_20.04.*_x86-64", linuxDistro)
+		/*
+		 * PLACEHOLDER - POINT MORE DISTRO VERSIONS
 		 */
 	}
 
-	reg := NewRegistry()
-	for _, t := range supportedOsK8s {
-		a := &algo.BaseK8sInstaller{
-			K8sStepProvider: t.algo,
-			/*BundlePath: will be set when tag is known */
-			OutputBuilder: ob}
-		reg.Add(t.os, t.k8s, a)
-	}
+	/*
+	 * PLACEHOLDER - ADD MORE OS HERE
+	 */
 
 	return reg
 }
@@ -145,16 +156,18 @@ func (i *installer) Uninstall(k8sVer, tag string) error {
 func (i *installer) getAlgoInstallerWithBundle(k8sVer, tag string) (osk8sInstaller, error) {
 	// This OS supports at least 1 k8s version. See New.
 
-	algoInst := i.algoRegistry.GetInstaller(i.detectedOs, k8sVer)
+	algoInst, osBundle := i.algoRegistry.GetInstaller(i.detectedOs, k8sVer)
 	if algoInst == nil {
 		return nil, ErrOsK8sNotSupported
 	}
+	i.logger.Info("Current OS will be handled as", "OS", osBundle)
+
 	// copy installer from registry and set BundlePath including tag
 	// empty means preview mode
 	algoInstCopy := *algoInst.(*algo.BaseK8sInstaller)
 	algoInstCopy.BundlePath = i.bundleDownloader.getBundlePathDirOrPreview(k8sVer, tag)
 
-	bdErr := i.bundleDownloader.DownloadOrPreview(i.detectedOs, k8sVer, tag)
+	bdErr := i.bundleDownloader.DownloadOrPreview(osBundle, k8sVer, tag)
 	if bdErr != nil {
 		return nil, bdErr
 	}
@@ -163,7 +176,7 @@ func (i *installer) getAlgoInstallerWithBundle(k8sVer, tag string) (osk8sInstall
 }
 
 // ListSupportedOS() returns the list of all supported OS-es. Can be invoked on a non-supported OS.
-func ListSupportedOS() []string {
+func ListSupportedOS() (osFilters, osBundles []string) {
 	srd := getSupportedRegistryDescription()
 	return srd.ListOS()
 }
@@ -187,7 +200,7 @@ func getSupportedRegistryDescription() registry {
 func PreviewChanges(os, k8sVer string) (install, uninstall string, err error) {
 	stepPreviewer := stringPrinter{msgFmt: "# %s"}
 	reg := getSupportedRegistry(&bundleDownloader{}, &stepPreviewer)
-	installer := reg.GetInstaller(os, k8sVer)
+	installer, _ := reg.GetInstaller(os, k8sVer)
 
 	if installer == nil {
 		err = ErrOsK8sNotSupported

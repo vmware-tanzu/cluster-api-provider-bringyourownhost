@@ -10,6 +10,7 @@ import (
 
 	"github.com/pkg/errors"
 	"github.com/vmware-tanzu/cluster-api-provider-bringyourownhost/agent/cloudinit"
+	"github.com/vmware-tanzu/cluster-api-provider-bringyourownhost/agent/installer"
 	"github.com/vmware-tanzu/cluster-api-provider-bringyourownhost/agent/registration"
 	"github.com/vmware-tanzu/cluster-api-provider-bringyourownhost/common"
 	corev1 "k8s.io/api/core/v1"
@@ -28,11 +29,13 @@ import (
 )
 
 type HostReconciler struct {
-	Client         client.Client
-	CmdRunner      cloudinit.ICmdRunner
-	FileWriter     cloudinit.IFileWriter
-	TemplateParser cloudinit.ITemplateParser
-	Recorder       record.EventRecorder
+	Client           client.Client
+	CmdRunner        cloudinit.ICmdRunner
+	FileWriter       cloudinit.IFileWriter
+	TemplateParser   cloudinit.ITemplateParser
+	Recorder         record.EventRecorder
+	SkipInstallation bool
+	DownloadPath     string
 }
 
 const (
@@ -101,12 +104,16 @@ func (r *HostReconciler) reconcileNormal(ctx context.Context, byoHost *infrastru
 			return ctrl.Result{}, err
 		}
 
-		err = r.installK8sComponents(ctx, byoHost)
-		if err != nil {
-			logger.Error(err, "error in installing k8s components")
-			r.Recorder.Event(byoHost, corev1.EventTypeWarning, "InstallK8sComponentFailed", "k8s component installation failed")
-			conditions.MarkFalse(byoHost, infrastructurev1beta1.K8sComponentsInstallationSucceeded, infrastructurev1beta1.K8sComponentsInstallationFailedReason, clusterv1.ConditionSeverityInfo, "")
-			return ctrl.Result{}, err
+		if r.SkipInstallation {
+			logger.Info("Skipping installation of k8s components")
+		} else {
+			err = r.installK8sComponents(ctx, byoHost)
+			if err != nil {
+				logger.Error(err, "error in installing k8s components")
+				r.Recorder.Event(byoHost, corev1.EventTypeWarning, "InstallK8sComponentFailed", "k8s component installation failed")
+				conditions.MarkFalse(byoHost, infrastructurev1beta1.K8sComponentsInstallationSucceeded, infrastructurev1beta1.K8sComponentsInstallationFailedReason, clusterv1.ConditionSeverityInfo, "")
+				return ctrl.Result{}, err
+			}
 		}
 
 		err = r.cleank8sdirectories(ctx)
@@ -187,6 +194,24 @@ func (r *HostReconciler) hostCleanUp(ctx context.Context, byoHost *infrastructur
 		return err
 	}
 
+	if r.SkipInstallation {
+		logger.Info("Skipping uninstallation of k8s components")
+	} else {
+		bundleRegistry := byoHost.GetAnnotations()[infrastructurev1beta1.BundleLookupBaseRegistryAnnotation]
+		k8sVersion := byoHost.GetAnnotations()[infrastructurev1beta1.K8sVersionAnnotation]
+		byohBundleTag := byoHost.GetAnnotations()[infrastructurev1beta1.BundleLookupTagAnnotation]
+		bundleInstaller, err := installer.New(bundleRegistry, r.DownloadPath, logger)
+		if err != nil {
+			return err
+		}
+		err = bundleInstaller.Uninstall(k8sVersion, byohBundleTag)
+		if err != nil {
+			return err
+		}
+	}
+
+	conditions.MarkFalse(byoHost, infrastructurev1beta1.K8sNodeBootstrapSucceeded, infrastructurev1beta1.K8sNodeAbsentReason, clusterv1.ConditionSeverityInfo, "")
+
 	logger.Info("Removing the bootstrap sentinel file...")
 	if _, err := os.Stat(bootstrapSentinelFile); !os.IsNotExist(err) {
 		err := os.Remove(bootstrapSentinelFile)
@@ -224,6 +249,12 @@ func (r *HostReconciler) hostCleanUp(ctx context.Context, byoHost *infrastructur
 	// Remove the cluster version annotation
 	delete(byoHost.Annotations, infrastructurev1beta1.K8sVersionAnnotation)
 
+	// Remove the bundle registry annotation
+	delete(byoHost.Annotations, infrastructurev1beta1.BundleLookupBaseRegistryAnnotation)
+
+	// Remove the bundle tag annotation
+	delete(byoHost.Annotations, infrastructurev1beta1.BundleLookupTagAnnotation)
+
 	conditions.MarkFalse(byoHost, infrastructurev1beta1.K8sNodeBootstrapSucceeded, infrastructurev1beta1.K8sNodeAbsentReason, clusterv1.ConditionSeverityInfo, "")
 	return nil
 }
@@ -254,9 +285,18 @@ func (r *HostReconciler) bootstrapK8sNode(ctx context.Context, bootstrapScript s
 func (r *HostReconciler) installK8sComponents(ctx context.Context, byoHost *infrastructurev1beta1.ByoHost) error {
 	logger := ctrl.LoggerFrom(ctx)
 	logger.Info("Installing K8s")
-	conditions.MarkFalse(byoHost, infrastructurev1beta1.K8sComponentsInstallationSucceeded, infrastructurev1beta1.K8sComponentsInstallingReason, clusterv1.ConditionSeverityInfo, "")
-	// TODO: call installer.Install(k8sVersion) here
-	// if err, return err
+
+	bundleRegistry := byoHost.GetAnnotations()[infrastructurev1beta1.BundleLookupBaseRegistryAnnotation]
+	k8sVersion := byoHost.GetAnnotations()[infrastructurev1beta1.K8sVersionAnnotation]
+	byohBundleTag := byoHost.GetAnnotations()[infrastructurev1beta1.BundleLookupTagAnnotation]
+	bundleInstaller, err := installer.New(bundleRegistry, r.DownloadPath, logger)
+	if err != nil {
+		return err
+	}
+	err = bundleInstaller.Install(k8sVersion, byohBundleTag)
+	if err != nil {
+		return err
+	}
 
 	r.Recorder.Event(byoHost, corev1.EventTypeNormal, "k8sComponentInstalled", "Successfully Installed K8s components")
 	conditions.MarkTrue(byoHost, infrastructurev1beta1.K8sComponentsInstallationSucceeded)

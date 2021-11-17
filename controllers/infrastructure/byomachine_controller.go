@@ -8,6 +8,7 @@ import (
 	"errors"
 	"fmt"
 	"reflect"
+	"strings"
 	"time"
 
 	"k8s.io/apimachinery/pkg/labels"
@@ -73,7 +74,7 @@ type ByoMachineReconciler struct {
 // - https://pkg.go.dev/sigs.k8s.io/controller-runtime@v0.8.3/pkg/reconcile
 
 // Reconcile handles ByoMachine events
-// nolint: gocyclo
+// nolint: gocyclo, funlen
 func (r *ByoMachineReconciler) Reconcile(ctx context.Context, req ctrl.Request) (_ ctrl.Result, reterr error) {
 	logger := log.FromContext(ctx)
 	logger.Info("Reconcile request received")
@@ -112,6 +113,18 @@ func (r *ByoMachineReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 		return ctrl.Result{}, nil
 	}
 	logger = logger.WithValues("cluster", cluster.Name)
+
+	byoCluster := &infrav1.ByoCluster{}
+	infraClusterName := client.ObjectKey{
+		Namespace: byoMachine.Namespace,
+		Name:      cluster.Spec.InfrastructureRef.Name,
+	}
+
+	if err = r.Client.Get(ctx, infraClusterName, byoCluster); err != nil {
+		logger.Error(err, "failed to get infra cluster")
+		return ctrl.Result{}, nil
+	}
+
 	helper, _ := patch.NewHelper(byoMachine, r.Client)
 	defer func() {
 		if err = helper.Patch(ctx, byoMachine); err != nil && reterr == nil {
@@ -134,6 +147,7 @@ func (r *ByoMachineReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 		Client:     r.Client,
 		Cluster:    cluster,
 		Machine:    machine,
+		ByoCluster: byoCluster,
 		ByoMachine: byoMachine,
 		ByoHost:    refByoHost,
 	})
@@ -451,7 +465,9 @@ func (r *ByoMachineReconciler) attachByoHost(ctx context.Context, machineScope *
 		host.Annotations = make(map[string]string)
 	}
 	host.Annotations[infrav1.EndPointIPAnnotation] = machineScope.Cluster.Spec.ControlPlaneEndpoint.Host
-	host.Annotations[infrav1.K8sVersionAnnotation] = *machineScope.Machine.Spec.Version
+	host.Annotations[infrav1.K8sVersionAnnotation] = strings.Split(*machineScope.Machine.Spec.Version, "_")[0]
+	host.Annotations[infrav1.BundleLookupBaseRegistryAnnotation] = machineScope.ByoCluster.Spec.BundleLookupBaseRegistry
+	host.Annotations[infrav1.BundleLookupTagAnnotation] = machineScope.ByoCluster.Spec.BundleLookupTag
 
 	err = byohostHelper.Patch(ctx, &host)
 	if err != nil {

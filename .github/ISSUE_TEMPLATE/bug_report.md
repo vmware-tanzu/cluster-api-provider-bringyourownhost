@@ -18,5 +18,5 @@ about: Tell us about a problem you are experiencing
 **Environment:**
 
 - Cluster-api-provider-bringyourownhost version: 
-- Kubernetes version: (use `kubectl version`): 
-- OS (e.g. from `/etc/os-release`): 
+- Kubernetes version: (use `kubectl version --short`):
+- OS (e.g. from `/etc/os-release`):

@@ -9,11 +9,11 @@ about: Suggest an idea for this project
 
 
 **Anything else you would like to add:**
-[Miscellaneous information that will assist in solving the issue.]
+[Miscellaneous information that will assist in implementing the feature.]
 
 
 **Environment:**
 
 - Cluster-api-provider-bringyourownhost version: 
-- Kubernetes version: (use `kubectl version`): 
-- OS (e.g. from `/etc/os-release`): 
+- Kubernetes version: (use `kubectl version --short`):
+- OS (e.g. from `/etc/os-release`):

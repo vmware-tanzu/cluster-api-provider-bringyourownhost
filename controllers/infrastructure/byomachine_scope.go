@@ -16,6 +16,7 @@ type byoMachineScopeParams struct {
 	Client     client.Client
 	Cluster    *clusterv1.Cluster
 	Machine    *clusterv1.Machine
+	ByoCluster *infrav1.ByoCluster
 	ByoMachine *infrav1.ByoMachine
 	ByoHost    *infrav1.ByoHost
 }
@@ -26,6 +27,7 @@ type byoMachineScope struct {
 	patchHelper *patch.Helper
 	Cluster     *clusterv1.Cluster
 	Machine     *clusterv1.Machine
+	ByoCluster  *infrav1.ByoCluster
 	ByoMachine  *infrav1.ByoMachine
 	ByoHost     *infrav1.ByoHost
 }
@@ -45,6 +47,9 @@ func newByoMachineScope(params byoMachineScopeParams) (*byoMachineScope, error) 
 	if params.ByoMachine == nil {
 		return nil, errors.New("BYOMachine is required when creating a MachineScope")
 	}
+	if params.ByoCluster == nil {
+		return nil, errors.New("ByoCluster is required when creating a MachineScope")
+	}
 
 	helper, err := patch.NewHelper(params.ByoMachine, params.Client)
 	if err != nil {
@@ -56,6 +61,7 @@ func newByoMachineScope(params byoMachineScopeParams) (*byoMachineScope, error) 
 		patchHelper: helper,
 		Cluster:     params.Cluster,
 		Machine:     params.Machine,
+		ByoCluster:  params.ByoCluster,
 		ByoMachine:  params.ByoMachine,
 		ByoHost:     params.ByoHost,
 	}, nil

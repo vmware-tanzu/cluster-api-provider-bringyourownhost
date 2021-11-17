@@ -6,13 +6,15 @@ package installer
 import (
 	"flag"
 	"fmt"
+	"os"
+	"text/tabwriter"
+
 	"github.com/go-logr/logr"
 	"k8s.io/klog/klogr"
 )
 
 var (
-	listSupportedFlag    = flag.Bool("list-supported", false, "List all supported OS and Kubernetes versions")
-	listBundlesFlag      = flag.Bool("list-bundles", false, "List the BYOH Bundle names for all supported OS and Kubernetes versions")
+	listSupportedFlag    = flag.Bool("list-supported", false, "List all supported OS, Kubernetes versions and BYOH Bundle names")
 	detectOSFlag         = flag.Bool("detect", false, "Detects the current operating system")
 	installFlag          = flag.Bool("install", false, "Install a BYOH Bundle")
 	uninstallFlag        = flag.Bool("uninstall", false, "Unnstall a BYOH Bundle")
@@ -43,11 +45,6 @@ func Main() {
 		return
 	}
 
-	if *listBundlesFlag {
-		listBundles()
-		return
-	}
-
 	if *detectOSFlag {
 		detectOS()
 		return
@@ -72,30 +69,36 @@ func Main() {
 }
 
 func listSupported() {
-	for _, os := range ListSupportedOS() {
-		for _, k8s := range ListSupportedK8s(os) {
-			fmt.Printf("%s %s\n", os, k8s)
-		}
-	}
-}
+	w := new(tabwriter.Writer)
+	const (
+		minwidth = 8
+		tabwidth = 8
+		padding  = 0
+		flags    = 0
+	)
+	w.Init(os.Stdout, minwidth, tabwidth, padding, '\t', flags)
+	defer w.Flush()
 
-func listBundles() {
-	for _, os := range ListSupportedOS() {
-		for _, k8s := range ListSupportedK8s(os) {
-			fmt.Println(GetBundleName(os, k8s))
+	fmt.Fprintf(w, "%s\t%s\t%s\n", "OS", "K8S Version", "BYOH Bundle Name")
+	fmt.Fprintf(w, "%s\t%s\t%s\n", "---", "-----------", "----------------")
+
+	osFilters, osBundles := ListSupportedOS()
+	for i := range osFilters {
+		for _, k8s := range ListSupportedK8s(osBundles[i]) {
+			fmt.Fprintf(w, "%s\t %s\t%s\n", osFilters[i], k8s, GetBundleName(osBundles[i], k8s))
 		}
 	}
 }
 
 func detectOS() {
 	osd := osDetector{}
-	os, err := osd.Detect()
+	detectedOs, err := osd.Detect()
 	if err != nil {
 		klogger.Error(err, "Error detecting OS")
 		return
 	}
 
-	fmt.Printf("Detected OS as: %s", os)
+	fmt.Printf("Detected OS as: %s", detectedOs)
 }
 
 func runInstaller(install bool) {

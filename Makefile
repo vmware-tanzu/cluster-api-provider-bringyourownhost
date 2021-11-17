@@ -31,6 +31,8 @@ GINKGO := $(TOOLS_BIN_DIR)/ginkgo
 
 BYOH_TEMPLATES := $(REPO_ROOT)/test/e2e/data/infrastructure-provider-byoh
 
+LDFLAGS=-w -s
+STATIC=-extldflags '-static'
 
 # Get the currently used golang install path (in GOPATH/bin, unless GOBIN is set)
 ifeq (,$(shell go env GOBIN))
@@ -151,7 +153,7 @@ kustomize: ## Download kustomize locally if necessary.
 	$(call go-get-tool,$(KUSTOMIZE),sigs.k8s.io/kustomize/kustomize/v3@v3.9.1)
 
 host-agent-binaries: ## Builds the binaries for the host-agent
-	RELEASE_BINARY=./byoh-hostagent GOOS=linux GOARCH=amd64 HOST_AGENT_DIR=./$(HOST_AGENT_DIR) $(MAKE) host-agent-binary
+	RELEASE_BINARY=./byoh-hostagent GOOS=linux GOARCH=amd64 GOLDFLAGS="$(LDFLAGS) $(STATIC)" HOST_AGENT_DIR=./$(HOST_AGENT_DIR) $(MAKE) host-agent-binary
 
 host-agent-binary: $(RELEASE_DIR)
 	docker run \
@@ -162,7 +164,7 @@ host-agent-binary: $(RELEASE_DIR)
 		-v "$$(pwd):/workspace$(DOCKER_VOL_OPTS)" \
 		-w /workspace \
 		golang:1.16.6 \
-		go build -a -ldflags "$(LDFLAGS) -extldflags '-static'" \
+		go build -a -ldflags "$(GOLDFLAGS)" \
 		-o ./bin/$(notdir $(RELEASE_BINARY))-$(GOOS)-$(GOARCH) $(HOST_AGENT_DIR)
 
 
