@@ -57,16 +57,30 @@ func (r *registry) ListOS() (osFilter, osBundle []string) {
 	return
 }
 
-func (r *registry) ListK8s(osBundle string) []string {
-	result := make([]string, 0, len(r.osk8sInstallerMap[osBundle]))
-	for k8s := range r.osk8sInstallerMap[osBundle] {
+func (r *registry) ListK8s(osBundleHost string) []string {
+	var result []string
+
+	// os bundle
+	if k8sMap, ok := r.osk8sInstallerMap[osBundleHost]; ok {
+		for k8s := range k8sMap {
+			result = append(result, k8s)
+		}
+
+		return result
+	}
+
+	// os host
+	for k8s := range r.osk8sInstallerMap[r.resolveOsToOsBundle(osBundleHost)] {
 		result = append(result, k8s)
 	}
+
 	return result
 }
 
-func (r *registry) GetInstaller(osHost, k8sVer string) osk8sInstaller {
-	return r.osk8sInstallerMap[r.resolveOsToOsBundle(osHost)][k8sVer]
+func (r *registry) GetInstaller(osHost, k8sVer string) (osk8si osk8sInstaller, osBundle string) {
+	osBundle = r.resolveOsToOsBundle(osHost)
+	osk8si = r.osk8sInstallerMap[osBundle][k8sVer]
+	return
 }
 
 func (r *registry) resolveOsToOsBundle(os string) string {

@@ -156,16 +156,18 @@ func (i *installer) Uninstall(k8sVer, tag string) error {
 func (i *installer) getAlgoInstallerWithBundle(k8sVer, tag string) (osk8sInstaller, error) {
 	// This OS supports at least 1 k8s version. See New.
 
-	algoInst := i.algoRegistry.GetInstaller(i.detectedOs, k8sVer)
+	algoInst, osBundle := i.algoRegistry.GetInstaller(i.detectedOs, k8sVer)
 	if algoInst == nil {
 		return nil, ErrOsK8sNotSupported
 	}
+	i.logger.Info("Current OS will be handled as", "OS", osBundle)
+
 	// copy installer from registry and set BundlePath including tag
 	// empty means preview mode
 	algoInstCopy := *algoInst.(*algo.BaseK8sInstaller)
 	algoInstCopy.BundlePath = i.bundleDownloader.getBundlePathDirOrPreview(k8sVer, tag)
 
-	bdErr := i.bundleDownloader.DownloadOrPreview(i.detectedOs, k8sVer, tag)
+	bdErr := i.bundleDownloader.DownloadOrPreview(osBundle, k8sVer, tag)
 	if bdErr != nil {
 		return nil, bdErr
 	}
@@ -198,7 +200,7 @@ func getSupportedRegistryDescription() registry {
 func PreviewChanges(os, k8sVer string) (install, uninstall string, err error) {
 	stepPreviewer := stringPrinter{msgFmt: "# %s"}
 	reg := getSupportedRegistry(&bundleDownloader{}, &stepPreviewer)
-	installer := reg.GetInstaller(os, k8sVer)
+	installer, _ := reg.GetInstaller(os, k8sVer)
 
 	if installer == nil {
 		err = ErrOsK8sNotSupported
