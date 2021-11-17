@@ -15,7 +15,7 @@ var _ = Describe("Installer Algo Tests", func() {
 	)
 
 	const (
-		stepsNum = 24
+		stepsNum = 22
 	)
 
 	BeforeEach(func() {

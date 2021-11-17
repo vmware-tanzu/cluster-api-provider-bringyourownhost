@@ -26,8 +26,11 @@ func NewAptStepEx(k *BaseK8sInstaller, aptPkg string, optional bool) Step {
 	if optional {
 		condCmd = fmt.Sprintf("if [ -f %s ]; then %%s; fi", pkgAbsolutePath)
 	}
-
-	doCmd := fmt.Sprintf("dpkg --install '%s'", pkgAbsolutePath)
+	// apt-mark hold will prevent the package from being automatically installed, upgraded or removed.
+	// This is done to prevent unexpected upgrades of the external package in order to ensure that
+	// the working environment is stable. If needed the package can be manually upgraded.
+	doCmd := fmt.Sprintf("dpkg --install '%s' && apt-mark hold %s", pkgAbsolutePath, pkgName)
+	// When uninstalling the package the hold is removed automatically.
 	undoCmd := fmt.Sprintf("dpkg --purge %s", pkgName)
 
 	return &ShellStep{

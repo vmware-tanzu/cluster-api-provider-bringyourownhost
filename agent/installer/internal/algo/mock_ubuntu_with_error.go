@@ -56,10 +56,6 @@ func (u *MockUbuntuWithError) kernelModsLoadStep(bki *BaseK8sInstaller) Step {
 	return u.getEmptyStep("KERNEL MODULES", bki)
 }
 
-func (u *MockUbuntuWithError) unattendedUpdStep(bki *BaseK8sInstaller) Step {
-	return u.getEmptyStep("AUTO OS UPGRADES", bki)
-}
-
 func (u *MockUbuntuWithError) osWideCfgUpdateStep(bki *BaseK8sInstaller) Step {
 	return u.getEmptyStep("OS CONFIGURATION", bki)
 }
