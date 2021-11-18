@@ -1,0 +1,29 @@
+area/docs:
+- "docs/**/*"
+- "**/*.md"
+
+area/installer:
+- "agent-installer/**/*"
+
+area/apis:
+- "apis/*"
+- "apis/**/*"
+
+area/test-release:
+- "hack/**/*"
+- "test/**/*"
+- "go.mod"
+- "Makefile"
+
+area:
+- "apis"
+- "docs"
+- "test-release"
+- "installer"
+
+kind:
+- "bug"
+- "feature"
+- "cleanup"
+- "docs"
+- "test-release"
