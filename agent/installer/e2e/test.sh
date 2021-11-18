@@ -1,8 +1,7 @@
 #~/bin/bash
 
 # host machine is accessible as gateway by guest
-apt install net-tools -y
-REPO_IP=`netstat -rn | awk '/default|^0.0.0.0/{print $2}'`
+REPO_IP=$(/sbin/ip route | awk '/default/ { print $3 }')
 REPO_PORT=$1
 K8SVER=$2
 
