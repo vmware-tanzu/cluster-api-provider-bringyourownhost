@@ -21,27 +21,3 @@ jobs:
 
     - name: Run test make target
       run: make test
-
-
-  e2e-pr-blocking:
-    runs-on: ubuntu-latest
-    steps:
-    - name: Checkout code
-      uses: actions/checkout@v2
-
-    - name: Set up Go
-      uses: actions/setup-go@v2
-      with:
-        go-version: 1.16
-
-    - name: Install ginkgo
-      run: sudo apt-get install golang-ginkgo-dev
-
-    - name: turn off swap
-      run: sudo swapoff -a
-
-    - name: Set netfilter conntrack max
-      run: sudo sysctl -w net.netfilter.nf_conntrack_max=131072
-
-    - name: Run PR-Blocking e2e tests
-      run: GINKGO_FOCUS="\[PR-Blocking\]" make test-e2e

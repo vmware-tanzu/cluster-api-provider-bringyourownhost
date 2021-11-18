@@ -5,8 +5,7 @@ on:
     branches: [ main ]
 
 jobs:
-
-  test:
+  e2e-pr-blocking:
     runs-on: ubuntu-latest
     steps:
     - name: Checkout code
@@ -26,5 +25,5 @@ jobs:
     - name: Set netfilter conntrack max
       run: sudo sysctl -w net.netfilter.nf_conntrack_max=131072
 
-    - name: run e2e test
-      run: make test-e2e
+    - name: Run PR-Blocking e2e tests
+      run: GINKGO_FOCUS="\[PR-Blocking\]" make test-e2e
