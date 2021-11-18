@@ -18,7 +18,7 @@ function cleanup()
     vagrant destroy -f
 
     rm cli
-    rm -rf $K8SVER
+    rm -rf $K8SVER*
 
     popd
 
