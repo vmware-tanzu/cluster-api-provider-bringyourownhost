@@ -303,7 +303,8 @@ This test executes the following workflow:
 - start local repo
 - build a BYOH bundle and upload it to the local repo
 - spin up a Ubuntu 20.04 VM and inside it run
--- cli install with local repo
--- kubeadm init phase preflight
--- cli uninstall
+  - cli install with local repo
+  - kubeadm init phase preflight
+  - cli uninstall
+
 Upon success return 0.
