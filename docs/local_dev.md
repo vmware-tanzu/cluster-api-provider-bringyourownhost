@@ -140,7 +140,7 @@ export CONTROL_PLANE_ENDPOINT_IP=<static IP from the subnet where the containers
 From ```cluster-api-provider-bringyourownhost``` folder
 
 ```shell
-cat test/e2e/data/infrastructure-provider-bringyourownhost/v1beta1/cluster-template-byoh.yaml | envsubst | kubectl apply -f -
+cat test/e2e/data/infrastructure-provider-byoh/v1beta1/cluster-template.yaml | envsubst | kubectl apply -f -
 ```
 
 ```shell
