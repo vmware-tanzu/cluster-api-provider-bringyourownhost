@@ -9,6 +9,7 @@ RUN apt-get update \
        rsync nfs-common fuse-overlayfs containerd curl gnupg2\
     && mkdir -p /etc/containerd \
     && containerd config default | tee /etc/containerd/config.toml \
+    && sed 's/SystemdCgroup = false/SystemdCgroup = true/'  /etc/containerd/config.toml \
     && ln -s "$(which systemd)" /sbin/init
 RUN  systemctl enable containerd
 COPY kubernetes.list /etc/apt/sources.list.d/kubernetes.list
