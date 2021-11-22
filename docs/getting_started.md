@@ -154,6 +154,10 @@ $ CONTROL_PLANE_ENDPOINT_IP=10.10.10.10 clusterctl generate cluster byoh-cluster
     --control-plane-machine-count 1 \
     --worker-machine-count 1 > cluster.yaml
 
+# For docker hosts, update cgroup driver to cgroupfs
+$ sed -i '/^          kubeletExtraArgs:/a\            cgroup-driver: cgroupfs' cluster.yaml
+$ sed -i '/^        kubeletExtraArgs:/a\          cgroup-driver: cgroupfs' cluster.yaml
+
 # Inspect and make any changes
 $ vi cluster.yaml
 
