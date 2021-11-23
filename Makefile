@@ -179,7 +179,7 @@ build-release-artifacts: build-cluster-templates build-infra-yaml build-metadata
 
 build-cluster-templates: $(RELEASE_DIR) cluster-templates
 	cp $(BYOH_TEMPLATES)/v1beta1/cluster-template.yaml $(RELEASE_DIR)/cluster-template.yaml
-	sed -i -e 1,7d $(RELEASE_DIR)/cluster-template.yaml
+	sed -i -e 1,20d $(RELEASE_DIR)/cluster-template.yaml
 
 build-infra-yaml:kustomize # Generate infrastructure-components.yaml for the provider
 	cd config/manager && $(KUSTOMIZE) edit set image gcr.io/k8s-staging-cluster-api/cluster-api-byoh-controller=${IMG}
