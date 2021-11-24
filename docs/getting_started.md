@@ -102,7 +102,7 @@ done
   - socat
   - ebtables
   - ethtool
-  - conntract
+  - conntrack
 - You can install these with
 ``` shell
 sudo apt-get install socat ebtables ethtool conntrack
