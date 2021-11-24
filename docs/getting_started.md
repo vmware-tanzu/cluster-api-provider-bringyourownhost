@@ -97,8 +97,31 @@ done
 ### Register BYOH host to management cluster
 
 ---
+#### VM Prerequisites
+- The following packages must be pre-installed on the VMs
+  - socat
+  - ebtables
+  - ethtool
+  - conntract
+- You can install these with
+``` shell
+sudo apt-get install socat ebtables ethtool conntrack
+```
+- The output of `hostname` should be added to `/etc/hosts`
+
+Example:
+```shell
+$ hostname
+node01
+
+$ cat /etc/hosts
+127.0.0.1 localhost
+127.0.0.1 node01
+...
+```
+
 If you are trying this on your own hosts, then for each host
-1. Download the [byoh-hostagent-linux-amd64](https://github.com/vmware-tanzu/cluster-api-provider-bringyourownhost/releases/download/v0.1.0-alpha.1/byoh-hostagent-linux-amd64)
+1. Download the [byoh-hostagent-linux-amd64](https://github.com/vmware-tanzu/cluster-api-provider-bringyourownhost/releases/download/v0.1.0-alpha.2/byoh-hostagent-linux-amd64)
 2. Copy the management cluster `kubeconfig` file as `management.conf`
 3. Start the agent 
 ```shell
@@ -150,7 +173,7 @@ Running the following command(on the host where you execute `clusterctl` in prev
 ```shell
 $ CONTROL_PLANE_ENDPOINT_IP=10.10.10.10 clusterctl generate cluster byoh-cluster \
     --infrastructure byoh \
-    --kubernetes-version v1.22.0 \
+    --kubernetes-version v1.22.3 \
     --control-plane-machine-count 1 \
     --worker-machine-count 1 > cluster.yaml
 
@@ -188,7 +211,7 @@ after that you should see your nodes turn into ready:
 ```shell
 $ KUBECONFIG=byoh-cluster.kubeconfig kubectl get nodes
 NAME                                                          STATUS     ROLES    AGE   VERSION
-byoh-cluster-8siai8                                           Ready      master   5m   v1.21.2
+byoh-cluster-8siai8                                           Ready      master   5m   v1.22.3
 
 ```
 
