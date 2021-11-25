@@ -6,6 +6,7 @@ STAGING_REGISTRY ?= gcr.io/k8s-staging-cluster-api
 
 IMAGE_NAME ?= cluster-api-byoh-controller
 TAG ?= dev
+RELEASE_DIR := _dist
 
 # Image URL to use all building/pushing image targets
 IMG ?= ${STAGING_REGISTRY}/${IMAGE_NAME}:${TAG}
@@ -166,6 +167,29 @@ host-agent-binary: $(RELEASE_DIR)
 		golang:1.16.6 \
 		go build -a -ldflags "$(GOLDFLAGS)" \
 		-o ./bin/$(notdir $(RELEASE_BINARY))-$(GOOS)-$(GOARCH) $(HOST_AGENT_DIR)
+
+
+##@Release
+
+$(RELEASE_DIR):
+	rm -rf $(RELEASE_DIR)
+	mkdir -p $(RELEASE_DIR)
+
+build-release-artifacts: build-cluster-templates build-infra-yaml build-metadata-yaml build-host-agent-binary
+
+build-cluster-templates: $(RELEASE_DIR) cluster-templates
+	cp $(BYOH_TEMPLATES)/v1beta1/cluster-template.yaml $(RELEASE_DIR)/cluster-template.yaml
+	sed -i -e 1,20d $(RELEASE_DIR)/cluster-template.yaml
+
+build-infra-yaml:kustomize # Generate infrastructure-components.yaml for the provider
+	cd config/manager && $(KUSTOMIZE) edit set image gcr.io/k8s-staging-cluster-api/cluster-api-byoh-controller=${IMG}
+	$(KUSTOMIZE) build config/default > $(RELEASE_DIR)/infrastructure-components.yaml
+
+build-metadata-yaml:
+	cp metadata.yaml $(RELEASE_DIR)/metadata.yaml
+
+build-host-agent-binary: host-agent-binaries
+	cp bin/byoh-hostagent-linux-amd64 $(RELEASE_DIR)/byoh-hostagent-linux-amd64
 
 
 # go-get-tool will 'go get' any package $2 and install it to $1.
