@@ -19,6 +19,7 @@ require (
 	github.com/onsi/ginkgo v1.16.4
 	github.com/onsi/gomega v1.16.0
 	github.com/opencontainers/image-spec v1.0.2 //indirect
+	github.com/opencontainers/runc v1.0.3 // indirect
 	github.com/pkg/errors v0.9.1
 	github.com/theupdateframework/notary v0.7.0 // indirect
 	k8s.io/api v0.22.2
