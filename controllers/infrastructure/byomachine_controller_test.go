@@ -206,7 +206,7 @@ var _ = Describe("Controllers/ByomachineController", func() {
 				Expect(createdByoHostLabels[clusterv1.ClusterLabelName]).To(Equal(capiCluster.Name))
 
 				createdByoHostAnnotations := createdByoHost.GetAnnotations()
-				Expect(createdByoHostAnnotations[infrastructurev1beta1.K8sVersionAnnotation]).To(Equal(strings.Split(testClusterVersion, "_")[0]))
+				Expect(createdByoHostAnnotations[infrastructurev1beta1.K8sVersionAnnotation]).To(Equal(strings.Split(testClusterVersion, "+")[0]))
 				Expect(createdByoHostAnnotations[infrastructurev1beta1.BundleLookupBaseRegistryAnnotation]).To(Equal(byoCluster.Spec.BundleLookupBaseRegistry))
 				Expect(createdByoHostAnnotations[infrastructurev1beta1.BundleLookupTagAnnotation]).To(Equal(byoCluster.Spec.BundleLookupTag))
 
