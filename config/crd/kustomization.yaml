@@ -18,7 +18,7 @@ patchesStrategicMerge:
 #- patches/webhook_in_byomachines.yaml
 - patches/webhook_in_byohosts.yaml
 #- patches/webhook_in_byomachinetemplates.yaml
-#- patches/webhook_in_byoclusters.yaml
+- patches/webhook_in_byoclusters.yaml
 #- patches/webhook_in_byohosts.yaml
 #+kubebuilder:scaffold:crdkustomizewebhookpatch
 
@@ -27,7 +27,7 @@ patchesStrategicMerge:
 #- patches/cainjection_in_byomachines.yaml
 - patches/cainjection_in_byohosts.yaml
 #- patches/cainjection_in_byomachinetemplates.yaml
-#- patches/cainjection_in_byoclusters.yaml
+- patches/cainjection_in_byoclusters.yaml
 #- patches/cainjection_in_byohosts.yaml
 #+kubebuilder:scaffold:crdkustomizecainjectionpatch
 

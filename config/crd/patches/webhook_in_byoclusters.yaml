@@ -8,6 +8,7 @@ spec:
     strategy: Webhook
     webhook:
       clientConfig:
+        caBundle: Cg==
         service:
           namespace: system
           name: webhook-service
