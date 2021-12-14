@@ -20,7 +20,7 @@ jobs:
           go-version: 1.16
 
       - name: Build Release Artifacts
-        run: IMG="projects.registry.vmware.com/cluster_api_provider_bringyourownhost/cluster-api-byoh-controller:${{ env.GITHUB_REF }}" make build-release-artifacts
+        run: IMG="projects.registry.vmware.com/cluster_api_provider_bringyourownhost/cluster-api-byoh-controller:${{ github.ref_name }}" make build-release-artifacts
 
       - name: Publish Release
         uses: softprops/action-gh-release@v1
