@@ -121,6 +121,10 @@ func main() {
 		setupLog.Error(err, "unable to create webhook", "webhook", "ByoHost")
 		os.Exit(1)
 	}
+	if err = (&infrastructurev1beta1.ByoCluster{}).SetupWebhookWithManager(mgr); err != nil {
+		setupLog.Error(err, "unable to create webhook", "webhook", "ByoCluster")
+		os.Exit(1)
+	}
 	//+kubebuilder:scaffold:builder
 
 	if err := mgr.AddHealthzCheck("healthz", healthz.Ping); err != nil {
