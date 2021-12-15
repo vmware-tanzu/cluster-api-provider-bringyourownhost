@@ -26,6 +26,7 @@ func (r *ByoCluster) SetupWebhookWithManager(mgr ctrl.Manager) error {
 var _ webhook.Defaulter = &ByoCluster{}
 
 // Default implements webhook.Defaulter so a webhook will be registered for the type
+// nolint: stylecheck
 func (r *ByoCluster) Default() {
 	byoclusterlog.Info("default", "name", r.Name)
 
