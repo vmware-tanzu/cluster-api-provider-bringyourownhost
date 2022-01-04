@@ -4,7 +4,11 @@
 package v1beta1
 
 import (
+	"errors"
+
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 	ctrl "sigs.k8s.io/controller-runtime"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/webhook"
@@ -29,10 +33,6 @@ var _ webhook.Defaulter = &ByoCluster{}
 // nolint: stylecheck
 func (r *ByoCluster) Default() {
 	byoclusterlog.Info("default", "name", r.Name)
-
-	if r.Spec.BundleLookupTag == "" {
-		r.Spec.BundleLookupTag = "v0.1.0_alpha.2"
-	}
 }
 
 // TODO(user): change verbs to "verbs=create;update;delete" if you want to enable deletion validation.
@@ -43,8 +43,12 @@ var _ webhook.Validator = &ByoCluster{}
 // ValidateCreate implements webhook.Validator so a webhook will be registered for the type
 func (r *ByoCluster) ValidateCreate() error {
 	byoclusterlog.Info("validate create", "name", r.Name)
+	groupResource := schema.GroupResource{Group: "infrastructure.cluster.x-k8s.io", Resource: "byocluster"}
 
-	// TODO(user): fill in your validation logic upon object creation.
+	if r.Spec.BundleLookupTag == "" {
+		return apierrors.NewForbidden(groupResource, r.Name, errors.New("cannot create ByoCluster with Spec.BundleLookupTag"))
+	}
+
 	return nil
 }
 
@@ -52,7 +56,11 @@ func (r *ByoCluster) ValidateCreate() error {
 func (r *ByoCluster) ValidateUpdate(old runtime.Object) error {
 	byoclusterlog.Info("validate update", "name", r.Name)
 
-	// TODO(user): fill in your validation logic upon object update.
+	groupResource := schema.GroupResource{Group: "infrastructure.cluster.x-k8s.io", Resource: "byocluster"}
+
+	if r.Spec.BundleLookupTag == "" {
+		return apierrors.NewForbidden(groupResource, r.Name, errors.New("cannot create ByoCluster with empty Spec.BundleLookupTag"))
+	}
 	return nil
 }
 

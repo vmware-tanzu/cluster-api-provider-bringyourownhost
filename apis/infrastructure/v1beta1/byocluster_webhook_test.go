@@ -4,8 +4,6 @@
 package v1beta1
 
 import (
-	"context"
-
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -17,15 +15,10 @@ import (
 var _ = Describe("ByoclusterWebhook", func() {
 	XContext("When ByoCluster gets a create request", func() {
 		var (
-			byoCluster        *ByoCluster
-			ctx               context.Context
-			k8sClientUncached client.Client
+			byoCluster *ByoCluster
 		)
 		BeforeEach(func() {
-			ctx = context.Background()
-			var clientErr error
-
-			k8sClientUncached, clientErr = client.New(cfg, client.Options{Scheme: scheme.Scheme})
+			_, clientErr := client.New(cfg, client.Options{Scheme: scheme.Scheme})
 			Expect(clientErr).NotTo(HaveOccurred())
 
 			byoCluster = &ByoCluster{
@@ -34,17 +27,60 @@ var _ = Describe("ByoclusterWebhook", func() {
 					APIVersion: clusterv1.GroupVersion.String(),
 				},
 				ObjectMeta: metav1.ObjectMeta{
-					Name:      "byocluster-",
+					Name:      "byocluster-create",
 					Namespace: "default",
 				},
 				Spec: ByoClusterSpec{},
 			}
-			Expect(k8sClientUncached.Create(ctx, byoCluster)).Should(Succeed())
 		})
 
-		It("should fill the default value", func() {
-			byoCluster.Default()
-			Expect(byoCluster.Spec.BundleLookupTag).Should(Equal("v0.1.0_alpha.2"))
+		It("should reject the request when BundleLookupTag is empty", func() {
+			err := byoCluster.ValidateCreate()
+			Expect(err).To(HaveOccurred())
+			Expect(err).To(MatchError("cSpec.BundleLookupTag of ByoCluster is empty"))
+		})
+
+	})
+
+	XContext("When ByoCluster gets a update request", func() {
+		var (
+			oldbyoCluster *ByoCluster
+			newbyoCluster *ByoCluster
+		)
+		BeforeEach(func() {
+			_, clientErr := client.New(cfg, client.Options{Scheme: scheme.Scheme})
+			Expect(clientErr).NotTo(HaveOccurred())
+
+			oldbyoCluster = &ByoCluster{
+				TypeMeta: metav1.TypeMeta{
+					Kind:       "ByoCluster",
+					APIVersion: clusterv1.GroupVersion.String(),
+				},
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "byocluster-update",
+					Namespace: "default",
+				},
+				Spec: ByoClusterSpec{
+					BundleLookupTag: "v0.1.0_alpha.2",
+				},
+			}
+			newbyoCluster = &ByoCluster{
+				TypeMeta: metav1.TypeMeta{
+					Kind:       "ByoCluster",
+					APIVersion: clusterv1.GroupVersion.String(),
+				},
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "byocluster-update",
+					Namespace: "default",
+				},
+				Spec: ByoClusterSpec{},
+			}
+		})
+
+		It("should reject the request when BundleLookupTag is empty", func() {
+			err := newbyoCluster.ValidateUpdate(oldbyoCluster)
+			Expect(err).To(HaveOccurred())
+			Expect(err).To(MatchError("Spec.BundleLookupTag of ByoCluster is empty"))
 		})
 
 	})
