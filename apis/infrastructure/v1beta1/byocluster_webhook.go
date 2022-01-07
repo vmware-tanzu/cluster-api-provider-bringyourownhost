@@ -46,7 +46,7 @@ func (r *ByoCluster) ValidateCreate() error {
 	groupResource := schema.GroupResource{Group: "infrastructure.cluster.x-k8s.io", Resource: "byocluster"}
 
 	if r.Spec.BundleLookupTag == "" {
-		return apierrors.NewForbidden(groupResource, r.Name, errors.New("cannot create ByoCluster with Spec.BundleLookupTag"))
+		return apierrors.NewForbidden(groupResource, r.Name, errors.New("cannot create ByoCluster without Spec.BundleLookupTag"))
 	}
 
 	return nil
