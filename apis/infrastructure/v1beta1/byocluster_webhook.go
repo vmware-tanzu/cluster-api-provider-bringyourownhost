@@ -8,7 +8,7 @@ import (
 
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/apimachinery/pkg/runtime/schema"
+	"k8s.io/apimachinery/pkg/util/validation/field"
 	ctrl "sigs.k8s.io/controller-runtime"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/webhook"
@@ -40,10 +40,10 @@ var _ webhook.Validator = &ByoCluster{}
 // ValidateCreate implements webhook.Validator so a webhook will be registered for the type
 func (r *ByoCluster) ValidateCreate() error {
 	byoclusterlog.Info("validate create", "name", r.Name)
-	groupResource := schema.GroupResource{Group: "infrastructure.cluster.x-k8s.io", Resource: "byocluster"}
-
 	if r.Spec.BundleLookupTag == "" {
-		return apierrors.NewForbidden(groupResource, r.Name, errors.New("cannot create ByoCluster without Spec.BundleLookupTag"))
+		return apierrors.NewInvalid(r.GroupVersionKind().GroupKind(), r.Name, field.ErrorList{
+			field.InternalError(nil, errors.New("cannot create ByoCluster without Spec.BundleLookupTag")),
+		})
 	}
 
 	return nil
@@ -52,11 +52,10 @@ func (r *ByoCluster) ValidateCreate() error {
 // ValidateUpdate implements webhook.Validator so a webhook will be registered for the type
 func (r *ByoCluster) ValidateUpdate(old runtime.Object) error {
 	byoclusterlog.Info("validate update", "name", r.Name)
-
-	groupResource := schema.GroupResource{Group: "infrastructure.cluster.x-k8s.io", Resource: "byocluster"}
-
 	if r.Spec.BundleLookupTag == "" {
-		return apierrors.NewForbidden(groupResource, r.Name, errors.New("cannot update ByoCluster with empty Spec.BundleLookupTag"))
+		return apierrors.NewInvalid(r.GroupVersionKind().GroupKind(), r.Name, field.ErrorList{
+			field.InternalError(nil, errors.New("cannot update ByoCluster with empty Spec.BundleLookupTag")),
+		})
 	}
 	return nil
 }
