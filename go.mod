@@ -17,7 +17,7 @@ require (
 	github.com/maxbrunsfeld/counterfeiter/v6 v6.4.1
 	github.com/moby/sys/mount v0.2.0 // indirect
 	github.com/onsi/ginkgo v1.16.4
-	github.com/onsi/gomega v1.16.0
+	github.com/onsi/gomega v1.17.0
 	github.com/opencontainers/image-spec v1.0.2 //indirect
 	github.com/opencontainers/runc v1.0.3 // indirect
 	github.com/pkg/errors v0.9.1
