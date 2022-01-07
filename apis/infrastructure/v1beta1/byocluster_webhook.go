@@ -23,8 +23,6 @@ func (r *ByoCluster) SetupWebhookWithManager(mgr ctrl.Manager) error {
 		Complete()
 }
 
-// TODO(user): EDIT THIS FILE!  THIS IS SCAFFOLDING FOR YOU TO OWN!
-
 //+kubebuilder:webhook:path=/mutate-infrastructure-cluster-x-k8s-io-v1beta1-byocluster,mutating=true,failurePolicy=fail,sideEffects=None,groups=infrastructure.cluster.x-k8s.io,resources=byoclusters,verbs=create;update,versions=v1beta1,name=mbyocluster.kb.io,admissionReviewVersions=v1
 
 var _ webhook.Defaulter = &ByoCluster{}
@@ -32,7 +30,6 @@ var _ webhook.Defaulter = &ByoCluster{}
 // Default implements webhook.Defaulter so a webhook will be registered for the type
 // nolint: stylecheck
 func (r *ByoCluster) Default() {
-	byoclusterlog.Info("default", "name", r.Name)
 }
 
 // TODO(user): change verbs to "verbs=create;update;delete" if you want to enable deletion validation.
@@ -66,8 +63,6 @@ func (r *ByoCluster) ValidateUpdate(old runtime.Object) error {
 
 // ValidateDelete implements webhook.Validator so a webhook will be registered for the type
 func (r *ByoCluster) ValidateDelete() error {
-	byoclusterlog.Info("validate delete", "name", r.Name)
-
 	// TODO(user): fill in your validation logic upon object deletion.
 	return nil
 }
