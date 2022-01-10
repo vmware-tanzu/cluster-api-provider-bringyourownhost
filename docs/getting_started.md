@@ -168,7 +168,19 @@ kubectl get byohosts
 ### Create workload cluster
 Running the following command(on the host where you execute `clusterctl` in previous steps)
 
-**NOTE:** The `CONTROL_PLANE_ENDPOINT_IP` is an IP that must be an IP on the same subnet as the control plane machines, it should be also an IP that is not part of your DHCP range
+**NOTE:** The `CONTROL_PLANE_ENDPOINT_IP` is an IP that must be an IP on the same subnet as the control plane machines, it should be also an IP that is not part of your DHCP range.
+
+If you are using docker containers then you can find the control plane machine's network subnet by running
+
+```shell
+docker network inspect kind | jq -r 'map(.IPAM.Config[].Subnet) []'
+```
+Randomly assign any free IP within the network subnet to the `CONTROL_PLANE_ENDPOINT_IP`. The list of IP addresses currently in use can be found by
+
+```shell
+docker network inspect kind | jq -r 'map(.Containers[].IPv4Address) []'
+```
+Create the workload cluster
 
 ```shell
 $ CONTROL_PLANE_ENDPOINT_IP=10.10.10.10 clusterctl generate cluster byoh-cluster \
