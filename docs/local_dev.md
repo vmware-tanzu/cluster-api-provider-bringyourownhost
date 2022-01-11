@@ -101,7 +101,7 @@ Run the following to create n hosts, where ```n>1```
 for i in {1..n}
 do
 echo "Creating docker container host $i"
-docker run --detach --tty --hostname host$i --name host$i --privileged --security-opt seccomp=unconfined --tmpfs /tmp --tmpfs /run --volume /var --volume /lib/modules:/lib/modules:ro --network kind byoh/node:v1.22.0
+docker run --detach --tty --hostname host$i --name host$i --privileged --security-opt seccomp=unconfined --tmpfs /tmp --tmpfs /run --volume /var --volume /lib/modules:/lib/modules:ro --network kind byoh/node:v1.22.3
 echo "Copy agent binary to host $i"
 docker cp bin/byoh-hostagent-linux-amd64 host$i:/byoh-hostagent
 echo "Copy kubeconfig to host $i"
@@ -131,7 +131,7 @@ Open a new shell and change directory to `cluster-api-provider-bringyourownhost`
 ```shell
 export CLUSTER_NAME="test1"
 export NAMESPACE="default"
-export KUBERNETES_VERSION="v1.22.0"
+export KUBERNETES_VERSION="v1.22.3"
 export CONTROL_PLANE_MACHINE_COUNT=1
 export WORKER_MACHINE_COUNT=1
 export CONTROL_PLANE_ENDPOINT_IP=<static IP from the subnet where the containers are running>
