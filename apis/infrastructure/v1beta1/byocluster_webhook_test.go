@@ -54,7 +54,7 @@ var _ = Describe("ByoclusterWebhook", func() {
 
 	})
 
-	Context("When ByoCluster gets a update request", func() {
+	Context("When ByoCluster gets an update request", func() {
 		var (
 			byoCluster        *ByoCluster
 			ctx               context.Context
