@@ -13,7 +13,7 @@ import (
 )
 
 var _ = Describe("ByoclusterWebhook", func() {
-	XContext("When ByoCluster gets a create request", func() {
+	Context("When ByoCluster gets a create request", func() {
 		var (
 			byoCluster *ByoCluster
 		)
@@ -37,12 +37,12 @@ var _ = Describe("ByoclusterWebhook", func() {
 		It("should reject the request when BundleLookupTag is empty", func() {
 			err := byoCluster.ValidateCreate()
 			Expect(err).To(HaveOccurred())
-			Expect(err).To(MatchError("cSpec.BundleLookupTag of ByoCluster is empty"))
+			Expect(err.Error()).To(ContainSubstring("cannot create ByoCluster without Spec.BundleLookupTag"))
 		})
 
 	})
 
-	XContext("When ByoCluster gets a update request", func() {
+	Context("When ByoCluster gets a update request", func() {
 		var (
 			oldbyoCluster *ByoCluster
 			newbyoCluster *ByoCluster
@@ -80,7 +80,7 @@ var _ = Describe("ByoclusterWebhook", func() {
 		It("should reject the request when BundleLookupTag is empty", func() {
 			err := newbyoCluster.ValidateUpdate(oldbyoCluster)
 			Expect(err).To(HaveOccurred())
-			Expect(err).To(MatchError("Spec.BundleLookupTag of ByoCluster is empty"))
+			Expect(err.Error()).To(ContainSubstring("cannot update ByoCluster with empty Spec.BundleLookupTag"))
 		})
 
 	})
