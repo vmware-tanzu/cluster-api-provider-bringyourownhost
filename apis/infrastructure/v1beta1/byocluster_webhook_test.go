@@ -43,7 +43,7 @@ var _ = Describe("ByoclusterWebhook", func() {
 		It("should reject the request when BundleLookupTag is empty", func() {
 			err := k8sClientUncached.Create(ctx, byoCluster)
 			Expect(err).To(HaveOccurred())
-			Expect(err.Error()).To(ContainSubstring("cannot create ByoCluster without Spec.BundleLookupTag"))
+			Expect(err).To(MatchError("admission webhook \"vbyocluster.kb.io\" denied the request: ByoCluster.infrastructure.cluster.x-k8s.io \"" + byoCluster.Name + "\" is invalid: <nil>: Internal error: cannot create ByoCluster without Spec.BundleLookupTag"))
 		})
 
 	})
@@ -81,7 +81,7 @@ var _ = Describe("ByoclusterWebhook", func() {
 			byoCluster.Spec.BundleLookupTag = ""
 			err := k8sClientUncached.Update(ctx, byoCluster)
 			Expect(err).To(HaveOccurred())
-			Expect(err.Error()).To(ContainSubstring("cannot update ByoCluster with empty Spec.BundleLookupTag"))
+			Expect(err).To(MatchError("admission webhook \"vbyocluster.kb.io\" denied the request: ByoCluster.infrastructure.cluster.x-k8s.io \"" + byoCluster.Name + "\" is invalid: <nil>: Internal error: cannot update ByoCluster with empty Spec.BundleLookupTag"))
 		})
 
 	})
