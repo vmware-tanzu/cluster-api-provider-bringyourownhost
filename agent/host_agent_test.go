@@ -201,10 +201,9 @@ var _ = Describe("Agent", func() {
 			date, err := exec.Command("date").Output()
 			Expect(err).NotTo(HaveOccurred())
 			version.BuildDate = string(date)
-			version.Version = "1.2.3"
+			version.Version = "v1.2.3"
 			ldflags := fmt.Sprintf("-X 'github.com/vmware-tanzu/cluster-api-provider-bringyourownhost/agent/version.Version=%s'"+
 				" -X 'github.com/vmware-tanzu/cluster-api-provider-bringyourownhost/agent/version.BuildDate=%s'", version.Version, version.BuildDate)
-			fmt.Fprintf(GinkgoWriter, ldflags)
 			tmpHostAgentBinary, err = gexec.Build("github.com/vmware-tanzu/cluster-api-provider-bringyourownhost/agent", "-ldflags", ldflags)
 			Expect(err).NotTo(HaveOccurred())
 		})
@@ -227,9 +226,8 @@ var _ = Describe("Agent", func() {
 			}
 			expected := fmt.Sprintf("byoh-hostagent version: %#v\n", expectedStruct)
 			out, err := exec.Command(tmpHostAgentBinary, "--version").Output()
-			output := string(out)
-			fmt.Fprintf(GinkgoWriter, "version.Version %s", version.Version)
 			Expect(err).NotTo(HaveOccurred())
+			output := string(out)
 			Expect(output).Should(Equal(expected))
 		})
 	})
