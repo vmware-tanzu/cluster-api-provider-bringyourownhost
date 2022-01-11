@@ -5,12 +5,16 @@ package main
 
 import (
 	"context"
+	"fmt"
 	"io/ioutil"
 	"net"
 	"os"
 	"os/exec"
+	"runtime"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+
+	"github.com/vmware-tanzu/cluster-api-provider-bringyourownhost/agent/version"
 
 	"github.com/jackpal/gateway"
 	. "github.com/onsi/ginkgo"
@@ -185,6 +189,47 @@ var _ = Describe("Agent", func() {
 			Expect(k8sClient.Create(context.TODO(), byoHost)).NotTo(HaveOccurred(), "failed to create byohost")
 
 			Consistently(session.Err, "10s").ShouldNot(gbytes.Say(byoHost.Name))
+		})
+	})
+
+	Context("When host agent is executed with --version flag", func() {
+		var (
+			tmpHostAgentBinary string
+		)
+		BeforeEach(func() {
+			date, err := exec.Command("date").Output()
+			Expect(err).NotTo(HaveOccurred())
+			version.BuildDate = string(date)
+			version.Version = "1.2.3"
+			ldflags := fmt.Sprintf("-X 'github.com/vmware-tanzu/cluster-api-provider-bringyourownhost/agent/version.Version=%s'"+
+				" -X 'github.com/vmware-tanzu/cluster-api-provider-bringyourownhost/agent/version.BuildDate=%s'", version.Version, version.BuildDate)
+			fmt.Fprintf(GinkgoWriter, ldflags)
+			tmpHostAgentBinary, err = gexec.Build("github.com/vmware-tanzu/cluster-api-provider-bringyourownhost/agent", "-ldflags", ldflags)
+			Expect(err).NotTo(HaveOccurred())
+		})
+
+		AfterEach(func() {
+			version.BuildDate = ""
+			version.Version = ""
+			tmpHostAgentBinary = ""
+		})
+
+		It("Shows the appropriate version of the agent", func() {
+			expectedStruct := version.Info{
+				Major:     "1",
+				Minor:     "2",
+				Patch:     "3",
+				BuildDate: version.BuildDate,
+				GoVersion: runtime.Version(),
+				Compiler:  runtime.Compiler,
+				Platform:  fmt.Sprintf("%s/%s", runtime.GOOS, runtime.GOARCH),
+			}
+			expected := fmt.Sprintf("byoh-hostagent version: %#v\n", expectedStruct)
+			out, err := exec.Command(tmpHostAgentBinary, "--version").Output()
+			output := string(out)
+			fmt.Fprintf(GinkgoWriter, "version.Version %s", version.Version)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(output).Should(Equal(expected))
 		})
 	})
 })
