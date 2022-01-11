@@ -40,7 +40,7 @@ func Get() Info {
 	}
 }
 
-func extractVersion(major *string, minor *string, patch *string) {
+func extractVersion(major, minor, patch *string) {
 
 	if Version == "dev" {
 		*major = "dev"

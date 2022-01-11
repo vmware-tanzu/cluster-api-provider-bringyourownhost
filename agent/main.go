@@ -80,8 +80,6 @@ var (
 	downloadpath       string
 	skipInstallation   bool
 	printVersion       bool
-	BuildVersion       string
-	BuildTime          string
 )
 
 // TODO - fix logging
