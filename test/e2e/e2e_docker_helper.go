@@ -25,7 +25,7 @@ import (
 )
 
 const (
-	KindImage          = "byoh/node:v1.22.0"
+	KindImage          = "byoh/node:v1.22.3"
 	TempKubeconfigPath = "/tmp/mgmt.conf"
 )
 
