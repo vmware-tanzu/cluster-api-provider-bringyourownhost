@@ -90,7 +90,7 @@ Once the image is ready, lets start 2 docker containers for our deployment. One 
 for i in {1..2}
 do
   echo "Creating docker container named host$i"
-  docker run --detach --tty --hostname host$i --name host$i --privileged --security-opt seccomp=unconfined --tmpfs /tmp --tmpfs /run --volume /var --volume /lib/modules:/lib/modules:ro --network kind byoh/node:v1.22.0
+  docker run --detach --tty --hostname host$i --name host$i --privileged --security-opt seccomp=unconfined --tmpfs /tmp --tmpfs /run --volume /var --volume /lib/modules:/lib/modules:ro --network kind byoh/node:v1.22.3
 done
 ```
 
@@ -121,7 +121,7 @@ $ cat /etc/hosts
 ```
 
 If you are trying this on your own hosts, then for each host
-1. Download the [byoh-hostagent-linux-amd64](https://github.com/vmware-tanzu/cluster-api-provider-bringyourownhost/releases/download/v0.1.0-alpha.2/byoh-hostagent-linux-amd64)
+1. Download the [byoh-hostagent-linux-amd64](https://github.com/vmware-tanzu/cluster-api-provider-bringyourownhost/releases/download/v0.1.0/byoh-hostagent-linux-amd64)
 2. Copy the management cluster `kubeconfig` file as `management.conf`
 3. Start the agent 
 ```shell
@@ -147,15 +147,15 @@ echo "Copy kubeconfig to host $i"
 docker cp ~/.kube/management-cluster.conf host$i:/management-cluster.conf
 done
 ```
-Start the host agent on each of the hosts and keep it running
+Start the host agent on each of the hosts and keep it running. Use the `--skip-installation` flag as we already have k8s components included in the docker image. This flag will skip k8s installation attempt on the host
 
 ```shell
 export HOST_NAME=host1
-docker exec -it $HOST_NAME sh -c "chmod +x byoh-hostagent && ./byoh-hostagent --kubeconfig management-cluster.conf"
+docker exec -it $HOST_NAME sh -c "chmod +x byoh-hostagent && ./byoh-hostagent --kubeconfig management-cluster.conf --skip-installation"
 
 # do the same for host2 in a separate tab
 export HOST_NAME=host2
-docker exec -it $HOST_NAME sh -c "chmod +x byoh-hostagent && ./byoh-hostagent --kubeconfig management-cluster.conf"
+docker exec -it $HOST_NAME sh -c "chmod +x byoh-hostagent && ./byoh-hostagent --kubeconfig management-cluster.conf --skip-installation"
 ```
 ---
 
@@ -168,18 +168,35 @@ kubectl get byohosts
 ### Create workload cluster
 Running the following command(on the host where you execute `clusterctl` in previous steps)
 
-**NOTE:** The `CONTROL_PLANE_ENDPOINT_IP` is an IP that must be an IP on the same subnet as the control plane machines, it should be also an IP that is not part of your DHCP range
+**NOTE:** The `CONTROL_PLANE_ENDPOINT_IP` is an IP that must be an IP on the same subnet as the control plane machines, it should be also an IP that is not part of your DHCP range.
+
+If you are using docker containers then you can find the control plane machine's network subnet by running
 
 ```shell
+docker network inspect kind | jq -r 'map(.IPAM.Config[].Subnet) []'
+```
+Randomly assign any free IP within the network subnet to the `CONTROL_PLANE_ENDPOINT_IP`. The list of IP addresses currently in use can be found by
+
+```shell
+docker network inspect kind | jq -r 'map(.Containers[].IPv4Address) []'
+```
+Create the workload cluster
+
+```shell
+# for vms as byohosts
 $ CONTROL_PLANE_ENDPOINT_IP=10.10.10.10 clusterctl generate cluster byoh-cluster \
     --infrastructure byoh \
     --kubernetes-version v1.22.3 \
     --control-plane-machine-count 1 \
     --worker-machine-count 1 > cluster.yaml
 
-# For docker hosts, update cgroup driver to cgroupfs
-$ sed -i '/^          kubeletExtraArgs:/a\            cgroup-driver: cgroupfs' cluster.yaml
-$ sed -i '/^        kubeletExtraArgs:/a\          cgroup-driver: cgroupfs' cluster.yaml
+# for docker hosts use the --flavor argument
+$ CONTROL_PLANE_ENDPOINT_IP=10.10.10.10 clusterctl generate cluster byoh-cluster \
+    --infrastructure byoh \
+    --kubernetes-version v1.22.3 \
+    --control-plane-machine-count 1 \
+    --worker-machine-count 1 \
+    --flavor docker > cluster.yaml
 
 # Inspect and make any changes
 $ vi cluster.yaml

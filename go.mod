@@ -17,7 +17,7 @@ require (
 	github.com/maxbrunsfeld/counterfeiter/v6 v6.4.1
 	github.com/moby/sys/mount v0.2.0 // indirect
 	github.com/onsi/ginkgo v1.16.4
-	github.com/onsi/gomega v1.16.0
+	github.com/onsi/gomega v1.17.0
 	github.com/opencontainers/image-spec v1.0.2 //indirect
 	github.com/opencontainers/runc v1.0.3 // indirect
 	github.com/pkg/errors v0.9.1
@@ -29,7 +29,7 @@ require (
 	k8s.io/kubectl v0.22.2
 	k8s.io/utils v0.0.0-20210930125809-cb0fa318a74b
 	sigs.k8s.io/cluster-api v1.0.0
-	sigs.k8s.io/cluster-api/test v1.0.0
-	sigs.k8s.io/controller-runtime v0.10.2
+	sigs.k8s.io/cluster-api/test v1.0.2
+	sigs.k8s.io/controller-runtime v0.10.3
 	sigs.k8s.io/yaml v1.3.0
 )

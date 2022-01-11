@@ -16,9 +16,8 @@ import (
 )
 
 var _ = Describe("ByohostWebhook", func() {
-	// TODO: Make the below Context work
-	// we will not need the second context if this works
-	XContext("When ByoHost gets a delete request", func() {
+
+	Context("When ByoHost gets a delete request", func() {
 		var (
 			byoHost           *ByoHost
 			ctx               context.Context
@@ -83,52 +82,9 @@ var _ = Describe("ByohostWebhook", func() {
 			It("should reject the request", func() {
 				err := byoHost.ValidateDelete()
 				Expect(err).To(HaveOccurred())
-				Expect(err).To(MatchError("cannot delete ByoHost when MachineRef is assigned"))
+				Expect(err).To(MatchError("byohost.infrastructure.cluster.x-k8s.io \"" + byoHost.Name + "\" is forbidden: cannot delete ByoHost when MachineRef is assigned"))
 			})
 		})
 	})
 
-	Context("When ByoHost gets a delete request", func() {
-		var (
-			byoHost ByoHost
-		)
-		BeforeEach(func() {
-			byoHost = ByoHost{
-				TypeMeta: metav1.TypeMeta{
-					Kind:       "ByoHost",
-					APIVersion: "infrastructure.cluster.x-k8s.io/v1beta1",
-				},
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "byohost",
-					Namespace: "default",
-				},
-				Spec: ByoHostSpec{},
-				Status: ByoHostStatus{
-					MachineRef: nil,
-				},
-			}
-		})
-
-		It("should not reject the request", func() {
-			err := byoHost.ValidateDelete()
-			Expect(err).To(BeNil())
-		})
-
-		Context("When ByoHost has MachineRef assigned", func() {
-
-			BeforeEach(func() {
-				byoHost.Status.MachineRef = &corev1.ObjectReference{
-					Kind:      "ByoMachine",
-					Namespace: "default",
-					Name:      "byomachine",
-				}
-			})
-
-			It("should reject the request", func() {
-				err := byoHost.ValidateDelete()
-				Expect(err).To(HaveOccurred())
-				Expect(err).To(MatchError("byohost.infrastructure.cluster.x-k8s.io \"byohost\" is forbidden: cannot delete ByoHost when MachineRef is assigned"))
-			})
-		})
-	})
 })
