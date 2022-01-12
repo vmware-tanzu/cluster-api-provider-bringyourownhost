@@ -135,6 +135,7 @@ export KUBERNETES_VERSION="v1.22.3"
 export CONTROL_PLANE_MACHINE_COUNT=1
 export WORKER_MACHINE_COUNT=1
 export CONTROL_PLANE_ENDPOINT_IP=<static IP from the subnet where the containers are running>
+export BUNDLE_LOOKUP_TAG=<bundle tag>
 ```
 
 From ```cluster-api-provider-bringyourownhost``` folder
