@@ -94,7 +94,7 @@ var _ = Describe("ByoclusterWebhook", func() {
 			Expect(err).To(MatchError("admission webhook \"vbyocluster.kb.io\" denied the request: ByoCluster.infrastructure.cluster.x-k8s.io \"" + byoCluster.Name + "\" is invalid: <nil>: Internal error: cannot update ByoCluster with empty Spec.BundleLookupTag"))
 		})
 
-		It("should success when BundleLookupTag is not empty", func() {
+		It("should update the cluster with new BundleLookupTag value", func() {
 			byoCluster.Spec.BundleLookupTag = "fake"
 			err := k8sClientUncached.Update(ctx, byoCluster)
 			Expect(err).NotTo(HaveOccurred())
