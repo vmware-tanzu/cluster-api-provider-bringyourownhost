@@ -10,7 +10,7 @@ require (
 	github.com/docker/cli v20.10.7+incompatible
 	github.com/docker/docker v20.10.12+incompatible
 	github.com/docker/docker-credential-helpers v0.6.4 // indirect
-	github.com/go-logr/logr v0.4.0
+	github.com/go-logr/logr v1.2.2
 	github.com/jackpal/gateway v1.0.7
 	github.com/k14s/imgpkg v0.18.0
 	github.com/kube-vip/kube-vip v0.3.8
