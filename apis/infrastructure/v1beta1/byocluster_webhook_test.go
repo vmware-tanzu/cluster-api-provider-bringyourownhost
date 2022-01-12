@@ -9,6 +9,7 @@ import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/kubectl/pkg/scheme"
 	clusterv1 "sigs.k8s.io/cluster-api/api/v1beta1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -95,9 +96,17 @@ var _ = Describe("ByoclusterWebhook", func() {
 		})
 
 		It("should update the cluster with new BundleLookupTag value", func() {
-			byoCluster.Spec.BundleLookupTag = "fake"
+			newBundleLookupTag := "new_tag"
+
+			byoCluster.Spec.BundleLookupTag = newBundleLookupTag
 			err := k8sClientUncached.Update(ctx, byoCluster)
 			Expect(err).NotTo(HaveOccurred())
+
+			updatedByoCluster := &ByoCluster{}
+			byoCLusterLookupKey := types.NamespacedName{Name: byoCluster.Name, Namespace: byoCluster.Namespace}
+			Expect(k8sClientUncached.Get(ctx, byoCLusterLookupKey, updatedByoCluster)).Should(Not(HaveOccurred()))
+			Expect(updatedByoCluster.Spec.BundleLookupTag).To(Equal(newBundleLookupTag))
+
 		})
 
 	})
