@@ -107,6 +107,5 @@ var _ = Describe("ByoclusterWebhook", func() {
 			Expect(k8sClientUncached.Get(ctx, byoCLusterLookupKey, updatedByoCluster)).Should(Not(HaveOccurred()))
 			Expect(updatedByoCluster.Spec.BundleLookupTag).To(Equal(newBundleLookupTag))
 		})
-
 	})
 })
