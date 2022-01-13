@@ -81,7 +81,7 @@ If not, you could create containers to deploy your workload clusters on. We have
 
 ```shell
 cd cluster-api-provider-bringyourownhost
-make prepare-byoh-docker-host-image
+make prepare-byoh-docker-host-image-dev
 ```
 
 Once the image is ready, lets start 2 docker containers for our deployment. One for the control plane, and one for the worker. (you could of course run more)

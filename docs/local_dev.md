@@ -94,7 +94,7 @@ make host-agent-binaries
 ### Create docker hosts
 ```shell
 cd cluster-api-provider-bringyourownhost
-make prepare-byoh-docker-host-image
+make prepare-byoh-docker-host-image-dev
 ```
 Run the following to create n hosts, where ```n>1```
 ```shell

@@ -191,7 +191,7 @@ func setupByoDockerHost(ctx context.Context, clusterConName, byoHostName, namesp
 	rconfig := types.ExecConfig{
 		AttachStdout: true,
 		AttachStderr: true,
-		Cmd:          []string{"./agent", "--kubeconfig", "/mgmt.conf", "--namespace", namespace, "--skip-installation"},
+		Cmd:          []string{"./agent", "--kubeconfig", "/mgmt.conf", "--namespace", namespace},
 	}
 
 	resp, err := dockerClient.ContainerExecCreate(ctx, byohost.ID, rconfig)
