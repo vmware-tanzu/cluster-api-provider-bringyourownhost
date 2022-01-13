@@ -125,7 +125,8 @@ test-e2e: docker-build prepare-byoh-docker-host-image $(GINKGO) cluster-template
 cluster-templates: kustomize cluster-templates-v1beta1
 
 cluster-templates-v1beta1: kustomize ## Generate cluster templates for v1beta1
-	$(KUSTOMIZE) build $(BYOH_TEMPLATES)/v1beta1 --load_restrictor none > $(BYOH_TEMPLATES)/v1beta1/cluster-template.yaml
+	$(KUSTOMIZE) build $(BYOH_TEMPLATES)/v1beta1/templates/vm --load_restrictor none > $(BYOH_TEMPLATES)/v1beta1/templates/vm/cluster-template.yaml
+	$(KUSTOMIZE) build $(BYOH_TEMPLATES)/v1beta1/templates/docker --load_restrictor none > $(BYOH_TEMPLATES)/v1beta1/templates/docker/cluster-template.yaml
 
 $(GINKGO): # Build ginkgo from tools folder.
 	cd $(TOOLS_DIR) && go build -tags=tools -o $(BIN_DIR)/ginkgo github.com/onsi/ginkgo/ginkgo
@@ -182,8 +183,10 @@ $(RELEASE_DIR):
 build-release-artifacts: build-cluster-templates build-infra-yaml build-metadata-yaml build-host-agent-binary
 
 build-cluster-templates: $(RELEASE_DIR) cluster-templates
-	cp $(BYOH_TEMPLATES)/v1beta1/cluster-template.yaml $(RELEASE_DIR)/cluster-template.yaml
-	sed -i -e 1,20d $(RELEASE_DIR)/cluster-template.yaml
+	cp $(BYOH_TEMPLATES)/v1beta1/templates/docker/cluster-template.yaml $(RELEASE_DIR)/cluster-template-docker.yaml
+	sed -i -e 1,20d $(RELEASE_DIR)/cluster-template-docker.yaml
+	cp $(BYOH_TEMPLATES)/v1beta1/templates/vm/cluster-template.yaml $(RELEASE_DIR)/cluster-template.yaml
+
 
 build-infra-yaml:kustomize # Generate infrastructure-components.yaml for the provider
 	cd config/manager && $(KUSTOMIZE) edit set image gcr.io/k8s-staging-cluster-api/cluster-api-byoh-controller=${IMG}
