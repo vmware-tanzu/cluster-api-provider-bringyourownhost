@@ -14,16 +14,16 @@ import (
 )
 
 var (
-	listSupportedFlag    = flag.Bool("list-supported", false, "List all supported OS, Kubernetes versions and BYOH Bundle names")
-	detectOSFlag         = flag.Bool("detect", false, "Detects the current operating system")
-	installFlag          = flag.Bool("install", false, "Install a BYOH Bundle")
-	uninstallFlag        = flag.Bool("uninstall", false, "Unnstall a BYOH Bundle")
-	bundleRepoFlag       = flag.String("bundle-repo", "projects.registry.vmware.com", "BYOH Bundle Repository")
-	cachePathFlag        = flag.String("cache-path", ".", "Path to the local bundle cache")
-	k8sFlag              = flag.String("k8s", "1.22.1", "Kubernetes version")
-	osFlag               = flag.String("os", "", "OS. If used with install/uninstall, override os detection")
-	tagFlag              = flag.String("tag", "", "BYOH Bundle tag")
-	previewOSChangesFlag = flag.Bool("preview-os-changes", false, "Preview the install and uninstall changes for the specified OS")
+	listSupportedFlag    *bool
+	detectOSFlag         *bool
+	installFlag          *bool
+	uninstallFlag        *bool
+	bundleRepoFlag       *string
+	cachePathFlag        *string
+	k8sFlag              *string
+	osFlag               *string
+	tagFlag              *string
+	previewOSChangesFlag *bool
 )
 
 const (
@@ -37,6 +37,17 @@ var (
 
 func Main() {
 	klogger = klogr.New()
+
+	listSupportedFlag = flag.Bool("list-supported", false, "List all supported OS, Kubernetes versions and BYOH Bundle names")
+	detectOSFlag = flag.Bool("detect", false, "Detects the current operating system")
+	installFlag = flag.Bool("install", false, "Install a BYOH Bundle")
+	uninstallFlag = flag.Bool("uninstall", false, "Unnstall a BYOH Bundle")
+	bundleRepoFlag = flag.String("bundle-repo", "projects.registry.vmware.com", "BYOH Bundle Repository")
+	cachePathFlag = flag.String("cache-path", ".", "Path to the local bundle cache")
+	k8sFlag = flag.String("k8s", "1.22.1", "Kubernetes version")
+	osFlag = flag.String("os", "", "OS. If used with install/uninstall, override os detection")
+	tagFlag = flag.String("tag", "", "BYOH Bundle tag")
+	previewOSChangesFlag = flag.Bool("preview-os-changes", false, "Preview the install and uninstall changes for the specified OS")
 
 	flag.Parse()
 
