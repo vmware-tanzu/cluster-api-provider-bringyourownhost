@@ -124,7 +124,7 @@ prepare-byoh-docker-host-image:
 prepare-byoh-docker-host-image-dev:
 	docker build test/e2e -f docs/BYOHDockerFileDev -t ${BYOH_BASE_IMG_DEV}
 
-test-e2e: docker-build prepare-byoh-docker-host-image $(GINKGO) cluster-templates ## Run the end-to-end tests
+test-e2e: docker-build prepare-byoh-docker-host-image $(GINKGO) cluster-templates-e2e ## Run the end-to-end tests
 	CONTROL_PLANE_ENDPOINT_IP=172.18.10.151 $(GINKGO) -v -trace -tags=e2e -focus="$(GINKGO_FOCUS)" $(_SKIP_ARGS) -nodes=$(GINKGO_NODES) --noColor=$(GINKGO_NOCOLOR) $(GINKGO_ARGS) test/e2e -- \
 	    -e2e.artifacts-folder="$(ARTIFACTS)" \
 	    -e2e.config="$(E2E_CONF_FILE)" \
@@ -132,6 +132,9 @@ test-e2e: docker-build prepare-byoh-docker-host-image $(GINKGO) cluster-template
 		-e2e.existing-cluster-kubeconfig-path=$(EXISTING_CLUSTER_KUBECONFIG_PATH)
 
 cluster-templates: kustomize cluster-templates-v1beta1
+
+cluster-templates-e2e: kustomize
+	$(KUSTOMIZE) build $(BYOH_TEMPLATES)/v1beta1/templates/e2e --load_restrictor none > $(BYOH_TEMPLATES)/v1beta1/templates/e2e/cluster-template.yaml
 
 cluster-templates-v1beta1: kustomize ## Generate cluster templates for v1beta1
 	$(KUSTOMIZE) build $(BYOH_TEMPLATES)/v1beta1/templates/vm --load_restrictor none > $(BYOH_TEMPLATES)/v1beta1/templates/vm/cluster-template.yaml
