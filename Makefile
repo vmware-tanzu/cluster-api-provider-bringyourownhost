@@ -11,6 +11,7 @@ RELEASE_DIR := _dist
 # Image URL to use all building/pushing image targets
 IMG ?= ${STAGING_REGISTRY}/${IMAGE_NAME}:${TAG}
 BYOH_BASE_IMG = byoh/node:v1.22.3
+BYOH_BASE_IMG_DEV = byoh-dev/node:v1.22.3
 # Produce CRDs that work back to Kubernetes 1.11 (no version conversion)
 CRD_OPTIONS ?= "crd:trivialVersions=true,preserveUnknownFields=false"
 
@@ -110,6 +111,9 @@ docker-push: ## Push docker image with the manager.
 
 prepare-byoh-docker-host-image:
 	docker build test/e2e -f test/e2e/BYOHDockerFile -t ${BYOH_BASE_IMG}
+
+prepare-byoh-docker-host-image-dev:
+	docker build test/e2e -f docs/BYOHDockerFileDev -t ${BYOH_BASE_IMG_DEV}
 
 test-e2e: docker-build prepare-byoh-docker-host-image $(GINKGO) cluster-templates ## Run the end-to-end tests
 	CONTROL_PLANE_ENDPOINT_IP=172.18.10.151 $(GINKGO) -v -trace -tags=e2e -focus="$(GINKGO_FOCUS)" $(_SKIP_ARGS) -nodes=$(GINKGO_NODES) --noColor=$(GINKGO_NOCOLOR) $(GINKGO_ARGS) test/e2e -- \
