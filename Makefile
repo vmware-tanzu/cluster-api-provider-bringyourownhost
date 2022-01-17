@@ -196,7 +196,6 @@ build-release-artifacts: build-cluster-templates build-infra-yaml build-metadata
 
 build-cluster-templates: $(RELEASE_DIR) cluster-templates
 	cp $(BYOH_TEMPLATES)/v1beta1/templates/docker/cluster-template.yaml $(RELEASE_DIR)/cluster-template-docker.yaml
-	sed -i -e 1,20d $(RELEASE_DIR)/cluster-template-docker.yaml
 	cp $(BYOH_TEMPLATES)/v1beta1/templates/vm/cluster-template.yaml $(RELEASE_DIR)/cluster-template.yaml
 
 
