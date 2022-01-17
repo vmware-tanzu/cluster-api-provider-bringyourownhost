@@ -3,6 +3,9 @@ apiVersion: cluster.x-k8s.io/v1beta1
 kind: Cluster
 metadata:
   name: ${CLUSTER_NAME}
+  labels:
+    cni: ${CLUSTER_NAME}-crs-0
+    crs: "true"
 spec:
   clusterNetwork:
     services:
