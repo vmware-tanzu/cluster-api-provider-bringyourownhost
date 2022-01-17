@@ -16,7 +16,7 @@ require (
 	github.com/kube-vip/kube-vip v0.3.8
 	github.com/maxbrunsfeld/counterfeiter/v6 v6.4.1
 	github.com/moby/sys/mount v0.2.0 // indirect
-	github.com/onsi/ginkgo v1.16.4
+	github.com/onsi/ginkgo v1.16.5
 	github.com/onsi/gomega v1.17.0
 	github.com/opencontainers/runc v1.0.3 // indirect
 	github.com/pkg/errors v0.9.1
