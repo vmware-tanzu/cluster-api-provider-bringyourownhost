@@ -91,7 +91,7 @@ Once the image is ready, lets start 2 docker containers for our deployment. One 
 for i in {1..2}
 do
   echo "Creating docker container named host$i"
-  docker run --detach --tty --hostname host$i --name host$i --privileged --security-opt seccomp=unconfined --tmpfs /tmp --tmpfs /run --volume /var --volume /lib/modules:/lib/modules:ro --network kind byoh/node:v1.22.3
+  docker run --detach --tty --hostname host$i --name host$i --privileged --security-opt seccomp=unconfined --tmpfs /tmp --tmpfs /run --volume /var --volume /lib/modules:/lib/modules:ro --network kind byoh-dev/node:v1.22.3
 done
 ```
 
