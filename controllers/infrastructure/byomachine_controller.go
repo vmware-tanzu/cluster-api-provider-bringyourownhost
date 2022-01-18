@@ -375,7 +375,7 @@ func (r *ByoMachineReconciler) setNodeProviderID(ctx context.Context, remoteClie
 		return "", err
 	}
 
-	node.Spec.ProviderID = fmt.Sprintf("%s%s/%s", providerIDPrefix, host.Name, util.RandomString(providerIDSuffixLength))
+	node.Spec.ProviderID = fmt.Sprintf("%s%s/%s", ProviderIDPrefix, host.Name, util.RandomString(providerIDSuffixLength))
 
 	return node.Spec.ProviderID, helper.Patch(ctx, node)
 }
