@@ -1,16 +1,19 @@
 # Kubernetes Cluster API Provider BYOH(Bring your own host)
 <p align="center">
-<!-- lint card --><a href="https://github.com/vmware-tanzu/cluster-api-provider-bringyourownhost/actions/workflows/lint.yml" width="160x">
-<img src="https://github.com/vmware-tanzu/cluster-api-provider-bringyourownhost/actions/workflows/lint.yml/badge.svg" width="160x"></a>
+<!-- lint card --><a href="https://github.com/vmware-tanzu/cluster-api-provider-bringyourownhost/actions/workflows/lint.yml">
+<img src="https://github.com/vmware-tanzu/cluster-api-provider-bringyourownhost/actions/workflows/lint.yml/badge.svg"></a>
 <!-- test status -->
-<a href="https://github.com/vmware-tanzu/cluster-api-provider-bringyourownhost/actions/workflows/main.yml" width="160x">
-<img src="https://github.com/vmware-tanzu/cluster-api-provider-bringyourownhost/actions/workflows/main.yml/badge.svg" width="200x"></a>
+<a href="https://github.com/vmware-tanzu/cluster-api-provider-bringyourownhost/actions/workflows/main.yml">
+<img src="https://github.com/vmware-tanzu/cluster-api-provider-bringyourownhost/actions/workflows/main.yml/badge.svg"></a>
 <!-- go doc / reference card -->
-<a href="https://pkg.go.dev/github.com/vmware-tanzu/cluster-api-provider-bringyourownhost"  width="160x">
-<img src="https://pkg.go.dev/badge/github.com/vmware-tanzu/cluster-api-provider-bringyourownhost.svg"  width="100x"></a>
+<a href="https://pkg.go.dev/github.com/vmware-tanzu/cluster-api-provider-bringyourownhost">
+<img src="https://pkg.go.dev/badge/github.com/vmware-tanzu/cluster-api-provider-bringyourownhost.svg"></a>
 <!-- goreportcard badge -->
-<a href="https://goreportcard.com/report/github.com/vmware-tanzu/cluster-api-provider-bringyourownhost"  width="160x">
-<img src="https://goreportcard.com/badge/github.com/vmware-tanzu/cluster-api-provider-bringyourownhost"  width="100x"></a>
+<a href="https://goreportcard.com/report/github.com/vmware-tanzu/cluster-api-provider-bringyourownhost">
+<img src="https://goreportcard.com/badge/github.com/vmware-tanzu/cluster-api-provider-bringyourownhost"></a>
+<!-- codecov badge -->
+<a href="https://codecov.io/gh/vmware-tanzu/cluster-api-provider-bringyourownhost">
+<img src="https://codecov.io/gh/vmware-tanzu/cluster-api-provider-bringyourownhost/branch/main/graph/badge.svg?token=8GGPY0MENQ"></a>    
 </p>
 
 ------
@@ -61,7 +64,10 @@ More about development and contributing practices can be found in [`CONTRIBUTING
 |-|-|-|-|
 |BYOH Provider v1alpha1 (v0.1.0)|||✓|
 
-
+## BYOH in News
+- [TGIK episode on BYOH](https://www.youtube.com/watch?v=Xwm5Ka27-Io&t=2838s)
+- BYOH presented during [Cluster API Office Hours](https://www.youtube.com/watch?v=6ODMLgX-dz4&t=572s)
+- [BYOH on ARM](https://williamlam.com/2021/11/hybrid-x86-and-arm-kubernetes-clusters-using-tanzu-community-edition-tce-and-esxi-arm.html)
 
 
 <!-- References -->

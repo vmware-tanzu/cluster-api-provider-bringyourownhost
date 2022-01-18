@@ -1,7 +1,7 @@
 // Copyright 2021 VMware, Inc. All Rights Reserved.
 // SPDX-License-Identifier: Apache-2.0
 
-package controllers
+package controllers_test
 
 import (
 	"context"
@@ -22,6 +22,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 
 	infrastructurev1beta1 "github.com/vmware-tanzu/cluster-api-provider-bringyourownhost/apis/infrastructure/v1beta1"
+	controllers "github.com/vmware-tanzu/cluster-api-provider-bringyourownhost/controllers/infrastructure"
 	"github.com/vmware-tanzu/cluster-api-provider-bringyourownhost/test/builder"
 
 	//+kubebuilder:scaffold:imports
@@ -38,7 +39,7 @@ import (
 var (
 	testEnv               *envtest.Environment
 	clientFake            client.Client
-	reconciler            *ByoMachineReconciler
+	reconciler            *controllers.ByoMachineReconciler
 	recorder              *record.FakeRecorder
 	byoCluster            *infrastructurev1beta1.ByoCluster
 	capiCluster           *clusterv1.Cluster
@@ -112,7 +113,7 @@ var _ = BeforeSuite(func() {
 	).Build()
 
 	recorder = record.NewFakeRecorder(32)
-	reconciler = &ByoMachineReconciler{
+	reconciler = &controllers.ByoMachineReconciler{
 		Client:   k8sManager.GetClient(),
 		Tracker:  remote.NewTestClusterCacheTracker(logf.NullLogger{}, clientFake, scheme.Scheme, client.ObjectKey{Name: capiCluster.Name, Namespace: capiCluster.Namespace}),
 		Recorder: recorder,
