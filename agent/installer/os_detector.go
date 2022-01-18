@@ -87,6 +87,7 @@ func (osd *osDetector) getHostnamectl() (string, error) {
 	return string(out), nil
 }
 
+// nolint: gocritic
 // Method that extracts the important information from getHostSystemInfo.
 func parseHostnamectl(systemInfo string) [3]string {
 	const strIndicatingOSline string = "Operating System: "

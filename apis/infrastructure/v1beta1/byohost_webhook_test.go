@@ -1,13 +1,14 @@
 // Copyright 2021 VMware, Inc. All Rights Reserved.
 // SPDX-License-Identifier: Apache-2.0
 
-package v1beta1
+package v1beta1_test
 
 import (
 	"context"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+	byohv1beta1 "github.com/vmware-tanzu/cluster-api-provider-bringyourownhost/apis/infrastructure/v1beta1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/kubectl/pkg/scheme"
@@ -19,7 +20,7 @@ var _ = Describe("ByohostWebhook", func() {
 
 	Context("When ByoHost gets a delete request", func() {
 		var (
-			byoHost           *ByoHost
+			byoHost           *byohv1beta1.ByoHost
 			ctx               context.Context
 			k8sClientUncached client.Client
 		)
@@ -30,7 +31,7 @@ var _ = Describe("ByohostWebhook", func() {
 			k8sClientUncached, clientErr = client.New(cfg, client.Options{Scheme: scheme.Scheme})
 			Expect(clientErr).NotTo(HaveOccurred())
 
-			byoHost = &ByoHost{
+			byoHost = &byohv1beta1.ByoHost{
 				TypeMeta: metav1.TypeMeta{
 					Kind:       "ByoHost",
 					APIVersion: "infrastructure.cluster.x-k8s.io/v1beta1",
@@ -39,7 +40,7 @@ var _ = Describe("ByohostWebhook", func() {
 					GenerateName: "byohost-",
 					Namespace:    "default",
 				},
-				Spec: ByoHostSpec{},
+				Spec: byohv1beta1.ByoHostSpec{},
 			}
 			Expect(k8sClientUncached.Create(ctx, byoHost)).Should(Succeed())
 		})
@@ -51,10 +52,10 @@ var _ = Describe("ByohostWebhook", func() {
 
 		Context("When ByoHost has MachineRef assigned", func() {
 			var (
-				byoMachine *ByoMachine
+				byoMachine *byohv1beta1.ByoMachine
 			)
 			BeforeEach(func() {
-				byoMachine = &ByoMachine{
+				byoMachine = &byohv1beta1.ByoMachine{
 					TypeMeta: metav1.TypeMeta{
 						Kind:       "ByoMachine",
 						APIVersion: "infrastructure.cluster.x-k8s.io/v1beta1",
@@ -63,7 +64,7 @@ var _ = Describe("ByohostWebhook", func() {
 						GenerateName: "byomachine-",
 						Namespace:    "default",
 					},
-					Spec: ByoMachineSpec{},
+					Spec: byohv1beta1.ByoMachineSpec{},
 				}
 				Expect(k8sClientUncached.Create(ctx, byoMachine)).Should(Succeed())
 

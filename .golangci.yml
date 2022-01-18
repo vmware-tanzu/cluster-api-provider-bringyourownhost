@@ -39,6 +39,7 @@ linters:
     - staticcheck
     - structcheck
     - stylecheck
+    - testpackage
     - typecheck
     - unconvert
 #    - unparam
@@ -59,7 +60,6 @@ linters:
   # - lll
   # - nestif
   # - prealloc
-  # - testpackage
   # - revive
   # - scopelint
   # - wsl

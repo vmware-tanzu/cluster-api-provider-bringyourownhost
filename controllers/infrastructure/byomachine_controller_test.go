@@ -1,7 +1,7 @@
 // Copyright 2021 VMware, Inc. All Rights Reserved.
 // SPDX-License-Identifier: Apache-2.0
 
-package controllers
+package controllers_test
 
 import (
 	"context"
@@ -11,6 +11,7 @@ import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	infrastructurev1beta1 "github.com/vmware-tanzu/cluster-api-provider-bringyourownhost/apis/infrastructure/v1beta1"
+	controllers "github.com/vmware-tanzu/cluster-api-provider-bringyourownhost/controllers/infrastructure"
 	"github.com/vmware-tanzu/cluster-api-provider-bringyourownhost/test/builder"
 	eventutils "github.com/vmware-tanzu/cluster-api-provider-bringyourownhost/test/utils/events"
 	corev1 "k8s.io/api/core/v1"
@@ -170,7 +171,7 @@ var _ = Describe("Controllers/ByomachineController", func() {
 				// assert ByoMachine does not exists
 				deletedByoMachine := &infrastructurev1beta1.ByoMachine{}
 				err = k8sClientUncached.Get(ctx, byoMachineLookupKey, deletedByoMachine)
-				Expect(err).To(MatchError(fmt.Sprintf("byomachines.infrastructure.cluster.x-k8s.io \"%s\" not found", byoMachineLookupKey.Name)))
+				Expect(err).To(MatchError(fmt.Sprintf("byomachines.infrastructure.cluster.x-k8s.io %q not found", byoMachineLookupKey.Name)))
 
 			})
 		})
@@ -213,7 +214,7 @@ var _ = Describe("Controllers/ByomachineController", func() {
 				createdByoMachine := &infrastructurev1beta1.ByoMachine{}
 				err = k8sClientUncached.Get(ctx, byoMachineLookupKey, createdByoMachine)
 				Expect(err).ToNot(HaveOccurred())
-				Expect(createdByoMachine.Spec.ProviderID).To(ContainSubstring(providerIDPrefix))
+				Expect(createdByoMachine.Spec.ProviderID).To(ContainSubstring(controllers.ProviderIDPrefix))
 				Expect(createdByoMachine.Status.Ready).To(BeTrue())
 
 				actualCondition := conditions.Get(createdByoMachine, infrastructurev1beta1.BYOHostReady)
@@ -234,7 +235,7 @@ var _ = Describe("Controllers/ByomachineController", func() {
 				err = clientFake.Get(ctx, types.NamespacedName{Name: byoHost.Name, Namespace: defaultNamespace}, &node)
 				Expect(err).NotTo(HaveOccurred())
 
-				Expect(node.Spec.ProviderID).To(ContainSubstring(providerIDPrefix))
+				Expect(node.Spec.ProviderID).To(ContainSubstring(controllers.ProviderIDPrefix))
 			})
 
 			Context("When ByoMachine is attached to a host", func() {
@@ -299,7 +300,7 @@ var _ = Describe("Controllers/ByomachineController", func() {
 
 						// assert ByoMachine does not exists
 						err = k8sClientUncached.Get(ctx, byoMachineLookupKey, deletedByoMachine)
-						Expect(err).To(MatchError(fmt.Sprintf("byomachines.infrastructure.cluster.x-k8s.io \"%s\" not found", byoMachineLookupKey.Name)))
+						Expect(err).To(MatchError(fmt.Sprintf("byomachines.infrastructure.cluster.x-k8s.io %q not found", byoMachineLookupKey.Name)))
 					})
 				})
 			})
@@ -536,7 +537,7 @@ var _ = Describe("Controllers/ByomachineController", func() {
 				Expect(err).NotTo(HaveOccurred())
 
 				var nodeTagged bool
-				if strings.Contains(node1.Spec.ProviderID, providerIDPrefix) || strings.Contains(node2.Spec.ProviderID, providerIDPrefix) {
+				if strings.Contains(node1.Spec.ProviderID, controllers.ProviderIDPrefix) || strings.Contains(node2.Spec.ProviderID, controllers.ProviderIDPrefix) {
 					nodeTagged = true
 				}
 				Expect(nodeTagged).To(Equal(true))
@@ -580,7 +581,7 @@ var _ = Describe("Controllers/ByomachineController", func() {
 				err = clientFake.Get(ctx, types.NamespacedName{Name: byoHost1.Name, Namespace: defaultNamespace}, &node)
 				Expect(err).NotTo(HaveOccurred())
 
-				Expect(node.Spec.ProviderID).To(ContainSubstring(providerIDPrefix))
+				Expect(node.Spec.ProviderID).To(ContainSubstring(controllers.ProviderIDPrefix))
 			})
 
 			AfterEach(func() {
