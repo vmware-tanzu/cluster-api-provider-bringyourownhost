@@ -1,7 +1,7 @@
 // Copyright 2021 VMware, Inc. All Rights Reserved.
 // SPDX-License-Identifier: Apache-2.0
 
-package cloudinit
+package cloudinit_test
 
 import (
 	"io/fs"
@@ -12,6 +12,7 @@ import (
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+	"github.com/vmware-tanzu/cluster-api-provider-bringyourownhost/agent/cloudinit"
 )
 
 var _ = Describe("FileWriter", func() {
@@ -32,21 +33,21 @@ var _ = Describe("FileWriter", func() {
 	})
 
 	It("Should create a directory if it does not exists", func() {
-		err := FileWriter{}.MkdirIfNotExists(workDir)
+		err := cloudinit.FileWriter{}.MkdirIfNotExists(workDir)
 		Expect(err).NotTo(HaveOccurred())
 	})
 
 	It("Should not create a directory if it already exists", func() {
-		err := FileWriter{}.MkdirIfNotExists(workDir)
+		err := cloudinit.FileWriter{}.MkdirIfNotExists(workDir)
 		Expect(err).NotTo(HaveOccurred())
 
-		err = FileWriter{}.MkdirIfNotExists(workDir)
+		err = cloudinit.FileWriter{}.MkdirIfNotExists(workDir)
 		Expect(err).NotTo(HaveOccurred())
 	})
 
 	It("Should create and write to file", func() {
 		filePermission := 0777
-		file := Files{
+		file := cloudinit.Files{
 			Path:        path.Join(workDir, "file1.txt"),
 			Encoding:    "",
 			Owner:       "",
@@ -55,13 +56,13 @@ var _ = Describe("FileWriter", func() {
 			Append:      false,
 		}
 
-		err := FileWriter{}.MkdirIfNotExists(workDir)
+		err := cloudinit.FileWriter{}.MkdirIfNotExists(workDir)
 		Expect(err).NotTo(HaveOccurred())
 
-		err = FileWriter{}.WriteToFile(&file)
+		err = cloudinit.FileWriter{}.WriteToFile(&file)
 		Expect(err).NotTo(HaveOccurred())
 
-		buffer, err := ioutil.ReadFile(file.Path)
+		buffer, err := os.ReadFile(file.Path)
 		Expect(err).NotTo(HaveOccurred())
 		Expect(string(buffer)).To(Equal(file.Content))
 
@@ -73,7 +74,7 @@ var _ = Describe("FileWriter", func() {
 
 	It("Should append content to file when append mode is enabled", func() {
 		fileOriginContent := "some-file-content-1"
-		file := Files{
+		file := cloudinit.Files{
 			Path:        path.Join(workDir, "file3.txt"),
 			Encoding:    "",
 			Owner:       "",
@@ -82,16 +83,16 @@ var _ = Describe("FileWriter", func() {
 			Append:      true,
 		}
 
-		err := FileWriter{}.MkdirIfNotExists(workDir)
+		err := cloudinit.FileWriter{}.MkdirIfNotExists(workDir)
 		Expect(err).NotTo(HaveOccurred())
 
-		err = ioutil.WriteFile(file.Path, []byte(fileOriginContent), 0644)
+		err = os.WriteFile(file.Path, []byte(fileOriginContent), 0644)
 		Expect(err).NotTo(HaveOccurred())
 
-		err = FileWriter{}.WriteToFile(&file)
+		err = cloudinit.FileWriter{}.WriteToFile(&file)
 		Expect(err).NotTo(HaveOccurred())
 
-		buffer, err := ioutil.ReadFile(file.Path)
+		buffer, err := os.ReadFile(file.Path)
 		Expect(err).NotTo(HaveOccurred())
 		Expect(string(buffer)).To(Equal(fileOriginContent + file.Content))
 

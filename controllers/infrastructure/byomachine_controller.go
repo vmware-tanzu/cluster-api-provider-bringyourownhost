@@ -40,7 +40,7 @@ import (
 )
 
 const (
-	providerIDPrefix       = "byoh://"
+	ProviderIDPrefix       = "byoh://"
 	providerIDSuffixLength = 6
 	RequeueForbyohost      = 10 * time.Second
 )
@@ -260,7 +260,7 @@ func (r *ByoMachineReconciler) reconcileNormal(ctx context.Context, machineScope
 
 	if machineScope.ByoMachine.Spec.ProviderID == "" {
 		logger.Info("Updating Node with ProviderID")
-		providerID := fmt.Sprintf("%s%s/%s", providerIDPrefix, machineScope.ByoHost.Name, util.RandomString(providerIDSuffixLength))
+		providerID := fmt.Sprintf("%s%s/%s", ProviderIDPrefix, machineScope.ByoHost.Name, util.RandomString(providerIDSuffixLength))
 		remoteClient, err := r.getRemoteClient(ctx, machineScope.ByoMachine)
 		if err != nil {
 			logger.Error(err, "failed to get remote client")

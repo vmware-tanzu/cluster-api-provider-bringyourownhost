@@ -1,7 +1,7 @@
 // Copyright 2021 VMware, Inc. All Rights Reserved.
 // SPDX-License-Identifier: Apache-2.0
 
-package v1beta1
+package v1beta1_test
 
 import (
 	"context"
@@ -14,6 +14,7 @@ import (
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+	byohv1beta1 "github.com/vmware-tanzu/cluster-api-provider-bringyourownhost/apis/infrastructure/v1beta1"
 
 	admissionv1beta1 "k8s.io/api/admission/v1beta1"
 	"k8s.io/kubectl/pkg/scheme"
@@ -67,14 +68,14 @@ var _ = BeforeSuite(func() {
 	Expect(err).NotTo(HaveOccurred())
 	Expect(cfg).NotTo(BeNil())
 
-	err = AddToScheme(scheme.Scheme)
+	err = byohv1beta1.AddToScheme(scheme.Scheme)
 
 	Expect(err).NotTo(HaveOccurred())
 
 	err = admissionv1beta1.AddToScheme(scheme.Scheme)
 	Expect(err).NotTo(HaveOccurred())
 
-	err = AddToScheme(scheme.Scheme)
+	err = byohv1beta1.AddToScheme(scheme.Scheme)
 
 	Expect(err).NotTo(HaveOccurred())
 
@@ -96,10 +97,10 @@ var _ = BeforeSuite(func() {
 	})
 	Expect(err).NotTo(HaveOccurred())
 
-	err = (&ByoHost{}).SetupWebhookWithManager(mgr)
+	err = (&byohv1beta1.ByoHost{}).SetupWebhookWithManager(mgr)
 	Expect(err).NotTo(HaveOccurred())
 
-	err = (&ByoCluster{}).SetupWebhookWithManager(mgr)
+	err = (&byohv1beta1.ByoCluster{}).SetupWebhookWithManager(mgr)
 	Expect(err).NotTo(HaveOccurred())
 
 	//+kubebuilder:scaffold:webhook

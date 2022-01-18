@@ -55,7 +55,7 @@ runCmd:
 		err := scriptExecutor.Execute(cloudInitScript)
 		Expect(err).ToNot(HaveOccurred())
 
-		fileContents, errFileContents := ioutil.ReadFile(fileName)
+		fileContents, errFileContents := os.ReadFile(fileName)
 		Expect(errFileContents).ToNot(HaveOccurred())
 		Expect(string(fileContents)).To(Equal(fileNewContent))
 	})
@@ -67,7 +67,7 @@ runCmd:
 		filePermission := 0777
 		isAppend := true
 
-		err := ioutil.WriteFile(fileName, []byte(fileOriginContent), 0644)
+		err := os.WriteFile(fileName, []byte(fileOriginContent), 0644)
 		Expect(err).NotTo(HaveOccurred())
 
 		cloudInitScript := fmt.Sprintf(`write_files:
@@ -79,7 +79,7 @@ runCmd:
 		err = scriptExecutor.Execute(cloudInitScript)
 		Expect(err).ToNot(HaveOccurred())
 
-		fileContents, errFileContents := ioutil.ReadFile(fileName)
+		fileContents, errFileContents := os.ReadFile(fileName)
 		Expect(errFileContents).ToNot(HaveOccurred())
 		Expect(string(fileContents)).To(Equal(fileOriginContent + fileAppendContent))
 
@@ -101,7 +101,7 @@ runCmd:
 		err := scriptExecutor.Execute(cloudInitScript)
 		Expect(err).ToNot(HaveOccurred())
 
-		fileContents, err := ioutil.ReadFile(fileName)
+		fileContents, err := os.ReadFile(fileName)
 		Expect(err).ToNot(HaveOccurred())
 		Expect(string(fileContents)).To(Equal(fileContent))
 	})
@@ -121,7 +121,7 @@ runCmd:
 		err = scriptExecutor.Execute(cloudInitScript)
 		Expect(err).ToNot(HaveOccurred())
 
-		fileContents, err := ioutil.ReadFile(fileName)
+		fileContents, err := os.ReadFile(fileName)
 		Expect(err).ToNot(HaveOccurred())
 		Expect(string(fileContents)).To(Equal(fileContent))
 	})
@@ -138,7 +138,7 @@ runCmd:
 		err := scriptExecutor.Execute(cloudInitScript)
 		Expect(err).ToNot(HaveOccurred())
 
-		fileContents, err := ioutil.ReadFile(fileName)
+		fileContents, err := os.ReadFile(fileName)
 		Expect(err).ToNot(HaveOccurred())
 		Expect(string(fileContents)).To(Equal(replacedFileContent))
 	})

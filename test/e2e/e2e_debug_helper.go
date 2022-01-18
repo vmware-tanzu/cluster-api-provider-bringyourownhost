@@ -7,7 +7,6 @@ import (
 	"bufio"
 	"fmt"
 	"io/fs"
-	"io/ioutil"
 	"os"
 	"os/exec"
 
@@ -69,7 +68,7 @@ func Showf(format string, a ...interface{}) {
 }
 
 func ShowFileContent(fileName string) {
-	content, err := ioutil.ReadFile(fileName)
+	content, err := os.ReadFile(fileName)
 	if err != nil {
 		Showf("ioutil.ReadFile %s return failed: Get err %v", fileName, err)
 		return
