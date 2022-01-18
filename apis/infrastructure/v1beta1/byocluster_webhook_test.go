@@ -1,13 +1,14 @@
 // Copyright 2021 VMware, Inc. All Rights Reserved.
 // SPDX-License-Identifier: Apache-2.0
 
-package v1beta1
+package v1beta1_test
 
 import (
 	"context"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+	byohv1beta1 "github.com/vmware-tanzu/cluster-api-provider-bringyourownhost/apis/infrastructure/v1beta1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/kubectl/pkg/scheme"
@@ -18,7 +19,7 @@ import (
 var _ = Describe("ByoclusterWebhook", func() {
 	Context("When ByoCluster gets a create request", func() {
 		var (
-			byoCluster        *ByoCluster
+			byoCluster        *byohv1beta1.ByoCluster
 			ctx               context.Context
 			k8sClientUncached client.Client
 		)
@@ -28,7 +29,7 @@ var _ = Describe("ByoclusterWebhook", func() {
 			k8sClientUncached, clientErr = client.New(cfg, client.Options{Scheme: scheme.Scheme})
 			Expect(clientErr).NotTo(HaveOccurred())
 
-			byoCluster = &ByoCluster{
+			byoCluster = &byohv1beta1.ByoCluster{
 				TypeMeta: metav1.TypeMeta{
 					Kind:       "ByoCluster",
 					APIVersion: clusterv1.GroupVersion.String(),
@@ -37,7 +38,7 @@ var _ = Describe("ByoclusterWebhook", func() {
 					Name:      "byocluster-create",
 					Namespace: "default",
 				},
-				Spec: ByoClusterSpec{},
+				Spec: byohv1beta1.ByoClusterSpec{},
 			}
 		})
 
@@ -57,7 +58,7 @@ var _ = Describe("ByoclusterWebhook", func() {
 
 	Context("When ByoCluster gets an update request", func() {
 		var (
-			byoCluster        *ByoCluster
+			byoCluster        *byohv1beta1.ByoCluster
 			ctx               context.Context
 			k8sClientUncached client.Client
 		)
@@ -67,7 +68,7 @@ var _ = Describe("ByoclusterWebhook", func() {
 			k8sClientUncached, clientErr = client.New(cfg, client.Options{Scheme: scheme.Scheme})
 			Expect(clientErr).NotTo(HaveOccurred())
 
-			byoCluster = &ByoCluster{
+			byoCluster = &byohv1beta1.ByoCluster{
 				TypeMeta: metav1.TypeMeta{
 					Kind:       "ByoCluster",
 					APIVersion: clusterv1.GroupVersion.String(),
@@ -76,7 +77,7 @@ var _ = Describe("ByoclusterWebhook", func() {
 					Name:      "byocluster-update",
 					Namespace: "default",
 				},
-				Spec: ByoClusterSpec{
+				Spec: byohv1beta1.ByoClusterSpec{
 					BundleLookupTag: "v0.1.0_alpha.2",
 				},
 			}
@@ -102,7 +103,7 @@ var _ = Describe("ByoclusterWebhook", func() {
 			err := k8sClientUncached.Update(ctx, byoCluster)
 			Expect(err).NotTo(HaveOccurred())
 
-			updatedByoCluster := &ByoCluster{}
+			updatedByoCluster := &byohv1beta1.ByoCluster{}
 			byoCLusterLookupKey := types.NamespacedName{Name: byoCluster.Name, Namespace: byoCluster.Namespace}
 			Expect(k8sClientUncached.Get(ctx, byoCLusterLookupKey, updatedByoCluster)).Should(Not(HaveOccurred()))
 			Expect(updatedByoCluster.Spec.BundleLookupTag).To(Equal(newBundleLookupTag))
