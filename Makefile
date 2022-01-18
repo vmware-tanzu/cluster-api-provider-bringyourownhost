@@ -54,7 +54,10 @@ all: build
 HOST_AGENT_DIR ?= agent
 
 # Run tests
-test: generate fmt vet manifests controller-test agent-test webhook-test
+test: generate fmt vet manifests test-coverage webhook-test
+
+test-coverage:
+	source ./scripts/fetch_ext_bins.sh; fetch_tools; setup_envs; ginkgo --randomizeAllSpecs -r --cover --coverprofile=cover.out --outputdir=. --skipPackage=test,apis .
 
 agent-test:
 	source ./scripts/fetch_ext_bins.sh; fetch_tools; setup_envs; ginkgo --randomizeAllSpecs -r $(HOST_AGENT_DIR) -coverprofile cover.out
