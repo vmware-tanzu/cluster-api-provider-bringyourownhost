@@ -360,7 +360,8 @@ func (r *ByoMachineReconciler) setNodeProviderID(ctx context.Context, remoteClie
 	}
 
 	if node.Spec.ProviderID != "" {
-		match, err := regexp.MatchString("byoh://"+host.Name+"/.+", node.Spec.ProviderID)
+		var match bool
+		match, err = regexp.MatchString("byoh://"+host.Name+"/.+", node.Spec.ProviderID)
 		if err != nil {
 			return "", err
 		}
