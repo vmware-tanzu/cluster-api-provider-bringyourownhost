@@ -6,7 +6,7 @@ This is a guide on how to get started with Cluster API Provider BringYourOwnHost
 - clusterctl, which can be downloaded from the latest [release][releases] of Cluster API (CAPI) on GitHub.
 - [Kind][kind] can be used  to provide an initial management cluster for testing.
 - [kubectl][kubectl] is required to access your workload clusters.
-- Ubuntu 20.04 and above (Linux Kernel 5.4 and above) is required for accessing kernel configs during preflight checks.
+- Ubuntu 20.04 and above (Linux Kernel 5.4 and above) is required for accessing kernel configs during kubeadm preflight checks.
 
 ## Create a management cluster
 Cluster API requires an existing Kubernetes cluster accessible via kubectl. During the installation process the
