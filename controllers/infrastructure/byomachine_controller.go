@@ -260,19 +260,20 @@ func (r *ByoMachineReconciler) reconcileNormal(ctx context.Context, machineScope
 
 	if machineScope.ByoMachine.Spec.ProviderID == "" {
 		logger.Info("Updating Node with ProviderID")
-		providerID := fmt.Sprintf("%s%s/%s", providerIDPrefix, machineScope.ByoHost.Name, util.RandomString(providerIDSuffixLength))
+
 		remoteClient, err := r.getRemoteClient(ctx, machineScope.ByoMachine)
 		if err != nil {
 			logger.Error(err, "failed to get remote client")
 			return ctrl.Result{}, err
 		}
 
-		err = r.setNodeProviderID(ctx, remoteClient, machineScope.ByoHost, providerID)
+		providerID, err := r.setNodeProviderID(ctx, remoteClient, machineScope.ByoHost, machineScope.ByoHost.Name)
 		if err != nil {
 			logger.Error(err, "failed to set node providerID")
 			r.Recorder.Eventf(machineScope.ByoMachine, corev1.EventTypeWarning, "SetNodeProviderFailed", "Node %s does not exist", machineScope.ByoHost.Name)
 			return ctrl.Result{}, err
 		}
+
 		machineScope.ByoMachine.Spec.ProviderID = providerID
 		machineScope.ByoMachine.Status.Ready = true
 		conditions.MarkTrue(machineScope.ByoMachine, infrav1.BYOHostReady)
@@ -349,22 +350,33 @@ func (r *ByoMachineReconciler) ClusterToByoMachines(logger logr.Logger) handler.
 
 // setNodeProviderID patches the provider id to the node using
 // client pointing to workload cluster
-func (r *ByoMachineReconciler) setNodeProviderID(ctx context.Context, remoteClient client.Client, host *infrav1.ByoHost, providerID string) error {
+func (r *ByoMachineReconciler) setNodeProviderID(ctx context.Context, remoteClient client.Client, host *infrav1.ByoHost, byoHostName string) (string, error) {
 	node := &corev1.Node{}
 	key := client.ObjectKey{Name: host.Name, Namespace: host.Namespace}
 	err := remoteClient.Get(ctx, key, node)
-
 	if err != nil {
-		return err
+		return "", err
+	}
+
+	providerIDLen, providerIDPrefixLen := len(node.Spec.ProviderID), len(providerIDPrefix)
+	if providerIDLen > 0 {
+		if providerIDLen > providerIDPrefixLen+providerIDSuffixLength {
+			providerByohostName := node.Spec.ProviderID[providerIDPrefixLen : providerIDLen-providerIDSuffixLength-1]
+			if providerByohostName == byoHostName {
+				return node.Spec.ProviderID, nil
+			}
+			return "", fmt.Errorf("can't set provider to %s, since it already is %s", byoHostName, providerByohostName)
+		}
+		return "", errors.New("invalid format for node.Spec.ProviderID")
 	}
 	helper, err := patch.NewHelper(node, remoteClient)
 	if err != nil {
-		return err
+		return "", err
 	}
 
-	node.Spec.ProviderID = providerID
+	node.Spec.ProviderID = fmt.Sprintf("%s%s/%s", providerIDPrefix, byoHostName, util.RandomString(providerIDSuffixLength))
 
-	return helper.Patch(ctx, node)
+	return node.Spec.ProviderID, helper.Patch(ctx, node)
 }
 
 func (r *ByoMachineReconciler) getRemoteClient(ctx context.Context, byoMachine *infrav1.ByoMachine) (client.Client, error) {
