@@ -8,6 +8,7 @@ import (
 	"errors"
 	"fmt"
 	"reflect"
+	"regexp"
 	"strings"
 	"time"
 
@@ -267,7 +268,7 @@ func (r *ByoMachineReconciler) reconcileNormal(ctx context.Context, machineScope
 			return ctrl.Result{}, err
 		}
 
-		providerID, err := r.setNodeProviderID(ctx, remoteClient, machineScope.ByoHost, machineScope.ByoHost.Name)
+		providerID, err := r.setNodeProviderID(ctx, remoteClient, machineScope.ByoHost)
 		if err != nil {
 			logger.Error(err, "failed to set node providerID")
 			r.Recorder.Eventf(machineScope.ByoMachine, corev1.EventTypeWarning, "SetNodeProviderFailed", "Node %s does not exist", machineScope.ByoHost.Name)
@@ -350,7 +351,7 @@ func (r *ByoMachineReconciler) ClusterToByoMachines(logger logr.Logger) handler.
 
 // setNodeProviderID patches the provider id to the node using
 // client pointing to workload cluster
-func (r *ByoMachineReconciler) setNodeProviderID(ctx context.Context, remoteClient client.Client, host *infrav1.ByoHost, byoHostName string) (string, error) {
+func (r *ByoMachineReconciler) setNodeProviderID(ctx context.Context, remoteClient client.Client, host *infrav1.ByoHost) (string, error) {
 	node := &corev1.Node{}
 	key := client.ObjectKey{Name: host.Name, Namespace: host.Namespace}
 	err := remoteClient.Get(ctx, key, node)
@@ -358,23 +359,23 @@ func (r *ByoMachineReconciler) setNodeProviderID(ctx context.Context, remoteClie
 		return "", err
 	}
 
-	providerIDLen, providerIDPrefixLen := len(node.Spec.ProviderID), len(providerIDPrefix)
-	if providerIDLen > 0 {
-		if providerIDLen > providerIDPrefixLen+providerIDSuffixLength {
-			providerByohostName := node.Spec.ProviderID[providerIDPrefixLen : providerIDLen-providerIDSuffixLength-1]
-			if providerByohostName == byoHostName {
-				return node.Spec.ProviderID, nil
-			}
-			return "", fmt.Errorf("can't set provider to %s, since it already is %s", byoHostName, providerByohostName)
+	if node.Spec.ProviderID != "" {
+		match, err := regexp.MatchString("byoh://"+host.Name+"/.+", node.Spec.ProviderID)
+		if err != nil {
+			return "", err
+		}
+		if match {
+			return node.Spec.ProviderID, nil
 		}
 		return "", errors.New("invalid format for node.Spec.ProviderID")
 	}
+
 	helper, err := patch.NewHelper(node, remoteClient)
 	if err != nil {
 		return "", err
 	}
 
-	node.Spec.ProviderID = fmt.Sprintf("%s%s/%s", providerIDPrefix, byoHostName, util.RandomString(providerIDSuffixLength))
+	node.Spec.ProviderID = fmt.Sprintf("%s%s/%s", providerIDPrefix, host.Name, util.RandomString(providerIDSuffixLength))
 
 	return node.Spec.ProviderID, helper.Patch(ctx, node)
 }
