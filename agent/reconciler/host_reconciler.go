@@ -191,15 +191,15 @@ func (r *HostReconciler) hostCleanUp(ctx context.Context, byoHost *infrastructur
 	logger.Info("cleaning up host")
 
 	k8sComponentsInstallationSucceeded := conditions.Get(byoHost, infrastructurev1beta1.K8sComponentsInstallationSucceeded)
-	if k8sComponentsInstallationSucceeded.Status == corev1.ConditionFalse {
-		logger.Info("Skipping k8s node reset")
-	} else {
+	if k8sComponentsInstallationSucceeded != nil && k8sComponentsInstallationSucceeded.Status == corev1.ConditionTrue {
 		err := r.resetNode(ctx, byoHost)
 		if err != nil {
 			return err
 		}
+	} else {
+		logger.Info("Skipping k8s node reset")
 	}
-	logger.Info("k8s node reset skipped")
+
 	if r.SkipInstallation {
 		logger.Info("Skipping uninstallation of k8s components")
 	} else {
@@ -207,8 +207,6 @@ func (r *HostReconciler) hostCleanUp(ctx context.Context, byoHost *infrastructur
 		k8sVersion := byoHost.GetAnnotations()[infrastructurev1beta1.K8sVersionAnnotation]
 		byohBundleTag := byoHost.GetAnnotations()[infrastructurev1beta1.BundleLookupTagAnnotation]
 		bundleInstaller, err := installer.New(bundleRegistry, r.DownloadPath, logger)
-		logger.Info("registry: " + bundleRegistry + " k8sVersion: " + k8sVersion + 
-			"byohBundleTag" + byohBundleTag)
 		if err != nil {
 			return err
 		}
@@ -218,7 +216,6 @@ func (r *HostReconciler) hostCleanUp(ctx context.Context, byoHost *infrastructur
 			return err
 		}
 	}
-	logger.Info("componenets uninstalled")
 
 	conditions.MarkFalse(byoHost, infrastructurev1beta1.K8sNodeBootstrapSucceeded, infrastructurev1beta1.K8sNodeAbsentReason, clusterv1.ConditionSeverityInfo, "")
 
