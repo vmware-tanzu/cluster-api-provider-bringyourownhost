@@ -323,7 +323,26 @@ runCmd:
 					infrastructurev1beta1.BundleLookupTagAnnotation:          "byoh-bundle-tag",
 				}
 				conditions.MarkTrue(byoHost, infrastructurev1beta1.K8sNodeBootstrapSucceeded)
+				conditions.MarkTrue(byoHost, infrastructurev1beta1.K8sComponentsInstallationSucceeded)
 				Expect(patchHelper.Patch(ctx, byoHost, patch.WithStatusObservedGeneration{})).NotTo(HaveOccurred())
+			})
+
+			It("should skip node reset if k8s component installation failed", func() {
+				var err error
+				patchHelper, err = patch.NewHelper(byoHost, k8sClient)
+				Expect(err).ShouldNot(HaveOccurred())
+
+				conditions.MarkFalse(byoHost, infrastructurev1beta1.K8sComponentsInstallationSucceeded, 
+					infrastructurev1beta1.K8sComponentsInstallationFailedReason, clusterv1.ConditionSeverityInfo, "")
+				Expect(patchHelper.Patch(ctx, byoHost, patch.WithStatusObservedGeneration{})).NotTo(HaveOccurred())
+				result, reconcilerErr := hostReconciler.Reconcile(ctx, controllerruntime.Request{
+					NamespacedName: byoHostLookupKey,
+				})
+				Expect(result).To(Equal(controllerruntime.Result{}))
+				Expect(reconcilerErr).ToNot(HaveOccurred())
+
+				// assert kubeadm reset is not called
+				Expect(fakeCommandRunner.RunCmdCallCount()).To(Equal(0))
 			})
 
 			It("should reset the node and set the Reason to K8sNodeAbsentReason", func() {
