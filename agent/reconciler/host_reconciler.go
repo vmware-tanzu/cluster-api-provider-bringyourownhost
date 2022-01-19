@@ -219,10 +219,7 @@ func (r *HostReconciler) hostCleanUp(ctx context.Context, byoHost *infrastructur
 		return err
 	}
 
-	err = r.removeAnnotations(ctx, byoHost)
-	if err != nil {
-		return err
-	}
+	r.removeAnnotations(ctx, byoHost)
 	conditions.MarkFalse(byoHost, infrastructurev1beta1.K8sNodeBootstrapSucceeded, infrastructurev1beta1.K8sNodeAbsentReason, clusterv1.ConditionSeverityInfo, "")
 	return nil
 }
@@ -315,7 +312,7 @@ func (r *HostReconciler) deleteEndpointIP(ctx context.Context, byoHost *infrastr
 	return nil
 }
 
-func (r *HostReconciler) removeAnnotations(ctx context.Context, byoHost *infrastructurev1beta1.ByoHost) error {
+func (r *HostReconciler) removeAnnotations(ctx context.Context, byoHost *infrastructurev1beta1.ByoHost) {
 	logger := ctrl.LoggerFrom(ctx)
 	logger.Info("Removing annotations")
 	// Remove host reservation
@@ -344,5 +341,4 @@ func (r *HostReconciler) removeAnnotations(ctx context.Context, byoHost *infrast
 
 	// Remove the bundle tag annotation
 	delete(byoHost.Annotations, infrastructurev1beta1.BundleLookupTagAnnotation)
-	return nil
 }
