@@ -189,72 +189,37 @@ func (r *HostReconciler) cleank8sdirectories(ctx context.Context) error {
 func (r *HostReconciler) hostCleanUp(ctx context.Context, byoHost *infrastructurev1beta1.ByoHost) error {
 	logger := ctrl.LoggerFrom(ctx)
 	logger.Info("cleaning up host")
-	err := r.resetNode(ctx, byoHost)
-	if err != nil {
-		return err
-	}
 
-	if r.SkipInstallation {
-		logger.Info("Skipping uninstallation of k8s components")
-	} else {
-		bundleRegistry := byoHost.GetAnnotations()[infrastructurev1beta1.BundleLookupBaseRegistryAnnotation]
-		k8sVersion := byoHost.GetAnnotations()[infrastructurev1beta1.K8sVersionAnnotation]
-		byohBundleTag := byoHost.GetAnnotations()[infrastructurev1beta1.BundleLookupTagAnnotation]
-		bundleInstaller, err := installer.New(bundleRegistry, r.DownloadPath, logger)
+	k8sComponentsInstallationSucceeded := conditions.Get(byoHost, infrastructurev1beta1.K8sComponentsInstallationSucceeded)
+	if k8sComponentsInstallationSucceeded != nil && k8sComponentsInstallationSucceeded.Status == corev1.ConditionTrue {
+		err := r.resetNode(ctx, byoHost)
 		if err != nil {
 			return err
 		}
-		err = bundleInstaller.Uninstall(k8sVersion, byohBundleTag)
-		if err != nil {
-			return err
-		}
-	}
-
-	conditions.MarkFalse(byoHost, infrastructurev1beta1.K8sNodeBootstrapSucceeded, infrastructurev1beta1.K8sNodeAbsentReason, clusterv1.ConditionSeverityInfo, "")
-
-	logger.Info("Removing the bootstrap sentinel file...")
-	if _, err := os.Stat(bootstrapSentinelFile); !os.IsNotExist(err) {
-		err := os.Remove(bootstrapSentinelFile)
-		if err != nil {
-			return errors.Wrapf(err, "failed to delete sentinel file %s", bootstrapSentinelFile)
-		}
-	}
-	if IP, ok := byoHost.Annotations[infrastructurev1beta1.EndPointIPAnnotation]; ok {
-		network, err := vip.NewConfig(IP, registration.LocalHostRegistrar.ByoHostInfo.DefaultNetworkInterfaceName, false)
-		if err == nil {
-			err := network.DeleteIP()
+		if r.SkipInstallation {
+			logger.Info("Skipping uninstallation of k8s components")
+		} else {
+			err = r.uninstallk8sComponents(ctx, byoHost)
 			if err != nil {
 				return err
 			}
 		}
+	} else {
+		logger.Info("Skipping k8s node reset and k8s component uninstallation")
 	}
-	// Remove host reservation
-	byoHost.Status.MachineRef = nil
+	conditions.MarkFalse(byoHost, infrastructurev1beta1.K8sNodeBootstrapSucceeded, infrastructurev1beta1.K8sNodeAbsentReason, clusterv1.ConditionSeverityInfo, "")
 
-	// Remove BootstrapSecret
-	byoHost.Spec.BootstrapSecret = nil
+	err := r.removeSentinelFile(ctx, byoHost)
+	if err != nil {
+		return err
+	}
 
-	// Remove cluster-name label
-	delete(byoHost.Labels, clusterv1.ClusterLabelName)
+	err = r.deleteEndpointIP(ctx, byoHost)
+	if err != nil {
+		return err
+	}
 
-	// Remove Byomachine-name label
-	delete(byoHost.Labels, infrastructurev1beta1.AttachedByoMachineLabel)
-
-	// Remove the EndPointIP annotation
-	delete(byoHost.Annotations, infrastructurev1beta1.EndPointIPAnnotation)
-
-	// Remove the cleanup annotation
-	delete(byoHost.Annotations, infrastructurev1beta1.HostCleanupAnnotation)
-
-	// Remove the cluster version annotation
-	delete(byoHost.Annotations, infrastructurev1beta1.K8sVersionAnnotation)
-
-	// Remove the bundle registry annotation
-	delete(byoHost.Annotations, infrastructurev1beta1.BundleLookupBaseRegistryAnnotation)
-
-	// Remove the bundle tag annotation
-	delete(byoHost.Annotations, infrastructurev1beta1.BundleLookupTagAnnotation)
-
+	r.removeAnnotations(ctx, byoHost)
 	conditions.MarkFalse(byoHost, infrastructurev1beta1.K8sNodeBootstrapSucceeded, infrastructurev1beta1.K8sNodeAbsentReason, clusterv1.ConditionSeverityInfo, "")
 	return nil
 }
@@ -301,4 +266,79 @@ func (r *HostReconciler) installK8sComponents(ctx context.Context, byoHost *infr
 	r.Recorder.Event(byoHost, corev1.EventTypeNormal, "k8sComponentInstalled", "Successfully Installed K8s components")
 	conditions.MarkTrue(byoHost, infrastructurev1beta1.K8sComponentsInstallationSucceeded)
 	return nil
+}
+
+func (r *HostReconciler) uninstallk8sComponents(ctx context.Context, byoHost *infrastructurev1beta1.ByoHost) error {
+	logger := ctrl.LoggerFrom(ctx)
+
+	bundleRegistry := byoHost.GetAnnotations()[infrastructurev1beta1.BundleLookupBaseRegistryAnnotation]
+	k8sVersion := byoHost.GetAnnotations()[infrastructurev1beta1.K8sVersionAnnotation]
+	byohBundleTag := byoHost.GetAnnotations()[infrastructurev1beta1.BundleLookupTagAnnotation]
+	bundleInstaller, err := installer.New(bundleRegistry, r.DownloadPath, logger)
+	if err != nil {
+		return err
+	}
+	err = bundleInstaller.Uninstall(k8sVersion, byohBundleTag)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func (r *HostReconciler) removeSentinelFile(ctx context.Context, byoHost *infrastructurev1beta1.ByoHost) error {
+	logger := ctrl.LoggerFrom(ctx)
+	logger.Info("Removing the bootstrap sentinel file")
+	if _, err := os.Stat(bootstrapSentinelFile); !os.IsNotExist(err) {
+		err := os.Remove(bootstrapSentinelFile)
+		if err != nil {
+			return errors.Wrapf(err, "failed to delete sentinel file %s", bootstrapSentinelFile)
+		}
+	}
+	return nil
+}
+
+func (r *HostReconciler) deleteEndpointIP(ctx context.Context, byoHost *infrastructurev1beta1.ByoHost) error {
+	logger := ctrl.LoggerFrom(ctx)
+	logger.Info("Removing network endpoints")
+	if IP, ok := byoHost.Annotations[infrastructurev1beta1.EndPointIPAnnotation]; ok {
+		network, err := vip.NewConfig(IP, registration.LocalHostRegistrar.ByoHostInfo.DefaultNetworkInterfaceName, false)
+		if err == nil {
+			err := network.DeleteIP()
+			if err != nil {
+				return err
+			}
+		}
+	}
+	return nil
+}
+
+func (r *HostReconciler) removeAnnotations(ctx context.Context, byoHost *infrastructurev1beta1.ByoHost) {
+	logger := ctrl.LoggerFrom(ctx)
+	logger.Info("Removing annotations")
+	// Remove host reservation
+	byoHost.Status.MachineRef = nil
+
+	// Remove BootstrapSecret
+	byoHost.Spec.BootstrapSecret = nil
+
+	// Remove cluster-name label
+	delete(byoHost.Labels, clusterv1.ClusterLabelName)
+
+	// Remove Byomachine-name label
+	delete(byoHost.Labels, infrastructurev1beta1.AttachedByoMachineLabel)
+
+	// Remove the EndPointIP annotation
+	delete(byoHost.Annotations, infrastructurev1beta1.EndPointIPAnnotation)
+
+	// Remove the cleanup annotation
+	delete(byoHost.Annotations, infrastructurev1beta1.HostCleanupAnnotation)
+
+	// Remove the cluster version annotation
+	delete(byoHost.Annotations, infrastructurev1beta1.K8sVersionAnnotation)
+
+	// Remove the bundle registry annotation
+	delete(byoHost.Annotations, infrastructurev1beta1.BundleLookupBaseRegistryAnnotation)
+
+	// Remove the bundle tag annotation
+	delete(byoHost.Annotations, infrastructurev1beta1.BundleLookupTagAnnotation)
 }
