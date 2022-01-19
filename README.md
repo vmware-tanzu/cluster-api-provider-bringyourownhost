@@ -13,7 +13,10 @@
 <img src="https://goreportcard.com/badge/github.com/vmware-tanzu/cluster-api-provider-bringyourownhost"></a>
 <!-- codecov badge -->
 <a href="https://codecov.io/gh/vmware-tanzu/cluster-api-provider-bringyourownhost">
-<img src="https://codecov.io/gh/vmware-tanzu/cluster-api-provider-bringyourownhost/branch/main/graph/badge.svg?token=8GGPY0MENQ"></a>    
+<img src="https://codecov.io/gh/vmware-tanzu/cluster-api-provider-bringyourownhost/branch/main/graph/badge.svg?token=8GGPY0MENQ"></a>
+<!-- openssf badge -->
+<a href="https://bestpractices.coreinfrastructure.org/projects/5506">
+<img src="https://bestpractices.coreinfrastructure.org/projects/5506/badge"></a>
 </p>
 
 ------
