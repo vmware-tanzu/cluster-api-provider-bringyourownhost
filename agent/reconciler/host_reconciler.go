@@ -209,7 +209,17 @@ func (r *HostReconciler) hostCleanUp(ctx context.Context, byoHost *infrastructur
 	}
 	conditions.MarkFalse(byoHost, infrastructurev1beta1.K8sNodeBootstrapSucceeded, infrastructurev1beta1.K8sNodeAbsentReason, clusterv1.ConditionSeverityInfo, "")
 
-	err := r.removeAnnotations(ctx, byoHost)
+	err := r.removeSentinelFile(ctx, byoHost)
+	if err != nil {
+		return err
+	}
+
+	err = r.deleteEndpointIP(ctx, byoHost)
+	if err != nil {
+		return err
+	}
+
+	err = r.removeAnnotations(ctx, byoHost)
 	if err != nil {
 		return err
 	}
@@ -263,7 +273,7 @@ func (r *HostReconciler) installK8sComponents(ctx context.Context, byoHost *infr
 
 func (r *HostReconciler) uninstallk8sComponents(ctx context.Context, byoHost *infrastructurev1beta1.ByoHost) error {
 	logger := ctrl.LoggerFrom(ctx)
-	
+
 	bundleRegistry := byoHost.GetAnnotations()[infrastructurev1beta1.BundleLookupBaseRegistryAnnotation]
 	k8sVersion := byoHost.GetAnnotations()[infrastructurev1beta1.K8sVersionAnnotation]
 	byohBundleTag := byoHost.GetAnnotations()[infrastructurev1beta1.BundleLookupTagAnnotation]
@@ -278,15 +288,21 @@ func (r *HostReconciler) uninstallk8sComponents(ctx context.Context, byoHost *in
 	return nil
 }
 
-func (r *HostReconciler) removeAnnotations(ctx context.Context, byoHost *infrastructurev1beta1.ByoHost) error {
+func (r *HostReconciler) removeSentinelFile(ctx context.Context, byoHost *infrastructurev1beta1.ByoHost) error {
 	logger := ctrl.LoggerFrom(ctx)
-	logger.Info("Removing the bootstrap sentinel file...")
+	logger.Info("Removing the bootstrap sentinel file")
 	if _, err := os.Stat(bootstrapSentinelFile); !os.IsNotExist(err) {
 		err := os.Remove(bootstrapSentinelFile)
 		if err != nil {
 			return errors.Wrapf(err, "failed to delete sentinel file %s", bootstrapSentinelFile)
 		}
 	}
+	return nil
+}
+
+func (r *HostReconciler) deleteEndpointIP(ctx context.Context, byoHost *infrastructurev1beta1.ByoHost) error {
+	logger := ctrl.LoggerFrom(ctx)
+	logger.Info("Removing network endpoints")
 	if IP, ok := byoHost.Annotations[infrastructurev1beta1.EndPointIPAnnotation]; ok {
 		network, err := vip.NewConfig(IP, registration.LocalHostRegistrar.ByoHostInfo.DefaultNetworkInterfaceName, false)
 		if err == nil {
@@ -296,6 +312,12 @@ func (r *HostReconciler) removeAnnotations(ctx context.Context, byoHost *infrast
 			}
 		}
 	}
+	return nil
+}
+
+func (r *HostReconciler) removeAnnotations(ctx context.Context, byoHost *infrastructurev1beta1.ByoHost) error {
+	logger := ctrl.LoggerFrom(ctx)
+	logger.Info("Removing annotations")
 	// Remove host reservation
 	byoHost.Status.MachineRef = nil
 
