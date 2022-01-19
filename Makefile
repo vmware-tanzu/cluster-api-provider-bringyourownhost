@@ -98,6 +98,12 @@ fmt: ## Run go fmt against code.
 vet: ## Run go vet against code.
 	go vet ./...
 
+GOLANGCI_LINT = $(shell pwd)/bin/golangci-lint
+lint: golangci-lint
+	${GOLANGCI_LINT} run
+golangci-lint:
+	[ -e ${GOLANGCI_LINT} ] || curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b $(shell pwd)/bin v1.42.0
+
 ##@ Build
 
 build: generate fmt vet ## Build manager binary.
