@@ -1,4 +1,4 @@
-# Kubernetes Cluster API Provider BYOH(Bring your own host)
+# Kubernetes Cluster API Provider BYOH(Bring Your Own Host)
 <p align="center">
 <!-- lint card --><a href="https://github.com/vmware-tanzu/cluster-api-provider-bringyourownhost/actions/workflows/lint.yml">
 <img src="https://github.com/vmware-tanzu/cluster-api-provider-bringyourownhost/actions/workflows/lint.yml/badge.svg"></a>
@@ -28,6 +28,23 @@ declarative, Kubernetes-style APIs to cluster creation, configuration and
 management.
 
 __BYOH__ is a Cluster API v1beta1 Infrastructure Provider for already-provisioned hosts running Linux.
+
+## Community, discussion, contribution, and support
+
+The BringYourOwnHost provider is developed in the open, and is constantly being improved by our users, contributors, and maintainers.
+If you have questions or want to get the latest project news, you can connect with us in the following ways:
+
+- Chat with us on the Kubernetes [Slack](http://slack.k8s.io/) in the [#cluster-api](https://kubernetes.slack.com/archives/C8TSNPY4T) channel
+- Subscribe to the [SIG Cluster Lifecycle](https://groups.google.com/forum/#!forum/kubernetes-sig-cluster-lifecycle) Google Group for access to documents and calendars
+- Join our Cluster API Provider for BringYourOwnHost working group sessions where we share the latest project news, demos, answer questions, and triage issues
+    - Weekly on Wednesdays @ 1:30PM Indian Standard Time on [Zoom](https://VMware.zoom.us/j/94476574480?pwd=WGYzOXBoL1VsVnBXK3c5TWd1bG5SZz09)
+    - Previous meetings: \[ [notes](https://docs.google.com/document/d/1T-3_eskC_HCtXLh3PA8y--mgO-AIajZfevcnYuno6JM/edit#heading=h.y186zgz0eh6e) | [recordings](https://www.youtube.com/playlist?list=PLHbHoGHbooH41L5P-tIK6QqhILdEI9yBK) \]
+
+Pull Requests and feedback on issues are very welcome!
+See the [issue tracker](https://github.com/vmware-tanzu/cluster-api-provider-bringyourownhost/issues) if you're unsure where to start, especially the [Good first issue](https://github.com/vmware-tanzu/cluster-api-provider-bringyourownhost/issues?q=is%3Aopen+is%3Aissue+label%3A%22good+first+issue%22) and [Help wanted](https://github.com/vmware-tanzu/cluster-api-provider-bringyourownhost/issues?q=is%3Aopen+is%3Aissue+label%3A%22help+wanted%22) tags, and
+also feel free to reach out to discuss.
+
+See also our [contributor guide](CONTRIBUTING.md) and the Kubernetes [community page](https://kubernetes.io/community) for more details on how to get involved.
 
 ## Getting Started
 Check out the [getting_started](https://github.com/vmware-tanzu/cluster-api-provider-bringyourownhost/blob/main/docs/getting_started.md) guide for launching a BYOH workload cluster
