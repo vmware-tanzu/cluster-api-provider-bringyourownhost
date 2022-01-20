@@ -18,6 +18,7 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/kubernetes/scheme"
 	clusterv1 "sigs.k8s.io/cluster-api/api/v1beta1"
+	"sigs.k8s.io/cluster-api/util"
 	"sigs.k8s.io/cluster-api/util/annotations"
 	"sigs.k8s.io/cluster-api/util/conditions"
 	"sigs.k8s.io/cluster-api/util/patch"
@@ -115,6 +116,32 @@ var _ = Describe("Controllers/ByomachineController", func() {
 
 			_, err := reconciler.Reconcile(ctx, reconcile.Request{NamespacedName: byoMachineLookupKey})
 			Expect(err).To(MatchError("nodes \"" + byoHost.Name + "\" not found"))
+		})
+
+		Context("When node.Spec.ProviderID is already set", func() {
+
+			BeforeEach(func() {
+				byoHost = builder.ByoHost(defaultNamespace, "test-node-providerid-host").Build()
+				Expect(k8sClientUncached.Create(ctx, byoHost)).Should(Succeed())
+			})
+
+			It("should not return error when node.Spec.ProviderID is with correct value", func() {
+				node := builder.Node(defaultNamespace, byoHost.Name).Build()
+				node.Spec.ProviderID = fmt.Sprintf("%s%s/%s", controllers.ProviderIDPrefix, byoHost.Name, util.RandomString(controllers.ProviderIDSuffixLength))
+				Expect(clientFake.Create(ctx, node)).Should(Succeed())
+				WaitForObjectsToBePopulatedInCache(byoHost)
+				_, err := reconciler.Reconcile(ctx, reconcile.Request{NamespacedName: byoMachineLookupKey})
+				Expect(err).ToNot(HaveOccurred())
+			})
+
+			It("should return error when node.Spec.ProviderID is without correct value", func() {
+				node := builder.Node(defaultNamespace, byoHost.Name).Build()
+				node.Spec.ProviderID = "invalid_format"
+				Expect(clientFake.Create(ctx, node)).Should(Succeed())
+				WaitForObjectsToBePopulatedInCache(byoHost)
+				_, err := reconciler.Reconcile(ctx, reconcile.Request{NamespacedName: byoMachineLookupKey})
+				Expect(err).To(MatchError("invalid format for node.Spec.ProviderID"))
+			})
 		})
 
 		Context("When BYO Hosts are not available", func() {
