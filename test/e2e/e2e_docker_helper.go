@@ -5,6 +5,7 @@ package e2e
 
 import (
 	"context"
+	"fmt"
 	"io"
 	"os"
 	"path/filepath"
@@ -21,7 +22,6 @@ import (
 	. "github.com/onsi/gomega" // nolint: stylecheck
 	"github.com/onsi/gomega/gexec"
 	"github.com/pkg/errors"
-	"sigs.k8s.io/cluster-api/test/framework"
 )
 
 const (
@@ -35,6 +35,13 @@ type cpConfig struct {
 	sourcePath string
 	destPath   string
 	container  string
+}
+
+type ByoHostPoolContext struct {
+	Capacity     int
+	ContainerIDs []string
+	dockerClient *client.Client
+	ByoHostNames []string
 }
 
 func resolveLocalPath(localPath string) (absPath string, err error) {
@@ -148,7 +155,13 @@ func createDockerContainer(ctx context.Context, byoHostName string, dockerClient
 		nil, byoHostName)
 }
 
-func setupByoDockerHost(ctx context.Context, clusterConName, byoHostName, namespace string, dockerClient *client.Client, bootstrapClusterProxy framework.ClusterProxy) (types.HijackedResponse, string, error) {
+func setupByoDockerHost(caseContextData *CaseContext, byoHostPoolData *ByoHostPoolContext, byoHostName string) (types.HijackedResponse, error) {
+	ctx := caseContextData.ctx
+	clusterConName := caseContextData.ClusterConName
+	namespace := caseContextData.Namespace.Name
+	bootstrapClusterProxy := caseContextData.clusterProxy
+	dockerClient := byoHostPoolData.dockerClient
+
 	byohost, err := createDockerContainer(ctx, byoHostName, dockerClient)
 	Expect(err).NotTo(HaveOccurred())
 
@@ -199,5 +212,43 @@ func setupByoDockerHost(ctx context.Context, clusterConName, byoHostName, namesp
 
 	output, err := dockerClient.ContainerExecAttach(ctx, resp.ID, types.ExecStartCheck{})
 
-	return output, byohost.ID, err
+	byoHostPoolData.ContainerIDs = append(byoHostPoolData.ContainerIDs, byohost.ID)
+
+	return output, err
+}
+
+func setupByohostPool(caseContextData *CaseContext, collectInfoData *CollectInfoContext, byoHostPoolData *ByoHostPoolContext) []*os.File {
+	var fileList []*os.File
+	var err error
+	caseName := caseContextData.CaseName
+
+	byoHostPoolData.dockerClient, err = client.NewClientWithOpts(client.FromEnv)
+	Expect(err).NotTo(HaveOccurred())
+
+	for i := 0; i < byoHostPoolData.Capacity; i++ {
+		byoHostName := fmt.Sprintf("byohost-%s-%d", caseName, i)
+		output, err := setupByoDockerHost(caseContextData, byoHostPoolData, byoHostName)
+		Expect(err).NotTo(HaveOccurred())
+
+		byoHostPoolData.ByoHostNames = append(byoHostPoolData.ByoHostNames, byoHostName)
+
+		// read the log of host agent container in backend, and write it
+		agentLogFile := fmt.Sprintf("/tmp/host-agent-%s-%d.log", caseName, i)
+		f := WriteDockerLog(output, agentLogFile)
+		fileList = append(fileList, f)
+		collectInfoData.AgentLogList = append(collectInfoData.AgentLogList, agentLogFile)
+	}
+	return fileList
+}
+
+func cleanByohostPool(caseContextData *CaseContext, byoHostPoolData *ByoHostPoolContext) {
+	if byoHostPoolData.dockerClient != nil && len(byoHostPoolData.ContainerIDs) != 0 {
+		for _, byohostContainerID := range byoHostPoolData.ContainerIDs {
+			err := byoHostPoolData.dockerClient.ContainerStop(caseContextData.ctx, byohostContainerID, nil)
+			Expect(err).NotTo(HaveOccurred())
+
+			err = byoHostPoolData.dockerClient.ContainerRemove(caseContextData.ctx, byohostContainerID, types.ContainerRemoveOptions{})
+			Expect(err).NotTo(HaveOccurred())
+		}
+	}
 }
