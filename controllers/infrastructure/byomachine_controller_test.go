@@ -123,22 +123,27 @@ var _ = Describe("Controllers/ByomachineController", func() {
 			BeforeEach(func() {
 				byoHost = builder.ByoHost(defaultNamespace, "test-node-providerid-host").Build()
 				Expect(k8sClientUncached.Create(ctx, byoHost)).Should(Succeed())
+				WaitForObjectsToBePopulatedInCache(byoHost)
+			})
+
+			AfterEach(func() {
+				Expect(k8sClientUncached.Delete(ctx, byoHost)).ToNot(HaveOccurred())
 			})
 
 			It("should not return error when node.Spec.ProviderID is with correct value", func() {
-				node := builder.Node(defaultNamespace, byoHost.Name).Build()
-				node.Spec.ProviderID = fmt.Sprintf("%s%s/%s", controllers.ProviderIDPrefix, byoHost.Name, util.RandomString(controllers.ProviderIDSuffixLength))
+				node := builder.Node(defaultNamespace, byoHost.Name).
+					WithProviderID(fmt.Sprintf("%s%s/%s", controllers.ProviderIDPrefix, byoHost.Name, util.RandomString(controllers.ProviderIDSuffixLength))).
+					Build()
 				Expect(clientFake.Create(ctx, node)).Should(Succeed())
-				WaitForObjectsToBePopulatedInCache(byoHost)
 				_, err := reconciler.Reconcile(ctx, reconcile.Request{NamespacedName: byoMachineLookupKey})
 				Expect(err).ToNot(HaveOccurred())
 			})
 
 			It("should return error when node.Spec.ProviderID has stale value", func() {
-				node := builder.Node(defaultNamespace, byoHost.Name).Build()
-				node.Spec.ProviderID = "invalid_format"
+				node := builder.Node(defaultNamespace, byoHost.Name).
+					WithProviderID(fmt.Sprintf("%sanother-host/%s", controllers.ProviderIDPrefix, util.RandomString(controllers.ProviderIDSuffixLength))).
+					Build()
 				Expect(clientFake.Create(ctx, node)).Should(Succeed())
-				WaitForObjectsToBePopulatedInCache(byoHost)
 				_, err := reconciler.Reconcile(ctx, reconcile.Request{NamespacedName: byoMachineLookupKey})
 				Expect(err).To(MatchError("invalid format for node.Spec.ProviderID"))
 			})

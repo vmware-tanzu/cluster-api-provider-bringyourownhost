@@ -332,8 +332,9 @@ func (s *SecretBuilder) Build() *corev1.Secret {
 
 // NodeBuilder holds the variables and objects required to build a corev1.Node
 type NodeBuilder struct {
-	namespace string
-	name      string
+	namespace  string
+	name       string
+	providerID string
 }
 
 // Node returns a NodeBuilder with the given name and namespace
@@ -342,6 +343,12 @@ func Node(namespace, name string) *NodeBuilder {
 		namespace: namespace,
 		name:      name,
 	}
+}
+
+// WithProviderID adds the passed providerID to the ByoHostBuilder
+func (n *NodeBuilder) WithProviderID(providerID string) *NodeBuilder {
+	n.providerID = providerID
+	return n
 }
 
 // Build returns a Node with the attributes added to the NodeBuilder
@@ -355,7 +362,9 @@ func (n *NodeBuilder) Build() *corev1.Node {
 			Name:      n.name,
 			Namespace: n.namespace,
 		},
-		Spec:   corev1.NodeSpec{},
+		Spec: corev1.NodeSpec{
+			ProviderID: n.providerID,
+		},
 		Status: corev1.NodeStatus{},
 	}
 
