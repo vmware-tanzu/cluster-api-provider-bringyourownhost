@@ -13,6 +13,7 @@ import (
 	"github.com/vmware-tanzu/cluster-api-provider-bringyourownhost/agent/cloudinit"
 	"github.com/vmware-tanzu/cluster-api-provider-bringyourownhost/agent/reconciler"
 	"github.com/vmware-tanzu/cluster-api-provider-bringyourownhost/agent/registration"
+	"github.com/vmware-tanzu/cluster-api-provider-bringyourownhost/agent/version"
 	infrastructurev1beta1 "github.com/vmware-tanzu/cluster-api-provider-bringyourownhost/apis/infrastructure/v1beta1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/fields"
@@ -77,6 +78,7 @@ var (
 	metricsbindaddress string
 	downloadpath       string
 	skipInstallation   bool
+	printVersion       bool
 )
 
 // TODO - fix logging
@@ -87,7 +89,14 @@ func main() {
 	flag.StringVar(&metricsbindaddress, "metricsbindaddress", ":8080", "metricsbindaddress is the TCP address that the controller should bind to for serving prometheus metrics.It can be set to \"0\" to disable the metrics serving")
 	flag.StringVar(&downloadpath, "downloadpath", "/var/lib/byoh/bundles", "File System path to keep the downloads")
 	flag.BoolVar(&skipInstallation, "skip-installation", false, "If you want to skip installation of the kubernetes component binaries")
+	flag.BoolVar(&printVersion, "version", false, "Print the version of the agent")
 	flag.Parse()
+
+	if printVersion {
+		info := version.Get()
+		fmt.Printf("byoh-hostagent version: %#v\n", info)
+		return
+	}
 	scheme = runtime.NewScheme()
 	_ = infrastructurev1beta1.AddToScheme(scheme)
 	_ = corev1.AddToScheme(scheme)
