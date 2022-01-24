@@ -3,8 +3,8 @@
 <!-- lint card --><a href="https://github.com/vmware-tanzu/cluster-api-provider-bringyourownhost/actions/workflows/lint.yml">
 <img src="https://github.com/vmware-tanzu/cluster-api-provider-bringyourownhost/actions/workflows/lint.yml/badge.svg"></a>
 <!-- test status -->
-<a href="https://github.com/vmware-tanzu/cluster-api-provider-bringyourownhost/actions/workflows/main.yml">
-<img src="https://github.com/vmware-tanzu/cluster-api-provider-bringyourownhost/actions/workflows/main.yml/badge.svg"></a>
+<a href="https://github.com/vmware-tanzu/cluster-api-provider-bringyourownhost/actions?query=event%3Apush+branch%3Amain+workflow%3ACI+">
+<img src="https://github.com/vmware-tanzu/cluster-api-provider-bringyourownhost/actions/workflows/ci.yml/badge.svg?branch=main&event=push"></a>
 <!-- go doc / reference card -->
 <a href="https://pkg.go.dev/github.com/vmware-tanzu/cluster-api-provider-bringyourownhost">
 <img src="https://pkg.go.dev/badge/github.com/vmware-tanzu/cluster-api-provider-bringyourownhost.svg"></a>
