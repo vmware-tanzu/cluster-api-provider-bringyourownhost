@@ -134,7 +134,7 @@ var _ = Describe("Controllers/ByomachineController", func() {
 				Expect(err).ToNot(HaveOccurred())
 			})
 
-			It("should return error when node.Spec.ProviderID is without correct value", func() {
+			It("should return error when node.Spec.ProviderID has stale value", func() {
 				node := builder.Node(defaultNamespace, byoHost.Name).Build()
 				node.Spec.ProviderID = "invalid_format"
 				Expect(clientFake.Create(ctx, node)).Should(Succeed())
