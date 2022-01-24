@@ -49,7 +49,6 @@ var (
 	defaultByoHostName    string = "my-host"
 	defaultMachineName    string = "my-machine"
 	defaultByoMachineName string = "my-byomachine"
-	defaultByoClusterName string = "my-byocluster"
 	defaultNamespace      string = "default"
 	fakeBootstrapSecret   string = "fakeBootstrapSecret"
 	k8sManager            ctrl.Manager
