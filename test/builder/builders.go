@@ -136,6 +136,7 @@ type ByoClusterBuilder struct {
 	name           string
 	bundleRegistry string
 	bundleTag      string
+	cluster        *clusterv1.Cluster
 }
 
 // ByoCluster returns a ByoClusterBuilder with the given name and namespace
@@ -146,13 +147,19 @@ func ByoCluster(namespace, name string) *ByoClusterBuilder {
 	}
 }
 
-// WithPausedField adds the passed paused value to the ByoClusterBuilder
+// WithOwnerCluster adds the passed Owner Cluster to the ByoClusterBuilder
+func (c *ByoClusterBuilder) WithOwnerCluster(cluster *clusterv1.Cluster) *ByoClusterBuilder {
+	c.cluster = cluster
+	return c
+}
+
+// WithBundleBaseRegistry adds the passed registry value to the ByoClusterBuilder
 func (c *ByoClusterBuilder) WithBundleBaseRegistry(registry string) *ByoClusterBuilder {
 	c.bundleRegistry = registry
 	return c
 }
 
-// WithPausedField adds the passed paused value to the ByoClusterBuilder
+// WithBundleTag adds the passed bundleTag value to the ByoClusterBuilder
 func (c *ByoClusterBuilder) WithBundleTag(tag string) *ByoClusterBuilder {
 	c.bundleTag = tag
 	return c
@@ -170,6 +177,17 @@ func (c *ByoClusterBuilder) Build() *infrastructurev1beta1.ByoCluster {
 			Namespace: c.namespace,
 		},
 		Spec: infrastructurev1beta1.ByoClusterSpec{},
+	}
+
+	if c.cluster != nil {
+		cluster.ObjectMeta.OwnerReferences = []metav1.OwnerReference{
+			{
+				Kind:       "Cluster",
+				Name:       c.cluster.Name,
+				APIVersion: clusterv1.GroupVersion.String(),
+				UID:        c.cluster.UID,
+			},
+		}
 	}
 
 	if c.bundleRegistry != "" {
@@ -255,7 +273,7 @@ func (c *ClusterBuilder) WithPausedField(paused bool) *ClusterBuilder {
 	return c
 }
 
-// WithPausedField adds the passed paused value to the ClusterBuilder
+// WithInfrastructureRef adds the passed byoCluster value to the ClusterBuilder
 func (c *ClusterBuilder) WithInfrastructureRef(byoCluster *infrastructurev1beta1.ByoCluster) *ClusterBuilder {
 	c.byoCluster = byoCluster
 	return c

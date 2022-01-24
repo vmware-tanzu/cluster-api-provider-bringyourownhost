@@ -40,6 +40,7 @@ var (
 	testEnv               *envtest.Environment
 	clientFake            client.Client
 	reconciler            *controllers.ByoMachineReconciler
+	byoClusterReconciler  *controllers.ByoClusterReconciler
 	recorder              *record.FakeRecorder
 	byoCluster            *infrastructurev1beta1.ByoCluster
 	capiCluster           *clusterv1.Cluster
@@ -48,6 +49,7 @@ var (
 	defaultByoHostName    string = "my-host"
 	defaultMachineName    string = "my-machine"
 	defaultByoMachineName string = "my-byomachine"
+	defaultByoClusterName string = "my-byocluster"
 	defaultNamespace      string = "default"
 	fakeBootstrapSecret   string = "fakeBootstrapSecret"
 	k8sManager            ctrl.Manager
@@ -119,6 +121,12 @@ var _ = BeforeSuite(func() {
 		Recorder: recorder,
 	}
 	err = reconciler.SetupWithManager(context.TODO(), k8sManager)
+	Expect(err).NotTo(HaveOccurred())
+
+	byoClusterReconciler = &controllers.ByoClusterReconciler{
+		Client: k8sManager.GetClient(),
+	}
+	err = byoClusterReconciler.SetupWithManager(k8sManager)
 	Expect(err).NotTo(HaveOccurred())
 
 	go func() {
