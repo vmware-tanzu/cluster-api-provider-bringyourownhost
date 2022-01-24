@@ -1,10 +1,26 @@
-name: Post merge on main
+name: CI
 
 on:
   push:
     branches: [ main ]
+  pull_request:
+    branches: [ main ]    
 
 jobs:
+  build-agent:  
+      runs-on: ubuntu-latest
+      steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
+
+      - name: Set up Go
+        uses: actions/setup-go@v2
+        with:
+          go-version: 1.16
+
+      - name: build agent
+        run: make host-agent-binaries
+
   test:
     runs-on: ubuntu-latest
     steps:
