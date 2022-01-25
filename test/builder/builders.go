@@ -345,7 +345,7 @@ func Node(namespace, name string) *NodeBuilder {
 	}
 }
 
-// WithProviderID adds the passed providerID to the ByoHostBuilder
+// WithProviderID adds the passed providerID to the NodeBuilder
 func (n *NodeBuilder) WithProviderID(providerID string) *NodeBuilder {
 	n.providerID = providerID
 	return n
