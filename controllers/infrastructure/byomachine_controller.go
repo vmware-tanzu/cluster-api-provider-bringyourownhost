@@ -42,7 +42,7 @@ import (
 
 const (
 	ProviderIDPrefix       = "byoh://"
-	providerIDSuffixLength = 6
+	ProviderIDSuffixLength = 6
 	RequeueForbyohost      = 10 * time.Second
 )
 
@@ -259,26 +259,24 @@ func (r *ByoMachineReconciler) reconcileNormal(ctx context.Context, machineScope
 		r.Recorder.Eventf(machineScope.ByoMachine, corev1.EventTypeNormal, "ByoHostAttachSucceeded", "Attached ByoHost %s", machineScope.ByoHost.Name)
 	}
 
-	if machineScope.ByoMachine.Spec.ProviderID == "" {
-		logger.Info("Updating Node with ProviderID")
-		remoteClient, err := r.getRemoteClient(ctx, machineScope.ByoMachine)
-		if err != nil {
-			logger.Error(err, "failed to get remote client")
-			return ctrl.Result{}, err
-		}
-
-		providerID, err := r.setNodeProviderID(ctx, remoteClient, machineScope.ByoHost)
-		if err != nil {
-			logger.Error(err, "failed to set node providerID")
-			r.Recorder.Eventf(machineScope.ByoMachine, corev1.EventTypeWarning, "SetNodeProviderFailed", "Node %s does not exist", machineScope.ByoHost.Name)
-			return ctrl.Result{}, err
-		}
-
-		machineScope.ByoMachine.Spec.ProviderID = providerID
-		machineScope.ByoMachine.Status.Ready = true
-		conditions.MarkTrue(machineScope.ByoMachine, infrav1.BYOHostReady)
-		r.Recorder.Eventf(machineScope.ByoMachine, corev1.EventTypeNormal, "NodeProvisionedSucceeded", "Provisioned Node %s", machineScope.ByoHost.Name)
+	logger.Info("Updating Node with ProviderID")
+	remoteClient, err := r.getRemoteClient(ctx, machineScope.ByoMachine)
+	if err != nil {
+		logger.Error(err, "failed to get remote client")
+		return ctrl.Result{}, err
 	}
+
+	providerID, err := r.setNodeProviderID(ctx, remoteClient, machineScope.ByoHost)
+	if err != nil {
+		logger.Error(err, "failed to set node providerID")
+		r.Recorder.Eventf(machineScope.ByoMachine, corev1.EventTypeWarning, "SetNodeProviderFailed", "Node %s does not exist", machineScope.ByoHost.Name)
+		return ctrl.Result{}, err
+	}
+
+	machineScope.ByoMachine.Spec.ProviderID = providerID
+	machineScope.ByoMachine.Status.Ready = true
+	conditions.MarkTrue(machineScope.ByoMachine, infrav1.BYOHostReady)
+	r.Recorder.Eventf(machineScope.ByoMachine, corev1.EventTypeNormal, "NodeProvisionedSucceeded", "Provisioned Node %s", machineScope.ByoHost.Name)
 
 	return ctrl.Result{}, nil
 }
@@ -375,7 +373,7 @@ func (r *ByoMachineReconciler) setNodeProviderID(ctx context.Context, remoteClie
 		return "", err
 	}
 
-	node.Spec.ProviderID = fmt.Sprintf("%s%s/%s", ProviderIDPrefix, host.Name, util.RandomString(providerIDSuffixLength))
+	node.Spec.ProviderID = fmt.Sprintf("%s%s/%s", ProviderIDPrefix, host.Name, util.RandomString(ProviderIDSuffixLength))
 
 	return node.Spec.ProviderID, helper.Patch(ctx, node)
 }
