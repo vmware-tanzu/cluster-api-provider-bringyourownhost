@@ -132,7 +132,7 @@ var _ = Describe("Controllers/ByoclusterController", func() {
 		Expect(err).ToNot(HaveOccurred())
 		Expect(controllerutil.ContainsFinalizer(createdByoCluster, infrastructurev1beta1.ClusterFinalizer)).To(BeTrue())
 		Expect(createdByoCluster.Status.Ready).To(BeTrue())
-		Expect(createdByoCluster.Spec.ControlPlaneEndpoint.Port).To(Equal(controllers.DefaultAPIEndpointPort))
+		Expect(createdByoCluster.Spec.ControlPlaneEndpoint.Port).To(Equal(int32(controllers.DefaultAPIEndpointPort)))
 	})
 
 })
