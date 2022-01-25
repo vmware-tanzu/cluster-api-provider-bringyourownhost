@@ -36,7 +36,7 @@ var _ = Describe("Controllers/ByoclusterController", func() {
 		Expect(clientErr).NotTo(HaveOccurred())
 	})
 
-	It("should ignore when byocluster is not existed", func() {
+	It("should not throw error when byocluster does not exist", func() {
 		_, err := byoClusterReconciler.Reconcile(ctx, reconcile.Request{
 			NamespacedName: types.NamespacedName{
 				Name:      "non-existent-byocluster",
