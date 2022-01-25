@@ -56,7 +56,7 @@ var _ = Describe("Controllers/ByoclusterController", func() {
 		Expect(err).NotTo(HaveOccurred())
 	})
 
-	It("should paused when byocluster is paused", func() {
+	It("should not throw error when byocluster is paused", func() {
 		cluster = builder.Cluster(defaultNamespace, "cluster-paused").
 			WithPausedField(true).
 			Build()
