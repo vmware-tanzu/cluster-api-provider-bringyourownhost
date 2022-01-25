@@ -10,6 +10,7 @@ import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	infrastructurev1beta1 "github.com/vmware-tanzu/cluster-api-provider-bringyourownhost/apis/infrastructure/v1beta1"
+	controllers "github.com/vmware-tanzu/cluster-api-provider-bringyourownhost/controllers/infrastructure"
 	"github.com/vmware-tanzu/cluster-api-provider-bringyourownhost/test/builder"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/kubernetes/scheme"
@@ -131,7 +132,7 @@ var _ = Describe("Controllers/ByoclusterController", func() {
 		Expect(err).ToNot(HaveOccurred())
 		Expect(controllerutil.ContainsFinalizer(createdByoCluster, infrastructurev1beta1.ClusterFinalizer)).To(BeTrue())
 		Expect(createdByoCluster.Status.Ready).To(BeTrue())
-		Expect(createdByoCluster.Spec.ControlPlaneEndpoint.Port).NotTo(Equal(0))
+		Expect(createdByoCluster.Spec.ControlPlaneEndpoint.Port).To(Equal(controllers.DefaultAPIEndpointPort))
 	})
 
 })
