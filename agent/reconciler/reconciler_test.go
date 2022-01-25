@@ -332,7 +332,7 @@ runCmd:
 				patchHelper, err = patch.NewHelper(byoHost, k8sClient)
 				Expect(err).ShouldNot(HaveOccurred())
 
-				conditions.MarkFalse(byoHost, infrastructurev1beta1.K8sComponentsInstallationSucceeded, 
+				conditions.MarkFalse(byoHost, infrastructurev1beta1.K8sComponentsInstallationSucceeded,
 					infrastructurev1beta1.K8sComponentsInstallationFailedReason, clusterv1.ConditionSeverityInfo, "")
 				Expect(patchHelper.Patch(ctx, byoHost, patch.WithStatusObservedGeneration{})).NotTo(HaveOccurred())
 				result, reconcilerErr := hostReconciler.Reconcile(ctx, controllerruntime.Request{

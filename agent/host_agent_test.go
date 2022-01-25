@@ -6,10 +6,12 @@ package main
 
 import (
 	"context"
+	"fmt"
 	"io/ioutil"
 	"net"
 	"os"
 	"os/exec"
+	"runtime"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
@@ -18,6 +20,7 @@ import (
 	. "github.com/onsi/gomega"
 	"github.com/onsi/gomega/gbytes"
 	"github.com/onsi/gomega/gexec"
+	"github.com/vmware-tanzu/cluster-api-provider-bringyourownhost/agent/version"
 	infrastructurev1beta1 "github.com/vmware-tanzu/cluster-api-provider-bringyourownhost/apis/infrastructure/v1beta1"
 	"github.com/vmware-tanzu/cluster-api-provider-bringyourownhost/test/builder"
 	corev1 "k8s.io/api/core/v1"
@@ -186,6 +189,45 @@ var _ = Describe("Agent", func() {
 			Expect(k8sClient.Create(context.TODO(), byoHost)).NotTo(HaveOccurred(), "failed to create byohost")
 
 			Consistently(session.Err, "10s").ShouldNot(gbytes.Say(byoHost.Name))
+		})
+	})
+
+	Context("When host agent is executed with --version flag", func() {
+		var (
+			tmpHostAgentBinary string
+		)
+		BeforeEach(func() {
+			date, err := exec.Command("date").Output()
+			Expect(err).NotTo(HaveOccurred())
+			version.BuildDate = string(date)
+			version.Version = "v1.2.3"
+			ldflags := fmt.Sprintf("-X 'github.com/vmware-tanzu/cluster-api-provider-bringyourownhost/agent/version.Version=%s'"+
+				" -X 'github.com/vmware-tanzu/cluster-api-provider-bringyourownhost/agent/version.BuildDate=%s'", version.Version, version.BuildDate)
+			tmpHostAgentBinary, err = gexec.Build("github.com/vmware-tanzu/cluster-api-provider-bringyourownhost/agent", "-ldflags", ldflags)
+			Expect(err).NotTo(HaveOccurred())
+		})
+
+		AfterEach(func() {
+			version.BuildDate = ""
+			version.Version = ""
+			tmpHostAgentBinary = ""
+		})
+
+		It("Shows the appropriate version of the agent", func() {
+			expectedStruct := version.Info{
+				Major:     "1",
+				Minor:     "2",
+				Patch:     "3",
+				BuildDate: version.BuildDate,
+				GoVersion: runtime.Version(),
+				Compiler:  runtime.Compiler,
+				Platform:  fmt.Sprintf("%s/%s", runtime.GOOS, runtime.GOARCH),
+			}
+			expected := fmt.Sprintf("byoh-hostagent version: %#v\n", expectedStruct)
+			out, err := exec.Command(tmpHostAgentBinary, "--version").Output()
+			Expect(err).NotTo(HaveOccurred())
+			output := string(out)
+			Expect(output).Should(Equal(expected))
 		})
 	})
 })
