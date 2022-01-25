@@ -44,7 +44,7 @@ var _ = Describe("Controllers/ByoclusterController", func() {
 		Expect(err).NotTo(HaveOccurred())
 	})
 
-	It("should ignore When Cluster Controller is not set OwnerRef on ByoCluster", func() {
+	It("should not throw error when OwnerRef is not set", func() {
 		byoCluster = builder.ByoCluster(defaultNamespace, "byocluster-not-link-cluster").Build()
 		Expect(k8sClientUncached.Create(ctx, byoCluster)).Should(Succeed())
 		WaitForObjectsToBePopulatedInCache(byoCluster)
