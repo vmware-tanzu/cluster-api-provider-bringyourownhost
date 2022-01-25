@@ -67,37 +67,13 @@ var _ = Describe("Controllers/ByoclusterController", func() {
 			WithOwnerCluster(cluster).
 			Build()
 		Expect(k8sClientUncached.Create(ctx, byoCluster)).Should(Succeed())
+		WaitForObjectsToBePopulatedInCache(byoCluster)
 
 		_, err := byoClusterReconciler.Reconcile(ctx, reconcile.Request{
 			NamespacedName: types.NamespacedName{
 				Name:      byoCluster.Name,
 				Namespace: byoCluster.Namespace}})
 		Expect(err).NotTo(HaveOccurred())
-
-	})
-
-	It("should add ClusterFinalizer on ByoCluster", func() {
-		cluster = builder.Cluster(defaultNamespace, "byocluster-finalizer").
-			Build()
-		Expect(k8sClientUncached.Create(ctx, cluster)).Should(Succeed())
-		WaitForObjectsToBePopulatedInCache(cluster)
-
-		byoCluster = builder.ByoCluster(defaultNamespace, "byocluster-finalizer").
-			WithOwnerCluster(cluster).
-			Build()
-		Expect(k8sClientUncached.Create(ctx, byoCluster)).Should(Succeed())
-		WaitForObjectsToBePopulatedInCache(byoCluster)
-
-		byoClusterLookupKey := types.NamespacedName{Name: byoCluster.Name, Namespace: byoCluster.Namespace}
-		_, err := byoClusterReconciler.Reconcile(ctx, reconcile.Request{
-			NamespacedName: byoClusterLookupKey})
-		Expect(err).NotTo(HaveOccurred())
-
-		updatedByoCluster := &infrastructurev1beta1.ByoCluster{}
-		err = k8sClientUncached.Get(ctx, byoClusterLookupKey, updatedByoCluster)
-		Expect(err).ToNot(HaveOccurred())
-		Expect(controllerutil.ContainsFinalizer(updatedByoCluster, infrastructurev1beta1.ClusterFinalizer)).To(BeTrue())
-
 	})
 
 	It("should be able to delete ByoCluster", func() {
@@ -132,4 +108,30 @@ var _ = Describe("Controllers/ByoclusterController", func() {
 		Expect(err).To(MatchError(fmt.Sprintf("byoclusters.infrastructure.cluster.x-k8s.io %q not found", byoClusterLookupKey.Name)))
 
 	})
+
+	It("should get valid value of fields when ByoClusterController gets a create request", func() {
+		cluster = builder.Cluster(defaultNamespace, "byocluster-finalizer").
+			Build()
+		Expect(k8sClientUncached.Create(ctx, cluster)).Should(Succeed())
+		WaitForObjectsToBePopulatedInCache(cluster)
+
+		byoCluster = builder.ByoCluster(defaultNamespace, "byocluster-finalizer").
+			WithOwnerCluster(cluster).
+			Build()
+		Expect(k8sClientUncached.Create(ctx, byoCluster)).Should(Succeed())
+		WaitForObjectsToBePopulatedInCache(byoCluster)
+
+		byoClusterLookupKey := types.NamespacedName{Name: byoCluster.Name, Namespace: byoCluster.Namespace}
+		_, err := byoClusterReconciler.Reconcile(ctx, reconcile.Request{
+			NamespacedName: byoClusterLookupKey})
+		Expect(err).NotTo(HaveOccurred())
+
+		createdByoCluster := &infrastructurev1beta1.ByoCluster{}
+		err = k8sClientUncached.Get(ctx, byoClusterLookupKey, createdByoCluster)
+		Expect(err).ToNot(HaveOccurred())
+		Expect(controllerutil.ContainsFinalizer(createdByoCluster, infrastructurev1beta1.ClusterFinalizer)).To(BeTrue())
+		Expect(createdByoCluster.Status.Ready).To(BeTrue())
+		Expect(createdByoCluster.Spec.ControlPlaneEndpoint.Port).NotTo(Equal(0))
+	})
+
 })
