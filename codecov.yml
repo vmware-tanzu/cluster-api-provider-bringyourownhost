@@ -6,3 +6,8 @@ comment:                  # this is a top-level key
 ignore:
 - "test"
 - "apis"
+- "scripts"
+- "hack"
+- "docs"
+- "config"
+- "common"
