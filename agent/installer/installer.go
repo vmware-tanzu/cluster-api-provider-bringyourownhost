@@ -4,7 +4,10 @@
 package installer
 
 import (
+	"errors"
 	"fmt"
+	"os/exec"
+	"regexp"
 	"strings"
 
 	"github.com/go-logr/logr"
@@ -22,7 +25,10 @@ const (
 	ErrBundleExtract     = Error("Error extracting bundle")
 	ErrBundleInstall     = Error("Error installing bundle")
 	ErrBundleUninstall   = Error("Error uninstalling bundle")
+	SupportedOS          = "Ubuntu_20.04.*_x86-64"
 )
+
+var PreRequisitePackages = []string{"socat", "ebtables", "ethtool", "conntrack"}
 
 type installer struct {
 	algoRegistry registry
@@ -85,8 +91,55 @@ func (bd *bundleDownloader) DownloadOrPreview(os, k8s, tag string) error {
 	return bd.Download(os, k8s, tag)
 }
 
-// New returns an installer that downloads bundles for the current OS
-// and stores them under downloadPath. Download path is created,
+func supportedOSversion(os string) error {
+	matched, err := regexp.Match(SupportedOS, []byte(os))
+	if err != nil {
+		return err
+	}
+	if !matched {
+		errMsg := fmt.Sprintf("Unsupported OS. Note: Currently supported OS is %s", SupportedOS)
+		return errors.New(errMsg)
+	}
+	return nil
+}
+
+func preckeckPreRequsitPackages() error {
+	unavailablePackages := []string{}
+	for _, pkgName := range PreRequisitePackages {
+		_, err := exec.Command("dpkg-query", "-W", pkgName).Output()
+		if err != nil {
+			unavailablePackages = append(unavailablePackages, pkgName)
+		}
+	}
+	if len(unavailablePackages) != 0 {
+		errMsg := fmt.Sprintf("Required package(s): %s not found", unavailablePackages)
+		return errors.New(errMsg)
+	}
+	return nil
+}
+
+func runPrechecks(logger logr.Logger, os string) bool {
+	precheckSuccessful := true
+
+	// BYOH Agent is currently only supported on Ubuntu 20.04.x
+	// This precheck verifies
+	err := supportedOSversion(os)
+	if err != nil {
+		logger.Error(err, "Failed supported OS version precheck")
+		precheckSuccessful = false
+	}
+
+	// verify that packages are available when user has chosen to install kubernetes binaries
+	err = preckeckPreRequsitPackages()
+	if err != nil {
+		logger.Error(err, "Failed pre-requisit packages precheck")
+		precheckSuccessful = false
+	}
+	return precheckSuccessful
+}
+
+// New returns an installer that downloads bundles for the current OS from OCI repository with
+// address bundleRepo and stores them under downloadPath. Download path is created,
 // if it does not exist.
 func New(downloadPath string, logger logr.Logger) (*installer, error) {
 	if downloadPath == "" {
@@ -95,9 +148,14 @@ func New(downloadPath string, logger logr.Logger) (*installer, error) {
 
 	osd := osDetector{}
 	os, err := osd.Detect()
-	logger.Info("Detected", "OS", os)
 	if err != nil {
 		return nil, ErrDetectOs
+	}
+	logger.Info("Detected", "OS", os)
+
+	precheckSuccessful := runPrechecks(logger, os)
+	if !precheckSuccessful {
+		return nil, errors.New("precheck failed")
 	}
 
 	return newUnchecked(os, downloadPath, logger, &logPrinter{logger})
