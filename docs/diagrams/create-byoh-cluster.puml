@@ -1,0 +1,65 @@
+@startuml create-byoh-cluster
+skinparam BoxPadding 40
+title
+Create BYOH Cluster
+end title
+
+actor User as user <<(U,#ADD1B2)>>
+' participant HostAgent as hagent <<(A,#ADD1B2)>>
+
+
+box "Management Cluster"
+    participant APIServer as mc <<(S,#ADD1B2) >>
+    participant "BYOH Provider" as bmc <<(P,#ADD1B2)>>
+end box
+
+box "VM/Baremetal Host"
+    participant hostagent as hagent <<(H,#ADD1B2) >>
+end box 
+
+database "OCI Registry\n(Harbor)" as oci  
+
+== Register BYO Host ==
+user -> hagent: Download hostagent binary
+user --> hagent: ./byoh-agent --kubeconfig config
+hagent -> mc: register & watch <i>ByoHost</i> CRD
+
+== Create BYOH workload cluster ==
+user->mc: kubectl apply -f cluster.yaml
+
+mc --> bmc: Receive Reconcile Event for \nCreate <i>ByoMachine</i>, <i>ByoCluster</i> CRDs
+note left of bmc
+    1. Preconditions checks
+      a. Paused Annotation
+      b. Owner References
+      c. DataSecret
+end note
+bmc -> mc: Select/Filter Available <i>ByoHost</i>
+mc -> bmc: Recieve list of available <i>ByoHost</i>
+bmc -> bmc: Host Attachment
+note right of bmc    
+    1. Add labels for ByoHost
+    2. Add Annotations for ByoHost
+    3. Set Status.MachineRef
+end note
+bmc -> mc: Patch Selected <i>ByoHost</i>
+mc --> hagent: Recieve Reconcile Event
+bmc -> mc: Patch <i>ByoMachine</i> with status Ready
+
+note right of hagent
+    1. Preconditions Checks
+      a. Paused Annotation is 
+      b. Status.MachineRef
+      c. Spec.BootstrapSecret
+end note
+
+oci -> hagent: Download BYOH Imgpkg bundle
+hagent -> hagent: Node Bootstrap
+note right of hagent
+    1. Install k8s components
+    2. kubeadm init/join
+end note  
+hagent -> mc: Patch Condition \n K8sNodeBootstrapSucceeded
+
+== Cluster is provisioned ==
+@enduml
