@@ -270,6 +270,26 @@ var _ = Describe("Controllers/ByomachineController", func() {
 				Expect(node.Spec.ProviderID).To(ContainSubstring(controllers.ProviderIDPrefix))
 			})
 
+			It("should mark host as paused when the ByoMachine is paused", func() {
+				ph, err := patch.NewHelper(byoMachine, k8sClientUncached)
+				Expect(err).ShouldNot(HaveOccurred())
+				pauseAnnotations := map[string]string{
+					clusterv1.PausedAnnotation: "paused",
+				}
+				annotations.AddAnnotations(byoMachine, pauseAnnotations)
+
+				Expect(ph.Patch(ctx, byoMachine, patch.WithStatusObservedGeneration{})).Should(Succeed())
+
+				WaitForObjectToBeUpdatedInCache(byoMachine, func(object client.Object) bool {
+					return annotations.HasPausedAnnotation(object.(*infrastructurev1beta1.ByoMachine))
+				})
+				_, err = reconciler.Reconcile(ctx, reconcile.Request{NamespacedName: byoMachineLookupKey})
+				Expect(err).ToNot(HaveOccurred())
+
+				createdByoHost := &infrastructurev1beta1.ByoHost{}
+				Expect(createdByoHost.Annotations[clusterv1.PausedAnnotation]).Should(Equal(""))
+			})
+
 			Context("When ByoMachine is attached to a host", func() {
 				BeforeEach(func() {
 					ph, err := patch.NewHelper(byoHost, k8sClientUncached)
@@ -290,6 +310,26 @@ var _ = Describe("Controllers/ByomachineController", func() {
 					WaitForObjectToBeUpdatedInCache(byoHost, func(object client.Object) bool {
 						return object.(*infrastructurev1beta1.ByoHost).Status.MachineRef != nil
 					})
+				})
+
+				It("should set paused status of host to false", func() {
+
+					ph, err := patch.NewHelper(byoHost, k8sClientUncached)
+					Expect(err).ShouldNot(HaveOccurred())
+					pauseAnnotations := map[string]string{
+						clusterv1.PausedAnnotation: "",
+					}
+
+					annotations.AddAnnotations(byoHost, pauseAnnotations)
+					Expect(ph.Patch(ctx, byoHost, patch.WithStatusObservedGeneration{})).Should(Succeed())
+					WaitForObjectToBeUpdatedInCache(byoHost, func(object client.Object) bool {
+						return annotations.HasPausedAnnotation(object.(*infrastructurev1beta1.ByoHost))
+					})
+					_, err = reconciler.Reconcile(ctx, reconcile.Request{NamespacedName: byoMachineLookupKey})
+					Expect(err).ToNot(HaveOccurred())
+					createdByoHost := &infrastructurev1beta1.ByoHost{}
+					Expect(createdByoHost.Annotations).NotTo(HaveKey(clusterv1.PausedAnnotation))
+
 				})
 
 				Context("When ByoMachine is deleted", func() {
