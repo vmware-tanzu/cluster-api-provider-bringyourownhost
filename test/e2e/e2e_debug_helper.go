@@ -98,7 +98,12 @@ func WriteShellScript(shellFileName string, shellFileContent []string) {
 		return
 	}
 
-	defer f.Close()
+	defer func() {
+		deferredErr := f.Close()
+		if deferredErr != nil {
+			Showf("Close %s return failed: Get err %v", shellFileName, deferredErr)
+		}
+	}()
 
 	for _, line := range shellFileContent {
 		if _, err = f.WriteString(line); err != nil {

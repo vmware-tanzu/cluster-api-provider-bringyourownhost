@@ -114,7 +114,8 @@ var _ = Describe("Agent", func() {
 		AfterEach(func() {
 			err = k8sClient.Delete(context.TODO(), ns)
 			Expect(err).NotTo(HaveOccurred())
-			os.RemoveAll(workDir)
+			err = os.RemoveAll(workDir)
+			Expect(err).NotTo(HaveOccurred())
 			session.Terminate().Wait()
 		})
 

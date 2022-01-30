@@ -20,7 +20,7 @@ type osDetector struct {
 	cachedNormalizedOS string
 }
 
-// detect returns the os info in normalized format.
+// Detect returns the os info in normalized format.
 // The format is as follows: <os>_<ver>_<arch>
 // Example with Ubuntu 21.04.3 64bit: Ubuntu_20.04.3_x64
 func (osd *osDetector) Detect() (string, error) {

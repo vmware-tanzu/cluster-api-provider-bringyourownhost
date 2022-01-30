@@ -57,7 +57,7 @@ var _ = Describe("When BYOH joins existing cluster [PR-Blocking]", func() {
 
 		Expect(e2eConfig.Variables).To(HaveKey(KubernetesVersion))
 
-		// Setup a Namespace where to host objects for this spec and create a watcher for the namespace events.
+		// set up a Namespace where to host objects for this spec and create a watcher for the namespace events.
 		namespace, cancelWatches = setupSpecNamespace(ctx, specName, bootstrapClusterProxy, artifactFolder)
 		clusterResources = new(clusterctl.ApplyClusterTemplateAndWaitResult)
 	})
@@ -76,7 +76,12 @@ var _ = Describe("When BYOH joins existing cluster [PR-Blocking]", func() {
 		defer output.Close()
 		byohostContainerIDs = append(byohostContainerIDs, byohostContainerID)
 		f := WriteDockerLog(output, agentLogFile1)
-		defer f.Close()
+		defer func() {
+			deferredErr := f.Close()
+			if deferredErr != nil {
+				Showf("error closing file %s: %v", agentLogFile1, deferredErr)
+			}
+		}()
 
 		output, byohostContainerID, err = setupByoDockerHost(ctx, clusterConName, byoHostName2, namespace.Name, dockerClient, bootstrapClusterProxy)
 		Expect(err).NotTo(HaveOccurred())
@@ -85,7 +90,12 @@ var _ = Describe("When BYOH joins existing cluster [PR-Blocking]", func() {
 
 		// read the log of host agent container in backend, and write it
 		f = WriteDockerLog(output, agentLogFile2)
-		defer f.Close()
+		defer func() {
+			deferredErr := f.Close()
+			if deferredErr != nil {
+				Showf("error closing file %s: %v", agentLogFile2, deferredErr)
+			}
+		}()
 
 		clusterctl.ApplyClusterTemplateAndWait(ctx, clusterctl.ApplyClusterTemplateAndWaitInput{
 			ClusterProxy: bootstrapClusterProxy,
@@ -128,9 +138,24 @@ var _ = Describe("When BYOH joins existing cluster [PR-Blocking]", func() {
 			}
 		}
 
-		os.Remove(agentLogFile1)
-		os.Remove(agentLogFile2)
-		os.Remove(ReadByohControllerManagerLogShellFile)
-		os.Remove(ReadAllPodsShellFile)
+		err := os.Remove(agentLogFile1)
+		if err != nil {
+			Showf("error removing file %s: %v", agentLogFile1, err)
+		}
+
+		err = os.Remove(agentLogFile2)
+		if err != nil {
+			Showf("error removing file %s: %v", agentLogFile2, err)
+		}
+
+		err = os.Remove(ReadByohControllerManagerLogShellFile)
+		if err != nil {
+			Showf("error removing file %s: %v", ReadByohControllerManagerLogShellFile, err)
+		}
+
+		err = os.Remove(ReadAllPodsShellFile)
+		if err != nil {
+			Showf("error removing file %s: %v", ReadAllPodsShellFile, err)
+		}
 	})
 })

@@ -490,7 +490,7 @@ func (r *ByoMachineReconciler) attachByoHost(ctx context.Context, machineScope *
 	return ctrl.Result{}, nil
 }
 
-// MachineToInfrastructureMapFunc returns a handler.ToRequestsFunc that watches for
+// ByoHostToByoMachineMapFunc returns a handler.ToRequestsFunc that watches for
 // Machine events and returns reconciliation requests for an infrastructure provider object
 func ByoHostToByoMachineMapFunc(gvk schema.GroupVersionKind) handler.MapFunc {
 	return func(o client.Object) []reconcile.Request {

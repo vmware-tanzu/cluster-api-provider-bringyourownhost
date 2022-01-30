@@ -171,7 +171,7 @@ func (r *HostReconciler) cleank8sdirectories(ctx context.Context) error {
 		"/etc/cni/net.d/*",
 	}
 
-	errList := []error{}
+	errList := make([]error, 0)
 	for _, dir := range dirs {
 		logger.Info(fmt.Sprintf("cleaning up directory %s", dir))
 		if err := common.RemoveGlob(dir); err != nil {

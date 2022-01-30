@@ -75,6 +75,7 @@ var _ = BeforeSuite(func() {
 		MetricsBindAddress: ":6090",
 	})
 	Expect(err).ToNot(HaveOccurred())
+	Expect(k8sManager).ToNot(BeNil())
 })
 
 var _ = AfterSuite(func() {

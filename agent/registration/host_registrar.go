@@ -80,7 +80,7 @@ func (hr *HostRegistrar) UpdateNetwork(ctx context.Context, byoHost *infrastruct
 }
 
 func (hr *HostRegistrar) GetNetworkStatus() []infrastructurev1beta1.NetworkStatus {
-	Network := []infrastructurev1beta1.NetworkStatus{}
+	Network := make([]infrastructurev1beta1.NetworkStatus, 0)
 
 	defaultIP, err := gateway.DiscoverInterface()
 	if err != nil {

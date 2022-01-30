@@ -13,11 +13,12 @@ func NewAptStep(k *BaseK8sInstaller, aptPkg string) Step {
 	return NewAptStepEx(k, aptPkg, false)
 }
 
-// The step will run only if aptPkg is available
+// NewAptStepOptional optional step to install apt package
 func NewAptStepOptional(k *BaseK8sInstaller, aptPkg string) Step {
 	return NewAptStepEx(k, aptPkg, true)
 }
 
+// NewAptStepEx step to install apt packages
 func NewAptStepEx(k *BaseK8sInstaller, aptPkg string, optional bool) Step {
 	pkgName := strings.Split(aptPkg, ".")[0] // leave only pkg name, strip .deb
 	pkgAbsolutePath := filepath.Join(k.BundlePath, aptPkg)

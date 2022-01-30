@@ -69,10 +69,12 @@ func init() {
 	SchemeBuilder.Register(&ByoHost{}, &ByoHostList{})
 }
 
-func (h *ByoHost) GetConditions() clusterv1.Conditions {
-	return h.Status.Conditions
+// GetConditions gets the ByoHost status conditions
+func (byoHost *ByoHost) GetConditions() clusterv1.Conditions {
+	return byoHost.Status.Conditions
 }
 
-func (h *ByoHost) SetConditions(conditions clusterv1.Conditions) {
-	h.Status.Conditions = conditions
+// SetConditions sets the ByoHost status conditions
+func (byoHost *ByoHost) SetConditions(conditions clusterv1.Conditions) {
+	byoHost.Status.Conditions = conditions
 }

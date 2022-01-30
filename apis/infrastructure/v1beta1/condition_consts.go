@@ -8,9 +8,9 @@ import clusterv1 "sigs.k8s.io/cluster-api/api/v1beta1"
 // Conditions and Reasons defined on BYOHost
 const (
 	// K8sNodeBootstrapSucceeded documents if the node is successfully bootstrapped by kubeadm
-	// This condition is managed by the host agent and it could be always true
+	// This condition is managed by the host agent. and it could be always true
 	// if the host is unmanaged; instead, in case of managed host, it depends
-	// by the node currently being hosting a ByoMachine or not.
+	// on the node currently being hosting a ByoMachine or not.
 	K8sNodeBootstrapSucceeded clusterv1.ConditionType = "K8sNodeBootstrapSucceeded"
 
 	// K8sComponentsInstallationSucceeded documents if the required Kubernetes
@@ -41,6 +41,7 @@ const (
 
 	// K8sComponentsInstallingReason indicates that the k8s components are being
 	// downloaded and installed
+	// TODO unused, remove it
 	K8sComponentsInstallingReason = "K8sComponentsInstalling"
 
 	// K8sComponentsInstallationFailedReason indicates that the installer failed to install all the

@@ -3,7 +3,7 @@
 
 package algo
 
-// This is a generic installer interface
+// Installer generic installer interface
 type Installer interface {
 	Install() error
 	Uninstall() error
@@ -60,7 +60,7 @@ type K8sStepProvider interface {
 	kubectlStep(*BaseK8sInstaller) Step
 }
 
-// This is the default k8s installer implementation
+// BaseK8sInstaller is the default k8s installer implementation
 type BaseK8sInstaller struct {
 	BundlePath string
 	Installer
@@ -124,7 +124,7 @@ func (b *BaseK8sInstaller) getSteps(bki *BaseK8sInstaller) []Step {
 		prior to start working with kubeadm.
 
 		ContainerD has to be loaded as a daemon first, in order
-		to let kubeadm to detect that the default container
+		to let kubeadm detect that the default container
 		engine is not Docker.
 	*/
 

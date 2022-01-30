@@ -18,7 +18,6 @@ import (
 	infrastructurev1beta1 "github.com/vmware-tanzu/cluster-api-provider-bringyourownhost/apis/infrastructure/v1beta1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/client-go/rest"
 	clusterv1 "sigs.k8s.io/cluster-api/api/v1beta1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/envtest"
@@ -27,10 +26,8 @@ import (
 )
 
 var (
-	err                   error
 	pathToHostAgentBinary string
 	kubeconfigFile        *os.File
-	cfg                   *rest.Config
 	k8sClient             client.Client
 	tmpFilePrefix         = "kubeconfigFile-"
 	testEnv               *envtest.Environment
@@ -39,6 +36,14 @@ var (
 func TestHostAgent(t *testing.T) {
 	RegisterFailHandler(Fail)
 	RunSpecs(t, "Agent Suite")
+}
+
+func getKubeConfig() *os.File {
+	return kubeconfigFile
+}
+
+func setKubeConfig(kubeConfig *os.File) {
+	kubeconfigFile = kubeConfig
 }
 
 var _ = BeforeSuite(func() {
@@ -51,7 +56,7 @@ var _ = BeforeSuite(func() {
 		ErrorIfCRDPathMissing: true,
 	}
 
-	cfg, err = testEnv.Start()
+	cfg, err := testEnv.Start()
 	Expect(err).NotTo(HaveOccurred())
 	Expect(cfg).NotTo(BeNil())
 
@@ -67,6 +72,7 @@ var _ = BeforeSuite(func() {
 	Expect(err).NotTo(HaveOccurred())
 
 	k8sClient, err = client.New(cfg, client.Options{Scheme: scheme})
+	Expect(err).NotTo(HaveOccurred())
 	writeKubeConfig()
 
 	pathToHostAgentBinary, err = gexec.Build("github.com/vmware-tanzu/cluster-api-provider-bringyourownhost/agent")
@@ -75,16 +81,21 @@ var _ = BeforeSuite(func() {
 
 var _ = AfterSuite(func() {
 	gexec.CleanupBuildArtifacts()
-	os.Remove(kubeconfigFile.Name())
+	err := os.Remove(getKubeConfig().Name())
+	Expect(err).NotTo(HaveOccurred())
 	gexec.TerminateAndWait(time.Duration(10) * time.Second)
 	err = testEnv.Stop()
 	Expect(err).NotTo(HaveOccurred())
 })
 
 func writeKubeConfig() {
-	kubeconfigFile, err = ioutil.TempFile("", tmpFilePrefix)
+	kubeConf, err := ioutil.TempFile("", tmpFilePrefix)
 	Expect(err).NotTo(HaveOccurred())
-	defer kubeconfigFile.Close()
+	setKubeConfig(kubeConf)
+
+	defer func(config *os.File) {
+		_ = config.Close()
+	}(getKubeConfig())
 
 	user, err := testEnv.ControlPlane.AddUser(envtest.User{
 		Name:   "envtest-admin",
@@ -92,9 +103,9 @@ func writeKubeConfig() {
 	}, nil)
 	Expect(err).NotTo(HaveOccurred())
 
-	kubeConfig, err := user.KubeConfig()
+	kubeConfigData, err := user.KubeConfig()
 	Expect(err).NotTo(HaveOccurred())
 
-	_, err = kubeconfigFile.Write(kubeConfig)
+	_, err = getKubeConfig().Write(kubeConfigData)
 	Expect(err).NotTo(HaveOccurred())
 }

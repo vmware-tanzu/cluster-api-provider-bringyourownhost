@@ -41,8 +41,8 @@ formatting issue or spelling mistake, you may not need to sign the CLA.
 We encourage code reviews by non-maintainers as well. If you are lacking context, please ask the author to better explain the change in the description.
 
 Look for things like
-* Is the code well designed? Is it consistent with Cluster API contract?
+* Is the code well-designed? Is it consistent with Cluster API contract?
 * Are there ways to write simpler code? If so, please suggest
 * Is the code well covered by unit / integration / e2e tests?
 * Does the naming convention (variables / functions / types / methods) make sense?
-* Are there enough comments? Note that comments should explain the why rather than what
+* Are there enough comments? Note that comments should explain why rather than what

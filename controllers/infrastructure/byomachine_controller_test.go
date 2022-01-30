@@ -318,7 +318,7 @@ var _ = Describe("Controllers/ByomachineController", func() {
 
 					It("should delete the byomachine object", func() {
 						deletedByoMachine := &infrastructurev1beta1.ByoMachine{}
-						// assert ByoMachine Exists before the reconcile
+						// assert ByoMachine Exists before reconcile
 						Expect(k8sClientUncached.Get(ctx, byoMachineLookupKey, deletedByoMachine)).Should(Not(HaveOccurred()))
 						_, err := reconciler.Reconcile(ctx, reconcile.Request{NamespacedName: byoMachineLookupKey})
 						Expect(err).NotTo(HaveOccurred())

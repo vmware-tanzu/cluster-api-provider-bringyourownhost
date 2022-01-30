@@ -6,15 +6,13 @@ package common
 import (
 	"bytes"
 	"compress/gzip"
+	"github.com/pkg/errors"
 	"io"
-	"math/rand"
 	"os"
 	"path/filepath"
-	"time"
-
-	"github.com/pkg/errors"
 )
 
+// GzipData compresses the data bytes
 func GzipData(data []byte) ([]byte, error) {
 	var b bytes.Buffer
 	gz := gzip.NewWriter(&b)
@@ -34,20 +32,7 @@ func GzipData(data []byte) ([]byte, error) {
 	return b.Bytes(), nil
 }
 
-func RandStr(prefix string, length int) string {
-	str := "0123456789abcdefghijklmnopqrstuvwxyz"
-	randomSeed := 100
-	byteArr := []byte(str)
-	result := []byte{}
-	/* #nosec */
-	rand.Seed(time.Now().UnixNano() + int64(rand.Intn(randomSeed)))
-	for i := 0; i < length; i++ {
-		/* #nosec */
-		result = append(result, byteArr[rand.Intn(len(byteArr))])
-	}
-	return prefix + string(result)
-}
-
+// GunzipData un-compress the compressed data bytes
 func GunzipData(data []byte) ([]byte, error) {
 	var r io.Reader
 	var err error
@@ -66,6 +51,7 @@ func GunzipData(data []byte) ([]byte, error) {
 	return resB.Bytes(), nil
 }
 
+// RemoveGlob removes glob file as specified path
 func RemoveGlob(path string) error {
 	contents, err := filepath.Glob(path)
 	if err != nil {
