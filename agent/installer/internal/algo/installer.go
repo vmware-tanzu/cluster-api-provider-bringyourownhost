@@ -31,8 +31,8 @@ are required in order to:
 2) create a systemwide config that will enable those modules at boot time
 3) enable ipv4 & ipv6 forwarding
 4) create a systemwide config that will enable the forwarding at boot time
-5) realod the sysctl with the applied config changes so the changes can take
-   effect without restarting
+5) reload the sysctl with the applied config changes so the changes can take
+	effect without restarting
 6) disable unattended OS updates
 */
 
