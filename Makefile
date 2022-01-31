@@ -125,7 +125,7 @@ prepare-byoh-docker-host-image:
 prepare-byoh-docker-host-image-dev:
 	docker build test/e2e -f docs/BYOHDockerFileDev -t ${BYOH_BASE_IMG_DEV}
 
-test-e2e: docker-build prepare-byoh-docker-host-image $(GINKGO) cluster-templates-e2e ## Run the end-to-end tests
+test-e2e: take-user-input docker-build prepare-byoh-docker-host-image $(GINKGO) cluster-templates-e2e ## Run the end-to-end tests
 	CONTROL_PLANE_ENDPOINT_IP=172.18.10.151 $(GINKGO) -v -trace -tags=e2e -focus="$(GINKGO_FOCUS)" $(_SKIP_ARGS) -nodes=$(GINKGO_NODES) --noColor=$(GINKGO_NOCOLOR) $(GINKGO_ARGS) test/e2e -- \
 	    -e2e.artifacts-folder="$(ARTIFACTS)" \
 	    -e2e.config="$(E2E_CONF_FILE)" \
@@ -136,6 +136,32 @@ cluster-templates: kustomize cluster-templates-v1beta1
 
 cluster-templates-e2e: kustomize
 	$(KUSTOMIZE) build $(BYOH_TEMPLATES)/v1beta1/templates/e2e --load_restrictor none > $(BYOH_TEMPLATES)/v1beta1/templates/e2e/cluster-template.yaml
+
+define WARNING
+#####################################################################################################
+
+** WARNING **
+These tests modify system settings - and do **NOT** revert them at the end of the test.
+A list of changes can be found below. We **highly** recommend running these tests in a VM. 
+
+Running e2e tests locally will change the following host config
+- enable the kernel modules: overlay & bridge network filter
+- create a systemwide config that will enable those modules at boot time
+- enable ipv4 & ipv6 forwarding
+- create a systemwide config that will enable the forwarding at boot time
+- reload the sysctl with the applied config changes so the changes can take effect without restarting
+- disable unattended OS updates
+
+#####################################################################################################
+endef
+export WARNING
+
+.PHONY: take-user-input
+take-user-input:
+	@echo "$$WARNING"
+	@read -p "Do you want to proceed [Y/n]?" REPLY; \
+	if [[ $$REPLY = "Y" || $$REPLY = "y" ]]; then echo starting e2e test; exit 0 ; else echo aborting; exit 1; fi
+	
 
 cluster-templates-v1beta1: kustomize ## Generate cluster templates for v1beta1
 	$(KUSTOMIZE) build $(BYOH_TEMPLATES)/v1beta1/templates/vm --load_restrictor none > $(BYOH_TEMPLATES)/v1beta1/templates/vm/cluster-template.yaml

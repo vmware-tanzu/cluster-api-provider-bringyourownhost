@@ -26,4 +26,4 @@ jobs:
       run: sudo sysctl -w net.netfilter.nf_conntrack_max=131072
 
     - name: Run PR-Blocking e2e tests
-      run: GINKGO_FOCUS="\[PR-Blocking\]" make test-e2e
+      run: yes | make test-e2e
