@@ -313,7 +313,7 @@ var _ = Describe("Controllers/ByomachineController", func() {
 					Expect(createdByoHost.Annotations).To(HaveKey(clusterv1.PausedAnnotation))
 				})
 
-				It("should set paused status of host to false", func() {
+				It("should set paused status of byohost to false when byomachine is not paused", func() {
 
 					ph, err := patch.NewHelper(byoHost, k8sClientUncached)
 					Expect(err).ShouldNot(HaveOccurred())
