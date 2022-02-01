@@ -7,7 +7,6 @@ import (
 	"errors"
 	"fmt"
 	"os/exec"
-	"regexp"
 	"strings"
 
 	"github.com/go-logr/logr"
@@ -25,7 +24,6 @@ const (
 	ErrBundleExtract     = Error("Error extracting bundle")
 	ErrBundleInstall     = Error("Error installing bundle")
 	ErrBundleUninstall   = Error("Error uninstalling bundle")
-	SupportedOS          = "Ubuntu_20.04.*_x86-64"
 )
 
 var PreRequisitePackages = []string{"socat", "ebtables", "ethtool", "conntrack"}
@@ -91,18 +89,6 @@ func (bd *bundleDownloader) DownloadOrPreview(os, k8s, tag string) error {
 	return bd.Download(os, k8s, tag)
 }
 
-func supportedOSversion(os string) error {
-	matched, err := regexp.Match(SupportedOS, []byte(os))
-	if err != nil {
-		return err
-	}
-	if !matched {
-		errMsg := fmt.Sprintf("Unsupported OS. Note: Currently supported OS is %s", SupportedOS)
-		return errors.New(errMsg)
-	}
-	return nil
-}
-
 func ckeckPreRequsitePackages() error {
 	unavailablePackages := []string{}
 	for _, pkgName := range PreRequisitePackages {
@@ -121,16 +107,8 @@ func ckeckPreRequsitePackages() error {
 func runPrechecks(logger logr.Logger, os string) bool {
 	precheckSuccessful := true
 
-	// BYOH Agent is currently only supported on Ubuntu 20.04.x
-	// This precheck verifies
-	err := supportedOSversion(os)
-	if err != nil {
-		logger.Error(err, "Failed supported OS version precheck")
-		precheckSuccessful = false
-	}
-
 	// verify that packages are available when user has chosen to install kubernetes binaries
-	err = ckeckPreRequsitePackages()
+	err := ckeckPreRequsitePackages()
 	if err != nil {
 		logger.Error(err, "Failed pre-requisite packages precheck")
 		precheckSuccessful = false

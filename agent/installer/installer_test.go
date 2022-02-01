@@ -156,18 +156,6 @@ var _ = Describe("Byohost Installer Tests", func() {
 			Expect(err).Should((HaveOccurred()))
 		})
 	})
-	Context("When supported OS version is passed for precheck", func() {
-		It("Should not return error", func() {
-			err := supportedOSversion("Ubuntu_20.04.1_x86-64")
-			Expect(err).ShouldNot((HaveOccurred()))
-		})
-	})
-	Context("When unsupported OS version is passed for precheck", func() {
-		It("Should return an error", func() {
-			err := supportedOSversion("dummy_os")
-			Expect(err).Should(HaveOccurred())
-		})
-	})
 })
 
 func NewPreviewInstaller(os string, ob algo.OutputBuilder) *installer {
