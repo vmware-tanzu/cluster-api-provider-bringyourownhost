@@ -122,18 +122,6 @@ var _ = Describe("Byohost Installer Tests", func() {
 			Expect(func() { NewPreviewInstaller("Ubuntu_20.04.3_x86-64", nil) }).NotTo(Panic())
 		})
 	})
-	Context("When supported OS version is passed for precheck", func() {
-		It("Should not return error", func() {
-			err := supportedOSversion("Ubuntu_20.04.1_x86-64")
-			Expect(err).ShouldNot((HaveOccurred()))
-		})
-	})
-	Context("When unsupported OS version is passed for precheck", func() {
-		It("Should return an error", func() {
-			err := supportedOSversion("dummy_os")
-			Expect(err).Should(HaveOccurred())
-		})
-	})
 	Context("When available packages are checked for PreRequisitPackages", func() {
 		var preRequisitPackagesBackup []string
 		BeforeEach(func() {
@@ -147,7 +135,7 @@ var _ = Describe("Byohost Installer Tests", func() {
 		})
 
 		It("Should not return error", func() {
-			err := preckeckPreRequsitPackages()
+			_, err := New("repo", "downloadPath", logr.Discard())
 			Expect(err).ShouldNot((HaveOccurred()))
 		})
 	})
@@ -164,8 +152,20 @@ var _ = Describe("Byohost Installer Tests", func() {
 		})
 
 		It("Should return error", func() {
-			err := preckeckPreRequsitPackages()
+			_, err := New("repo", "downloadPath", logr.Discard())
 			Expect(err).Should((HaveOccurred()))
+		})
+	})
+	Context("When supported OS version is passed for precheck", func() {
+		It("Should not return error", func() {
+			err := supportedOSversion("Ubuntu_20.04.1_x86-64")
+			Expect(err).ShouldNot((HaveOccurred()))
+		})
+	})
+	Context("When unsupported OS version is passed for precheck", func() {
+		It("Should return an error", func() {
+			err := supportedOSversion("dummy_os")
+			Expect(err).Should(HaveOccurred())
 		})
 	})
 })
