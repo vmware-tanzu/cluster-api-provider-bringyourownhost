@@ -132,7 +132,7 @@ func runPrechecks(logger logr.Logger, os string) bool {
 	// verify that packages are available when user has chosen to install kubernetes binaries
 	err = preckeckPreRequsitPackages()
 	if err != nil {
-		logger.Error(err, "Failed pre-requisit packages precheck")
+		logger.Error(err, "Failed pre-requisite packages precheck")
 		precheckSuccessful = false
 	}
 	return precheckSuccessful
