@@ -103,7 +103,7 @@ func supportedOSversion(os string) error {
 	return nil
 }
 
-func preckeckPreRequsitPackages() error {
+func ckeckPreRequsitePackages() error {
 	unavailablePackages := []string{}
 	for _, pkgName := range PreRequisitePackages {
 		_, err := exec.Command("dpkg-query", "-W", pkgName).Output()
