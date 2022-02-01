@@ -98,8 +98,7 @@ func ckeckPreRequsitePackages() error {
 		}
 	}
 	if len(unavailablePackages) != 0 {
-		errMsg := fmt.Sprintf("Required package(s): %s not found", unavailablePackages)
-		return errors.New(errMsg)
+		return fmt.Errorf("required package(s): %s not found", unavailablePackages)
 	}
 	return nil
 }
