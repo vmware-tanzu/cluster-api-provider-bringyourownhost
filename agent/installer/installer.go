@@ -6,10 +6,7 @@ package installer
 import (
 	"errors"
 	"fmt"
-	"runtime"
 	"strings"
-
-	utilsexec "k8s.io/utils/exec"
 
 	"github.com/go-logr/logr"
 	"github.com/vmware-tanzu/cluster-api-provider-bringyourownhost/agent/installer/internal/algo"
@@ -89,36 +86,6 @@ func (bd *bundleDownloader) DownloadOrPreview(os, k8s, tag string) error {
 	}
 
 	return bd.Download(os, k8s, tag)
-}
-
-func ckeckPreRequsitePackages() error {
-	if runtime.GOOS == "linux" {
-		unavailablePackages := []string{}
-		execr := utilsexec.New()
-		for _, pkgName := range preRequisitePackages {
-			_, err := execr.LookPath(pkgName)
-			if err != nil {
-				unavailablePackages = append(unavailablePackages, pkgName)
-			}
-		}
-		if len(unavailablePackages) != 0 {
-			return fmt.Errorf("required package(s): %s not found", unavailablePackages)
-		}
-		return nil
-	}
-	return nil
-}
-
-func runPrechecks(logger logr.Logger, os string) bool {
-	precheckSuccessful := true
-
-	// verify that packages are available when user has chosen to install kubernetes binaries
-	err := ckeckPreRequsitePackages()
-	if err != nil {
-		logger.Error(err, "Failed pre-requisite packages precheck")
-		precheckSuccessful = false
-	}
-	return precheckSuccessful
 }
 
 // New returns an installer that downloads bundles for the current OS from OCI repository with
