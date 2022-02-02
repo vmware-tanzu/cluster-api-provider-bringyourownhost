@@ -6,8 +6,10 @@ package installer
 import (
 	"errors"
 	"fmt"
-	"os/exec"
+	"runtime"
 	"strings"
+
+	utilsexec "k8s.io/utils/exec"
 
 	"github.com/go-logr/logr"
 	"github.com/vmware-tanzu/cluster-api-provider-bringyourownhost/agent/installer/internal/algo"
@@ -90,15 +92,19 @@ func (bd *bundleDownloader) DownloadOrPreview(os, k8s, tag string) error {
 }
 
 func ckeckPreRequsitePackages() error {
-	unavailablePackages := []string{}
-	for _, pkgName := range preRequisitePackages {
-		_, err := exec.Command("dpkg-query", "-W", pkgName).Output()
-		if err != nil {
-			unavailablePackages = append(unavailablePackages, pkgName)
+	if runtime.GOOS == "linux" {
+		unavailablePackages := []string{}
+		execr := utilsexec.New()
+		for _, pkgName := range preRequisitePackages {
+			_, err := execr.LookPath(pkgName)
+			if err != nil {
+				unavailablePackages = append(unavailablePackages, pkgName)
+			}
 		}
-	}
-	if len(unavailablePackages) != 0 {
-		return fmt.Errorf("required package(s): %s not found", unavailablePackages)
+		if len(unavailablePackages) != 0 {
+			return fmt.Errorf("required package(s): %s not found", unavailablePackages)
+		}
+		return nil
 	}
 	return nil
 }
