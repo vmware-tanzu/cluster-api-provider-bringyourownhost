@@ -8,11 +8,7 @@ import (
 	"os/exec"
 )
 
-/*
-########################################
-# Extends Step to a shell exec command #
-########################################
-*/
+// ShellStep step that executes a shell command
 type ShellStep struct {
 	Step
 	DoCmd   string
@@ -51,7 +47,7 @@ func (s *ShellStep) runStep(command string) error {
 
 	if len(stdErr.String()) > 0 {
 		/*
-			this is a non critical error
+			this is a non-critical error
 			the installer is still running properly
 			but some package stderrored.
 			e.g.:
@@ -60,7 +56,7 @@ func (s *ShellStep) runStep(command string) error {
 				    and cannot confirm the repository
 
 			do not return err! just log it.
-			otherwise it will cause execution of the rollback procedure
+			otherwise, it will cause execution of the rollback procedure
 
 			we only return error if the shellExec
 			cannot be executed due to erroneous shell command, etc.

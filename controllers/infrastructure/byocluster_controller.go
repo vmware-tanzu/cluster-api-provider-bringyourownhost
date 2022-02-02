@@ -122,7 +122,7 @@ func patchByoCluster(ctx context.Context, patchHelper *patch.Helper, byoCluster 
 	)
 }
 
-// Get ByoMachinesInCluster gets a cluster's ByoMachine resources.
+// GetByoMachinesInCluster gets a cluster's ByoMachine resources.
 func GetByoMachinesInCluster(
 	ctx context.Context,
 	controllerClient client.Client,

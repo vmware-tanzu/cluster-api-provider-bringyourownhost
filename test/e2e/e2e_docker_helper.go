@@ -100,7 +100,12 @@ func copyToContainer(ctx context.Context, cli *client.Client, copyConfig cpConfi
 	if err != nil {
 		return err
 	}
-	defer srcArchive.Close()
+	defer func() {
+		deferredErr := srcArchive.Close()
+		if deferredErr != nil {
+			Showf("error in closing the src archive %v", deferredErr)
+		}
+	}()
 
 	// With the stat info about the local source as well as the
 	// destination, we have enough information to know whether we need to
@@ -118,7 +123,12 @@ func copyToContainer(ctx context.Context, cli *client.Client, copyConfig cpConfi
 	if err != nil {
 		return err
 	}
-	defer preparedArchive.Close()
+	defer func() {
+		deferredErr := preparedArchive.Close()
+		if deferredErr != nil {
+			Showf("error in closing the prepared archive %v", deferredErr)
+		}
+	}()
 
 	resolvedDstPath = dstDir
 	content = preparedArchive

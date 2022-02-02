@@ -88,15 +88,28 @@ func listSupported() {
 		flags    = 0
 	)
 	w.Init(os.Stdout, minwidth, tabwidth, padding, '\t', flags)
-	defer w.Flush()
+	defer func() {
+		err := w.Flush()
+		if err != nil {
+			klogger.Error(err, "Failed to flush the tabwriter")
+		}
+	}()
 
-	fmt.Fprintf(w, "%s\t%s\t%s\n", "OS", "K8S Version", "BYOH Bundle Name")
-	fmt.Fprintf(w, "%s\t%s\t%s\n", "---", "-----------", "----------------")
-
+	_, err := fmt.Fprintf(w, "%s\t%s\t%s\n", "OS", "K8S Version", "BYOH Bundle Name")
+	if err != nil {
+		klogger.Error(err, "Failed to write to tabwriter")
+	}
+	_, err = fmt.Fprintf(w, "%s\t%s\t%s\n", "---", "-----------", "----------------")
+	if err != nil {
+		klogger.Error(err, "Failed to write to tabwriter")
+	}
 	osFilters, osBundles := ListSupportedOS()
 	for i := range osFilters {
 		for _, k8s := range ListSupportedK8s(osBundles[i]) {
-			fmt.Fprintf(w, "%s\t %s\t%s\n", osFilters[i], k8s, GetBundleName(osBundles[i], k8s))
+			_, err = fmt.Fprintf(w, "%s\t %s\t%s\n", osFilters[i], k8s, GetBundleName(osBundles[i], k8s))
+			if err != nil {
+				klogger.Error(err, "Failed to write to tabwriter")
+			}
 		}
 	}
 }

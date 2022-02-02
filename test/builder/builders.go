@@ -10,7 +10,7 @@ import (
 	clusterv1 "sigs.k8s.io/cluster-api/api/v1beta1"
 )
 
-// ByoMachineBuider holds the variables and objects required to build a infrastructurev1beta1.ByoMachine
+// ByoMachineBuilder holds the variables and objects required to build an infrastructurev1beta1.ByoMachine
 type ByoMachineBuilder struct {
 	namespace    string
 	name         string
@@ -39,7 +39,7 @@ func (b *ByoMachineBuilder) WithClusterLabel(clusterName string) *ByoMachineBuil
 	return b
 }
 
-// WithClusterLabel adds the passed cluster label to the ByoMachineBuilder
+// WithLabelSelector adds the passed cluster label to the ByoMachineBuilder
 func (b *ByoMachineBuilder) WithLabelSelector(selector map[string]string) *ByoMachineBuilder {
 	b.selector = selector
 	return b
@@ -80,7 +80,7 @@ func (b *ByoMachineBuilder) Build() *infrastructurev1beta1.ByoMachine {
 	return byoMachine
 }
 
-// ByoHostBuilder holds the variables and objects required to build a infrastructurev1beta1.ByoHost
+// ByoHostBuilder holds the variables and objects required to build an infrastructurev1beta1.ByoHost
 type ByoHostBuilder struct {
 	namespace string
 	name      string
@@ -130,7 +130,7 @@ type MachineBuilder struct {
 	bootstrapDataSecret string
 }
 
-// ByoClusterBuilder holds the variables and objects required to build a infrastructurev1beta1.ByoCluster
+// ByoClusterBuilder holds the variables and objects required to build an infrastructurev1beta1.ByoCluster
 type ByoClusterBuilder struct {
 	namespace      string
 	name           string

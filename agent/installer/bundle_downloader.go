@@ -67,7 +67,12 @@ func (bd *bundleDownloader) DownloadFromRepo(
 
 	dir, err := os.MkdirTemp(bd.downloadPath, "tempBundle")
 	// It is fine if the dir path does not exist.
-	defer os.RemoveAll(dir)
+	defer func() {
+		err = os.RemoveAll(dir)
+		if err != nil {
+			bd.logger.Error(err, "Failed to remove temp bundle dir", "path", dir)
+		}
+	}()
 	if err != nil {
 		return err
 	}

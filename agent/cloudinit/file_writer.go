@@ -62,7 +62,6 @@ func (w FileWriter) WriteToFile(file *Files) error {
 		return err
 	}
 
-	defer f.Close()
 	_, err = f.WriteString(file.Content)
 	if err != nil {
 		return err
@@ -114,5 +113,5 @@ func (w FileWriter) WriteToFile(file *Files) error {
 		}
 	}
 
-	return nil
+	return f.Close()
 }

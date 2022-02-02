@@ -44,13 +44,13 @@ var (
 	recorder              *record.FakeRecorder
 	byoCluster            *infrastructurev1beta1.ByoCluster
 	capiCluster           *clusterv1.Cluster
-	defaultClusterName    string = "my-cluster"
-	defaultNodeName       string = "my-host"
-	defaultByoHostName    string = "my-host"
-	defaultMachineName    string = "my-machine"
-	defaultByoMachineName string = "my-byomachine"
-	defaultNamespace      string = "default"
-	fakeBootstrapSecret   string = "fakeBootstrapSecret"
+	defaultClusterName    = "my-cluster"
+	defaultNodeName       = "my-host"
+	defaultByoHostName    = "my-host"
+	defaultMachineName    = "my-machine"
+	defaultByoMachineName = "my-byomachine"
+	defaultNamespace      = "default"
+	fakeBootstrapSecret   = "fakeBootstrapSecret"
 	k8sManager            ctrl.Manager
 	cfg                   *rest.Config
 )

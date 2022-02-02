@@ -17,9 +17,9 @@ import (
 // log is for logging in this package.
 var byoclusterlog = logf.Log.WithName("byocluster-resource")
 
-func (r *ByoCluster) SetupWebhookWithManager(mgr ctrl.Manager) error {
+func (byoCluster *ByoCluster) SetupWebhookWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewWebhookManagedBy(mgr).
-		For(r).
+		For(byoCluster).
 		Complete()
 }
 
@@ -28,8 +28,7 @@ func (r *ByoCluster) SetupWebhookWithManager(mgr ctrl.Manager) error {
 var _ webhook.Defaulter = &ByoCluster{}
 
 // Default implements webhook.Defaulter so a webhook will be registered for the type
-// nolint: stylecheck
-func (r *ByoCluster) Default() {
+func (byoCluster *ByoCluster) Default() {
 }
 
 // TODO(user): change verbs to "verbs=create;update;delete" if you want to enable deletion validation.
@@ -38,10 +37,10 @@ func (r *ByoCluster) Default() {
 var _ webhook.Validator = &ByoCluster{}
 
 // ValidateCreate implements webhook.Validator so a webhook will be registered for the type
-func (r *ByoCluster) ValidateCreate() error {
-	byoclusterlog.Info("validate create", "name", r.Name)
-	if r.Spec.BundleLookupTag == "" {
-		return apierrors.NewInvalid(r.GroupVersionKind().GroupKind(), r.Name, field.ErrorList{
+func (byoCluster *ByoCluster) ValidateCreate() error {
+	byoclusterlog.Info("validate create", "name", byoCluster.Name)
+	if byoCluster.Spec.BundleLookupTag == "" {
+		return apierrors.NewInvalid(byoCluster.GroupVersionKind().GroupKind(), byoCluster.Name, field.ErrorList{
 			field.InternalError(nil, errors.New("cannot create ByoCluster without Spec.BundleLookupTag")),
 		})
 	}
@@ -50,10 +49,10 @@ func (r *ByoCluster) ValidateCreate() error {
 }
 
 // ValidateUpdate implements webhook.Validator so a webhook will be registered for the type
-func (r *ByoCluster) ValidateUpdate(old runtime.Object) error {
-	byoclusterlog.Info("validate update", "name", r.Name)
-	if r.Spec.BundleLookupTag == "" {
-		return apierrors.NewInvalid(r.GroupVersionKind().GroupKind(), r.Name, field.ErrorList{
+func (byoCluster *ByoCluster) ValidateUpdate(old runtime.Object) error {
+	byoclusterlog.Info("validate update", "name", byoCluster.Name)
+	if byoCluster.Spec.BundleLookupTag == "" {
+		return apierrors.NewInvalid(byoCluster.GroupVersionKind().GroupKind(), byoCluster.Name, field.ErrorList{
 			field.InternalError(nil, errors.New("cannot update ByoCluster with empty Spec.BundleLookupTag")),
 		})
 	}
@@ -61,7 +60,7 @@ func (r *ByoCluster) ValidateUpdate(old runtime.Object) error {
 }
 
 // ValidateDelete implements webhook.Validator so a webhook will be registered for the type
-func (r *ByoCluster) ValidateDelete() error {
+func (byoCluster *ByoCluster) ValidateDelete() error {
 	// TODO(user): fill in your validation logic upon object deletion.
 	return nil
 }

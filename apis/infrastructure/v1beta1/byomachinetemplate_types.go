@@ -40,6 +40,7 @@ type ByoMachineTemplateList struct {
 	Items           []ByoMachineTemplate `json:"items"`
 }
 
+// ByoMachineTemplateResource defines the desired state of ByoMachineTemplateResource
 type ByoMachineTemplateResource struct {
 	// Spec is the specification of the desired behavior of the machine.
 	Spec ByoMachineSpec `json:"spec"`

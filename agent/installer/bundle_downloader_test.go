@@ -64,7 +64,7 @@ var _ = Describe("Byohost Installer Tests", func() {
 				k8sVersion,
 				testTag,
 				mi.Get)
-			Expect(err).ShouldNot((HaveOccurred()))
+			Expect(err).ShouldNot(HaveOccurred())
 
 			// Test no download on cache hit
 			err = bd.DownloadFromRepo(
@@ -72,7 +72,7 @@ var _ = Describe("Byohost Installer Tests", func() {
 				k8sVersion,
 				testTag,
 				mi.Get)
-			Expect(err).ShouldNot((HaveOccurred()))
+			Expect(err).ShouldNot(HaveOccurred())
 			Expect(mi.callCount).Should(Equal(1))
 		})
 		It("Should create dir if missing and download bundle", func() {
@@ -82,48 +82,48 @@ var _ = Describe("Byohost Installer Tests", func() {
 				k8sVersion,
 				testTag,
 				mi.Get)
-			Expect(err).ShouldNot((HaveOccurred()))
+			Expect(err).ShouldNot(HaveOccurred())
 		})
 	})
 	Context("When there is error during download", func() {
 		It("Should return error if given bad repo", func() {
-			mi.err = errors.New("Fetching image: Get \"a.a.com/\": dial tcp: lookup a.a.com: no such host")
+			mi.err = errors.New("fetching image: Get \"a.a.com/\": dial tcp: lookup a.a.com: no such host")
 			err := bd.DownloadFromRepo(
 				normalizedOsVersion,
 				k8sVersion,
 				testTag,
 				mi.Get)
-			Expect(err).Should((HaveOccurred()))
+			Expect(err).Should(HaveOccurred())
 			Expect(err.Error()).Should(Equal(ErrBundleDownload.Error()))
 		})
 		It("Should return error if connection timed out", func() {
-			mi.err = errors.New("Extracting image into directory: read tcp 192.168.0.1:1->1.1.1.1:1: read: connection timed out")
+			mi.err = errors.New("extracting image into directory: read tcp 192.168.0.1:1->1.1.1.1:1: read: connection timed out")
 			err := bd.DownloadFromRepo(
 				normalizedOsVersion,
 				k8sVersion,
 				testTag,
 				mi.Get)
-			Expect(err).Should((HaveOccurred()))
+			Expect(err).Should(HaveOccurred())
 			Expect(err.Error()).Should(Equal(ErrBundleDownload.Error()))
 		})
 		It("Should return error if failure in name resolution", func() {
-			mi.err = errors.New("Fetching image: Get \"a.a/\": dial tcp: lookup a.a: Temporary failure in name resolution")
+			mi.err = errors.New("fetching image: Get \"a.a/\": dial tcp: lookup a.a: Temporary failure in name resolution")
 			err := bd.DownloadFromRepo(
 				normalizedOsVersion,
 				k8sVersion,
 				testTag,
 				mi.Get)
-			Expect(err).Should((HaveOccurred()))
+			Expect(err).Should(HaveOccurred())
 			Expect(err.Error()).Should(Equal(ErrBundleDownload.Error()))
 		})
 		It("Should return error if out of space", func() {
-			mi.err = errors.New("Extracting image into directory: write /tmp/asd: no space left on device")
+			mi.err = errors.New("extracting image into directory: write /tmp/asd: no space left on device")
 			err := bd.DownloadFromRepo(
 				normalizedOsVersion,
 				k8sVersion,
 				testTag,
 				mi.Get)
-			Expect(err).Should((HaveOccurred()))
+			Expect(err).Should(HaveOccurred())
 			Expect(err.Error()).Should(Equal(ErrBundleExtract.Error()))
 		})
 

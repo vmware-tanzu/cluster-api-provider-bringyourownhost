@@ -17,9 +17,9 @@ import (
 // log is for logging in this package
 var byohostlog = logf.Log.WithName("byohost-resource")
 
-func (h *ByoHost) SetupWebhookWithManager(mgr ctrl.Manager) error {
+func (byoHost *ByoHost) SetupWebhookWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewWebhookManagedBy(mgr).
-		For(h).
+		For(byoHost).
 		Complete()
 }
 
@@ -28,22 +28,22 @@ func (h *ByoHost) SetupWebhookWithManager(mgr ctrl.Manager) error {
 var _ webhook.Validator = &ByoHost{}
 
 // ValidateCreate implements webhook.Validator so a webhook will be registered for the type
-func (h *ByoHost) ValidateCreate() error {
+func (byoHost *ByoHost) ValidateCreate() error {
 	return nil
 }
 
 // ValidateUpdate implements webhook.Validator so a webhook will be registered for the type
-func (h *ByoHost) ValidateUpdate(old runtime.Object) error {
+func (byoHost *ByoHost) ValidateUpdate(old runtime.Object) error {
 	return nil
 }
 
 // ValidateDelete implements webhook.Validator so a webhook will be registered for the type
-func (h *ByoHost) ValidateDelete() error {
-	byohostlog.Info("validate delete", "name", h.Name)
+func (byoHost *ByoHost) ValidateDelete() error {
+	byohostlog.Info("validate delete", "name", byoHost.Name)
 	groupResource := schema.GroupResource{Group: "infrastructure.cluster.x-k8s.io", Resource: "byohost"}
 
-	if h.Status.MachineRef != nil {
-		return apierrors.NewForbidden(groupResource, h.Name, errors.New("cannot delete ByoHost when MachineRef is assigned"))
+	if byoHost.Status.MachineRef != nil {
+		return apierrors.NewForbidden(groupResource, byoHost.Name, errors.New("cannot delete ByoHost when MachineRef is assigned"))
 	}
 
 	return nil

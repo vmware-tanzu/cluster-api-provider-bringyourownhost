@@ -65,12 +65,14 @@ type ByoCluster struct {
 	Status ByoClusterStatus `json:"status,omitempty"`
 }
 
-func (c *ByoCluster) GetConditions() clusterv1.Conditions {
-	return c.Status.Conditions
+// GetConditions gets the condition for the ByoCluster status
+func (byoCluster *ByoCluster) GetConditions() clusterv1.Conditions {
+	return byoCluster.Status.Conditions
 }
 
-func (c *ByoCluster) SetConditions(conditions clusterv1.Conditions) {
-	c.Status.Conditions = conditions
+// SetConditions sets the conditions for the ByoCluster status
+func (byoCluster *ByoCluster) SetConditions(conditions clusterv1.Conditions) {
+	byoCluster.Status.Conditions = conditions
 }
 
 //+kubebuilder:object:root=true

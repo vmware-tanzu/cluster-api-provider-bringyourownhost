@@ -24,6 +24,10 @@ import (
 	"sigs.k8s.io/cluster-api/util"
 )
 
+var (
+	dockerClient *client.Client
+)
+
 var _ = Describe("When BYO Host rejoins the capacity pool", func() {
 
 	var (
@@ -32,8 +36,6 @@ var _ = Describe("When BYO Host rejoins the capacity pool", func() {
 		namespace           *corev1.Namespace
 		cancelWatches       context.CancelFunc
 		clusterResources    *clusterctl.ApplyClusterTemplateAndWaitResult
-		dockerClient        *client.Client
-		err                 error
 		byohostContainerIDs []string
 		agentLogFile1       = "/tmp/host-agent1.log"
 		agentLogFile2       = "/tmp/host-agent-reuse.log"
@@ -51,7 +53,7 @@ var _ = Describe("When BYO Host rejoins the capacity pool", func() {
 
 		Expect(e2eConfig.Variables).To(HaveKey(KubernetesVersion))
 
-		// Setup a Namespace where to host objects for this spec and create a watcher for the namespace events.
+		// set up a Namespace where to host objects for this spec and create a watcher for the namespace events.
 		namespace, cancelWatches = setupSpecNamespace(ctx, specName, bootstrapClusterProxy, artifactFolder)
 		clusterResources = new(clusterctl.ApplyClusterTemplateAndWaitResult)
 	})
@@ -61,25 +63,36 @@ var _ = Describe("When BYO Host rejoins the capacity pool", func() {
 		byoHostName1 := "byohost-1"
 		byoHostName2 := "byohost-for-reuse"
 
-		dockerClient, err = client.NewClientWithOpts(client.FromEnv)
+		client, err := client.NewClientWithOpts(client.FromEnv)
 		Expect(err).NotTo(HaveOccurred())
+		setDockerClient(client)
 
 		var output types.HijackedResponse
-		output, byohostContainerID, err := setupByoDockerHost(ctx, clusterConName, byoHostName1, namespace.Name, dockerClient, bootstrapClusterProxy)
+		output, byohostContainerID, err := setupByoDockerHost(ctx, clusterConName, byoHostName1, namespace.Name, getDockerClient(), bootstrapClusterProxy)
 		Expect(err).NotTo(HaveOccurred())
 		defer output.Close()
 		byohostContainerIDs = append(byohostContainerIDs, byohostContainerID)
 		f := WriteDockerLog(output, agentLogFile1)
-		defer f.Close()
+		defer func() {
+			deferredErr := f.Close()
+			if deferredErr != nil {
+				Showf("Error closing file %s: %v", agentLogFile1, deferredErr)
+			}
+		}()
 
-		output, byohostContainerID, err = setupByoDockerHost(ctx, clusterConName, byoHostName2, namespace.Name, dockerClient, bootstrapClusterProxy)
+		output, byohostContainerID, err = setupByoDockerHost(ctx, clusterConName, byoHostName2, namespace.Name, getDockerClient(), bootstrapClusterProxy)
 		Expect(err).NotTo(HaveOccurred())
 		defer output.Close()
 		byohostContainerIDs = append(byohostContainerIDs, byohostContainerID)
 
 		// read the log of host agent container in backend, and write it
 		f = WriteDockerLog(output, agentLogFile2)
-		defer f.Close()
+		defer func() {
+			deferredErr := f.Close()
+			if deferredErr != nil {
+				Showf("Error closing file %s: %v", agentLogFile2, deferredErr)
+			}
+		}()
 
 		By("Creating a cluster")
 		clusterctl.ApplyClusterTemplateAndWait(ctx, clusterctl.ApplyClusterTemplateAndWaitInput{
@@ -162,19 +175,39 @@ var _ = Describe("When BYO Host rejoins the capacity pool", func() {
 		// Dumps all the resources in the spec namespace, then cleanups the cluster object and the spec namespace itself.
 		dumpSpecResourcesAndCleanup(ctx, specName, bootstrapClusterProxy, artifactFolder, namespace, cancelWatches, clusterResources.Cluster, e2eConfig.GetIntervals, skipCleanup)
 
-		if dockerClient != nil && len(byohostContainerIDs) != 0 {
+		if getDockerClient() != nil && len(byohostContainerIDs) != 0 {
 			for _, byohostContainerID := range byohostContainerIDs {
-				err := dockerClient.ContainerStop(ctx, byohostContainerID, nil)
+				err := getDockerClient().ContainerStop(ctx, byohostContainerID, nil)
 				Expect(err).NotTo(HaveOccurred())
 
-				err = dockerClient.ContainerRemove(ctx, byohostContainerID, types.ContainerRemoveOptions{})
+				err = getDockerClient().ContainerRemove(ctx, byohostContainerID, types.ContainerRemoveOptions{})
 				Expect(err).NotTo(HaveOccurred())
 			}
 		}
 
-		os.Remove(agentLogFile1)
-		os.Remove(agentLogFile2)
-		os.Remove(ReadByohControllerManagerLogShellFile)
-		os.Remove(ReadAllPodsShellFile)
+		err := os.Remove(agentLogFile1)
+		if err != nil {
+			Showf("Failed to remove file %s: %v", agentLogFile1, err)
+		}
+		err = os.Remove(agentLogFile2)
+		if err != nil {
+			Showf("Failed to remove file %s: %v", agentLogFile2, err)
+		}
+		err = os.Remove(ReadByohControllerManagerLogShellFile)
+		if err != nil {
+			Showf("Failed to remove file %s: %v", ReadByohControllerManagerLogShellFile, err)
+		}
+		err = os.Remove(ReadAllPodsShellFile)
+		if err != nil {
+			Showf("Failed to remove file %s: %v", ReadAllPodsShellFile, err)
+		}
 	})
 })
+
+func setDockerClient(dc *client.Client) {
+	dockerClient = dc
+}
+
+func getDockerClient() *client.Client {
+	return dockerClient
+}

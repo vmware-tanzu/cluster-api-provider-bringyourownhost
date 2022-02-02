@@ -30,7 +30,6 @@ var _ = Describe("When testing MachineDeployment scale out/in", func() {
 		cancelWatches          context.CancelFunc
 		clusterResources       *clusterctl.ApplyClusterTemplateAndWaitResult
 		dockerClient           *client.Client
-		err                    error
 		byoHostCapacityPool    = 6
 		byoHostName            string
 		allbyohostContainerIDs []string
@@ -49,7 +48,7 @@ var _ = Describe("When testing MachineDeployment scale out/in", func() {
 
 		Expect(e2eConfig.Variables).To(HaveKey(KubernetesVersion))
 
-		// Setup a Namespace where to host objects for this spec and create a watcher for the namespace events.
+		// set up a Namespace where to host objects for this spec and create a watcher for the namespace events.
 		namespace, cancelWatches = setupSpecNamespace(ctx, specName, bootstrapClusterProxy, artifactFolder)
 		clusterResources = new(clusterctl.ApplyClusterTemplateAndWaitResult)
 	})
@@ -57,11 +56,13 @@ var _ = Describe("When testing MachineDeployment scale out/in", func() {
 	It("Should successfully scale a MachineDeployment up and down upon changes to the MachineDeployment replica count", func() {
 		clusterName := fmt.Sprintf("%s-%s", specName, util.RandomString(6))
 
-		dockerClient, err = client.NewClientWithOpts(client.FromEnv)
+		dClient, err := client.NewClientWithOpts(client.FromEnv)
+		dockerClient = dClient
 		Expect(err).NotTo(HaveOccurred())
 
 		By("Creating byohost capacity pool containing 5 hosts")
 		for i := 0; i < byoHostCapacityPool; i++ {
+
 			byoHostName = fmt.Sprintf("byohost-%s", util.RandomString(6))
 			output, byohostContainerID, err := setupByoDockerHost(ctx, clusterConName, byoHostName, namespace.Name, dockerClient, bootstrapClusterProxy)
 			allbyohostContainerIDs = append(allbyohostContainerIDs, byohostContainerID)
@@ -69,11 +70,17 @@ var _ = Describe("When testing MachineDeployment scale out/in", func() {
 
 			// read the log of host agent container in backend, and write it
 			agentLogFile := fmt.Sprintf("/tmp/host-agent-%d.log", i)
-			f := WriteDockerLog(output, agentLogFile)
-			defer f.Close()
+			func() {
+				f := WriteDockerLog(output, agentLogFile)
+				defer func() {
+					deferredErr := f.Close()
+					if deferredErr != nil {
+						Showf("error closing file %s:, %v", agentLogFile, deferredErr)
+					}
+				}()
+			}()
 			allAgentLogFiles = append(allAgentLogFiles, agentLogFile)
 		}
-
 		// TODO: Write agent logs to files for better debugging
 
 		By("creating a workload cluster with one control plane node and one worker node")
@@ -144,9 +151,18 @@ var _ = Describe("When testing MachineDeployment scale out/in", func() {
 		}
 
 		for _, agentLogFile := range allAgentLogFiles {
-			os.Remove(agentLogFile)
+			err := os.Remove(agentLogFile)
+			if err != nil {
+				Showf("error removing file %s: %v", agentLogFile, err)
+			}
 		}
-		os.Remove(ReadByohControllerManagerLogShellFile)
-		os.Remove(ReadAllPodsShellFile)
+		err := os.Remove(ReadByohControllerManagerLogShellFile)
+		if err != nil {
+			Showf("error removing file %s: %v", ReadByohControllerManagerLogShellFile, err)
+		}
+		err = os.Remove(ReadAllPodsShellFile)
+		if err != nil {
+			Showf("error removing file %s: %v", ReadAllPodsShellFile, err)
+		}
 	})
 })
