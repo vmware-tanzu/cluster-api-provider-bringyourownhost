@@ -122,40 +122,6 @@ var _ = Describe("Byohost Installer Tests", func() {
 			Expect(func() { NewPreviewInstaller("Ubuntu_20.04.3_x86-64", nil) }).NotTo(Panic())
 		})
 	})
-	Context("When available packages are checked for PreRequisitPackages", func() {
-		var preRequisitPackagesBackup []string
-		BeforeEach(func() {
-			// Setting pre requisits as some packages that would definitely be present on any ubuntu version
-			preRequisitPackagesBackup = PreRequisitePackages
-			PreRequisitePackages = []string{"apt", "cron"}
-		})
-
-		AfterEach(func() {
-			PreRequisitePackages = preRequisitPackagesBackup
-		})
-
-		It("Should not return error", func() {
-			_, err := New("repo", "downloadPath", logr.Discard())
-			Expect(err).ShouldNot((HaveOccurred()))
-		})
-	})
-	Context("When unavailable packages are checked for PreRequisitPackages", func() {
-		var preRequisitPackagesBackup []string
-		BeforeEach(func() {
-			// Setting pre requisits as some packages that would definitely be present on any ubuntu version
-			preRequisitPackagesBackup = PreRequisitePackages
-			PreRequisitePackages = []string{"dummy_package_name"}
-		})
-
-		AfterEach(func() {
-			PreRequisitePackages = preRequisitPackagesBackup
-		})
-
-		It("Should return error", func() {
-			_, err := New("repo", "downloadPath", logr.Discard())
-			Expect(err).Should((HaveOccurred()))
-		})
-	})
 })
 
 func NewPreviewInstaller(os string, ob algo.OutputBuilder) *installer {

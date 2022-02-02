@@ -26,7 +26,7 @@ const (
 	ErrBundleUninstall   = Error("Error uninstalling bundle")
 )
 
-var PreRequisitePackages = []string{"socat", "ebtables", "ethtool", "conntrack"}
+var preRequisitePackages = []string{"socat", "ebtables", "ethtool", "conntrack"}
 
 type installer struct {
 	algoRegistry registry
@@ -91,7 +91,7 @@ func (bd *bundleDownloader) DownloadOrPreview(os, k8s, tag string) error {
 
 func ckeckPreRequsitePackages() error {
 	unavailablePackages := []string{}
-	for _, pkgName := range PreRequisitePackages {
+	for _, pkgName := range preRequisitePackages {
 		_, err := exec.Command("dpkg-query", "-W", pkgName).Output()
 		if err != nil {
 			unavailablePackages = append(unavailablePackages, pkgName)
