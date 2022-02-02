@@ -259,7 +259,11 @@ docker run --rm -v `pwd`/byoh-ingredients-download:/ingredients -v`pwd`:/bundle 
 ```
 
 ## CLI
-The installer CLI exposes the installer package as a command line tool. For a list of all commands, run
+The installer CLI exposes the installer package as a command line tool. It can be built by running
+```shell
+go build ./agent/installer/cli
+```
+Once built, for a list of all commands, run
 
 ```shell
 ./cli --help
