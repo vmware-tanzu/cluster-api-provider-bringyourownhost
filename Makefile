@@ -126,7 +126,11 @@ prepare-byoh-docker-host-image-dev:
 	docker build test/e2e -f docs/BYOHDockerFileDev -t ${BYOH_BASE_IMG_DEV}
 
 test-e2e: take-user-input docker-build prepare-byoh-docker-host-image $(GINKGO) cluster-templates-e2e ## Run the end-to-end tests
-	CONTROL_PLANE_ENDPOINT_IP=172.18.10.151 $(GINKGO) -v -trace -tags=e2e -focus="$(GINKGO_FOCUS)" $(_SKIP_ARGS) -nodes=$(GINKGO_NODES) --noColor=$(GINKGO_NOCOLOR) $(GINKGO_ARGS) test/e2e -- \
+	$(eval CONTROL_PLANE_SUBNET := $(strip $(shell docker network inspect kind | jq -r 'map(.IPAM.Config[].Subnet) []' | head -1)))
+	$(eval CONTROL_PLANE_SUBNET := $(subst ., , $(CONTROL_PLANE_SUBNET)))
+	$(eval CONTROL_PLANE_ENDPOINT_IP := "$(word 1,$(CONTROL_PLANE_SUBNET)).$(word 2,$(CONTROL_PLANE_SUBNET)).$(word 3,$(CONTROL_PLANE_SUBNET)).51")
+
+	CONTROL_PLANE_ENDPOINT_IP=$(CONTROL_PLANE_ENDPOINT_IP) $(GINKGO) -v -trace -tags=e2e -focus="$(GINKGO_FOCUS)" $(_SKIP_ARGS) -nodes=$(GINKGO_NODES) --noColor=$(GINKGO_NOCOLOR) $(GINKGO_ARGS) test/e2e -- \
 	    -e2e.artifacts-folder="$(ARTIFACTS)" \
 	    -e2e.config="$(E2E_CONF_FILE)" \
 	    -e2e.skip-resource-cleanup=$(SKIP_RESOURCE_CLEANUP) -e2e.use-existing-cluster=$(USE_EXISTING_CLUSTER) \
@@ -142,7 +146,7 @@ define WARNING
 
 ** WARNING **
 These tests modify system settings - and do **NOT** revert them at the end of the test.
-A list of changes can be found below. We **highly** recommend running these tests in a VM. 
+A list of changes can be found below. We **highly** recommend running these tests in a VM.
 
 Running e2e tests locally will change the following host config
 - enable the kernel modules: overlay & bridge network filter
@@ -161,7 +165,7 @@ take-user-input:
 	@echo "$$WARNING"
 	@read -p "Do you want to proceed [Y/n]?" REPLY; \
 	if [[ $$REPLY = "Y" || $$REPLY = "y" ]]; then echo starting e2e test; exit 0 ; else echo aborting; exit 1; fi
-	
+
 
 cluster-templates-v1beta1: kustomize ## Generate cluster templates for v1beta1
 	$(KUSTOMIZE) build $(BYOH_TEMPLATES)/v1beta1/templates/vm --load_restrictor none > $(BYOH_TEMPLATES)/v1beta1/templates/vm/cluster-template.yaml
