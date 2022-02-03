@@ -27,8 +27,8 @@ providers:
   - name: cluster-api
     type: CoreProvider
     versions:
-      - name: v1.0.0 # next; use manifest from source files
-        value: "https://github.com/kubernetes-sigs/cluster-api/releases/download/v1.0.0/core-components.yaml"
+      - name: v1.0.4 # next; use manifest from source files
+        value: "https://github.com/kubernetes-sigs/cluster-api/releases/download/v1.0.4/core-components.yaml"
         type: "url"
         replacements:
           - old: --metrics-bind-addr=127.0.0.1:8080
@@ -39,8 +39,8 @@ providers:
   - name: kubeadm
     type: BootstrapProvider
     versions:
-      - name: v1.0.0 # next; use manifest from source files
-        value: "https://github.com/kubernetes-sigs/cluster-api/releases/download/v1.0.0/bootstrap-components.yaml"
+      - name: v1.0.4 # next; use manifest from source files
+        value: "https://github.com/kubernetes-sigs/cluster-api/releases/download/v1.0.4/bootstrap-components.yaml"
         type: "url"
         replacements:
           - old: --metrics-bind-addr=127.0.0.1:8080
@@ -51,8 +51,8 @@ providers:
   - name: kubeadm
     type: ControlPlaneProvider
     versions:
-      - name: v1.0.0 # next; use manifest from source files
-        value: "https://github.com/kubernetes-sigs/cluster-api/releases/download/v1.0.0/control-plane-components.yaml"
+      - name: v1.0.4 # next; use manifest from source files
+        value: "https://github.com/kubernetes-sigs/cluster-api/releases/download/v1.0.4/control-plane-components.yaml"
         type: "url"
         replacements:
           - old: --metrics-bind-addr=127.0.0.1:8080
