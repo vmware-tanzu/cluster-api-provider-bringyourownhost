@@ -2,7 +2,7 @@ module github.com/vmware-tanzu/cluster-api-provider-bringyourownhost
 
 go 1.16
 
-replace sigs.k8s.io/cluster-api => sigs.k8s.io/cluster-api v1.0.0
+replace sigs.k8s.io/cluster-api => sigs.k8s.io/cluster-api v1.0.4
 
 require (
 	github.com/containerd/containerd v1.5.9 // indirect
