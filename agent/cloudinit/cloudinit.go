@@ -10,7 +10,7 @@ import (
 	"strings"
 
 	"github.com/pkg/errors"
-	"github.com/vmware-tanzu/cluster-api-provider-bringyourownhost/common"
+	"sigs.k8s.io/cluster-api-provider-bringyourownhost/common"
 	"sigs.k8s.io/yaml"
 )
 

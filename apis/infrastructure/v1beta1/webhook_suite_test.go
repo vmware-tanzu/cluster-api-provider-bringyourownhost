@@ -14,7 +14,7 @@ import (
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-	byohv1beta1 "github.com/vmware-tanzu/cluster-api-provider-bringyourownhost/apis/infrastructure/v1beta1"
+	byohv1beta1 "sigs.k8s.io/cluster-api-provider-bringyourownhost/apis/infrastructure/v1beta1"
 
 	admissionv1beta1 "k8s.io/api/admission/v1beta1"
 	"k8s.io/kubectl/pkg/scheme"

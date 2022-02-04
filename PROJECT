@@ -3,7 +3,7 @@ layout:
 - go.kubebuilder.io/v3
 multigroup: true
 projectName: byoh
-repo: github.com/vmware-tanzu/cluster-api-provider-bringyourownhost
+repo: sigs.k8s.io/cluster-api-provider-bringyourownhost
 resources:
 - api:
     crdVersion: v1
@@ -11,7 +11,7 @@ resources:
   domain: cluster.x-k8s.io
   group: infrastructure
   kind: ByoMachine
-  path: github.com/vmware-tanzu/cluster-api-provider-bringyourownhost/apis/infrastructure/v1beta1
+  path: sigs.k8s.io/cluster-api-provider-bringyourownhost/apis/infrastructure/v1beta1
   version: v1beta1
 - api:
     crdVersion: v1
@@ -19,7 +19,7 @@ resources:
   domain: cluster.x-k8s.io
   group: infrastructure
   kind: ByoHost
-  path: github.com/vmware-tanzu/cluster-api-provider-bringyourownhost/apis/infrastructure/v1beta1
+  path: sigs.k8s.io/cluster-api-provider-bringyourownhost/apis/infrastructure/v1beta1
   version: v1beta1
   webhooks:
     validation: true
@@ -30,7 +30,7 @@ resources:
   domain: cluster.x-k8s.io
   group: infrastructure
   kind: ByoCluster
-  path: github.com/vmware-tanzu/cluster-api-provider-bringyourownhost/apis/infrastructure/v1beta1
+  path: sigs.k8s.io/cluster-api-provider-bringyourownhost/apis/infrastructure/v1beta1
   version: v1beta1
   webhooks:
     defaulting: true
@@ -42,6 +42,6 @@ resources:
   domain: cluster.x-k8s.io
   group: infrastructure
   kind: ByoMachineTemplate
-  path: github.com/vmware-tanzu/cluster-api-provider-bringyourownhost/apis/infrastructure/v1beta1
+  path: sigs.k8s.io/cluster-api-provider-bringyourownhost/apis/infrastructure/v1beta1
   version: v1beta1
 version: "3"

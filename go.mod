@@ -1,4 +1,4 @@
-module github.com/vmware-tanzu/cluster-api-provider-bringyourownhost
+module sigs.k8s.io/cluster-api-provider-bringyourownhost
 
 go 1.16
 

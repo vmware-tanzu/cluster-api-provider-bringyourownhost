@@ -21,9 +21,9 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/healthz"
 
-	byohcontrollers "github.com/vmware-tanzu/cluster-api-provider-bringyourownhost/controllers/infrastructure"
+	byohcontrollers "sigs.k8s.io/cluster-api-provider-bringyourownhost/controllers/infrastructure"
 
-	infrastructurev1beta1 "github.com/vmware-tanzu/cluster-api-provider-bringyourownhost/apis/infrastructure/v1beta1"
+	infrastructurev1beta1 "sigs.k8s.io/cluster-api-provider-bringyourownhost/apis/infrastructure/v1beta1"
 	//+kubebuilder:scaffold:imports
 	clusterv1 "sigs.k8s.io/cluster-api/api/v1beta1"
 	"sigs.k8s.io/cluster-api/controllers/remote"

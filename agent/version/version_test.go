@@ -8,7 +8,7 @@ import (
 	"os/exec"
 	"runtime"
 
-	"github.com/vmware-tanzu/cluster-api-provider-bringyourownhost/agent/version"
+	"sigs.k8s.io/cluster-api-provider-bringyourownhost/agent/version"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"

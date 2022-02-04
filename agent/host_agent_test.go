@@ -20,11 +20,11 @@ import (
 	. "github.com/onsi/gomega"
 	"github.com/onsi/gomega/gbytes"
 	"github.com/onsi/gomega/gexec"
-	"github.com/vmware-tanzu/cluster-api-provider-bringyourownhost/agent/version"
-	infrastructurev1beta1 "github.com/vmware-tanzu/cluster-api-provider-bringyourownhost/apis/infrastructure/v1beta1"
-	"github.com/vmware-tanzu/cluster-api-provider-bringyourownhost/test/builder"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/types"
+	"sigs.k8s.io/cluster-api-provider-bringyourownhost/agent/version"
+	infrastructurev1beta1 "sigs.k8s.io/cluster-api-provider-bringyourownhost/apis/infrastructure/v1beta1"
+	"sigs.k8s.io/cluster-api-provider-bringyourownhost/test/builder"
 )
 
 var _ = Describe("Agent", func() {
@@ -202,9 +202,9 @@ var _ = Describe("Agent", func() {
 			Expect(err).NotTo(HaveOccurred())
 			version.BuildDate = string(date)
 			version.Version = "v1.2.3"
-			ldflags := fmt.Sprintf("-X 'github.com/vmware-tanzu/cluster-api-provider-bringyourownhost/agent/version.Version=%s'"+
-				" -X 'github.com/vmware-tanzu/cluster-api-provider-bringyourownhost/agent/version.BuildDate=%s'", version.Version, version.BuildDate)
-			tmpHostAgentBinary, err = gexec.Build("github.com/vmware-tanzu/cluster-api-provider-bringyourownhost/agent", "-ldflags", ldflags)
+			ldflags := fmt.Sprintf("-X 'sigs.k8s.io/cluster-api-provider-bringyourownhost/agent/version.Version=%s'"+
+				" -X 'sigs.k8s.io/cluster-api-provider-bringyourownhost/agent/version.BuildDate=%s'", version.Version, version.BuildDate)
+			tmpHostAgentBinary, err = gexec.Build("sigs.k8s.io/cluster-api-provider-bringyourownhost/agent", "-ldflags", ldflags)
 			Expect(err).NotTo(HaveOccurred())
 		})
 

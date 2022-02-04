@@ -8,7 +8,7 @@ import (
 	"strings"
 
 	"github.com/go-logr/logr"
-	"github.com/vmware-tanzu/cluster-api-provider-bringyourownhost/agent/installer/internal/algo"
+	"sigs.k8s.io/cluster-api-provider-bringyourownhost/agent/installer/internal/algo"
 )
 
 type Error string

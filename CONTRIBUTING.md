@@ -2,7 +2,7 @@
 
 ## As a Developer
 ### Fork and branch
-Local development has to be done in the forked repo of [cluster-api-provider-bringyourownhost](https://github.com/vmware-tanzu/cluster-api-provider-bringyourownhost). Here are some examples of meaningful branch names
+Local development has to be done in the forked repo of [cluster-api-provider-bringyourownhost](https://github.com/kubernetes-sigs/cluster-api-provider-bringyourownhost). Here are some examples of meaningful branch names
 * add-host-reservation-logic
 * update-readme
 * fix-byomachine-controller-flakes
@@ -18,7 +18,7 @@ At the minimum,
 * write (at least) another couple of lines explaining why the commit is necessary or what is the reasoning behind certain code logic
 
 ### Raising a PR
-* all PRs should be raised against the main branch of [cluster-api-provider-bringyourownhost](https://github.com/vmware-tanzu/cluster-api-provider-bringyourownhost)
+* all PRs should be raised against the main branch of [cluster-api-provider-bringyourownhost](https://github.com/kubernetes-sigs/cluster-api-provider-bringyourownhost)
 
 ### Contributor License Agreement
 All contributors to this project must have a signed Contributor License

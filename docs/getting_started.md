@@ -48,7 +48,7 @@ be set in `~/.cluster-api/clusterctl.yaml` as the following:
 ``` yaml
 providers:
   - name: byoh
-    url: https://github.com/vmware-tanzu/cluster-api-provider-bringyourownhost/releases/latest/infrastructure-components.yaml
+    url: https://github.com/kubernetes-sigs/cluster-api-provider-bringyourownhost/releases/latest/infrastructure-components.yaml
     type: InfrastructureProvider
 ```
 
@@ -60,7 +60,7 @@ clusterctl config repositories
 NAME           TYPE                     URL                                                                                          FILE
 cluster-api    CoreProvider             https://github.com/kubernetes-sigs/cluster-api/releases/latest/                              core-components.yaml
 ...
-byoh           InfrastructureProvider   https://github.com/vmware-tanzu/cluster-api-provider-bringyourownhost/releases/latest/       infrastructure-components.yaml
+byoh           InfrastructureProvider   https://github.com/kubernetes-sigs/cluster-api-provider-bringyourownhost/releases/latest/       infrastructure-components.yaml
 ...
 vsphere        InfrastructureProvider   https://github.com/kubernetes-sigs/cluster-api-provider-vsphere/releases/latest/             infrastructure-components.yaml
 ```
@@ -122,7 +122,7 @@ $ cat /etc/hosts
 ```
 
 If you are trying this on your own hosts, then for each host
-1. Download the [byoh-hostagent-linux-amd64](https://github.com/vmware-tanzu/cluster-api-provider-bringyourownhost/releases/download/v0.1.0/byoh-hostagent-linux-amd64)
+1. Download the [byoh-hostagent-linux-amd64](https://github.com/kubernetes-sigs/cluster-api-provider-bringyourownhost/releases/download/v0.1.0/byoh-hostagent-linux-amd64)
 2. Copy the management cluster `kubeconfig` file as `management.conf`
 3. Start the agent 
 ```shell
