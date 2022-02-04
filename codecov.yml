@@ -3,6 +3,11 @@ comment:                  # this is a top-level key
   behavior: default
   require_changes: true  # if true: only post the comment if coverage changes
 
+#list of paths (folders or file names) to exclude files from being collected by Codecov
 ignore:
 - "test"
-- "apis"
+- "controllers/infrastructure/byohost_controller.go"
+- "controllers/infrastructure/byomachinetemplate_controller.go"
+- "apis/infrastructure/v1beta1/*_types.go"
+- "apis/infrastructure/v1beta1/zz_generated.deepcopy.go"
+- "agent/installer/cli.go"
