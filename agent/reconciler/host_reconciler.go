@@ -254,11 +254,11 @@ func (r *HostReconciler) installK8sComponents(ctx context.Context, byoHost *infr
 	bundleRegistry := byoHost.GetAnnotations()[infrastructurev1beta1.BundleLookupBaseRegistryAnnotation]
 	k8sVersion := byoHost.GetAnnotations()[infrastructurev1beta1.K8sVersionAnnotation]
 	byohBundleTag := byoHost.GetAnnotations()[infrastructurev1beta1.BundleLookupTagAnnotation]
-	bundleInstaller, err := installer.New(bundleRegistry, r.DownloadPath, logger)
+	bundleInstaller, err := installer.New(r.DownloadPath, logger)
 	if err != nil {
 		return err
 	}
-	err = bundleInstaller.Install(k8sVersion, byohBundleTag)
+	err = bundleInstaller.Install(bundleRegistry, k8sVersion, byohBundleTag)
 	if err != nil {
 		return err
 	}
@@ -274,11 +274,11 @@ func (r *HostReconciler) uninstallk8sComponents(ctx context.Context, byoHost *in
 	bundleRegistry := byoHost.GetAnnotations()[infrastructurev1beta1.BundleLookupBaseRegistryAnnotation]
 	k8sVersion := byoHost.GetAnnotations()[infrastructurev1beta1.K8sVersionAnnotation]
 	byohBundleTag := byoHost.GetAnnotations()[infrastructurev1beta1.BundleLookupTagAnnotation]
-	bundleInstaller, err := installer.New(bundleRegistry, r.DownloadPath, logger)
+	bundleInstaller, err := installer.New(r.DownloadPath, logger)
 	if err != nil {
 		return err
 	}
-	err = bundleInstaller.Uninstall(k8sVersion, byohBundleTag)
+	err = bundleInstaller.Uninstall(bundleRegistry, k8sVersion, byohBundleTag)
 	if err != nil {
 		return err
 	}
