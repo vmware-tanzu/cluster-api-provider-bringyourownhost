@@ -84,6 +84,25 @@ var _ = Describe("Byohost Installer Tests", func() {
 				mi.Get)
 			Expect(err).ShouldNot(HaveOccurred())
 		})
+		It("Should create and rename dir correctly after successful download", func() {
+			bd.repoAddr = "repo.ccoomm/r/"
+			bd.downloadPath = filepath.Join(bd.downloadPath)
+			err := bd.DownloadFromRepo(
+				normalizedOsVersion,
+				k8sVersion,
+				testTag,
+				mi.Get)
+			Expect(err).ShouldNot((HaveOccurred()))
+			_, err = os.Stat(bd.GetBundleDirPath(k8sVersion, testTag))
+			Expect(err).ShouldNot((HaveOccurred()))
+			notExist := os.IsNotExist(err)
+			Expect(notExist).ShouldNot(BeTrue())
+
+			_, err = os.Stat(bd.GetBundleDirPath(k8sVersion+"a", testTag))
+			Expect(err).Should((HaveOccurred()))
+			notExist = os.IsNotExist(err)
+			Expect(notExist).Should(BeTrue())
+		})
 	})
 	Context("When there is error during download", func() {
 		It("Should return error if given bad repo", func() {

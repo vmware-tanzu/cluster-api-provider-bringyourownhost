@@ -50,7 +50,10 @@ func (bd *bundleDownloader) DownloadFromRepo(
 	tag string,
 	downloadByTool func(string, string) error) error {
 
-	err := ensureDirExist(bd.downloadPath)
+	downloadPathWithRepo := bd.getBundlePathWithRepo()
+
+	err := ensureDirExist(downloadPathWithRepo)
+	defer os.Remove(downloadPathWithRepo)
 	if err != nil {
 		return err
 	}
@@ -65,7 +68,7 @@ func (bd *bundleDownloader) DownloadFromRepo(
 
 	bd.logger.Info("Cache miss", "path", bundleDirPath)
 
-	dir, err := os.MkdirTemp(bd.downloadPath, "tempBundle")
+	dir, err := os.MkdirTemp(downloadPathWithRepo, "tempBundle")
 	// It is fine if the dir path does not exist.
 	defer func() {
 		err = os.RemoveAll(dir)
@@ -76,7 +79,6 @@ func (bd *bundleDownloader) DownloadFromRepo(
 	if err != nil {
 		return err
 	}
-
 	bundleAddr := bd.getBundleAddr(normalizedOsVersion, k8sVersion, tag)
 	err = convertError(downloadByTool(bundleAddr, dir))
 	if err != nil {
@@ -125,12 +127,17 @@ func (bd *bundleDownloader) GetBundleDirPath(k8sVersion, tag string) string {
 	// Not storing tag as a subdir of k8s because we can't atomically move
 	// the temp bundle dir to a non-existing dir.
 	// Using "-" instead of ":" because Windows doesn't like the latter
-	return fmt.Sprintf("%s-%s", filepath.Join(bd.downloadPath, k8sVersion), tag)
+	return fmt.Sprintf("%s-%s", filepath.Join(bd.getBundlePathWithRepo(), k8sVersion), tag)
 }
 
 // GetBundleName returns the name of the bundle in normalized format.
 func GetBundleName(normalizedOsVersion, k8sVersion string) string {
 	return strings.ToLower(fmt.Sprintf("byoh-bundle-%s_k8s_%s", normalizedOsVersion, k8sVersion))
+}
+
+// getBundlePathWithRepo returns the path
+func (bd *bundleDownloader) getBundlePathWithRepo() string {
+	return filepath.Join(bd.downloadPath, strings.ReplaceAll(bd.repoAddr, "/", "."))
 }
 
 // getBundleAddr returns the exact address to the bundle in the repo.
