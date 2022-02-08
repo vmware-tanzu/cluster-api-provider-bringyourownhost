@@ -85,8 +85,11 @@ var _ = Describe("When testing MachineDeployment scale out/in", func() {
 
 		By("creating a workload cluster with one control plane node and one worker node")
 		
-		ip := getControlPlaneIP(context.Background(), dockerClient)
-		os.Setenv("CONTROL_PLANE_ENDPOINT_IP", ip)
+		_, ok := os.LookupEnv("CONTROL_PLANE_ENDPOINT_IP")
+		if ok {
+			ip := getControlPlaneIP(context.Background(), dockerClient)
+			os.Setenv("CONTROL_PLANE_ENDPOINT_IP", ip)
+		}
 
 		clusterctl.ApplyClusterTemplateAndWait(ctx, clusterctl.ApplyClusterTemplateAndWaitInput{
 			ClusterProxy: bootstrapClusterProxy,

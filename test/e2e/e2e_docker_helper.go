@@ -9,6 +9,7 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
+	"strings"
 
 	"github.com/docker/cli/cli/command"
 	"github.com/docker/docker/api/types"
@@ -210,4 +211,12 @@ func setupByoDockerHost(ctx context.Context, clusterConName, byoHostName, namesp
 	output, err := dockerClient.ContainerExecAttach(ctx, resp.ID, types.ExecStartCheck{})
 
 	return output, byohost.ID, err
+}
+
+func getControlPlaneIP(ctx context.Context, dockerClient *client.Client) string {
+	inspect, _ := dockerClient.NetworkInspect(ctx, "kind", types.NetworkInspectOptions{})
+	ipOctets := strings.Split(inspect.IPAM.Config[0].Subnet, ".")
+	ipOctets[3] = "151"
+	ip := strings.Join(ipOctets, ".")
+	return ip
 }

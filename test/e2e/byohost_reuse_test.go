@@ -96,8 +96,12 @@ var _ = Describe("When BYO Host rejoins the capacity pool", func() {
 
 		By("Creating a cluster")
 		
-		ip := getControlPlaneIP(context.Background(), dockerClient)
-		os.Setenv("CONTROL_PLANE_ENDPOINT_IP", ip)
+		_, ok := os.LookupEnv("CONTROL_PLANE_ENDPOINT_IP")
+		if ok {
+			ip := getControlPlaneIP(context.Background(), dockerClient)
+			os.Setenv("CONTROL_PLANE_ENDPOINT_IP", ip)
+		}
+
 
 		clusterctl.ApplyClusterTemplateAndWait(ctx, clusterctl.ApplyClusterTemplateAndWaitInput{
 			ClusterProxy: bootstrapClusterProxy,
@@ -142,8 +146,11 @@ var _ = Describe("When BYO Host rejoins the capacity pool", func() {
 		By("Creating a new cluster")
 		clusterName = fmt.Sprintf("%s-%s", specName, util.RandomString(6))
 		
-		ip = getControlPlaneIP(context.Background(), dockerClient)
-		os.Setenv("CONTROL_PLANE_ENDPOINT_IP", ip)
+		_, ok = os.LookupEnv("CONTROL_PLANE_ENDPOINT_IP")
+		if ok {
+			ip := getControlPlaneIP(context.Background(), dockerClient)
+			os.Setenv("CONTROL_PLANE_ENDPOINT_IP", ip)
+		}
 
 		clusterctl.ApplyClusterTemplateAndWait(ctx, clusterctl.ApplyClusterTemplateAndWaitInput{
 			ClusterProxy: bootstrapClusterProxy,
