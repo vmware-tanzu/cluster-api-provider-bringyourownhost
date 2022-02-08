@@ -213,10 +213,13 @@ func setupByoDockerHost(ctx context.Context, clusterConName, byoHostName, namesp
 	return output, byohost.ID, err
 }
 
-func getControlPlaneIP(ctx context.Context, dockerClient *client.Client) string {
-	inspect, _ := dockerClient.NetworkInspect(ctx, "kind", types.NetworkInspectOptions{})
-	ipOctets := strings.Split(inspect.IPAM.Config[0].Subnet, ".")
-	ipOctets[3] = "151"
-	ip := strings.Join(ipOctets, ".")
-	return ip
+func setControlPlaneIP(ctx context.Context, dockerClient *client.Client) {
+	_, ok := os.LookupEnv("CONTROL_PLANE_ENDPOINT_IP")
+	if !ok {
+		inspect, _ := dockerClient.NetworkInspect(ctx, "kind", types.NetworkInspectOptions{})
+		ipOctets := strings.Split(inspect.IPAM.Config[0].Subnet, ".")
+		ipOctets[3] = "151"
+		ip := strings.Join(ipOctets, ".")
+		os.Setenv("CONTROL_PLANE_ENDPOINT_IP", ip)
+	}
 }
