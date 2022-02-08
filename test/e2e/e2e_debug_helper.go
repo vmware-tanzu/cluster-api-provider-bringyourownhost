@@ -149,7 +149,7 @@ func ShowInfo(allAgentLogFiles []string) {
 	ExecuteShellScript(ReadByohControllerManagerLogShellFile)
 }
 
-func getControlPlaneIp(ctx context.Context, dockerClient *client.Client) string {
+func getControlPlaneIP(ctx context.Context, dockerClient *client.Client) string {
 	inspect, _ := dockerClient.NetworkInspect(ctx, "kind", types.NetworkInspectOptions{})
 	ipOctets := strings.Split(inspect.IPAM.Config[0].Subnet, ".")
 	ipOctets[3] = "151"
