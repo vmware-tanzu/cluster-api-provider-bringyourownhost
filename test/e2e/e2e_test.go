@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/client"
@@ -97,6 +98,11 @@ var _ = Describe("When BYOH joins existing cluster [PR-Blocking]", func() {
 			}
 		}()
 
+		inspect, _ := dockerClient.NetworkInspect(context.Background(), "kind", types.NetworkInspectOptions{})
+		res1 := strings.Split(inspect.IPAM.Config[0].Subnet, ".")
+		res1[3] = "151"
+		ip := strings.Join(res1, ".")
+		os.Setenv("CONTROL_PLANE_ENDPOINT_IP", ip)
 		clusterctl.ApplyClusterTemplateAndWait(ctx, clusterctl.ApplyClusterTemplateAndWaitInput{
 			ClusterProxy: bootstrapClusterProxy,
 			ConfigCluster: clusterctl.ConfigClusterInput{
