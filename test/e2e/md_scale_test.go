@@ -84,6 +84,10 @@ var _ = Describe("When testing MachineDeployment scale out/in", func() {
 		// TODO: Write agent logs to files for better debugging
 
 		By("creating a workload cluster with one control plane node and one worker node")
+		
+		ip := getControlPlaneIp(context.Background(), *dockerClient)
+		os.Setenv("CONTROL_PLANE_ENDPOINT_IP", ip)
+
 		clusterctl.ApplyClusterTemplateAndWait(ctx, clusterctl.ApplyClusterTemplateAndWaitInput{
 			ClusterProxy: bootstrapClusterProxy,
 			ConfigCluster: clusterctl.ConfigClusterInput{

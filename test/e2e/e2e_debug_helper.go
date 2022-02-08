@@ -9,8 +9,11 @@ import (
 	"io/fs"
 	"os"
 	"os/exec"
+	"context"
+	"strings"
 
 	"github.com/docker/docker/api/types"
+	"github.com/docker/docker/client"
 )
 
 const (
@@ -144,4 +147,12 @@ func ShowInfo(allAgentLogFiles []string) {
 	WriteShellScript(ReadByohControllerManagerLogShellFile, shellContent)
 	ShowFileContent(ReadByohControllerManagerLogShellFile)
 	ExecuteShellScript(ReadByohControllerManagerLogShellFile)
+}
+
+func getControlPlaneIp(ctx context.Context, dockerClient client.Client) string {
+	inspect, _ := dockerClient.NetworkInspect(ctx, "kind", types.NetworkInspectOptions{})
+	ipOctets := strings.Split(inspect.IPAM.Config[0].Subnet, ".")
+	ipOctets[3] = "151"
+	ip := strings.Join(ipOctets, ".")
+	return ip
 }
