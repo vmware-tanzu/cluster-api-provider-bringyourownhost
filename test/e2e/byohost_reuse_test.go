@@ -140,7 +140,6 @@ var _ = Describe("When BYO Host rejoins the capacity pool", func() {
 		By("Creating a new cluster")
 		clusterName = fmt.Sprintf("%s-%s", specName, util.RandomString(6))
 
-		setControlPlaneIP(context.Background(), dockerClient)
 		clusterctl.ApplyClusterTemplateAndWait(ctx, clusterctl.ApplyClusterTemplateAndWaitInput{
 			ClusterProxy: bootstrapClusterProxy,
 			ConfigCluster: clusterctl.ConfigClusterInput{
