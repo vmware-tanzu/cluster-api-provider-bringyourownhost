@@ -37,7 +37,7 @@ If you have questions or want to get the latest project news, you can connect wi
 - Chat with us on the Kubernetes [Slack](http://slack.k8s.io/) in the [#cluster-api](https://kubernetes.slack.com/archives/C8TSNPY4T) channel
 - Subscribe to the [SIG Cluster Lifecycle](https://groups.google.com/forum/#!forum/kubernetes-sig-cluster-lifecycle) Google Group for access to documents and calendars
 - Join our Cluster API Provider for BringYourOwnHost working group sessions where we share the latest project news, demos, answer questions, and triage issues
-    - Weekly on Wednesdays @ 1:30PM Indian Standard Time on [Zoom](https://VMware.zoom.us/j/94476574480?pwd=WGYzOXBoL1VsVnBXK3c5TWd1bG5SZz09)
+    - Weekly on Wednesdays @ 1:30PM Indian Standard Time on [Zoom](https://VMware.zoom.us/j/94476574480?pwd=WGYzOXBoL1VsVnBXK3c5TWd1bG5SZz09) - [convert to your timezone](https://dateful.com/time-zone-converter?t=13:30&tz=IST)
     - Previous meetings: \[ [notes](https://docs.google.com/document/d/1T-3_eskC_HCtXLh3PA8y--mgO-AIajZfevcnYuno6JM/edit#heading=h.y186zgz0eh6e) | [recordings](https://www.youtube.com/playlist?list=PLHbHoGHbooH41L5P-tIK6QqhILdEI9yBK) \]
 
 Pull Requests and feedback on issues are very welcome!
