@@ -228,5 +228,4 @@ func setControlPlaneIP(ctx context.Context, dockerClient *client.Client) {
 	ipOctets[3] = "151"
 	ip := strings.Join(ipOctets, ".")
 	os.Setenv("CONTROL_PLANE_ENDPOINT_IP", ip)
-	
 }
