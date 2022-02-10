@@ -97,6 +97,7 @@ var _ = Describe("When BYOH joins existing cluster [PR-Blocking]", func() {
 			}
 		}()
 
+		setControlPlaneIP(context.Background(), dockerClient)
 		clusterctl.ApplyClusterTemplateAndWait(ctx, clusterctl.ApplyClusterTemplateAndWaitInput{
 			ClusterProxy: bootstrapClusterProxy,
 			ConfigCluster: clusterctl.ConfigClusterInput{
