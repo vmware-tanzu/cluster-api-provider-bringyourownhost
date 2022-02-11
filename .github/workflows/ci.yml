@@ -4,10 +4,10 @@ on:
   push:
     branches: [ main ]
   pull_request:
-    branches: [ main ]    
+    branches: [ main ]
 
 jobs:
-  build-agent:  
+  build-agent:
       runs-on: ubuntu-latest
       steps:
       - name: Checkout code
@@ -35,6 +35,9 @@ jobs:
     - name: Install ginkgo
       run: go get github.com/onsi/ginkgo/ginkgo@v1.16.5
 
+    - name: Install prequisit packages
+      run: sudo apt update && sudo apt install -qq --yes socat ebtables ethtool conntrack
+
     - name: Run test make target
       run: make test
 
@@ -43,4 +46,4 @@ jobs:
       with:
         token: ${{ secrets.CODECOV_TOKEN }}
         files: cover.out
-        verbose: true 
+        verbose: true

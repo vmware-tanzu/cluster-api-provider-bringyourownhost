@@ -4,6 +4,7 @@
 package installer
 
 import (
+	"errors"
 	"fmt"
 	"strings"
 
@@ -23,6 +24,8 @@ const (
 	ErrBundleInstall     = Error("Error installing bundle")
 	ErrBundleUninstall   = Error("Error uninstalling bundle")
 )
+
+var preRequisitePackages = []string{"socat", "ebtables", "ethtool", "conntrack"}
 
 type installer struct {
 	algoRegistry registry
@@ -85,8 +88,8 @@ func (bd *bundleDownloader) DownloadOrPreview(os, k8s, tag string) error {
 	return bd.Download(os, k8s, tag)
 }
 
-// New returns an installer that downloads bundles for the current OS
-// and stores them under downloadPath. Download path is created,
+// New returns an installer that downloads bundles for the current OS from OCI repository with
+// address bundleRepo and stores them under downloadPath. Download path is created,
 // if it does not exist.
 func New(downloadPath string, logger logr.Logger) (*installer, error) {
 	if downloadPath == "" {
@@ -95,9 +98,14 @@ func New(downloadPath string, logger logr.Logger) (*installer, error) {
 
 	osd := osDetector{}
 	os, err := osd.Detect()
-	logger.Info("Detected", "OS", os)
 	if err != nil {
 		return nil, ErrDetectOs
+	}
+	logger.Info("Detected", "OS", os)
+
+	precheckSuccessful := runPrechecks(logger, os)
+	if !precheckSuccessful {
+		return nil, errors.New("precheck failed")
 	}
 
 	return newUnchecked(os, downloadPath, logger, &logPrinter{logger})
