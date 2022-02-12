@@ -18,7 +18,6 @@ import (
 	"github.com/docker/docker/client"
 	"github.com/docker/docker/pkg/archive"
 	"github.com/docker/docker/pkg/system"
-	. "github.com/onsi/gomega" // nolint: stylecheck
 	"github.com/onsi/gomega/gexec"
 	"github.com/pkg/errors"
 	"sigs.k8s.io/cluster-api/test/framework"

@@ -58,17 +58,16 @@ func (l *labelFlags) Set(value string) error {
 			(*l)[k] = v
 		}
 		return nil
-	} else {
-		// account for only one key-value pair in a single invocation
-		parts := strings.SplitN(value, "=", 2)
-		if len(parts) < 2 {
-			return fmt.Errorf("invalid argument value. expect key=value, got %s", value)
-		}
-		k := strings.TrimSpace(parts[0])
-		v := strings.TrimSpace(parts[1])
-		(*l)[k] = v
-		return nil
 	}
+	// account for only one key-value pair in a single invocation
+	parts := strings.SplitN(value, "=", 2)
+	if len(parts) < 2 {
+		return fmt.Errorf("invalid argument value. expect key=value, got %s", value)
+	}
+	k := strings.TrimSpace(parts[0])
+	v := strings.TrimSpace(parts[1])
+	(*l)[k] = v
+	return nil
 }
 
 var (

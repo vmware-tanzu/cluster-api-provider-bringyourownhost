@@ -21,6 +21,7 @@ require (
 	github.com/opencontainers/runc v1.0.3 // indirect
 	github.com/pkg/errors v0.9.1
 	github.com/theupdateframework/notary v0.7.0 // indirect
+	golang.org/x/tools v0.1.9 // indirect
 	k8s.io/api v0.22.2
 	k8s.io/apimachinery v0.22.2
 	k8s.io/client-go v0.22.2
