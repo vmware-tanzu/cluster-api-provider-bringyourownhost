@@ -13,8 +13,8 @@ import (
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-	"github.com/vmware-tanzu/cluster-api-provider-bringyourownhost/agent/cloudinit"
-	"github.com/vmware-tanzu/cluster-api-provider-bringyourownhost/agent/cloudinit/cloudinitfakes"
+	"sigs.k8s.io/cluster-api-provider-bringyourownhost/agent/cloudinit"
+	"sigs.k8s.io/cluster-api-provider-bringyourownhost/agent/cloudinit/cloudinitfakes"
 )
 
 var _ = Describe("Cloudinit", func() {

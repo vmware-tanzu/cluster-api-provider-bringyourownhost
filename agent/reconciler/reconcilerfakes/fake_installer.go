@@ -4,7 +4,7 @@ package reconcilerfakes
 // import (
 // 	"sync"
 
-// 	"github.com/vmware-tanzu/cluster-api-provider-bringyourownhost/agent/reconciler"
+// 	"sigs.k8s.io/cluster-api-provider-bringyourownhost/agent/reconciler"
 // )
 
 // type FakeInstaller struct {

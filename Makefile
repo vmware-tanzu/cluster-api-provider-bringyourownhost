@@ -199,8 +199,8 @@ kustomize: ## Download kustomize locally if necessary.
 
 host-agent-binaries: ## Builds the binaries for the host-agent
 	RELEASE_BINARY=./byoh-hostagent GOOS=linux GOARCH=amd64 GOLDFLAGS="$(LDFLAGS) $(STATIC) \
-	-X 'github.com/vmware-tanzu/cluster-api-provider-bringyourownhost/agent/version.Version=${AGENT_BINARY_VERSION}' \
-	-X 'github.com/vmware-tanzu/cluster-api-provider-bringyourownhost/agent/version.BuildDate=$(shell date -u +\"%Y-%m-%dT%H:%M:%SZ\")'" \
+	-X 'sigs.k8s.io/cluster-api-provider-bringyourownhost/agent/version.Version=${AGENT_BINARY_VERSION}' \
+	-X 'sigs.k8s.io/cluster-api-provider-bringyourownhost/agent/version.BuildDate=$(shell date -u +\"%Y-%m-%dT%H:%M:%SZ\")'" \
 	HOST_AGENT_DIR=./$(HOST_AGENT_DIR) $(MAKE) host-agent-binary
 
 host-agent-binary: $(RELEASE_DIR)

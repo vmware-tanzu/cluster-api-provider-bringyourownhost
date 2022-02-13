@@ -21,9 +21,9 @@ import (
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 
-	infrastructurev1beta1 "github.com/vmware-tanzu/cluster-api-provider-bringyourownhost/apis/infrastructure/v1beta1"
-	controllers "github.com/vmware-tanzu/cluster-api-provider-bringyourownhost/controllers/infrastructure"
-	"github.com/vmware-tanzu/cluster-api-provider-bringyourownhost/test/builder"
+	infrastructurev1beta1 "sigs.k8s.io/cluster-api-provider-bringyourownhost/apis/infrastructure/v1beta1"
+	controllers "sigs.k8s.io/cluster-api-provider-bringyourownhost/controllers/infrastructure"
+	"sigs.k8s.io/cluster-api-provider-bringyourownhost/test/builder"
 
 	//+kubebuilder:scaffold:imports
 

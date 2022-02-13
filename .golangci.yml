@@ -99,7 +99,7 @@ linters-settings:
   gocyclo:
     min-complexity: 15
   goimports:
-    local-prefixes: github.com/vmware-tanzu
+    local-prefixes: sigs.k8s.io
   gomnd:
     settings:
       mnd:
