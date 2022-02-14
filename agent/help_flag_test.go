@@ -24,6 +24,7 @@ var _ = Describe("Help flag for host agent", func() {
 				"-namespace string",
 				"-skip-installation",
 				"-version",
+				"-log-level int",
 			}
 		)
 

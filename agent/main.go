@@ -81,6 +81,7 @@ var (
 	skipInstallation   bool
 	printVersion       bool
 	k8sInstaller       reconciler.IK8sInstaller
+	logLevel           int
 )
 
 // TODO - fix logging
@@ -92,6 +93,7 @@ func main() {
 	flag.StringVar(&downloadpath, "downloadpath", "/var/lib/byoh/bundles", "File System path to keep the downloads")
 	flag.BoolVar(&skipInstallation, "skip-installation", false, "If you want to skip installation of the kubernetes component binaries")
 	flag.BoolVar(&printVersion, "version", false, "Print the version of the agent")
+	flag.IntVar(&logLevel, "log-level", 0, "Determines the verbosity of the system logs (Default: 0)")
 	flag.Parse()
 
 	if printVersion {
@@ -104,7 +106,7 @@ func main() {
 	_ = corev1.AddToScheme(scheme)
 	_ = clusterv1.AddToScheme(scheme)
 
-	logger := klogr.New()
+	logger := klogr.New().V(logLevel)
 	ctrl.SetLogger(logger)
 	config, err := ctrl.GetConfig()
 	if err != nil {
