@@ -32,7 +32,7 @@ __BYOH__ is a Cluster API Infrastructure Provider for already-provisioned hosts 
 ## BYOH Glossary
 **Host** - A host is a running computer system. It could be physical or virtual. It has a kernel and some base operating system
 
-**BYO Host** - A host provisioned and managed outside of Cluster API
+**BYO Host** - A Linux host provisioned and managed outside of Cluster API
 
 **BYOH Capacity Pool** - A set of BYO Hosts registered in a management cluster & authorized for usage as a capacity for deploying Kubernetes nodes
 
@@ -85,7 +85,7 @@ More about development and contributing practices can be found in [`CONTRIBUTING
 ## Compatibility with Cluster API and Kubernetes Versions
 
 - BYOH is currently compatible wth Cluster API v1beta1 (v1.0)
-- BYOH installer support is present and tested only for Kubernetes version `v1.22.3`. You may however use it to provision clusters of a different version, but install the Kubernetes components yourself (use the `--skip-installation` flag when starting the agent)
+- BYOH installer support is present and tested only for Kubernetes version `v1.22.3`. You may however use it to provision clusters of a different version by manually installing the Kubernetes components (use the `--skip-installation` flag when starting the agent)
 
 
 ## BYOH in News
