@@ -25,7 +25,7 @@ Kubernetes cluster will be transformed into a [management cluster](https://clust
 
 2. **Kind**
 
-If you are testing locally, you can use [Kind][kind] create a cluster with the following command:
+If you are testing locally, you can use [Kind][kind] to create a cluster with the following command:
 
 ```shell
 kind create cluster

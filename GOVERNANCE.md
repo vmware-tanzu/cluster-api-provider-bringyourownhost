@@ -39,7 +39,7 @@ The list of current maintainers can be found in
 While anyone can review a PR and is encouraged to do so, only maintainers are
 allowed to merge the PR. To maintain velocity, two approvals (either maintainers or reviewers) are
 required to merge a given PR. In case of a disagreement between maintainers, a
-vote should be called (on Github or Slack) and a simple majority is required in
+vote should be called (on GitHub or Slack) and a simple majority is required in
 order for the PR to be merged.
 
 New maintainers must be nominated from contributors by an existing maintainer

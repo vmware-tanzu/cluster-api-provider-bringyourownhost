@@ -17,13 +17,13 @@ var _ = Describe("Byohost Installer Tests", func() {
 	Context("When installer is created for unsupported OS", func() {
 		It("Should return error", func() {
 			_, err := newUnchecked("Ubuntu_99.04.3_x86-64", "", logr.Discard(), nil)
-			Expect(err).Should((HaveOccurred()))
+			Expect(err).Should(HaveOccurred())
 		})
 	})
 	Context("When installer is created with empty download path", func() {
 		It("Should return error", func() {
 			_, err := New("", logr.Discard())
-			Expect(err).Should((HaveOccurred()))
+			Expect(err).Should(HaveOccurred())
 		})
 	})
 	Context("When installer is created", func() {
@@ -33,10 +33,10 @@ var _ = Describe("Byohost Installer Tests", func() {
 				i := NewPreviewInstaller(os, nil)
 
 				err := i.Install("", "unsupported-k8s", testTag)
-				Expect(err).Should((HaveOccurred()))
+				Expect(err).Should(HaveOccurred())
 
 				err = i.Uninstall("", "unsupported-k8s", testTag)
-				Expect(err).Should((HaveOccurred()))
+				Expect(err).Should(HaveOccurred())
 			}
 		})
 	})
@@ -49,7 +49,7 @@ var _ = Describe("Byohost Installer Tests", func() {
 						ob := algo.OutputBuilderCounter{}
 						i := NewPreviewInstaller(os, &ob)
 						err := i.Install("", k8s, testTag)
-						Expect(err).ShouldNot((HaveOccurred()))
+						Expect(err).ShouldNot(HaveOccurred())
 						Expect(ob.LogCalledCnt).Should(Equal(22))
 					}
 
@@ -57,7 +57,7 @@ var _ = Describe("Byohost Installer Tests", func() {
 						ob := algo.OutputBuilderCounter{}
 						i := NewPreviewInstaller(os, &ob)
 						err := i.Uninstall("", k8s, testTag)
-						Expect(err).ShouldNot((HaveOccurred()))
+						Expect(err).ShouldNot(HaveOccurred())
 						Expect(ob.LogCalledCnt).Should(Equal(22))
 					}
 				}

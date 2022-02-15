@@ -92,14 +92,14 @@ var _ = Describe("Byohost Installer Tests", func() {
 				k8sVersion,
 				testTag,
 				mi.Get)
-			Expect(err).ShouldNot((HaveOccurred()))
+			Expect(err).ShouldNot(HaveOccurred())
 			_, err = os.Stat(bd.GetBundleDirPath(k8sVersion, testTag))
-			Expect(err).ShouldNot((HaveOccurred()))
+			Expect(err).ShouldNot(HaveOccurred())
 			notExist := os.IsNotExist(err)
 			Expect(notExist).ShouldNot(BeTrue())
 
 			_, err = os.Stat(bd.GetBundleDirPath(k8sVersion+"a", testTag))
-			Expect(err).Should((HaveOccurred()))
+			Expect(err).Should(HaveOccurred())
 			notExist = os.IsNotExist(err)
 			Expect(notExist).Should(BeTrue())
 		})
