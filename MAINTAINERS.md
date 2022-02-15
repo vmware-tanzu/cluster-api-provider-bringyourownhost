@@ -2,11 +2,11 @@
 
 ## Maintainers
 
-| Maintainer | GitHub ID | Affiliation |
-|------------|-----------|-------------|
-|Anusha Hegde | [anusha94](https://github.com/anusha94 ) | [VMware](https://www.github.com/vmware/) |
-|Dharmjit Singh | [dharmjit](https://github.com/dharmjit/ ) | [VMware](https://www.github.com/vmware/) |
-|Jamie Monserrate | [jamiemonserrate](https://github.com/jamiemonserrate ) | [VMware](https://www.github.com/vmware/) |
+| Maintainer       | GitHub ID                                              | Affiliation                              |
+|------------------|--------------------------------------------------------|------------------------------------------|
+| Anusha Hegde     | [anusha94](https://github.com/anusha94 )               | [VMware](https://www.github.com/vmware/) |
+| Dharmjit Singh   | [dharmjit](https://github.com/dharmjit/ )              | [VMware](https://www.github.com/vmware/) |
+| Jamie Monserrate | [jamiemonserrate](https://github.com/jamiemonserrate ) | [VMware](https://www.github.com/vmware/) |
 
 ## Core Contributors and Stakeholders
 
