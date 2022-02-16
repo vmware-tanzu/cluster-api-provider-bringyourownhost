@@ -73,14 +73,21 @@ func (l *labelFlags) Set(value string) error {
 	}
 }
 
-func isFlagPassed(name string) bool {
+func setFlagIfNotSet(flagName string) error {
 	found := false
 	flag.Visit(func(f *flag.Flag) {
-		if f.Name == name {
+		if f.Name == flagName {
 			found = true
 		}
 	})
-	return found
+
+	// checking if log level flag has been explicitly set
+	// else setting the flag at 1
+	if !found {
+		err := flag.Set("v", "1")
+		return err
+	}
+	return nil
 }
 
 var (
@@ -118,15 +125,9 @@ func main() {
 
 	// setting info log verbosity level at 1
 	logger := klogr.New().V(1)
-	
-	// checking if log level flag has been explicitly set
-	// else setting the flag at 1
-	if !isFlagPassed("v") {
-		err := flag.Set("v", "1")
-		if err != nil {
-			logger.Error(err, "error setting log verbosity")
-			return
-		}
+	err := setFlagIfNotSet("v")
+	if err != nil {
+		logger.Error(err, "error setting log verbosity")
 	}
 	ctrl.SetLogger(logger)
 	config, err := ctrl.GetConfig()
