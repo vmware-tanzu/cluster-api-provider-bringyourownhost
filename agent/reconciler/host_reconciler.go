@@ -258,7 +258,6 @@ func (r *HostReconciler) bootstrapK8sNode(ctx context.Context, bootstrapScript s
 }
 
 func (r *HostReconciler) Install(bundleRegistry, k8sVersion, byohBundleTag string, logger logr.Logger) error {
-
 	bundleInstaller, err := installer.New(r.DownloadPath, logger)
 	if err != nil {
 		return err
@@ -271,7 +270,6 @@ func (r *HostReconciler) Install(bundleRegistry, k8sVersion, byohBundleTag strin
 }
 
 func (r *HostReconciler) Uninstall(bundleRegistry, k8sVersion, byohBundleTag string, logger logr.Logger) error {
-
 	bundleInstaller, err := installer.New(r.DownloadPath, logger)
 	if err != nil {
 		return err
