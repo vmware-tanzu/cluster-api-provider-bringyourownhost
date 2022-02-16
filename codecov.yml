@@ -10,4 +10,4 @@ ignore:
 - "controllers/infrastructure/byomachinetemplate_controller.go"
 - "apis/infrastructure/v1beta1/*_types.go"
 - "apis/infrastructure/v1beta1/zz_generated.deepcopy.go"
-- "agent/installer/cli.go"
+- "agent/installer/cli-dev.go"
