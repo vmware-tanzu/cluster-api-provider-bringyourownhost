@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"os"
 
+	"github.com/go-logr/logr"
 	"github.com/pkg/errors"
 	"github.com/vmware-tanzu/cluster-api-provider-bringyourownhost/agent/cloudinit"
 	"github.com/vmware-tanzu/cluster-api-provider-bringyourownhost/agent/installer"
@@ -28,12 +29,21 @@ import (
 	infrastructurev1beta1 "github.com/vmware-tanzu/cluster-api-provider-bringyourownhost/apis/infrastructure/v1beta1"
 )
 
+//go:generate go run github.com/maxbrunsfeld/counterfeiter/v6 -generate
+
+//counterfeiter:generate . Installer
+type Installer interface {
+	Install(string, string, string, logr.Logger) error
+	Uninstall(string, string, string, logr.Logger) error
+}
+
 type HostReconciler struct {
 	Client           client.Client
 	CmdRunner        cloudinit.ICmdRunner
 	FileWriter       cloudinit.IFileWriter
 	TemplateParser   cloudinit.ITemplateParser
 	Recorder         record.EventRecorder
+	Installer        Installer
 	SkipInstallation bool
 	DownloadPath     string
 }
@@ -247,6 +257,32 @@ func (r *HostReconciler) bootstrapK8sNode(ctx context.Context, bootstrapScript s
 		ParseTemplateExecutor: r.TemplateParser}.Execute(bootstrapScript)
 }
 
+func (r *HostReconciler) Install(bundleRegistry string, k8sVersion string, byohBundleTag string, logger logr.Logger) error {
+
+	bundleInstaller, err := installer.New(r.DownloadPath, logger)
+	if err != nil {
+		return err
+	}
+	err = bundleInstaller.Install(bundleRegistry, k8sVersion, byohBundleTag)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func (r *HostReconciler) Uninstall(bundleRegistry string, k8sVersion string, byohBundleTag string, logger logr.Logger) error {
+
+	bundleInstaller, err := installer.New(r.DownloadPath, logger)
+	if err != nil {
+		return err
+	}
+	err = bundleInstaller.Uninstall(bundleRegistry, k8sVersion, byohBundleTag)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
 func (r *HostReconciler) installK8sComponents(ctx context.Context, byoHost *infrastructurev1beta1.ByoHost) error {
 	logger := ctrl.LoggerFrom(ctx)
 	logger.Info("Installing K8s")
@@ -254,11 +290,7 @@ func (r *HostReconciler) installK8sComponents(ctx context.Context, byoHost *infr
 	bundleRegistry := byoHost.GetAnnotations()[infrastructurev1beta1.BundleLookupBaseRegistryAnnotation]
 	k8sVersion := byoHost.GetAnnotations()[infrastructurev1beta1.K8sVersionAnnotation]
 	byohBundleTag := byoHost.GetAnnotations()[infrastructurev1beta1.BundleLookupTagAnnotation]
-	bundleInstaller, err := installer.New(r.DownloadPath, logger)
-	if err != nil {
-		return err
-	}
-	err = bundleInstaller.Install(bundleRegistry, k8sVersion, byohBundleTag)
+	err := r.Installer.Install(bundleRegistry, k8sVersion, byohBundleTag, logger)
 	if err != nil {
 		return err
 	}
@@ -274,11 +306,7 @@ func (r *HostReconciler) uninstallk8sComponents(ctx context.Context, byoHost *in
 	bundleRegistry := byoHost.GetAnnotations()[infrastructurev1beta1.BundleLookupBaseRegistryAnnotation]
 	k8sVersion := byoHost.GetAnnotations()[infrastructurev1beta1.K8sVersionAnnotation]
 	byohBundleTag := byoHost.GetAnnotations()[infrastructurev1beta1.BundleLookupTagAnnotation]
-	bundleInstaller, err := installer.New(r.DownloadPath, logger)
-	if err != nil {
-		return err
-	}
-	err = bundleInstaller.Uninstall(bundleRegistry, k8sVersion, byohBundleTag)
+	err := r.Installer.Uninstall(bundleRegistry, k8sVersion, byohBundleTag, logger)
 	if err != nil {
 		return err
 	}
