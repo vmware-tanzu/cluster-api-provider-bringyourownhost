@@ -24,7 +24,18 @@ var _ = Describe("Help flag for host agent", func() {
 				"-namespace string",
 				"-skip-installation",
 				"-version",
-				"-log-level int",
+				"-add_dir_header",
+				"-alsologtostderr",
+				"-log_backtrace_at value",
+				"-log_dir string",
+				"-log_file string",
+				"-log_file_max_size uint",
+				"-logtostderr",
+				"-skip_headers",
+				"-skip_log_headers",
+				"-stderrthreshold value",
+				"-v value",
+				"-vmodule value",
 			}
 		)
 

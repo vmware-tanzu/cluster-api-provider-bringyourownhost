@@ -73,6 +73,16 @@ func (l *labelFlags) Set(value string) error {
 	}
 }
 
+func isFlagPassed(name string) bool {
+	found := false
+	flag.Visit(func(f *flag.Flag) {
+		if f.Name == name {
+			found = true
+		}
+	})
+	return found
+}
+
 var (
 	namespace          string
 	scheme             *runtime.Scheme
@@ -82,7 +92,6 @@ var (
 	skipInstallation   bool
 	printVersion       bool
 	k8sInstaller       reconciler.IK8sInstaller
-	logLevel           int
 )
 
 // TODO - fix logging
@@ -95,7 +104,6 @@ func main() {
 	flag.StringVar(&downloadpath, "downloadpath", "/var/lib/byoh/bundles", "File System path to keep the downloads")
 	flag.BoolVar(&skipInstallation, "skip-installation", false, "If you want to skip installation of the kubernetes component binaries")
 	flag.BoolVar(&printVersion, "version", false, "Print the version of the agent")
-	flag.IntVar(&logLevel, "log-level", 0, "Determines the verbosity of the system logs (Default: 0)")
 	flag.Parse()
 
 	if printVersion {
@@ -108,7 +116,14 @@ func main() {
 	_ = corev1.AddToScheme(scheme)
 	_ = clusterv1.AddToScheme(scheme)
 
-	logger := klogr.New().V(logLevel)
+	// checking if log level flag has been explicitly set
+	// else setting the flag at 1
+	if !isFlagPassed("v") {
+		flag.Set("v", "1")
+	}
+
+	// setting info log verbosity level at 1
+	logger := klogr.New().V(1)
 	ctrl.SetLogger(logger)
 	config, err := ctrl.GetConfig()
 	if err != nil {
