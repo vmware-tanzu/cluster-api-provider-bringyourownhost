@@ -1,4 +1,4 @@
-# Kubernetes Cluster API Provider BYOH(Bring Your Own Host)
+# Kubernetes Cluster API Provider Bring Your Own Host (BYOH)
 <p align="center">
 <!-- lint card --><a href="https://github.com/vmware-tanzu/cluster-api-provider-bringyourownhost/actions/workflows/lint.yml">
 <img src="https://github.com/vmware-tanzu/cluster-api-provider-bringyourownhost/actions/workflows/lint.yml/badge.svg"></a>
@@ -23,11 +23,31 @@
 
 ## What is Cluster API Provider BYOH
 
-[Cluster API][cluster_api] brings
+[Cluster API](https://github.com/kubernetes-sigs/cluster-api) brings
 declarative, Kubernetes-style APIs to cluster creation, configuration and
 management.
 
-__BYOH__ is a Cluster API v1beta1 Infrastructure Provider for already-provisioned hosts running Linux.
+__BYOH__ is a Cluster API Infrastructure Provider for already-provisioned hosts running Linux. This provider allows operators to adopt Cluster API for deploying and managing kubernetes nodes without also having to adopt a specific infrastructure service. This enables users to decouple kubernetes node provisioning from host and infrastructure provisioning.
+
+## BYOH Glossary
+**Host** - A host is a running computer system. It could be physical or virtual. It has a kernel and some base operating system
+
+**BYO Host** - A Linux host provisioned and managed outside of Cluster API
+
+**BYOH Capacity Pool** - A set of BYO Hosts registered in a management cluster & authorized for usage as a capacity for deploying Kubernetes nodes
+
+**Kubernetes Node** - A Kubernetes Node that runs on top of a Host. There is a 1-to-1 relationship between nodes and hosts (every host has zero or one nodes). Node provisioning and lifecycle management is a Cluster API responsibility
+
+**Kubernetes Host Components** - The components that run uncontainerized on the host and are required to bootstrap a Kubernetes node. Typically, this is at least kubelet, containerd and kubeadm, but different OS might require different components in this category
+
+## Features
+
+- Native Kubernetes manifests and API
+- Support for single and multi-node control plane clusters
+- Support already provisioned Linux VMs with Ubuntu 20.04
+
+## Getting Started
+Check out the [getting_started](https://github.com/vmware-tanzu/cluster-api-provider-bringyourownhost/blob/main/docs/getting_started.md) guide for launching a BYOH workload cluster
 
 ## Community, discussion, contribution, and support
 
@@ -46,18 +66,11 @@ also feel free to reach out to discuss.
 
 See also our [contributor guide](CONTRIBUTING.md) and the Kubernetes [community page](https://kubernetes.io/community) for more details on how to get involved.
 
-## Getting Started
-Check out the [getting_started](https://github.com/vmware-tanzu/cluster-api-provider-bringyourownhost/blob/main/docs/getting_started.md) guide for launching a BYOH workload cluster
 
 ## Project Status
 
 This project is currently a work-in-progress, in an Alpha state, so it may not be production ready. There is no backwards-compatibility guarantee at this point. For more details on the roadmap and upcoming features, check out [the project's issue tracker on GitHub][issue].
 
-## Features
-
-- Native Kubernetes manifests and API
-- Support for single and multi-node control plane clusters
-- Support already provisioned Linux VMs with Ubuntu 20.04
 
 ## Getting involved and contributing
 
@@ -71,26 +84,12 @@ More about development and contributing practices can be found in [`CONTRIBUTING
 
 ## Compatibility with Cluster API and Kubernetes Versions
 
-### Cluster API compatibility Matrix:
+- BYOH is currently compatible wth Cluster API v1beta1 (v1.0)
+- BYOH installer support is present and tested only for Kubernetes version `v1.22.3`. You may however use it to provision clusters of a different version by manually installing the Kubernetes components (use the `--skip-installation` flag when starting the agent)
 
-||Cluster API v1alpha4 (v0.4)|Cluster API v1beta1 (v1.0)|
-|-|-|-|
-|BYOH Provider v1alpha1 (v0.1.0)||✓|
-
-
-### Kubernetes compatibility Matrix:
-
-||Kubernetes 1.20|Kubernetes 1.21|Kubernetes 1.22|
-|-|-|-|-|
-|BYOH Provider v1alpha1 (v0.1.0)|||✓|
 
 ## BYOH in News
 - [TGIK episode on BYOH](https://www.youtube.com/watch?v=Xwm5Ka27-Io&t=2838s)
 - BYOH presented during [Cluster API Office Hours](https://www.youtube.com/watch?v=6ODMLgX-dz4&t=572s)
 - [BYOH on ARM](https://williamlam.com/2021/11/hybrid-x86-and-arm-kubernetes-clusters-using-tanzu-community-edition-tce-and-esxi-arm.html)
 
-
-<!-- References -->
-
-[cluster_api]: https://github.com/kubernetes-sigs/cluster-api
-[issue]: https://github.com/vmware-tanzu/cluster-api-provider-bringyourownhost/issues
