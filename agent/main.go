@@ -116,14 +116,18 @@ func main() {
 	_ = corev1.AddToScheme(scheme)
 	_ = clusterv1.AddToScheme(scheme)
 
+	// setting info log verbosity level at 1
+	logger := klogr.New().V(1)
+	
 	// checking if log level flag has been explicitly set
 	// else setting the flag at 1
 	if !isFlagPassed("v") {
-		flag.Set("v", "1")
+		err := flag.Set("v", "1")
+		if err != nil {
+			logger.Error(err, "error setting log verbosity")
+			return
+		}
 	}
-
-	// setting info log verbosity level at 1
-	logger := klogr.New().V(1)
 	ctrl.SetLogger(logger)
 	config, err := ctrl.GetConfig()
 	if err != nil {
