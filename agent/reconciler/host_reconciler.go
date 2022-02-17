@@ -37,6 +37,10 @@ type Installer interface {
 	Uninstall(string, string, string, logr.Logger) error
 }
 
+type K8sInstaller struct {
+	DownloadPath string
+}
+
 type HostReconciler struct {
 	Client           client.Client
 	CmdRunner        cloudinit.ICmdRunner
@@ -45,7 +49,6 @@ type HostReconciler struct {
 	Recorder         record.EventRecorder
 	Installer        Installer
 	SkipInstallation bool
-	DownloadPath     string
 }
 
 const (
@@ -257,8 +260,8 @@ func (r *HostReconciler) bootstrapK8sNode(ctx context.Context, bootstrapScript s
 		ParseTemplateExecutor: r.TemplateParser}.Execute(bootstrapScript)
 }
 
-func (r *HostReconciler) Install(bundleRegistry, k8sVersion, byohBundleTag string, logger logr.Logger) error {
-	bundleInstaller, err := installer.New(r.DownloadPath, logger)
+func (k *K8sInstaller) Install(bundleRegistry, k8sVersion, byohBundleTag string, logger logr.Logger) error {
+	bundleInstaller, err := installer.New(k.DownloadPath, logger)
 	if err != nil {
 		return err
 	}
@@ -269,8 +272,8 @@ func (r *HostReconciler) Install(bundleRegistry, k8sVersion, byohBundleTag strin
 	return nil
 }
 
-func (r *HostReconciler) Uninstall(bundleRegistry, k8sVersion, byohBundleTag string, logger logr.Logger) error {
-	bundleInstaller, err := installer.New(r.DownloadPath, logger)
+func (k *K8sInstaller) Uninstall(bundleRegistry, k8sVersion, byohBundleTag string, logger logr.Logger) error {
+	bundleInstaller, err := installer.New(k.DownloadPath, logger)
 	if err != nil {
 		return err
 	}
