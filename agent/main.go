@@ -150,7 +150,7 @@ func main() {
 		return
 	}
 
-	installer, err := installer.New(downloadpath, logger)
+	k8sInstaller, err := installer.New(downloadpath, logger)
 	if err != nil {
 		logger.Error(err, "failed to instantiate installer")
 	}
@@ -166,7 +166,7 @@ func main() {
 		},
 		SkipInstallation: skipInstallation,
 		Recorder:         mgr.GetEventRecorderFor("hostagent-controller"),
-		K8sInstaller:     installer,
+		K8sInstaller:     k8sInstaller,
 	}
 	if err = hostReconciler.SetupWithManager(context.TODO(), mgr); err != nil {
 		logger.Error(err, "unable to create controller")
