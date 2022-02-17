@@ -11,6 +11,7 @@ import (
 	"strings"
 
 	"github.com/vmware-tanzu/cluster-api-provider-bringyourownhost/agent/cloudinit"
+	"github.com/vmware-tanzu/cluster-api-provider-bringyourownhost/agent/installer"
 	"github.com/vmware-tanzu/cluster-api-provider-bringyourownhost/agent/reconciler"
 	"github.com/vmware-tanzu/cluster-api-provider-bringyourownhost/agent/registration"
 	"github.com/vmware-tanzu/cluster-api-provider-bringyourownhost/agent/version"
@@ -149,6 +150,11 @@ func main() {
 		return
 	}
 
+	installer, err := installer.New(downloadpath, logger)
+	if err != nil {
+		logger.Error(err, "failed to instantiate installer")
+	}
+
 	hostReconciler := &reconciler.HostReconciler{
 		Client:     k8sClient,
 		CmdRunner:  cloudinit.CmdRunner{},
@@ -160,9 +166,7 @@ func main() {
 		},
 		SkipInstallation: skipInstallation,
 		Recorder:         mgr.GetEventRecorderFor("hostagent-controller"),
-		Installer: &reconciler.K8sInstaller{
-			DownloadPath: downloadpath,
-		},
+		K8sInstaller:     installer,
 	}
 	if err = hostReconciler.SetupWithManager(context.TODO(), mgr); err != nil {
 		logger.Error(err, "unable to create controller")

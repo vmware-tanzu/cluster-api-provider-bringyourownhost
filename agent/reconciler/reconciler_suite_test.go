@@ -40,7 +40,7 @@ var (
 	fakeCommandRunner  *cloudinitfakes.FakeICmdRunner
 	fakeFileWriter     *cloudinitfakes.FakeIFileWriter
 	fakeTemplateParser *cloudinitfakes.FakeITemplateParser
-	fakeInstaller      *reconcilerfakes.FakeInstaller
+	fakeInstaller      *reconcilerfakes.FakeIK8sInstaller
 )
 
 var _ = BeforeSuite(func() {
