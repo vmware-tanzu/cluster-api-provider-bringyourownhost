@@ -80,6 +80,7 @@ var (
 	downloadpath       string
 	skipInstallation   bool
 	printVersion       bool
+	k8sInstaller       reconciler.IK8sInstaller
 )
 
 // TODO - fix logging
@@ -150,9 +151,13 @@ func main() {
 		return
 	}
 
-	k8sInstaller, err := installer.New(downloadpath, logger)
-	if err != nil {
-		logger.Error(err, "failed to instantiate installer")
+	if skipInstallation {
+		k8sInstaller = nil
+	} else {
+		k8sInstaller, err = installer.New(downloadpath, logger)
+		if err != nil {
+			logger.Error(err, "failed to instantiate installer")
+		}
 	}
 
 	hostReconciler := &reconciler.HostReconciler{
@@ -164,9 +169,8 @@ func main() {
 				DefaultNetworkInterfaceName: registration.LocalHostRegistrar.ByoHostInfo.DefaultNetworkInterfaceName,
 			},
 		},
-		SkipInstallation: skipInstallation,
-		Recorder:         mgr.GetEventRecorderFor("hostagent-controller"),
-		K8sInstaller:     k8sInstaller,
+		Recorder:     mgr.GetEventRecorderFor("hostagent-controller"),
+		K8sInstaller: k8sInstaller,
 	}
 	if err = hostReconciler.SetupWithManager(context.TODO(), mgr); err != nil {
 		logger.Error(err, "unable to create controller")

@@ -36,13 +36,12 @@ type IK8sInstaller interface {
 }
 
 type HostReconciler struct {
-	Client           client.Client
-	CmdRunner        cloudinit.ICmdRunner
-	FileWriter       cloudinit.IFileWriter
-	TemplateParser   cloudinit.ITemplateParser
-	Recorder         record.EventRecorder
-	K8sInstaller     IK8sInstaller
-	SkipInstallation bool
+	Client         client.Client
+	CmdRunner      cloudinit.ICmdRunner
+	FileWriter     cloudinit.IFileWriter
+	TemplateParser cloudinit.ITemplateParser
+	Recorder       record.EventRecorder
+	K8sInstaller   IK8sInstaller
 }
 
 const (
@@ -111,7 +110,7 @@ func (r *HostReconciler) reconcileNormal(ctx context.Context, byoHost *infrastru
 			return ctrl.Result{}, err
 		}
 
-		if r.SkipInstallation {
+		if r.K8sInstaller == nil {
 			logger.Info("Skipping installation of k8s components")
 		} else {
 			err = r.installK8sComponents(ctx, byoHost)
@@ -203,7 +202,7 @@ func (r *HostReconciler) hostCleanUp(ctx context.Context, byoHost *infrastructur
 		if err != nil {
 			return err
 		}
-		if r.SkipInstallation {
+		if r.K8sInstaller == nil {
 			logger.Info("Skipping uninstallation of k8s components")
 		} else {
 			err = r.uninstallk8sComponents(ctx, byoHost)

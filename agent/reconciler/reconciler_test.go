@@ -45,13 +45,12 @@ var _ = Describe("Byohost Agent Tests", func() {
 		fakeInstaller = &reconcilerfakes.FakeIK8sInstaller{}
 		recorder = record.NewFakeRecorder(32)
 		hostReconciler = &reconciler.HostReconciler{
-			Client:           k8sClient,
-			CmdRunner:        fakeCommandRunner,
-			FileWriter:       fakeFileWriter,
-			TemplateParser:   fakeTemplateParser,
-			Recorder:         recorder,
-			SkipInstallation: true,
-			K8sInstaller:     fakeInstaller,
+			Client:         k8sClient,
+			CmdRunner:      fakeCommandRunner,
+			FileWriter:     fakeFileWriter,
+			TemplateParser: fakeTemplateParser,
+			Recorder:       recorder,
+			K8sInstaller:   nil,
 		}
 	})
 
@@ -179,7 +178,7 @@ runCmd:
 				})
 
 				It("should set K8sComponentsInstallationSucceeded to false with Reason K8sComponentsInstallationFailedReason if Install fails", func() {
-					hostReconciler.SkipInstallation = false
+					hostReconciler.K8sInstaller = fakeInstaller
 					fakeInstaller.InstallReturns(errors.New("k8s components install failed"))
 
 					result, reconcilerErr := hostReconciler.Reconcile(ctx, controllerruntime.Request{
@@ -433,7 +432,7 @@ runCmd:
 			})
 
 			It("should return error if uninstall fails", func() {
-				hostReconciler.SkipInstallation = false
+				hostReconciler.K8sInstaller = fakeInstaller
 				fakeInstaller.UninstallReturns(errors.New("uninstall failed"))
 				result, reconcilerErr := hostReconciler.Reconcile(ctx, controllerruntime.Request{
 					NamespacedName: byoHostLookupKey,
