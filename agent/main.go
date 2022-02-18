@@ -85,21 +85,11 @@ func setupflags() {
 	flag.BoolVar(&printVersion, "version", false, "Print the version of the agent")
 
 	pflag.CommandLine.AddGoFlagSet(flag.CommandLine)
-	_ = pflag.CommandLine.MarkHidden("log-flush-frequency")
-	_ = pflag.CommandLine.MarkHidden("alsologtostderr")
-	_ = pflag.CommandLine.MarkHidden("log-backtrace-at")
-	_ = pflag.CommandLine.MarkHidden("log-dir")
-	_ = pflag.CommandLine.MarkHidden("logtostderr")
-	_ = pflag.CommandLine.MarkHidden("stderrthreshold")
-	_ = pflag.CommandLine.MarkHidden("vmodule")
-	_ = pflag.CommandLine.MarkHidden("azure-container-registry-config")
-	_ = pflag.CommandLine.MarkHidden("log_backtrace_at")
-	_ = pflag.CommandLine.MarkHidden("log_dir")
-	_ = pflag.CommandLine.MarkHidden("log_file")
-	_ = pflag.CommandLine.MarkHidden("log_file_max_size")
-	_ = pflag.CommandLine.MarkHidden("add_dir_header")
-	_ = pflag.CommandLine.MarkHidden("skip_headers")
-	_ = pflag.CommandLine.MarkHidden("skip_log_headers")
+	hiddenFlags := [] string{"log-flush-frequency", "alsologtostderr", "log-backtrace-at", "log-dir", "logtostderr", "stderrthreshold", "vmodule", "azure-container-registry-config",
+							 "log_backtrace_at", "log_dir", "log_file", "log_file_max_size", "add_dir_header", "skip_headers", "skip_log_headers"}
+	for _, hiddenFlag := range hiddenFlags {
+		_ = pflag.CommandLine.MarkHidden(hiddenFlag)
+	}
 }
 
 var (
