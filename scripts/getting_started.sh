@@ -255,7 +255,7 @@ function runByohAgent(){
 function installDocker() {
     cmdName="docker"
 
-    ## check  if denpency is installed before
+    ## check  if dependency is present
     isCmdInstalled "${cmdName}"
 
     if [ $? -ne 0 ]; then
