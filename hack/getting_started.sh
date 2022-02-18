@@ -1,5 +1,17 @@
 #!/bin/bash
 
+<<COMMENT
+ssh-copy-id <alias-name-for-this-jump-box>
+> sudo bash
+> chmod +w /etc/sudoers
+> vi /etc/sudoers
+<your-user-name>  ALL=(ALL) NOPASSWD:ALL
+> exit
+ssh-keygen -t rsa
+docker login
+
+COMMENT
+
 function isCmdInstalled() {
     cmd=$1
     ${cmd} version 2>&1 | grep -q "not found"
@@ -11,7 +23,6 @@ function isCmdInstalled() {
     fi
     return ${returnCode}
 }
-
 
 function exitIfNot(){
     code=$1
@@ -84,10 +95,6 @@ function runCmdUntil() {
     fi
     exit
 }
-
-
-
-
 
 function isIPOccupied() {
     ip=$1
@@ -178,32 +185,18 @@ function calcControlPlaneIP() {
 function configClusterctl() {
     # Write clusterctl.yaml
     writeByoh=0
-    writeCertManager=0
     clusterCtlYamlFile="${HOME}/.cluster-api/clusterctl.yaml"
     if [ ! -f "${clusterCtlYamlFile}" ]; then
         writeByoh=1
-        writeCertManager=1
         touch ${clusterCtlYamlFile}
     else
         grep -q "byoh" ${clusterCtlYamlFile}
         if [ $? -ne 0 ] ; then
             writeByoh=1
         fi
-        grep -q "cert-manager" ${clusterCtlYamlFile}
-        if [ $? -ne 0 ] ; then
-            writeCertManager=1
-        fi
     fi 
 
-    # if cert-manager missing,it report error: Error: action failed after 10 attempts: failed to get cert-manager object /, Kind=, /: Object 'Kind' is missing in 'unstructured object has no kind'
-    if [ ${writeCertManager} -eq 1 ] ; then
-        cat>>${clusterCtlYamlFile}<<EOF
-cert-manager:
-  url: "https://github.com/cert-manager/cert-manager/releases/latest/cert-manager.yaml"
-EOF
-    fi
-
-    if [ ${writeCertManager} -eq 1 ] ; then
+    if [ ${writeByoh} -eq 1 ] ; then
         cat>>${clusterCtlYamlFile}<<EOF
 providers:
   - name: byoh
@@ -249,7 +242,6 @@ function runByohAgent(){
 
     echo "Error: byohost object(host${index}) is created failed..."
     exit
-
 }
 
 function installDocker() {
@@ -273,14 +265,10 @@ function installDocker() {
     ## check  if denpency is installed successfully
     isCmdInstalled  "${cmdName}"
     exitIfNot $? 0 "Installing ${cmdName} failed, exit..."
-
-
-    sudo systemctl enable docker
-
+    runCmd "sudo systemctl enable docker" 0
 }
 
 function enableDocker() {
-
     runCmd "sudo systemctl start docker" 0
     runCmd "sudo systemctl enable docker" 0
 
@@ -311,7 +299,6 @@ function enableDocker() {
 }
 
 function installKind() {
-
     cmdName="kind"
      ## check  if denpency is installed before
     isCmdInstalled "${cmdName}"
@@ -327,7 +314,6 @@ function installKind() {
 }
 
 function installClusterctl() {
-
     cmdName="clusterctl"
      ## check  if denpency is installed before
     isCmdInstalled "${cmdName}"
@@ -335,13 +321,12 @@ function installClusterctl() {
     ## install denpency if it not installed
     if [ $? -eq 0 ] ; then
         echo "Installing ${cmdName}..."
-        curl -L https://github.com/kubernetes-sigs/cluster-api/releases/download/v1.0.0/clusterctl-linux-amd64 -o clusterctl && sudo install clusterctl /usr/local/bin/clusterctl
+        curl -L https://github.com/kubernetes-sigs/cluster-api/releases/download/v1.1.1/clusterctl-linux-amd64 -o clusterctl && sudo install clusterctl /usr/local/bin/clusterctl
         ## check  if denpency is installed successfully
         isCmdInstalled  "${cmdName}"
         exitIfNot $? 0 "Installing ${cmdName} failed, exit..."
     fi
 }
-
 
 function intallDependencies(){
     installDocker
@@ -421,7 +406,6 @@ fi
 
 configClusterctl
 
-
 # check if init it before
 kubectl get pods --all-namespaces | grep -q byoh-controller-manager
 if [ $? -ne 0 ]; then
@@ -453,13 +437,9 @@ else
     echo "${byohBinaryFile} existed."
 fi
 
-
 manageClusterConfFile="${HOME}/.kube/management-cluster.conf"
-if [ ! -f "${manageClusterConfFile}" ]; then
-    cp ${HOME}/.kube/config ${manageClusterConfFile}
-else
-    echo "${manageClusterConfFile} existed."
-fi
+cp -f ${HOME}/.kube/config ${manageClusterConfFile}
+
 
 KIND_IP=$(docker inspect -f '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' kind-control-plane) 
 
@@ -469,7 +449,6 @@ if [ $? -ne 0 ]; then
 else
     echo "Already modified ${manageClusterConfFile} before"
 fi
-
 
 ## Register BYOH host to management cluster
 for i in {1..2}
@@ -515,7 +494,6 @@ if [ $? -ne 0 ]; then
     exit
 fi
 
-
 echo "Creating the workload cluster..."
 kubectl apply -f ${clusterYamlFile} 
 if [ $? -ne 0 ]; then
@@ -541,7 +519,6 @@ do
     fi
 done
 
-
 echo "Applying a CNI for network..."
 
 # Sometimes work cluster is not entirely ready, it reports error: Unable to connect to the server: dial tcp 172.18.0.5:6443: connect: no route to host
@@ -561,7 +538,6 @@ do
     fi
 done
 
-
 if [ ${cniSucc} -eq 0 ]; then
     echo "Apply a CNI for network failed"
     exit
@@ -573,11 +549,3 @@ if [ $? -eq 0 ]; then
 else
     echo "FAIL"
 fi
-
-
-
-
-
-
-
-
