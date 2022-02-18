@@ -153,6 +153,7 @@ func main() {
 
 	if skipInstallation {
 		k8sInstaller = nil
+		logger.Info("skip-installation flag set, skipping installer initialisation")
 	} else {
 		k8sInstaller, err = installer.New(downloadpath, logger)
 		if err != nil {
