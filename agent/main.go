@@ -11,6 +11,7 @@ import (
 	"strings"
 
 	"github.com/vmware-tanzu/cluster-api-provider-bringyourownhost/agent/cloudinit"
+	"github.com/vmware-tanzu/cluster-api-provider-bringyourownhost/agent/installer"
 	"github.com/vmware-tanzu/cluster-api-provider-bringyourownhost/agent/reconciler"
 	"github.com/vmware-tanzu/cluster-api-provider-bringyourownhost/agent/registration"
 	"github.com/vmware-tanzu/cluster-api-provider-bringyourownhost/agent/version"
@@ -79,6 +80,7 @@ var (
 	downloadpath       string
 	skipInstallation   bool
 	printVersion       bool
+	k8sInstaller       reconciler.IK8sInstaller
 )
 
 // TODO - fix logging
@@ -149,6 +151,16 @@ func main() {
 		return
 	}
 
+	if skipInstallation {
+		k8sInstaller = nil
+		logger.Info("skip-installation flag set, skipping installer initialisation")
+	} else {
+		k8sInstaller, err = installer.New(downloadpath, logger)
+		if err != nil {
+			logger.Error(err, "failed to instantiate installer")
+		}
+	}
+
 	hostReconciler := &reconciler.HostReconciler{
 		Client:     k8sClient,
 		CmdRunner:  cloudinit.CmdRunner{},
@@ -158,9 +170,8 @@ func main() {
 				DefaultNetworkInterfaceName: registration.LocalHostRegistrar.ByoHostInfo.DefaultNetworkInterfaceName,
 			},
 		},
-		SkipInstallation: skipInstallation,
-		DownloadPath:     downloadpath,
-		Recorder:         mgr.GetEventRecorderFor("hostagent-controller"),
+		Recorder:     mgr.GetEventRecorderFor("hostagent-controller"),
+		K8sInstaller: k8sInstaller,
 	}
 	if err = hostReconciler.SetupWithManager(context.TODO(), mgr); err != nil {
 		logger.Error(err, "unable to create controller")
