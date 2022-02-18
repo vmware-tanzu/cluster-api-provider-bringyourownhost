@@ -10,6 +10,7 @@ import (
 	"os"
 	"strings"
 
+	pflag "github.com/spf13/pflag"
 	"github.com/vmware-tanzu/cluster-api-provider-bringyourownhost/agent/cloudinit"
 	"github.com/vmware-tanzu/cluster-api-provider-bringyourownhost/agent/installer"
 	"github.com/vmware-tanzu/cluster-api-provider-bringyourownhost/agent/reconciler"
@@ -73,21 +74,33 @@ func (l *labelFlags) Set(value string) error {
 	}
 }
 
-func setFlagIfNotSet(flagName string) error {
-	found := false
-	flag.Visit(func(f *flag.Flag) {
-		if f.Name == flagName {
-			found = true
-		}
-	})
+func setupflags() {
+	klog.InitFlags(nil)
 
-	// checking if log level flag has been explicitly set
-	// else setting the flag at 1
-	if !found {
-		err := flag.Set("v", "1")
-		return err
-	}
-	return nil
+	flag.StringVar(&namespace, "namespace", "default", "Namespace in the management cluster where you would like to register this host")
+	flag.Var(&labels, "label", "labels to attach to the ByoHost CR in the form labelname=labelVal for e.g. '--label site=apac --label cores=2'")
+	flag.StringVar(&metricsbindaddress, "metricsbindaddress", ":8080", "metricsbindaddress is the TCP address that the controller should bind to for serving prometheus metrics.It can be set to \"0\" to disable the metrics serving")
+	flag.StringVar(&downloadpath, "downloadpath", "/var/lib/byoh/bundles", "File System path to keep the downloads")
+	flag.BoolVar(&skipInstallation, "skip-installation", false, "If you want to skip installation of the kubernetes component binaries")
+	flag.BoolVar(&printVersion, "version", false, "Print the version of the agent")
+
+	pflag.CommandLine.AddGoFlagSet(flag.CommandLine)
+	pflag.CommandLine.MarkHidden("log-flush-frequency")
+	pflag.CommandLine.MarkHidden("alsologtostderr")
+	pflag.CommandLine.MarkHidden("log-backtrace-at")
+	pflag.CommandLine.MarkHidden("log-dir")
+	pflag.CommandLine.MarkHidden("logtostderr")
+	pflag.CommandLine.MarkHidden("stderrthreshold")
+	pflag.CommandLine.MarkHidden("vmodule")
+	pflag.CommandLine.MarkHidden("azure-container-registry-config")
+	pflag.CommandLine.MarkHidden("log_backtrace_at")
+	pflag.CommandLine.MarkHidden("log_dir")
+	pflag.CommandLine.MarkHidden("log_file")
+	pflag.CommandLine.MarkHidden("log_file_max_size")
+	pflag.CommandLine.MarkHidden("add_dir_header")
+	pflag.CommandLine.MarkHidden("skip_headers")
+	pflag.CommandLine.MarkHidden("skip_log_headers")
+
 }
 
 var (
@@ -104,14 +117,8 @@ var (
 // TODO - fix logging
 
 func main() {
-	klog.InitFlags(nil)
-	flag.StringVar(&namespace, "namespace", "default", "Namespace in the management cluster where you would like to register this host")
-	flag.Var(&labels, "label", "labels to attach to the ByoHost CR in the form labelname=labelVal for e.g. '--label site=apac --label cores=2'")
-	flag.StringVar(&metricsbindaddress, "metricsbindaddress", ":8080", "metricsbindaddress is the TCP address that the controller should bind to for serving prometheus metrics.It can be set to \"0\" to disable the metrics serving")
-	flag.StringVar(&downloadpath, "downloadpath", "/var/lib/byoh/bundles", "File System path to keep the downloads")
-	flag.BoolVar(&skipInstallation, "skip-installation", false, "If you want to skip installation of the kubernetes component binaries")
-	flag.BoolVar(&printVersion, "version", false, "Print the version of the agent")
-	flag.Parse()
+	setupflags()
+	pflag.Parse()
 
 	if printVersion {
 		info := version.Get()
@@ -123,12 +130,7 @@ func main() {
 	_ = corev1.AddToScheme(scheme)
 	_ = clusterv1.AddToScheme(scheme)
 
-	// setting info log verbosity level at 1
-	logger := klogr.New().V(1)
-	err := setFlagIfNotSet("v")
-	if err != nil {
-		logger.Error(err, "error setting log verbosity")
-	}
+	logger := klogr.New()
 	ctrl.SetLogger(logger)
 	config, err := ctrl.GetConfig()
 	if err != nil {
@@ -179,7 +181,8 @@ func main() {
 		k8sInstaller = nil
 		logger.Info("skip-installation flag set, skipping installer initialisation")
 	} else {
-		k8sInstaller, err = installer.New(downloadpath, logger)
+		// increasing installer log level to 1, so that it wont be logged by default
+		k8sInstaller, err = installer.New(downloadpath, logger.V(1))
 		if err != nil {
 			logger.Error(err, "failed to instantiate installer")
 		}

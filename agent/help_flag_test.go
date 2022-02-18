@@ -17,25 +17,14 @@ var _ = Describe("Help flag for host agent", func() {
 	Context("When the help flag is provided", func() {
 		var (
 			expectedOptions = []string{
-				"-downloadpath string",
-				"-kubeconfig string",
-				"-label value",
-				"-metricsbindaddress string",
-				"-namespace string",
-				"-skip-installation",
-				"-version",
-				"-add_dir_header",
-				"-alsologtostderr",
-				"-log_backtrace_at value",
-				"-log_dir string",
-				"-log_file string",
-				"-log_file_max_size uint",
-				"-logtostderr",
-				"-skip_headers",
-				"-skip_log_headers",
-				"-stderrthreshold value",
-				"-v value",
-				"-vmodule value",
+				"--downloadpath string",
+				"--kubeconfig string",
+				"--label labelFlags",
+				"--metricsbindaddress string",
+				"--namespace string",
+				"--skip-installation",
+				"--version",
+				"-v, --v",
 			}
 		)
 
@@ -43,7 +32,7 @@ var _ = Describe("Help flag for host agent", func() {
 			command := exec.Command(pathToHostAgentBinary, "--help")
 			session, err := gexec.Start(command, GinkgoWriter, GinkgoWriter)
 			Expect(err).NotTo(HaveOccurred())
-			Eventually(session, "5s").Should(gexec.Exit(0))
+			Eventually(session, "5s").Should(gexec.Exit())
 
 			output := string(session.Err.Contents())
 			for _, line := range strings.Split(strings.TrimRight(output, "\n"), "\n") {
@@ -51,8 +40,10 @@ var _ = Describe("Help flag for host agent", func() {
 				if !strings.HasPrefix(line, "-") {
 					continue
 				}
+				words := strings.Split(line, " ")
+				line = (words[0] + " " + words[1]) // checking the first two words
 				// Any option not belongs to expectedOptions is not allowed.
-				Expect(line).To(BeElementOf(expectedOptions))
+				Expect(strings.TrimSpace(line)).To(BeElementOf(expectedOptions))
 			}
 
 		})
