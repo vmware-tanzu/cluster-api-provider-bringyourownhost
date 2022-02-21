@@ -10,6 +10,7 @@ import (
 	"os"
 	"strings"
 
+	pflag "github.com/spf13/pflag"
 	"github.com/vmware-tanzu/cluster-api-provider-bringyourownhost/agent/cloudinit"
 	"github.com/vmware-tanzu/cluster-api-provider-bringyourownhost/agent/installer"
 	"github.com/vmware-tanzu/cluster-api-provider-bringyourownhost/agent/reconciler"
@@ -19,6 +20,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/fields"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/klog"
 	"k8s.io/klog/klogr"
 	clusterv1 "sigs.k8s.io/cluster-api/api/v1beta1"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -72,6 +74,24 @@ func (l *labelFlags) Set(value string) error {
 	}
 }
 
+func setupflags() {
+	klog.InitFlags(nil)
+
+	flag.StringVar(&namespace, "namespace", "default", "Namespace in the management cluster where you would like to register this host")
+	flag.Var(&labels, "label", "labels to attach to the ByoHost CR in the form labelname=labelVal for e.g. '--label site=apac --label cores=2'")
+	flag.StringVar(&metricsbindaddress, "metricsbindaddress", ":8080", "metricsbindaddress is the TCP address that the controller should bind to for serving prometheus metrics.It can be set to \"0\" to disable the metrics serving")
+	flag.StringVar(&downloadpath, "downloadpath", "/var/lib/byoh/bundles", "File System path to keep the downloads")
+	flag.BoolVar(&skipInstallation, "skip-installation", false, "If you want to skip installation of the kubernetes component binaries")
+	flag.BoolVar(&printVersion, "version", false, "Print the version of the agent")
+
+	pflag.CommandLine.AddGoFlagSet(flag.CommandLine)
+	hiddenFlags := [] string{"log-flush-frequency", "alsologtostderr", "log-backtrace-at", "log-dir", "logtostderr", "stderrthreshold", "vmodule", "azure-container-registry-config",
+							 "log_backtrace_at", "log_dir", "log_file", "log_file_max_size", "add_dir_header", "skip_headers", "skip_log_headers"}
+	for _, hiddenFlag := range hiddenFlags {
+		_ = pflag.CommandLine.MarkHidden(hiddenFlag)
+	}
+}
+
 var (
 	namespace          string
 	scheme             *runtime.Scheme
@@ -86,13 +106,8 @@ var (
 // TODO - fix logging
 
 func main() {
-	flag.StringVar(&namespace, "namespace", "default", "Namespace in the management cluster where you would like to register this host")
-	flag.Var(&labels, "label", "labels to attach to the ByoHost CR in the form labelname=labelVal for e.g. '--label site=apac --label cores=2'")
-	flag.StringVar(&metricsbindaddress, "metricsbindaddress", ":8080", "metricsbindaddress is the TCP address that the controller should bind to for serving prometheus metrics.It can be set to \"0\" to disable the metrics serving")
-	flag.StringVar(&downloadpath, "downloadpath", "/var/lib/byoh/bundles", "File System path to keep the downloads")
-	flag.BoolVar(&skipInstallation, "skip-installation", false, "If you want to skip installation of the kubernetes component binaries")
-	flag.BoolVar(&printVersion, "version", false, "Print the version of the agent")
-	flag.Parse()
+	setupflags()
+	pflag.Parse()
 
 	if printVersion {
 		info := version.Get()
@@ -155,7 +170,8 @@ func main() {
 		k8sInstaller = nil
 		logger.Info("skip-installation flag set, skipping installer initialisation")
 	} else {
-		k8sInstaller, err = installer.New(downloadpath, logger)
+		// increasing installer log level to 1, so that it wont be logged by default
+		k8sInstaller, err = installer.New(downloadpath, logger.V(1))
 		if err != nil {
 			logger.Error(err, "failed to instantiate installer")
 		}
