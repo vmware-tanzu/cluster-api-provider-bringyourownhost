@@ -1,17 +1,16 @@
-name: golangci-lint
+name: get-started-suite
 
 on:
   pull_request:
     branches: [ main ]
 
 jobs:
-  golangci:
+  e2e-pr-blocking:
     runs-on: ubuntu-latest
     steps:
     - name: Checkout code
       uses: actions/checkout@v2
 
-    - name: golangci-lint
-      uses: golangci/golangci-lint-action@v2
-      with:
-        version: v1.42.0
+    - name: Run get-started test
+      run: ./hack/getting_started.sh
+
