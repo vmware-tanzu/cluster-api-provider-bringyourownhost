@@ -518,7 +518,7 @@ function createWorkCluster() {
 
     # Find a available IP for control plane endpoint
     calcControlPlaneIP
-    
+
     CONTROL_PLANE_ENDPOINT_IP=${controlPlaneEndPointIp} clusterctl generate cluster ${workerClusterName} --infrastructure byoh --kubernetes-version ${kubernetesVersion} --control-plane-machine-count ${controlPlaneNums}  --worker-machine-count ${workerNums} --flavor docker > "${clusterYamlFile}"
     if [ $? -ne 0 ]; then
         echo "Generate ${clusterYamlFile} failed, exiting..."
@@ -579,3 +579,7 @@ if [ ${defaultCni} -eq 1 ]; then
 fi
 
 checkNodeStatus
+
+if [ ${defaultCni} -eq 0 ]; then
+    echo "Byoh cluster \"${workerClusterName}\" is successfully created, next step is to apply a CNI of your choice."
+fi
