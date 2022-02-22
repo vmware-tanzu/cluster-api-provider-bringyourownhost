@@ -1,19 +1,6 @@
 #!/bin/bash
-
-<<COMMENT
-ssh-copy-id <alias-name-for-this-jump-box>
-> sudo bash
-> chmod +w /etc/sudoers
-> vi /etc/sudoers
-<your-user-name>  ALL=(ALL) NOPASSWD:ALL
-> exit
-ssh-keygen -t rsa
-docker login
-
-COMMENT
-
 function isCmdInstalled() {
-    cmd=$1
+    local cmd=$1
     ${cmd} version 2>&1 | grep -q "not found"
     returnCode=$?  
     if [ ${returnCode} -eq 0 ] ; then
@@ -25,21 +12,21 @@ function isCmdInstalled() {
 }
 
 function exitIfNot(){
-    code=$1
-    expectedCode=$2
-    prompt=$3
+    local code=$1
+    local expectedCode=$2
+    local prompt=$3
     if [ ${code} == ${expectedCode} ]; then
         echo ${prompt}
-        exit
+        exit 1
     fi
 }
 
 function runCmd(){
-    cmd=$1
-    expectCode=$2
-    promptBeforeCmd=$3
-    PromptAfterCmdSuc=$4
-    promptAfterCmdFail=$5
+    local cmd=$1
+    local expectCode=$2
+    local promptBeforeCmd=$3
+    local PromptAfterCmdSuc=$4
+    local promptAfterCmdFail=$5
 
     if [ -n "${promptBeforeCmd}" ]; then
         echo ${promptBeforeCmd}
@@ -53,7 +40,7 @@ function runCmd(){
             echo ${promptAfterCmdFail}
         fi
         echo "${cmd} failed, exit...."
-        exit
+        exit 1
     fi
 
     if [ -n "${PromptAfterCmdSuc}" ]; then
@@ -61,64 +48,36 @@ function runCmd(){
     fi
 }
 
-function runCmdUntil() {
-    cmd=$1
-    expectCode=$2
-    waitTime=$3
-    maxRunTimes=$4
-    promptBeforeCmd=$5
-    PromptAfterCmdSuc=$6
-    promptAfterCmdFail=$7
-
-    echo "huchen: cmd is ${cmd}"
-
-    if [ -n "${promptBeforeCmd}" ]; then
-        echo ${promptBeforeCmd}
-    fi
-    for((i=1;i<=${maxRunTimes};i++));  
-    do   
-        ${cmd}
-        returnCode=$?
-        if [ ${returnCode} -ne ${expectCode} ]; then
-            sleep ${waitTime}
-            continue
-        else   
-            if [ -n "${PromptAfterCmdSuc}" ]; then
-                echo ${PromptAfterCmdSuc}
-            fi
-            return
-        fi
-        
-    done
-    if [ -n "${promptAfterCmdFail}" ]; then
-        echo ${promptAfterCmdFail}
-    fi
-    exit
-}
-
 function isIPOccupied() {
-    ip=$1
-    occupiedIPList=$2
+    local ip=$1
+    local occupiedIPList=$2
     echo "Checking if ${ip} is occupied"
 
-    echo "huchen: occupiedIPList is ${occupiedIPList}"
     IFS=$'\n'
     for occupiedIPWithMask in ${occupiedIPList}
     do
-        echo "huchen: occupiedIPWithMask is ${occupiedIPWithMask}"
         occupiedIP=`echo $occupiedIPWithMask | sed -En 's/^(.*)\/([0-9]{1,2})/\1/p'`
-        echo "huchen: ip is ${ip}, occupiedIP is ${occupiedIP}"
         if [ "${ip}" == "${occupiedIP}" ]; then
              return 1
         fi
     done
+
+    # should not use the gateway address
+    for gateway in ${gateways}
+    do 
+        if [ "${gateway}" == "${ip}" ]; then
+            return 1
+        fi
+    done
+
     echo "${ip} is not occupied"
     return 0
 }
 
 
+
 function num2IP() {
-    num=$1
+    local num=$1
     a=$((num>>24))
     b=$((num>>16&0xff))
     c=$((num>>8&0xff))
@@ -132,9 +91,9 @@ function binary2IP() {
     echo ${returnValue}
 }
 
-
 function calcControlPlaneIP() {
     subNet=`docker network inspect kind | jq -r 'map(.IPAM.Config[].Subnet) []'`
+    gateways=`docker network inspect kind | jq -r 'map(.IPAM.Config[].Gateway) []'`
     occupiedIPList=`docker network inspect kind | jq -r 'map(.Containers[].IPv4Address) []'`
 
     for line in ${subNet}
@@ -148,6 +107,7 @@ function calcControlPlaneIP() {
 
     echo "IPMask is ${subNet}"
     echo "occupiedIPList:${occupiedIPList}"
+    echo "gateways:${gateways}"
 
     ip=`echo $IPMask | sed -En 's/^(.*)\/([0-9]{1,2})/\1/p'`
     ipSubNetBit=`echo $IPMask | sed -En 's/^(.*)\/([0-9]{1,2})/\2/p'`
@@ -159,7 +119,7 @@ function calcControlPlaneIP() {
 
     ipSubNet=`echo ${binaryIP:0:${ipSubNetBit}}`
 
-    full0="00000000000000000000000000000010"
+    full0="00000000000000000000000000000001"
     full1="11111111111111111111111111111110"
 
     minIPBinary=${ipSubNet}`echo ${full0:${ipSubNetBit}}`
@@ -168,24 +128,30 @@ function calcControlPlaneIP() {
     minIPint=`echo "ibase=2; ${minIPBinary}"|bc`
     maxIPint=`echo "ibase=2; ${maxIPBinary}"|bc`
 
-
     for((i=${minIPint};i<=${maxIPint};i++));  
     do
         ip=$(num2IP ${i})
-
-        isIPOccupied "${ip}" "${occupiedIPList}"
+ 
+        isIPOccupied "${ip}" "${occupiedIPList}" "${gateways}"
         if [ $? == 0 ]; then
-            CONTROL_PLANE_ENDPOINT_IP=${ip}
-            echo "Available IP is ${CONTROL_PLANE_ENDPOINT_IP}"
+            controlPlaneEndPointIp=${ip}
+            echo "CONTROL_PLANE_ENDPOINT_IP is ${controlPlaneEndPointIp}"
             return
         fi
     done
+
+    echo "Can't get an available IP for control plane endpoint, exit...."
+    exit 1
+    
 }
 
-function configClusterctl() {
+function installByohProvider() {
+    local writeByoh=0
+    local clusterCtlYamlFile="${HOME}/.cluster-api/clusterctl.yaml"
+    local maxRunTimes=40
+    local waitTime=20
+
     # Write clusterctl.yaml
-    writeByoh=0
-    clusterCtlYamlFile="${HOME}/.cluster-api/clusterctl.yaml"
     if [ ! -f "${clusterCtlYamlFile}" ]; then
         writeByoh=1
         touch ${clusterCtlYamlFile}
@@ -208,44 +174,29 @@ EOF
     clusterctl config repositories | grep -q byoh
     if [ $? -ne 0 ] ; then
         echo "Config clusterctl failed..."
-        exit
+        exit 1
     fi
-}
-
-function runByohAgent(){
-    index=$1
-    byohBinaryFile=$2
-    manageClusterConfFile=$3
-
-    runCmd "docker cp ${byohBinaryFile} host${index}:/byoh-hostagent" 0 "Copying agent binary to byoh container: host${index}..."
-    runCmd "docker cp ${manageClusterConfFile} host${index}:/management-cluster.conf" 0 "Copying kubeconfig to byoh container: host${index}..."
-    docker exec -d host$i sh -c "chmod +x /byoh-hostagent && /byoh-hostagent --kubeconfig management-cluster.conf --skip-installation > /agent.log 2>&1"
-    if [ $? -ne 0 ] ; then
-        echo "Starting the host${index} agent..."
-        exit
-    fi
-
     
-    maxRunTimes=10
-    waitTime=1
+    runCmd "clusterctl init --infrastructure byoh" 0 " Transforming the Kubernetes cluster into a management cluster..."
+
+    # Waiting for byoh provider is totally ready
     for((i=1;i<=${maxRunTimes};i++));  
-    do   
-        kubectl get byohosts host${index} | grep -v NAME | grep -q host${index}
-        if [ $? -ne 0 ]; then
-            sleep ${waitTime}
-            continue
-        else   
-            echo "byohost object(host${index}) is created successfully..."
+    do  
+        byohStatus=$(kubectl get pods --all-namespaces | grep byoh-controller-manager | awk '{print $4}')
+        if [ "${byohStatus}" == "Running" ] ; then
+            echo "Byoh provider is ready"
             return
+        else
+            echo "Waiting for byoh-provider to be ready..."
+            sleep ${waitTime}
         fi
     done
-
-    echo "Error: byohost object(host${index}) is created failed..."
+    echo "Waiting too long for byoh provider, something may wrong with it."
     exit
 }
 
 function installDocker() {
-    cmdName="docker"
+    local cmdName="docker"
 
     ## check  if dependency is present
     isCmdInstalled "${cmdName}"
@@ -275,31 +226,14 @@ function enableDocker() {
     sudo systemctl status docker | grep -q "active (running)"
     if [ $? -ne 0 ]; then
         echo "Enable docker failed"
-        exit 
+        exit 1
     fi
     echo "Enable docker success"
-
-    # Make sure current user has permission for docker, do this if not Create the docker group.
-    docker ps 2>&1 | grep -q "connect: permission denied"
-    if [ $? -eq 0 ]; then
-
-        grep -q "docker" /etc/group 
-        if [ $? -ne 0 ]; then
-            runCmd "sudo groupadd docker" 0
-        else
-            echo "group 'docker' already exists"
-        fi
-        USER=`whoami`
-        # Add your user to the docker group.
-        runCmd "sudo usermod -aG docker ${USER}" 0 "Add ${USER} to docker group"
-        echo "You would need to log out and log back in so that your group membership is re-evaluated. Rerun this script after that."
-        exit
-    fi
-    echo "current user has permission for docker"
 }
 
 function installKind() {
-    cmdName="kind"
+    local cmdName="kind"
+
      ## check  if denpency is installed before
     isCmdInstalled "${cmdName}"
 
@@ -314,7 +248,8 @@ function installKind() {
 }
 
 function installClusterctl() {
-    cmdName="clusterctl"
+    local cmdName="clusterctl"
+
      ## check  if denpency is installed before
     isCmdInstalled "${cmdName}"
 
@@ -322,6 +257,23 @@ function installClusterctl() {
     if [ $? -eq 0 ] ; then
         echo "Installing ${cmdName}..."
         curl -L https://github.com/kubernetes-sigs/cluster-api/releases/download/v1.1.1/clusterctl-linux-amd64 -o clusterctl && sudo install clusterctl /usr/local/bin/clusterctl
+        ## check  if denpency is installed successfully
+        isCmdInstalled  "${cmdName}"
+        exitIfNot $? 0 "Installing ${cmdName} failed, exit..."
+    fi
+}
+
+function commonInstall(){
+    local cmdName=$1
+    local installCmd=$2
+
+    ## check  if denpency is installed before
+    isCmdInstalled "${cmdName}"
+
+    ## install denpency if it not installed
+    if [ $? -eq 0 ] ; then
+        runCmd "${installCmd}" 0 "Installing ${cmdName}..."
+
         ## check  if denpency is installed successfully
         isCmdInstalled  "${cmdName}"
         exitIfNot $? 0 "Installing ${cmdName} failed, exit..."
@@ -339,213 +291,291 @@ function intallDependencies(){
     commonInstall go "sudo snap install go --classic"
 }
 
-function commonInstall(){
-    cmdName=$1
-    installCmd=$2
-
-    ## check  if denpency is installed before
-    isCmdInstalled "${cmdName}"
-
-    ## install denpency if it not installed
-    if [ $? -eq 0 ] ; then
-        runCmd "${installCmd}" 0 "Installing ${cmdName}..."
-
-        ## check  if denpency is installed successfully
-        isCmdInstalled  "${cmdName}"
-        exitIfNot $? 0 "Installing ${cmdName} failed, exit..."
-    fi
-}
-
 function createKindCluster(){
     echo  "Creating kind cluster..."
 
-    msg=$(kind create cluster 2>&1)
+    kind create cluster --name ${managerClusterName}
     if [ $? -ne 0 ]; then
         echo "Create kind cluster failed"
-        echo $msg | grep -q "You have reached your pull rate limit"
-        if [ $? -eq 0 ]; then 
-            echo "Suggestion: you can use \"docker login\" to avoid such an error."
-            exit
-        fi
+        exit 1
     else
         echo "Create kind cluster successfully"
     fi
 }
 
-function downloadByohCode(){
-    runCmd "rm -rf cluster-api-provider-bringyourownhost" 0 " Cleaning byoh code..."
-    msg=$(git clone git@github.com:vmware-tanzu/cluster-api-provider-bringyourownhost.git 2>&1)
-    if [ $? -ne 0 ]; then
-        echo "Downloading byoh code..."
-        echo $msg | grep "Please make sure you have the correct access rights"
-        if [ $? -eq 0 ]; then 
-            echo "Suggestion: Add an public key of this machine into \"SSH and GPG keys\" of your github setting"
-            exit
+function cleanUp(){
+    kind delete clusters ${managerClusterName}
+    docker ps -a | grep host
+    for dockerId in `docker ps -a | grep host | awk '{print $1}'`
+    do
+        docker rm -f ${dockerId}
+    done
+}
+
+function readArgs() {
+    TEMP=`getopt -o nm:c: --long cni,md:,cp:`
+    if [ $? != 0 ] ; then 
+        echo "Terminating..." >&2 
+        exit 1 
+    fi
+    # Note the quotes around `$TEMP': they are essential!
+    while true ; do
+        case "$1" in
+            -n|--cni) 
+                defaultCni=1
+                shift 
+                ;;
+            -m|--md) 
+                workerNums=$2
+                shift 2 
+                ;;
+            -c|--cp) 
+                controlPlaneNums=$2
+                shift 2 
+                ;;
+            *) 
+                break 
+                ;;
+        esac
+    done
+
+    byohNums=$[${workerNums}+${controlPlaneNums}]
+
+    echo "defaultCni=${defaultCni}, controlPlaneNums=${controlPlaneNums}, workerNums=${workerNums}"
+}
+
+function installCNI(){
+    local maxRunTimes=40
+    local waitTime=20
+    local cniSucc=0
+    local i=1
+
+    # Sometimes work cluster is not entirely ready, it reports error: Unable to connect to the server: dial tcp 172.18.0.5:6443: connect: no route to host
+    echo "Applying a CNI for network..."
+    for((i=1;i<=${maxRunTimes};i++));  
+    do
+        KUBECONFIG=${kubeConfigFile} kubectl apply -f https://docs.projectcalico.org/v3.20/manifests/calico.yaml
+        if [ $? -ne 0 ]; then
+            sleep ${waitTime}
+            continue
+        else 
+            echo "Apply CNI for network successfully"
+            cniSucc=1
+            break
         fi
-    else
-        echo "Download byoh code successfully"
+    done
+
+    if [ ${cniSucc} -eq 0 ]; then
+        echo "Apply a CNI for network failed"
+        exit 1
     fi
 }
 
-export PATH=/snap/bin:${PATH}
-intallDependencies 
- 
-runCmd "sudo swapoff -a" 0 "Turning off swap..."
-swapMsg=$(sudo swapon -s)
-if [ -n "${swapMsg}" ]; then
-    echo "Please turn off swap first."
+function retrieveKubeConfig() {
+    local maxRunTimes=10
+    local waitTime=1
+    
+    echo "Retrieving the kubeconfig of workload cluster..."
+    for((i=1;i<=${maxRunTimes};i++));  
+    do   
+        kubectl get secret/${workerClusterName}-kubeconfig 2>&1 | grep -q "not found"
+        if [ $? -eq 0 ]; then
+            sleep ${waitTime}
+            continue
+        else 
+            kubectl get secret/${workerClusterName}-kubeconfig -o json | jq -r .data.value | base64 --decode  > ${kubeConfigFile}
+            echo "Retrieve the kubeconfig of workload cluster successfully"
+            return
+        fi
+    done
+
+    echo "Retrieve the kubeconfig of workload cluster failed"
     exit
-fi
- 
-# check if cluster "kind" is already exited
-clusterName=`kind get clusters`
-if [ "${clusterName}" != "kind" ]; then
-    #runCmd "kind create cluster" 0 "Creating kind cluster..."
-    createKindCluster
-fi
+}
 
-configClusterctl
 
-# check if init it before
-kubectl get pods --all-namespaces | grep -q byoh-controller-manager
-if [ $? -ne 0 ]; then
-    runCmd "clusterctl init --infrastructure byoh" 0 " Transforming the Kubernetes cluster into a management cluster..."
-else
-    echo "clusterctl init --infrastructure byoh before"
-fi
+function checkNodeStatus() {
+    local maxRunTimes=40
+    local waitTime=30
+    local i=1
+    local j=1
+    local ready=0
 
-#check if byoh image is existed
-docker images | grep "byoh-dev/node" | grep -q "v1.22.3"
-if [ $? -ne 0 ]; then
-    #runCmd "rm -rf cluster-api-provider-bringyourownhost" 0 " Cleaning byoh code..."
-    #runCmd "git clone git@github.com:vmware-tanzu/cluster-api-provider-bringyourownhost.git" 0 " Downloading byoh code..."
-    downloadByohCode
-    runCmd "cd cluster-api-provider-bringyourownhost" 0
-    # The origin one will report error:   Could not connect to apt.kubernetes.io:443 (10.25.207.164), connection timed out [IP: 10.25.207.164 443]
-    echo "deb http://packages.cloud.google.com/apt/ kubernetes-xenial main" > test/e2e/kubernetes.list
-    runCmd "make prepare-byoh-docker-host-image-dev" 0  "Making a byoh image: byoh-dev/node:v1.22.3 ..."
+    for((i=1;i<=${byohNums};i++)); 
+    do
+        ready=0
+        for((j=1;j<=${maxRunTimes};j++));  
+        do   
+            KUBECONFIG=${kubeConfigFile} kubectl get nodes host${i} | grep -q "not found"
+            if [ $? -eq 0 ]; then
+                sleep ${waitTime}
+                continue
+            fi
+            if [ ${defaultCni} -eq 1 ]; then
+                status=`KUBECONFIG=${kubeConfigFile} kubectl get nodes host${i} | grep -v NAME | awk '{print $2}'`
+                if [ "${status}" != "Ready" ]; then
+                    sleep ${waitTime}
+                    continue
+                fi
+            fi
+            ready=1
+            echo "node \"host${i}\" is ready"
+            break
+            
+        done
+
+        if [ ${ready} -eq 0 ]; then
+            echo "FAIL! node \"host${i}\" is not ready"
+            exit 1
+        fi
+    done
+}
+
+
+function prepareImageAndBinary() {
+    local  isImageExisted=0
+
+    runCmd "cd ${reposDir}" 0
+
+    # Build byoh image
+    # Check if byoh image is existed
+    for line in `docker images | grep "${byohImageName}" | grep "${byohImageTag}" | awk '{print $1":"$2}'`
+    do
+        if [ ${line} == "${byohImageName}:${byohImageTag}" ]; then
+            isImageExisted=1
+            break
+        fi
+    done
+
+    if [ ${isImageExisted} -eq 0 ]; then
+        # The origin one will report error:   Could not connect to apt.kubernetes.io:443 (10.25.207.164), connection timed out [IP: 10.25.207.164 443]
+        echo "deb http://packages.cloud.google.com/apt/ kubernetes-xenial main" > ${reposDir}/test/e2e/kubernetes.list
+        runCmd "make prepare-byoh-docker-host-image" 0  "Making a byoh image: ${byohImageName}:${byohImageTag} ..."
+        
+    else
+        echo "byoh image \"${byohImageName}:${byohImageTag}\" existed."
+    fi
+
+    # Build byoh binary
+    # Check if byoh binary is existed
+    if [ ! -f ${byohBinaryFile} ]; then
+        runCmd "make host-agent-binaries" 0  "Making byoh binary: ${byohBinaryFile} ..."
+    else
+        echo "byoh binary \"${byohBinaryFile}\" existed."
+    fi
+
     runCmd "cd -" 0
-else
-    echo "byoh image \"byoh-dev/node:v1.22.3\" existed."
-fi
-
-#check if byoh binary is existed
-byohBinaryFile="/tmp/byoh-hostagent-linux-amd64"
-if [ ! -f "${byohBinaryFile}" ]; then
-    runCmd "wget https://github.com/vmware-tanzu/cluster-api-provider-bringyourownhost/releases/download/v0.1.0/byoh-hostagent-linux-amd64 -P /tmp" 0  "Downloading a byoh binary..."
-else
-    echo "${byohBinaryFile} existed."
-fi
-
-manageClusterConfFile="${HOME}/.kube/management-cluster.conf"
-cp -f ${HOME}/.kube/config ${manageClusterConfFile}
 
 
-KIND_IP=$(docker inspect -f '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' kind-control-plane) 
+    # Download byoh binary
+    #rm -f ${byohBinaryFile}
+    #runCmd "wget https://github.com/vmware-tanzu/cluster-api-provider-bringyourownhost/releases/download/v0.1.0/byoh-hostagent-linux-amd64 -P /tmp" 0  "Downloading a byoh binary..."
+}
 
-grep ${KIND_IP} ${manageClusterConfFile} | grep -q 6443
-if [ $? -ne 0 ]; then
+function bringUpByoHost(){
+    local i=1
+    local t=1
+    local maxRunTimes=10
+    local waitTime=1
+    local KIND_IP=$(docker inspect -f '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' ${managerClusterName}-control-plane) 
+    local ok=0
+    
+    cp -f ${HOME}/.kube/config ${manageClusterConfFile}
     sed -i 's/    server\:.*/    server\: https\:\/\/'"${KIND_IP}"'\:6443/g' ${manageClusterConfFile}
-else
-    echo "Already modified ${manageClusterConfFile} before"
-fi
+    
+    for (( i=1; i<=${byohNums}; i++ ))
+    do
+        runCmd "docker run --detach --tty --hostname host${i} --name host${i} --privileged --security-opt seccomp=unconfined --tmpfs /tmp --tmpfs /run --volume /var --volume /lib/modules:/lib/modules:ro --network kind ${byohImageName}:${byohImageTag}" 0 "Starting byoh container: host${i}..."
 
-## Register BYOH host to management cluster
-for i in {1..2}
-do
-  #Check if container "host$i" is already created.
-  docker ps -a | grep -q "host${i}"
-  if [ $? -ne 0 ]; then
-    runCmd "docker run --detach --tty --hostname host${i} --name host${i} --privileged --security-opt seccomp=unconfined --tmpfs /tmp --tmpfs /run --volume /var --volume /lib/modules:/lib/modules:ro --network kind byoh-dev/node:v1.22.3" 0 "Starting byoh container: host${i}..."
-    runByohAgent ${i} ${byohBinaryFile} ${manageClusterConfFile}
-  else
-    echo "Container \"host${i}\" is already created"
+        runCmd "docker cp ${byohBinaryFile} host${i}:/byoh-hostagent" 0 "Copying agent binary to byoh container: host${i}..."
+        runCmd "docker cp ${manageClusterConfFile} host${i}:/management-cluster.conf" 0 "Copying kubeconfig to byoh container: host${i}..."
+        
+        echo "Starting the host${i} agent..."
+        docker exec -d host${i} sh -c "chmod +x /byoh-hostagent && /byoh-hostagent --kubeconfig /management-cluster.conf > /agent.log 2>&1"
 
-    # check if docker status is valid
-    status=`docker container inspect -f '{{.State.Status}}' host${i}`
-    if [ "${status}" != "running" ]; then
-        echo "Error: Status of Container \"host${i}\" is ${status}, suggest to remove it, then rerun this script"
+        ok=0
+        for((t=1;t<=${maxRunTimes};t++));  
+        do
+            kubectl get byohosts host${i} | grep -q "not found" 2>/dev/null
+            if [ $? -eq 0 ]; then
+                sleep ${waitTime}
+                continue
+            else   
+                echo "byohost object(host${i}) is created successfully..."
+                ok=1
+                break
+            fi
+        done
+        if [ $ok -eq 0 ]; then
+            echo "Error: byohost object(host${i}) is created failed..."
+            exit 1
+        fi
+    done
+}
+
+function createWorkCluster() {
+    local clusterYamlFile="/tmp/cluster-yaml"
+
+    # Find a available IP for control plane endpoint
+    calcControlPlaneIP
+    
+    CONTROL_PLANE_ENDPOINT_IP=${controlPlaneEndPointIp} clusterctl generate cluster ${workerClusterName} --infrastructure byoh --kubernetes-version ${kubernetesVersion} --control-plane-machine-count ${controlPlaneNums}  --worker-machine-count ${workerNums} --flavor docker > "${clusterYamlFile}"
+    if [ $? -ne 0 ]; then
+        echo "Generate ${clusterYamlFile} failed, exiting..."
+        exit 1
+    fi
+
+    echo "Creating the workload cluster..."
+    kubectl apply -f ${clusterYamlFile} 
+    if [ $? -ne 0 ]; then
+        echo "Create the workload cluster failed"
+        exit 1
+    fi
+}
+
+function swapOff() {
+    runCmd "sudo swapoff -a" 0 "Turning off swap..."
+    swapMsg=$(sudo swapon -s)
+    if [ -n "${swapMsg}" ]; then
+        echo "Please turn off swap first."
         exit
     fi
+}
 
-    # check if byoh process running in this container
-    docker exec host${i} sh -c "ps aux" | grep -q byoh-hostagent
-    if [ $? -ne 0 ]; then
-        runByohAgent ${i} ${byohBinaryFile} ${manageClusterConfFile}
-    else
-        echo "byoh process is already ran in this container"
-    fi
-  fi
-done
 
-# Find a available IP for control plane endpoint
-CONTROL_PLANE_ENDPOINT_IP=""
-calcControlPlaneIP
-if [ -z "${CONTROL_PLANE_ENDPOINT_IP}" ]; then
-    echo "Can't get an available IP for control plane endpoint, exit...."
-    exit
-fi
-echo "CONTROL_PLANE_ENDPOINT_IP is ${CONTROL_PLANE_ENDPOINT_IP}"
-
-clusterYamlFile="/tmp/cluster-yaml"
-CONTROL_PLANE_ENDPOINT_IP=${CONTROL_PLANE_ENDPOINT_IP} clusterctl generate cluster byoh-cluster --infrastructure byoh --kubernetes-version v1.22.3 --control-plane-machine-count 1  --worker-machine-count 1 --flavor docker > "${clusterYamlFile}"
-if [ $? -ne 0 ]; then
-    echo "Generate ${clusterYamlFile} failed, exiting..."
-    exit
-fi
-
-echo "Creating the workload cluster..."
-kubectl apply -f ${clusterYamlFile} 
-if [ $? -ne 0 ]; then
-    echo "Create the workload cluster failed"
-    exit
-fi
-
-echo "Retrieving the kubeconfig of workload cluster..."
-
-maxRunTimes=10
-waitTime=1
+export PATH=/snap/bin:${PATH}
+byohImageName="byoh/node"
+byohImageTag="v1.22.3"
+managerClusterName="kind-byoh"
+workerClusterName="worker-byoh"
+controlPlaneEndPointIp=""
+workerNums=1
+controlPlaneNums=1
+byohNums=2
+defaultCni=0
+manageClusterConfFile="${HOME}/.kube/management-cluster.conf"
 kubeConfigFile=/tmp/byoh-cluster-kubeconfig
-for((i=1;i<=${maxRunTimes};i++));  
-do   
-    kubectl get secret/byoh-cluster-kubeconfig 2>&1 | grep -q "not found"
-    if [ $? -eq 0 ]; then
-        sleep ${waitTime}
-        continue
-    else 
-        kubectl get secret/byoh-cluster-kubeconfig -o json | jq -r .data.value | base64 --decode  > ${kubeConfigFile}
-        echo "Retrieve the kubeconfig of workload cluster successfully"
-        break
-    fi
-done
+reposDir=$(dirname $0)/../
+byohBinaryFile=${reposDir}/bin/byoh-hostagent-linux-amd64
 
-echo "Applying a CNI for network..."
 
-# Sometimes work cluster is not entirely ready, it reports error: Unable to connect to the server: dial tcp 172.18.0.5:6443: connect: no route to host
-maxRunTimes=10
-waitTime=5
-cniSucc=0
-for((i=1;i<=${maxRunTimes};i++));  
-do   
-    KUBECONFIG=${kubeConfigFile} kubectl apply -f https://docs.projectcalico.org/v3.20/manifests/calico.yaml
-    if [ $? -ne 0 ]; then
-        sleep ${waitTime}
-        continue
-    else 
-        echo "Applya CNI for network successfully"
-        cniSucc=1
-        break
-    fi
-done
-
-if [ ${cniSucc} -eq 0 ]; then
-    echo "Apply a CNI for network failed"
-    exit
+if [ -z "${KUBERNETES_VERSION}" ]; then
+    kubernetesVersion="v1.22.3"
 fi
 
-KUBECONFIG=${kubeConfigFile} kubectl get nodes | grep host
-if [ $? -eq 0 ]; then
-    echo "SUCCESS"
-else
-    echo "FAIL"
+readArgs $@
+swapOff
+intallDependencies 
+cleanUp
+createKindCluster
+installByohProvider
+prepareImageAndBinary
+bringUpByoHost
+createWorkCluster
+retrieveKubeConfig
+
+if [ ${defaultCni} -eq 1 ]; then
+    installCNI
 fi
+
+checkNodeStatus
