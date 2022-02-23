@@ -131,7 +131,7 @@ function calcControlPlaneIP() {
     for((i=${minIPint};i<=${maxIPint};i++));  
     do
         ip=$(num2IP ${i})
- 
+
         isIPOccupied "${ip}" "${occupiedIPList}" "${gateways}"
         if [ $? == 0 ]; then
             controlPlaneEndPointIp=${ip}
@@ -142,7 +142,7 @@ function calcControlPlaneIP() {
 
     echo "Can't get an available IP for control plane endpoint, exit...."
     exit 1
-    
+
 }
 
 function installByohProvider() {
@@ -176,7 +176,7 @@ EOF
         echo "Config clusterctl failed..."
         exit 1
     fi
-    
+
     runCmd "clusterctl init --infrastructure byoh" 0 " Transforming the Kubernetes cluster into a management cluster..."
 
     # Waiting for byoh provider is totally ready
@@ -192,7 +192,7 @@ EOF
         fi
     done
     echo "Waiting too long for byoh provider, something may wrong with it."
-    exit
+    exit 1
 }
 
 function installDocker() {
@@ -373,7 +373,7 @@ function installCNI(){
 function retrieveKubeConfig() {
     local maxRunTimes=10
     local waitTime=1
-    
+
     echo "Retrieving the kubeconfig of workload cluster..."
     for((i=1;i<=${maxRunTimes};i++));  
     do   
@@ -389,7 +389,7 @@ function retrieveKubeConfig() {
     done
 
     echo "Retrieve the kubeconfig of workload cluster failed"
-    exit
+    exit 1
 }
 
 function checkNodeStatus() {
@@ -419,7 +419,7 @@ function checkNodeStatus() {
             ready=1
             echo "node \"host${i}\" is ready"
             break
-            
+
         done
 
         if [ ${ready} -eq 0 ]; then
@@ -440,7 +440,7 @@ function prepareImageAndBinary() {
         # The origin one will report error:   Could not connect to apt.kubernetes.io:443 (10.25.207.164), connection timed out [IP: 10.25.207.164 443]
         echo "deb http://packages.cloud.google.com/apt/ kubernetes-xenial main" > ${reposDir}/test/e2e/kubernetes.list
         runCmd "make prepare-byoh-docker-host-image" 0  "Making a byoh image: ${byohImageName}:${byohImageTag} ..."
-        
+
     else
         echo "byoh image \"${byohImageName}:${byohImageTag}\" existed."
     fi
@@ -463,17 +463,17 @@ function bringUpByoHost(){
     local waitTime=1
     local KIND_IP=$(docker inspect -f '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' ${managerClusterName}-control-plane) 
     local ok=0
-    
+
     cp -f ${HOME}/.kube/config ${manageClusterConfFile}
     sed -i 's/    server\:.*/    server\: https\:\/\/'"${KIND_IP}"'\:6443/g' ${manageClusterConfFile}
-    
+
     for (( i=1; i<=${byohNums}; i++ ))
     do
         runCmd "docker run --detach --tty --hostname host${i} --name host${i} --privileged --security-opt seccomp=unconfined --tmpfs /tmp --tmpfs /run --volume /var --volume /lib/modules:/lib/modules:ro --network kind ${byohImageName}:${byohImageTag}" 0 "Starting byoh container: host${i}..."
 
         runCmd "docker cp ${byohBinaryFile} host${i}:/byoh-hostagent" 0 "Copying agent binary to byoh container: host${i}..."
         runCmd "docker cp ${manageClusterConfFile} host${i}:/management-cluster.conf" 0 "Copying kubeconfig to byoh container: host${i}..."
-        
+
         echo "Starting the host${i} agent..."
         docker exec -d host${i} sh -c "chmod +x /byoh-hostagent && /byoh-hostagent --kubeconfig /management-cluster.conf > /agent.log 2>&1"
 
@@ -522,7 +522,7 @@ function swapOff() {
     swapMsg=$(sudo swapon -s)
     if [ -n "${swapMsg}" ]; then
         echo "Please turn off swap first."
-        exit
+        exit 1
     fi
 }
 
@@ -530,17 +530,14 @@ function swapOff() {
 function askForProceed() {
     local warning='
 #####################################################################################################
-
 ** WARNING **
 This modifys system settings - and do **NOT** revert them at the end of the test.
-
 It locally will change the following host config
 - disable swap, but it can revert back if rebooting vm
 - use "sudo apt-get update" command to download package information from all configured sources.
 - install docker, and enable it as service if not
 - install kind, clusterctl, jq, kubectl, build-essential and go, if not
 - create a kind cluster as manager cluster, byoh clustr as worker cluster
-
 #####################################################################################################'
 
     echo "${warning}"
@@ -592,3 +589,4 @@ checkNodeStatus
 if [ ${defaultCni} -eq 0 ]; then
     echo "Byoh cluster \"${workerClusterName}\" is successfully created, next step is to apply a CNI of your choice."
 fi
+
