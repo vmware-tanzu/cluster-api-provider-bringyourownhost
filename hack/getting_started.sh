@@ -304,11 +304,12 @@ function createKindCluster(){
 }
 
 function cleanUp(){
+    local i=1
+
     kind delete clusters ${managerClusterName}
-    docker ps -a | grep host
-    for dockerId in `docker ps -a | grep host | awk '{print $1}'`
+    for ((i=1;i<=${byohNums};i++)); 
     do
-        docker rm -f ${dockerId}
+        docker rm -f host${i}
     done
 }
 
@@ -340,8 +341,6 @@ function readArgs() {
     done
 
     byohNums=$[${workerNums}+${controlPlaneNums}]
-
-    echo "defaultCni=${defaultCni}, controlPlaneNums=${controlPlaneNums}, workerNums=${workerNums}"
 }
 
 function installCNI(){
@@ -393,7 +392,6 @@ function retrieveKubeConfig() {
     exit
 }
 
-
 function checkNodeStatus() {
     local maxRunTimes=40
     local waitTime=30
@@ -433,21 +431,12 @@ function checkNodeStatus() {
 
 
 function prepareImageAndBinary() {
-    local  isImageExisted=0
-
     runCmd "cd ${reposDir}" 0
 
     # Build byoh image
     # Check if byoh image is existed
-    for line in `docker images | grep "${byohImageName}" | grep "${byohImageTag}" | awk '{print $1":"$2}'`
-    do
-        if [ ${line} == "${byohImageName}:${byohImageTag}" ]; then
-            isImageExisted=1
-            break
-        fi
-    done
-
-    if [ ${isImageExisted} -eq 0 ]; then
+    image=$(docker images ${byohImageName}:${byohImageTag} | grep -v REPOSITORY)
+    if [ -z "${image}" ]; then
         # The origin one will report error:   Could not connect to apt.kubernetes.io:443 (10.25.207.164), connection timed out [IP: 10.25.207.164 443]
         echo "deb http://packages.cloud.google.com/apt/ kubernetes-xenial main" > ${reposDir}/test/e2e/kubernetes.list
         runCmd "make prepare-byoh-docker-host-image" 0  "Making a byoh image: ${byohImageName}:${byohImageTag} ..."
@@ -465,11 +454,6 @@ function prepareImageAndBinary() {
     fi
 
     runCmd "cd -" 0
-
-
-    # Download byoh binary
-    #rm -f ${byohBinaryFile}
-    #runCmd "wget https://github.com/vmware-tanzu/cluster-api-provider-bringyourownhost/releases/download/v0.1.0/byoh-hostagent-linux-amd64 -P /tmp" 0  "Downloading a byoh binary..."
 }
 
 function bringUpByoHost(){
@@ -543,6 +527,31 @@ function swapOff() {
 }
 
 
+function askForProceed() {
+    local warning='
+#####################################################################################################
+
+** WARNING **
+This modifys system settings - and do **NOT** revert them at the end of the test.
+
+It locally will change the following host config
+- disable swap, but it can revert back if rebooting vm
+- use "sudo apt-get update" command to download package information from all configured sources.
+- install docker, and enable it as service if not
+- install kind, clusterctl, jq, kubectl, build-essential and go, if not
+- create a kind cluster as manager cluster, byoh clustr as worker cluster
+
+#####################################################################################################'
+
+    echo "${warning}"
+	read -p "Do you want to proceed [Y/N]?" REPLY; 
+	if [[ ${REPLY} != "Y" && ${REPLY} != "y" ]]; then 
+        echo "Aborting..."
+        exit 1
+    fi
+}
+
+
 export PATH=/snap/bin:${PATH}
 byohImageName="byoh/node"
 byohImageTag="v1.22.3"
@@ -558,12 +567,12 @@ kubeConfigFile=/tmp/byoh-cluster-kubeconfig
 reposDir=$(dirname $0)/../
 byohBinaryFile=${reposDir}/bin/byoh-hostagent-linux-amd64
 
-
 if [ -z "${KUBERNETES_VERSION}" ]; then
     kubernetesVersion="v1.22.3"
 fi
 
 readArgs $@
+askForProceed
 swapOff
 intallDependencies 
 cleanUp
