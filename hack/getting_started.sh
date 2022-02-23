@@ -192,7 +192,7 @@ EOF
         fi
     done
     echo "Waiting too long for byoh provider, something may wrong with it."
-    exit
+    exit 1
 }
 
 function installDocker() {
@@ -389,7 +389,7 @@ function retrieveKubeConfig() {
     done
 
     echo "Retrieve the kubeconfig of workload cluster failed"
-    exit
+    exit 1
 }
 
 function checkNodeStatus() {
@@ -522,7 +522,7 @@ function swapOff() {
     swapMsg=$(sudo swapon -s)
     if [ -n "${swapMsg}" ]; then
         echo "Please turn off swap first."
-        exit
+        exit 1
     fi
 }
 
