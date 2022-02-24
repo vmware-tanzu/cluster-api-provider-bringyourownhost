@@ -266,10 +266,8 @@ function installClusterctl() {
 function commonInstall(){
     local cmdName=$1
     local installCmd=$2
-
     ## check  if denpency is installed before
     isCmdInstalled "${cmdName}"
-
     ## install denpency if it not installed
     if [ $? -eq 0 ] ; then
         runCmd "${installCmd}" 0 "Installing ${cmdName}..."
@@ -314,7 +312,7 @@ function cleanUp(){
 }
 
 function readArgs() {
-    TEMP=`getopt -o nm:c: --long cni,md:,cp:`
+    TEMP=`getopt -o nm:c:k: --long cni,md:,cp:,kv:`
     if [ $? != 0 ] ; then 
         echo "Terminating..." >&2 
         exit 1 
@@ -332,6 +330,10 @@ function readArgs() {
                 ;;
             -c|--cp) 
                 controlPlaneNums=$2
+                shift 2 
+                ;;
+            -k|--kv) 
+                kubernetesVersion=$2
                 shift 2 
                 ;;
             *) 
@@ -497,7 +499,7 @@ function bringUpByoHost(){
     done
 }
 
-function createWorkCluster() {
+function createWorkloadCluster() {
     local clusterYamlFile="/tmp/cluster-yaml"
 
     # Find a available IP for control plane endpoint
@@ -527,7 +529,7 @@ function swapOff() {
 }
 
 
-function askForProceed() {
+function userConfirmation() {
     local warning='
 #####################################################################################################
 ** WARNING **
@@ -563,13 +565,10 @@ manageClusterConfFile="${HOME}/.kube/management-cluster.conf"
 kubeConfigFile=/tmp/byoh-cluster-kubeconfig
 reposDir=$(dirname $0)/../
 byohBinaryFile=${reposDir}/bin/byoh-hostagent-linux-amd64
-
-if [ -z "${KUBERNETES_VERSION}" ]; then
-    kubernetesVersion="v1.22.3"
-fi
+kubernetesVersion="v1.22.3"
 
 readArgs $@
-askForProceed
+userConfirmation
 swapOff
 intallDependencies 
 cleanUp
@@ -577,7 +576,7 @@ createKindCluster
 installByohProvider
 prepareImageAndBinary
 bringUpByoHost
-createWorkCluster
+createWorkloadCluster
 retrieveKubeConfig
 
 if [ ${defaultCni} -eq 1 ]; then
