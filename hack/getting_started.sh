@@ -213,7 +213,7 @@ function installDocker() {
     sudo add-apt-repository "deb [arch=amd64] https://download.docker.com/linux/ubuntu  $(lsb_release -cs)  stable"
     runCmd "sudo apt-get install -y docker-ce" 0
 
-    ## check  if denpency is installed successfully
+    ## check  if dependency is installed successfully
     isCmdInstalled  "${cmdName}"
     exitIfNot $? 0 "Installing ${cmdName} failed, exit..."
     runCmd "sudo systemctl enable docker" 0
