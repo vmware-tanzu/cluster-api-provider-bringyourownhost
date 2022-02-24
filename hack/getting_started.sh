@@ -234,7 +234,7 @@ function enableDocker() {
 function installKind() {
     local cmdName="kind"
 
-     ## check  if denpency is installed before
+     ## check  if dependency is installed before
     isCmdInstalled "${cmdName}"
 
     ## install denpency if it not installed
