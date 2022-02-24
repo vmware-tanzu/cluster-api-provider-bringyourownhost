@@ -23,6 +23,11 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/envtest"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
+
+	"k8s.io/client-go/rest"
+	"k8s.io/client-go/tools/record"
+	bootstrapv1 "sigs.k8s.io/cluster-api/bootstrap/kubeadm/api/v1beta1"
+	ctrl "sigs.k8s.io/controller-runtime"
 )
 
 var (
@@ -31,6 +36,21 @@ var (
 	k8sClient             client.Client
 	tmpFilePrefix         = "kubeconfigFile-"
 	testEnv               *envtest.Environment
+
+	clientFake client.Client
+	// byoClusterReconciler  *controllers.ByoClusterReconciler
+	byoCluster            *infrastructurev1beta1.ByoCluster
+	capiCluster           *clusterv1.Cluster
+	defaultClusterName    = "my-cluster"
+	defaultNodeName       = "my-host"
+	defaultByoHostName    = "my-host"
+	defaultMachineName    = "my-machine"
+	defaultByoMachineName = "my-byomachine"
+	defaultNamespace      = "default"
+	fakeBootstrapSecret   = "fakeBootstrapSecret"
+	recorder              *record.FakeRecorder
+	k8sManager            ctrl.Manager
+	cfg                   *rest.Config
 )
 
 func TestHostAgent(t *testing.T) {
@@ -52,8 +72,13 @@ var _ = BeforeSuite(func() {
 		CRDDirectoryPaths: []string{
 			filepath.Join("..", "config", "crd", "bases"),
 			filepath.Join(build.Default.GOPATH, "pkg", "mod", "sigs.k8s.io", "cluster-api@v1.0.4", "config", "crd", "bases"),
+			filepath.Join(build.Default.GOPATH, "pkg", "mod", "sigs.k8s.io", "cluster-api@v1.0.4", "bootstrap", "kubeadm", "config", "crd", "bases"),
 		},
+
 		ErrorIfCRDPathMissing: true,
+		KubeAPIServerFlags: []string{
+			"--advertise-address=10.148.66.54",
+		},
 	}
 
 	cfg, err := testEnv.Start()
@@ -71,9 +96,41 @@ var _ = BeforeSuite(func() {
 	err = clusterv1.AddToScheme(scheme)
 	Expect(err).NotTo(HaveOccurred())
 
+	err = bootstrapv1.AddToScheme(scheme)
+	Expect(err).NotTo(HaveOccurred())
+
+	k8sManager, err = ctrl.NewManager(cfg, ctrl.Options{
+		Scheme:             scheme,
+		MetricsBindAddress: ":6080",
+	})
+	Expect(err).NotTo(HaveOccurred())
+
 	k8sClient, err = client.New(cfg, client.Options{Scheme: scheme})
 	Expect(err).NotTo(HaveOccurred())
 	writeKubeConfig()
+
+	// fakeCommandRunner := &cloudinitfakes.FakeICmdRunner{}
+	// fakeFileWriter := &cloudinitfakes.FakeIFileWriter{}
+	// fakeTemplateParser := &cloudinitfakes.FakeITemplateParser{}
+	// recorder = record.NewFakeRecorder(32)
+
+	// logger := klogr.New()
+	// downloadpath = "/tmp/workdir"
+	// k8sInstaller, err = installer.New(downloadpath, logger.V(1))
+
+	// if err != nil {
+	// 	logger.Error(err, "failed to instantiate installer")
+	// }
+	// reconciler := &reconciler.HostReconciler{
+	// 	Client:   k8sManager.GetClient(),
+	// 	CmdRunner:      fakeCommandRunner,
+	// 	FileWriter:     fakeFileWriter,
+	// 	TemplateParser: fakeTemplateParser,
+	// 	K8sInstaller:   k8sInstaller,
+	// 	Recorder: recorder,
+	// }
+	// err = reconciler.SetupWithManager(context.TODO(), k8sManager)
+	// Expect(err).NotTo(HaveOccurred())
 
 	pathToHostAgentBinary, err = gexec.Build("github.com/vmware-tanzu/cluster-api-provider-bringyourownhost/agent")
 	Expect(err).NotTo(HaveOccurred())
@@ -84,7 +141,7 @@ var _ = AfterSuite(func() {
 	err := os.Remove(getKubeConfig().Name())
 	Expect(err).NotTo(HaveOccurred())
 	gexec.TerminateAndWait(time.Duration(10) * time.Second)
-	err = testEnv.Stop()
+	// err = testEnv.Stop()
 	Expect(err).NotTo(HaveOccurred())
 })
 

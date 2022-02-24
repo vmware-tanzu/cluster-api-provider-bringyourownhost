@@ -213,6 +213,61 @@ func setupByoDockerHost(ctx context.Context, clusterConName, byoHostName, namesp
 	return output, byohost.ID, err
 }
 
+func SetupByoDockerWithConfig(ctx context.Context, byoHostName, port, namespace string, dockerClient *client.Client, kubeconfigFile *os.File) (types.HijackedResponse, string, error) {
+	byohost, err := createDockerContainer(ctx, byoHostName, dockerClient)
+	Expect(err).NotTo(HaveOccurred())
+
+	Expect(dockerClient.ContainerStart(ctx, byohost.ID, types.ContainerStartOptions{})).NotTo(HaveOccurred())
+
+	pathToHostAgentBinary, err := gexec.Build("github.com/vmware-tanzu/cluster-api-provider-bringyourownhost/agent")
+	Expect(err).NotTo(HaveOccurred())
+
+	config := cpConfig{
+		sourcePath: pathToHostAgentBinary,
+		destPath:   "/agent",
+		container:  byohost.ID,
+	}
+
+	Expect(copyToContainer(ctx, dockerClient, config)).NotTo(HaveOccurred())
+
+	listopt := types.ContainerListOptions{}
+	listopt.Filters = filters.NewArgs()
+	listopt.Filters.Add("name", byoHostName)
+
+	containers, err := dockerClient.ContainerList(ctx, listopt)
+	Expect(err).NotTo(HaveOccurred())
+	Expect(len(containers)).To(Equal(1))
+
+	// profile, err := dockerClient.ContainerInspect(ctx, containers[0].ID)
+	// Expect(err).NotTo(HaveOccurred())
+
+	kubeconfig, err := os.ReadFile(kubeconfigFile.Name())
+	Expect(err).NotTo(HaveOccurred())
+
+	re := regexp.MustCompile("server:.*")
+	// kubeconfig = re.ReplaceAll(kubeconfig, []byte("server: https://"+profile.NetworkSettings.Networks["kind"].IPAddress+":6443"))
+	kubeconfig = re.ReplaceAll(kubeconfig, []byte("server: https://10.148.66.54:" + port))
+
+	Expect(os.WriteFile(TempKubeconfigPath, kubeconfig, 0644)).NotTo(HaveOccurred()) // nolint: gosec,gomnd
+
+	config.sourcePath = TempKubeconfigPath
+	config.destPath = "/mgmt.conf"
+	Expect(copyToContainer(ctx, dockerClient, config)).NotTo(HaveOccurred())
+
+	rconfig := types.ExecConfig{
+		AttachStdout: true,
+		AttachStderr: true,
+		Cmd:          []string{"./agent", "--kubeconfig", "/mgmt.conf", "--namespace", namespace},
+	}
+
+	resp, err := dockerClient.ContainerExecCreate(ctx, byohost.ID, rconfig)
+	Expect(err).NotTo(HaveOccurred())
+
+	output, err := dockerClient.ContainerExecAttach(ctx, resp.ID, types.ExecStartCheck{})
+
+	return output, byohost.ID, err
+}
+
 func setControlPlaneIP(ctx context.Context, dockerClient *client.Client) {
 	_, ok := os.LookupEnv("CONTROL_PLANE_ENDPOINT_IP")
 	if ok {
