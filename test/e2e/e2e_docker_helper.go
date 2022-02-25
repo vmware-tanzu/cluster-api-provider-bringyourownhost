@@ -231,7 +231,7 @@ func setupByoDockerHost(ctx context.Context, clusterConName, byoHostName, namesp
 	return output, byohost.ID, err
 }
 
-func SetupByoDockerHostWithConfig(ctx context.Context, byoHostName, port, namespace string, dockerClient *client.Client, kubeconfigFile *os.File, flags []string) (types.HijackedResponse, string, error) {
+func SetupByoDockerHostWithConfig(ctx context.Context, byoHostName, port, namespace string, dockerClient *client.Client, kubeconfigFile *os.File, flags map[string]string) (types.HijackedResponse, string, error) {
 	byohost, err := createDockerContainerWithNetwork(ctx, "host", byoHostName, dockerClient)
 	Expect(err).NotTo(HaveOccurred())
 
@@ -256,33 +256,31 @@ func SetupByoDockerHostWithConfig(ctx context.Context, byoHostName, port, namesp
 	Expect(err).NotTo(HaveOccurred())
 	Expect(len(containers)).To(Equal(1))
 
-	// profile, err := dockerClient.ContainerInspect(ctx, containers[0].ID)
-	// Expect(err).NotTo(HaveOccurred())
-
 	kubeconfig, err := os.ReadFile(kubeconfigFile.Name())
 	Expect(err).NotTo(HaveOccurred())
 
 	re := regexp.MustCompile("server:.*")
-	// kubeconfig = re.ReplaceAll(kubeconfig, []byte("server: https://"+profile.NetworkSettings.Networks["kind"].IPAddress+":6443"))
 	kubeconfig = re.ReplaceAll(kubeconfig, []byte("server: https://127.0.0.1:" + port))
 
 	Expect(os.WriteFile(TempKubeconfigPath, kubeconfig, 0644)).NotTo(HaveOccurred()) // nolint: gosec,gomnd
 
 	config.sourcePath = TempKubeconfigPath
-	config.destPath = "/mgmt.conf"
+	config.destPath = flags["--kubeconfig"]
 	Expect(copyToContainer(ctx, dockerClient, config)).NotTo(HaveOccurred())
-
+	var cmdArgs []string 
+	cmdArgs = append(cmdArgs, "./agent")
+	for flag, arg := range flags {
+		cmdArgs = append(cmdArgs, flag)
+		cmdArgs = append(cmdArgs, arg)
+	}
 	rconfig := types.ExecConfig{
 		AttachStdout: true,
 		AttachStderr: true,
-		Cmd:          flags,
+		Cmd:          cmdArgs,
 	}
-
 	resp, err := dockerClient.ContainerExecCreate(ctx, byohost.ID, rconfig)
 	Expect(err).NotTo(HaveOccurred())
-
 	output, err := dockerClient.ContainerExecAttach(ctx, resp.ID, types.ExecStartCheck{})
-
 	return output, byohost.ID, err
 }
 

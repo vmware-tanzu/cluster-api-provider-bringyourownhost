@@ -246,8 +246,7 @@ var _ = Describe("Agent", func() {
 			dockerClient        *client.Client
 			byohostContainerIDs []string
 			agentLogFile        = "/tmp/host-agent.log"
-			skipCleanup         = false
-			flags				[]string
+			flags				map[string]string
 		)
 
 		BeforeEach(func() {
@@ -255,13 +254,16 @@ var _ = Describe("Agent", func() {
 			namespace = builder.Namespace("testns").Build()
 			host = "byohost"
 			Expect(k8sClient.Create(ctx, namespace)).NotTo(HaveOccurred(), "failed to create test namespace")
-			flags = []string {"./agent", "--kubeconfig", "/mgmt.conf", "--namespace", namespace.GetName()}
+			flags = map[string]string {
+					"--kubeconfig": "/mgmt.conf", 
+					"--namespace": namespace.GetName(),
+					"--v": "1",
+					}
 			Expect(err).NotTo(HaveOccurred())
 			
 		})
 
 		FIt("Should install the k8s components on the host", func() {
-			flags = append(flags, "--v=1")
 			dockerClient, err = client.NewClientWithOpts(client.FromEnv)
 			Expect(err).NotTo(HaveOccurred())
 
@@ -293,7 +295,8 @@ var _ = Describe("Agent", func() {
 		})
 
 		AfterEach(func() {
-			dumpSpecResourcesAndCleanup(ctx, agentLogFile, namespace, skipCleanup)
+			err := k8sClient.Delete(context.TODO(), namespace)
+			Expect(err).NotTo(HaveOccurred(), "failed to delete test namespace")
 			if dockerClient != nil && len(byohostContainerIDs) != 0 {
 				for _, byohostContainerID := range byohostContainerIDs {
 					err := dockerClient.ContainerStop(ctx, byohostContainerID, nil)

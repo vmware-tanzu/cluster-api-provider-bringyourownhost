@@ -5,7 +5,6 @@
 package main
 
 import (
-	"context"
 	"go/build"
 	"io/ioutil"
 	"os"
@@ -20,7 +19,6 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	clusterv1 "sigs.k8s.io/cluster-api/api/v1beta1"
-	"sigs.k8s.io/cluster-api/test/e2e"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/envtest"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
@@ -112,30 +110,4 @@ func writeKubeConfig() {
 
 	_, err = getKubeConfig().Write(kubeConfigData)
 	Expect(err).NotTo(HaveOccurred())
-}
-
-func dumpSpecResourcesAndCleanup(ctx context.Context, artifactFolder string, namespace *corev1.Namespace, skipCleanup bool) {
-	// e2e.Byf("Dumping logs from the %q workload cluster", cluster.Name)
-
-	// Dump all the logs from the workload cluster before deleting them.
-	// clusterProxy.CollectWorkloadClusterLogs(ctx, cluster.Namespace, cluster.Name, filepath.Join(artifactFolder, "clusters", cluster.Name, "machines"))
-
-	// e2e.Byf("Dumping all the Cluster API resources in the %q namespace", namespace.Name)
-
-	// Dump all Cluster API related resources to artifacts before deleting them.
-	// framework.DumpAllResources(ctx, framework.DumpAllResourcesInput{
-	// 	Lister:    clusterProxy.GetClient(),
-	// 	Namespace: namespace.Name,
-	// 	LogPath:   filepath.Join(artifactFolder, "clusters", clusterProxy.GetName(), "resources"),
-	// })
-
-	if !skipCleanup {
-		e2e.Byf("Deleting cluster %s", namespace.Name)
-		// framework.DeleteNamespace(ctx, framework.DeleteNamespaceInput{
-		// 	Deleter: clusterProxy.GetClient(),
-		// 	Name:    namespace.Name,
-		// })
-		err := k8sClient.Delete(context.TODO(), namespace)
-		Expect(err).NotTo(HaveOccurred(), "failed to delete test namespace")
-	}
 }
