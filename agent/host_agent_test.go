@@ -21,12 +21,9 @@ import (
 	. "github.com/onsi/gomega"
 	"github.com/onsi/gomega/gbytes"
 	"github.com/onsi/gomega/gexec"
-	"github.com/docker/docker/client"
-	dockertypes "github.com/docker/docker/api/types"
 	"github.com/vmware-tanzu/cluster-api-provider-bringyourownhost/agent/version"
 	infrastructurev1beta1 "github.com/vmware-tanzu/cluster-api-provider-bringyourownhost/apis/infrastructure/v1beta1"
 	"github.com/vmware-tanzu/cluster-api-provider-bringyourownhost/test/builder"
-	"github.com/vmware-tanzu/cluster-api-provider-bringyourownhost/test/e2e"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/types"
 )
@@ -234,79 +231,5 @@ var _ = Describe("Agent", func() {
 			output := string(out)
 			Expect(output).Should(Equal(expected))
 		})
-	})
-
-	Context("When the host-agent is executed without the --skip-installation flag", func() {
-		var (
-			ctx                 context.Context
-			namespace           *corev1.Namespace
-			// session          *gexec.Session
-			err                 error
-			host                string
-			dockerClient        *client.Client
-			byohostContainerIDs []string
-			agentLogFile        = "/tmp/host-agent.log"
-			flags				map[string]string
-		)
-
-		BeforeEach(func() {
-			ctx = context.TODO()
-			namespace = builder.Namespace("testns").Build()
-			host = "byohost"
-			Expect(k8sClient.Create(ctx, namespace)).NotTo(HaveOccurred(), "failed to create test namespace")
-			flags = map[string]string {
-					"--kubeconfig": "/mgmt.conf", 
-					"--namespace": namespace.GetName(),
-					"--v": "1",
-					}
-			Expect(err).NotTo(HaveOccurred())
-			
-		})
-
-		FIt("Should install the k8s components on the host", func() {
-			dockerClient, err = client.NewClientWithOpts(client.FromEnv)
-			Expect(err).NotTo(HaveOccurred())
-
-			kubeconfigFile := getKubeConfig()
-			var output dockertypes.HijackedResponse
-			port := testEnv.ControlPlane.APIServer.Port
-			output, byohostContainerID, err := e2e.SetupByoDockerHostWithConfig(ctx, host, port, namespace.Name, dockerClient, kubeconfigFile, flags)
-			Expect(err).NotTo(HaveOccurred())
-			defer output.Close()
-			byohostContainerIDs = append(byohostContainerIDs, byohostContainerID)
-			f :=e2e.WriteDockerLog(output, agentLogFile)
-			defer func() {
-				deferredErr := f.Close()
-				if deferredErr != nil {
-					e2e.Showf("error closing file %s: %v", agentLogFile, deferredErr)
-				}
-			}()
-
-			byoHostLookupKey := types.NamespacedName{Name: host, Namespace: namespace.Name}
-			createdByoHost := &infrastructurev1beta1.ByoHost{}
-			Eventually(func() *infrastructurev1beta1.ByoHost {
-				err := k8sClient.Get(context.TODO(), byoHostLookupKey, createdByoHost)
-				if err != nil {
-					return nil
-				}
-				return createdByoHost
-			}).ShouldNot(BeNil())
-
-		})
-
-		AfterEach(func() {
-			err := k8sClient.Delete(context.TODO(), namespace)
-			Expect(err).NotTo(HaveOccurred(), "failed to delete test namespace")
-			if dockerClient != nil && len(byohostContainerIDs) != 0 {
-				for _, byohostContainerID := range byohostContainerIDs {
-					err := dockerClient.ContainerStop(ctx, byohostContainerID, nil)
-					Expect(err).NotTo(HaveOccurred())
-
-					err = dockerClient.ContainerRemove(ctx, byohostContainerID, dockertypes.ContainerRemoveOptions{})
-					Expect(err).NotTo(HaveOccurred())
-				}
-			}
-		})
-
 	})
 })
