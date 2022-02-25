@@ -270,8 +270,7 @@ func SetupByoDockerHostWithConfig(ctx context.Context, byoHostName, port, namesp
 	var cmdArgs []string 
 	cmdArgs = append(cmdArgs, "./agent")
 	for flag, arg := range flags {
-		cmdArgs = append(cmdArgs, flag)
-		cmdArgs = append(cmdArgs, arg)
+		cmdArgs = append(cmdArgs, flag, arg)
 	}
 	rconfig := types.ExecConfig{
 		AttachStdout: true,
