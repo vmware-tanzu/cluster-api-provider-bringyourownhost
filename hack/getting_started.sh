@@ -293,7 +293,7 @@ function readArgs() {
     while true ; do
         case "$1" in
             -n|--cni) 
-                defaultCni=1
+                defaultCni="1"
                 shift 
                 ;;
             -m|--md) 
@@ -383,7 +383,7 @@ function checkNodeStatus() {
                 sleep ${waitTime}
                 continue
             fi
-            if [ ${defaultCni} -eq 1 ]; then
+            if [ "${defaultCni}" == "1" ]; then
                 status=`KUBECONFIG=${kubeConfigFile} kubectl get nodes host${i} | grep -v NAME | awk '{print $2}'`
                 if [ "${status}" != "Ready" ]; then
                     sleep ${waitTime}
@@ -532,7 +532,7 @@ controlPlaneEndPointIp=""
 workerNums=1
 controlPlaneNums=1
 byohNums=2
-defaultCni=0
+defaultCni="0"
 manageClusterConfFile="${HOME}/.kube/management-cluster.conf"
 kubeConfigFile=/tmp/byoh-cluster-kubeconfig
 reposDir=$(dirname $0)/../
@@ -551,13 +551,13 @@ bringUpByoHost
 createWorkloadCluster
 retrieveKubeConfig
 
-if [ ${defaultCni} -eq 1 ]; then
+if [ "${defaultCni}" == "1" ]; then
     installCNI
 fi
 
 checkNodeStatus
 
-if [ ${defaultCni} -eq 0 ]; then
+if [ "${defaultCni}" == "0" ]; then
     echo "Byoh cluster \"${workerClusterName}\" is successfully created, next step is to apply a CNI of your choice."
 fi
 
