@@ -1,14 +1,14 @@
 #!/bin/bash
 function isCmdInstalled() {
     local cmd=$1
-    ${cmd} version 2>&1 | grep -q "not found"
-    returnCode=$?  
-    if [ ${returnCode} -eq 0 ] ; then
+    which ${cmd}
+    if [ $? -eq 1 ] ; then
         echo "$cmd not found"
+        return 0
     else
         echo "$cmd found"
+        return 1
     fi
-    return ${returnCode}
 }
 
 function exitIfNot(){
@@ -146,39 +146,10 @@ function calcControlPlaneIP() {
 }
 
 function installByohProvider() {
-    local writeByoh=0
-    local clusterCtlYamlFile="${HOME}/.cluster-api/clusterctl.yaml"
     local maxRunTimes=40
     local waitTime=20
 
-    # Write clusterctl.yaml
-    if [ ! -f "${clusterCtlYamlFile}" ]; then
-        writeByoh=1
-        touch ${clusterCtlYamlFile}
-    else
-        grep -q "byoh" ${clusterCtlYamlFile}
-        if [ $? -ne 0 ] ; then
-            writeByoh=1
-        fi
-    fi 
-
-    if [ ${writeByoh} -eq 1 ] ; then
-        cat>>${clusterCtlYamlFile}<<EOF
-providers:
-  - name: byoh
-    url: https://github.com/vmware-tanzu/cluster-api-provider-bringyourownhost/releases/latest/infrastructure-components.yaml
-    type: InfrastructureProvider
-EOF
-    fi
-
-    clusterctl config repositories | grep -q byoh
-    if [ $? -ne 0 ] ; then
-        echo "Config clusterctl failed..."
-        exit 1
-    fi
-
     runCmd "clusterctl init --infrastructure byoh" 0 " Transforming the Kubernetes cluster into a management cluster..."
-
     # Waiting for byoh provider is totally ready
     for((i=1;i<=${maxRunTimes};i++));  
     do  
@@ -439,10 +410,11 @@ function prepareImageAndBinary() {
     # Check if byoh image is existed
     image=$(docker images ${byohImageName}:${byohImageTag} | grep -v REPOSITORY)
     if [ -z "${image}" ]; then
+        cp -f ${reposDir}/test/e2e/kubernetes.list ${reposDir}/test/e2e/kubernetes.list.bak
         # The origin one will report error:   Could not connect to apt.kubernetes.io:443 (10.25.207.164), connection timed out [IP: 10.25.207.164 443]
         echo "deb http://packages.cloud.google.com/apt/ kubernetes-xenial main" > ${reposDir}/test/e2e/kubernetes.list
         runCmd "make prepare-byoh-docker-host-image" 0  "Making a byoh image: ${byohImageName}:${byohImageTag} ..."
-
+        mv -f ${reposDir}/test/e2e/kubernetes.list.bak ${reposDir}/test/e2e/kubernetes.list
     else
         echo "byoh image \"${byohImageName}:${byohImageTag}\" existed."
     fi
@@ -549,7 +521,6 @@ It locally will change the following host config
         exit 1
     fi
 }
-
 
 export PATH=/snap/bin:${PATH}
 byohImageName="byoh/node"
