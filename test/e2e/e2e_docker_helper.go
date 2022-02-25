@@ -159,6 +159,24 @@ func createDockerContainer(ctx context.Context, byoHostName string, dockerClient
 		nil, byoHostName)
 }
 
+func createDockerContainerWithNetwork(ctx context.Context, networkInterface, byoHostName string, dockerClient *client.Client) (container.ContainerCreateCreatedBody, error) {
+	tmpfs := map[string]string{"/run": "", "/tmp": ""}
+
+	return dockerClient.ContainerCreate(ctx,
+		&container.Config{Hostname: byoHostName,
+			Image: KindImage,
+		},
+		&container.HostConfig{Privileged: true,
+			SecurityOpt: []string{"seccomp=unconfined"},
+			Tmpfs:       tmpfs,
+			NetworkMode: container.NetworkMode(networkInterface),
+			Binds:       []string{"/var", "/lib/modules:/lib/modules:ro"},
+		},
+		&network.NetworkingConfig{EndpointsConfig: map[string]*network.EndpointSettings{networkInterface: {}}},
+		nil, byoHostName)
+}
+
+
 func setupByoDockerHost(ctx context.Context, clusterConName, byoHostName, namespace string, dockerClient *client.Client, bootstrapClusterProxy framework.ClusterProxy) (types.HijackedResponse, string, error) {
 	byohost, err := createDockerContainer(ctx, byoHostName, dockerClient)
 	Expect(err).NotTo(HaveOccurred())
@@ -213,8 +231,8 @@ func setupByoDockerHost(ctx context.Context, clusterConName, byoHostName, namesp
 	return output, byohost.ID, err
 }
 
-func SetupByoDockerWithConfig(ctx context.Context, byoHostName, port, namespace string, dockerClient *client.Client, kubeconfigFile *os.File) (types.HijackedResponse, string, error) {
-	byohost, err := createDockerContainer(ctx, byoHostName, dockerClient)
+func SetupByoDockerHostWithConfig(ctx context.Context, byoHostName, port, namespace string, dockerClient *client.Client, kubeconfigFile *os.File, flags []string) (types.HijackedResponse, string, error) {
+	byohost, err := createDockerContainerWithNetwork(ctx, "host", byoHostName, dockerClient)
 	Expect(err).NotTo(HaveOccurred())
 
 	Expect(dockerClient.ContainerStart(ctx, byohost.ID, types.ContainerStartOptions{})).NotTo(HaveOccurred())
@@ -246,7 +264,7 @@ func SetupByoDockerWithConfig(ctx context.Context, byoHostName, port, namespace 
 
 	re := regexp.MustCompile("server:.*")
 	// kubeconfig = re.ReplaceAll(kubeconfig, []byte("server: https://"+profile.NetworkSettings.Networks["kind"].IPAddress+":6443"))
-	kubeconfig = re.ReplaceAll(kubeconfig, []byte("server: https://10.148.66.54:" + port))
+	kubeconfig = re.ReplaceAll(kubeconfig, []byte("server: https://127.0.0.1:" + port))
 
 	Expect(os.WriteFile(TempKubeconfigPath, kubeconfig, 0644)).NotTo(HaveOccurred()) // nolint: gosec,gomnd
 
@@ -257,7 +275,7 @@ func SetupByoDockerWithConfig(ctx context.Context, byoHostName, port, namespace 
 	rconfig := types.ExecConfig{
 		AttachStdout: true,
 		AttachStderr: true,
-		Cmd:          []string{"./agent", "--kubeconfig", "/mgmt.conf", "--namespace", namespace},
+		Cmd:          flags,
 	}
 
 	resp, err := dockerClient.ContainerExecCreate(ctx, byohost.ID, rconfig)

@@ -5,6 +5,7 @@
 package main
 
 import (
+	"context"
 	"go/build"
 	"io/ioutil"
 	"os"
@@ -19,15 +20,11 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	clusterv1 "sigs.k8s.io/cluster-api/api/v1beta1"
+	"sigs.k8s.io/cluster-api/test/e2e"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/envtest"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
-
-	"k8s.io/client-go/rest"
-	"k8s.io/client-go/tools/record"
-	bootstrapv1 "sigs.k8s.io/cluster-api/bootstrap/kubeadm/api/v1beta1"
-	ctrl "sigs.k8s.io/controller-runtime"
 )
 
 var (
@@ -36,21 +33,6 @@ var (
 	k8sClient             client.Client
 	tmpFilePrefix         = "kubeconfigFile-"
 	testEnv               *envtest.Environment
-
-	clientFake client.Client
-	// byoClusterReconciler  *controllers.ByoClusterReconciler
-	byoCluster            *infrastructurev1beta1.ByoCluster
-	capiCluster           *clusterv1.Cluster
-	defaultClusterName    = "my-cluster"
-	defaultNodeName       = "my-host"
-	defaultByoHostName    = "my-host"
-	defaultMachineName    = "my-machine"
-	defaultByoMachineName = "my-byomachine"
-	defaultNamespace      = "default"
-	fakeBootstrapSecret   = "fakeBootstrapSecret"
-	recorder              *record.FakeRecorder
-	k8sManager            ctrl.Manager
-	cfg                   *rest.Config
 )
 
 func TestHostAgent(t *testing.T) {
@@ -76,9 +58,6 @@ var _ = BeforeSuite(func() {
 		},
 
 		ErrorIfCRDPathMissing: true,
-		KubeAPIServerFlags: []string{
-			"--advertise-address=10.148.66.54",
-		},
 	}
 
 	cfg, err := testEnv.Start()
@@ -96,41 +75,9 @@ var _ = BeforeSuite(func() {
 	err = clusterv1.AddToScheme(scheme)
 	Expect(err).NotTo(HaveOccurred())
 
-	err = bootstrapv1.AddToScheme(scheme)
-	Expect(err).NotTo(HaveOccurred())
-
-	k8sManager, err = ctrl.NewManager(cfg, ctrl.Options{
-		Scheme:             scheme,
-		MetricsBindAddress: ":6080",
-	})
-	Expect(err).NotTo(HaveOccurred())
-
 	k8sClient, err = client.New(cfg, client.Options{Scheme: scheme})
 	Expect(err).NotTo(HaveOccurred())
 	writeKubeConfig()
-
-	// fakeCommandRunner := &cloudinitfakes.FakeICmdRunner{}
-	// fakeFileWriter := &cloudinitfakes.FakeIFileWriter{}
-	// fakeTemplateParser := &cloudinitfakes.FakeITemplateParser{}
-	// recorder = record.NewFakeRecorder(32)
-
-	// logger := klogr.New()
-	// downloadpath = "/tmp/workdir"
-	// k8sInstaller, err = installer.New(downloadpath, logger.V(1))
-
-	// if err != nil {
-	// 	logger.Error(err, "failed to instantiate installer")
-	// }
-	// reconciler := &reconciler.HostReconciler{
-	// 	Client:   k8sManager.GetClient(),
-	// 	CmdRunner:      fakeCommandRunner,
-	// 	FileWriter:     fakeFileWriter,
-	// 	TemplateParser: fakeTemplateParser,
-	// 	K8sInstaller:   k8sInstaller,
-	// 	Recorder: recorder,
-	// }
-	// err = reconciler.SetupWithManager(context.TODO(), k8sManager)
-	// Expect(err).NotTo(HaveOccurred())
 
 	pathToHostAgentBinary, err = gexec.Build("github.com/vmware-tanzu/cluster-api-provider-bringyourownhost/agent")
 	Expect(err).NotTo(HaveOccurred())
@@ -141,7 +88,7 @@ var _ = AfterSuite(func() {
 	err := os.Remove(getKubeConfig().Name())
 	Expect(err).NotTo(HaveOccurred())
 	gexec.TerminateAndWait(time.Duration(10) * time.Second)
-	// err = testEnv.Stop()
+	err = testEnv.Stop()
 	Expect(err).NotTo(HaveOccurred())
 })
 
@@ -165,4 +112,30 @@ func writeKubeConfig() {
 
 	_, err = getKubeConfig().Write(kubeConfigData)
 	Expect(err).NotTo(HaveOccurred())
+}
+
+func dumpSpecResourcesAndCleanup(ctx context.Context, artifactFolder string, namespace *corev1.Namespace, skipCleanup bool) {
+	// e2e.Byf("Dumping logs from the %q workload cluster", cluster.Name)
+
+	// Dump all the logs from the workload cluster before deleting them.
+	// clusterProxy.CollectWorkloadClusterLogs(ctx, cluster.Namespace, cluster.Name, filepath.Join(artifactFolder, "clusters", cluster.Name, "machines"))
+
+	// e2e.Byf("Dumping all the Cluster API resources in the %q namespace", namespace.Name)
+
+	// Dump all Cluster API related resources to artifacts before deleting them.
+	// framework.DumpAllResources(ctx, framework.DumpAllResourcesInput{
+	// 	Lister:    clusterProxy.GetClient(),
+	// 	Namespace: namespace.Name,
+	// 	LogPath:   filepath.Join(artifactFolder, "clusters", clusterProxy.GetName(), "resources"),
+	// })
+
+	if !skipCleanup {
+		e2e.Byf("Deleting cluster %s", namespace.Name)
+		// framework.DeleteNamespace(ctx, framework.DeleteNamespaceInput{
+		// 	Deleter: clusterProxy.GetClient(),
+		// 	Name:    namespace.Name,
+		// })
+		err := k8sClient.Delete(context.TODO(), namespace)
+		Expect(err).NotTo(HaveOccurred(), "failed to delete test namespace")
+	}
 }

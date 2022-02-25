@@ -238,14 +238,16 @@ var _ = Describe("Agent", func() {
 
 	Context("When the host-agent is executed without the --skip-installation flag", func() {
 		var (
-			ctx              context.Context
-			namespace        *corev1.Namespace
+			ctx                 context.Context
+			namespace           *corev1.Namespace
 			// session          *gexec.Session
-			err              error
-			host             string
-			dockerClient     *client.Client
+			err                 error
+			host                string
+			dockerClient        *client.Client
 			byohostContainerIDs []string
-			agentLogFile       = "/tmp/host-agent.log"
+			agentLogFile        = "/tmp/host-agent.log"
+			skipCleanup         = false
+			flags				[]string
 		)
 
 		BeforeEach(func() {
@@ -253,19 +255,20 @@ var _ = Describe("Agent", func() {
 			namespace = builder.Namespace("testns").Build()
 			host = "byohost"
 			Expect(k8sClient.Create(ctx, namespace)).NotTo(HaveOccurred(), "failed to create test namespace")
-			
+			flags = []string {"./agent", "--kubeconfig", "/mgmt.conf", "--namespace", namespace.GetName()}
 			Expect(err).NotTo(HaveOccurred())
 			
 		})
 
 		FIt("Should install the k8s components on the host", func() {
+			flags = append(flags, "--v=1")
 			dockerClient, err = client.NewClientWithOpts(client.FromEnv)
 			Expect(err).NotTo(HaveOccurred())
 
 			kubeconfigFile := getKubeConfig()
 			var output dockertypes.HijackedResponse
 			port := testEnv.ControlPlane.APIServer.Port
-			output, byohostContainerID, err := e2e.SetupByoDockerWithConfig(ctx, host, port, namespace.Name, dockerClient, kubeconfigFile)
+			output, byohostContainerID, err := e2e.SetupByoDockerHostWithConfig(ctx, host, port, namespace.Name, dockerClient, kubeconfigFile, flags)
 			Expect(err).NotTo(HaveOccurred())
 			defer output.Close()
 			byohostContainerIDs = append(byohostContainerIDs, byohostContainerID)
@@ -290,9 +293,16 @@ var _ = Describe("Agent", func() {
 		})
 
 		AfterEach(func() {
-			err = k8sClient.Delete(context.TODO(), namespace)
-			Expect(err).NotTo(HaveOccurred(), "failed to delete test namespace")
-			// session.Terminate().Wait()
+			dumpSpecResourcesAndCleanup(ctx, agentLogFile, namespace, skipCleanup)
+			if dockerClient != nil && len(byohostContainerIDs) != 0 {
+				for _, byohostContainerID := range byohostContainerIDs {
+					err := dockerClient.ContainerStop(ctx, byohostContainerID, nil)
+					Expect(err).NotTo(HaveOccurred())
+
+					err = dockerClient.ContainerRemove(ctx, byohostContainerID, dockertypes.ContainerRemoveOptions{})
+					Expect(err).NotTo(HaveOccurred())
+				}
+			}
 		})
 
 	})
