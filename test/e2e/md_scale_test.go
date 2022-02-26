@@ -14,6 +14,7 @@ import (
 	"github.com/docker/docker/client"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+	"github.com/onsi/gomega/gexec"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/utils/pointer"
 	"sigs.k8s.io/cluster-api/test/framework"
@@ -34,6 +35,8 @@ var _ = Describe("When testing MachineDeployment scale out/in", func() {
 		byoHostName            string
 		allbyohostContainerIDs []string
 		allAgentLogFiles       []string
+		pathToHostAgentBinary  string
+		err                    error
 	)
 
 	BeforeEach(func() {
@@ -47,6 +50,9 @@ var _ = Describe("When testing MachineDeployment scale out/in", func() {
 		Expect(os.MkdirAll(artifactFolder, 0755)).To(Succeed(), "Invalid argument. artifactFolder can't be created for %s spec", specName)
 
 		Expect(e2eConfig.Variables).To(HaveKey(KubernetesVersion))
+
+		pathToHostAgentBinary, err = gexec.Build("github.com/vmware-tanzu/cluster-api-provider-bringyourownhost/agent")
+		Expect(err).NotTo(HaveOccurred())
 
 		// set up a Namespace where to host objects for this spec and create a watcher for the namespace events.
 		namespace, cancelWatches = setupSpecNamespace(ctx, specName, bootstrapClusterProxy, artifactFolder)
@@ -70,6 +76,7 @@ var _ = Describe("When testing MachineDeployment scale out/in", func() {
 				clusterConName:        clusterConName,
 				byoHostName:           byoHostName,
 				namespace:             namespace.Name,
+				pathToHostAgentBinary: pathToHostAgentBinary,
 				dockerClient:          dockerClient,
 				bootstrapClusterProxy: bootstrapClusterProxy,
 				commandArgs: map[string]string{

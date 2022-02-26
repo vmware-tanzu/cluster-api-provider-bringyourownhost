@@ -7,6 +7,7 @@ package e2e
 import (
 	"context"
 	"fmt"
+	"github.com/onsi/gomega/gexec"
 	"os"
 	"path/filepath"
 
@@ -32,17 +33,18 @@ const (
 var _ = Describe("When BYOH joins existing cluster [PR-Blocking]", func() {
 
 	var (
-		ctx                 context.Context
-		specName            = "quick-start"
-		namespace           *corev1.Namespace
-		clusterName         string
-		cancelWatches       context.CancelFunc
-		clusterResources    *clusterctl.ApplyClusterTemplateAndWaitResult
-		dockerClient        *client.Client
-		err                 error
-		byohostContainerIDs []string
-		agentLogFile1       = "/tmp/host-agent1.log"
-		agentLogFile2       = "/tmp/host-agent2.log"
+		ctx                   context.Context
+		specName              = "quick-start"
+		namespace             *corev1.Namespace
+		clusterName           string
+		cancelWatches         context.CancelFunc
+		clusterResources      *clusterctl.ApplyClusterTemplateAndWaitResult
+		dockerClient          *client.Client
+		err                   error
+		byohostContainerIDs   []string
+		agentLogFile1         = "/tmp/host-agent1.log"
+		agentLogFile2         = "/tmp/host-agent2.log"
+		pathToHostAgentBinary string
 	)
 
 	BeforeEach(func() {
@@ -56,6 +58,9 @@ var _ = Describe("When BYOH joins existing cluster [PR-Blocking]", func() {
 		Expect(os.MkdirAll(artifactFolder, 0755)).To(Succeed(), "Invalid argument. artifactFolder can't be created for %s spec", specName)
 
 		Expect(e2eConfig.Variables).To(HaveKey(KubernetesVersion))
+
+		pathToHostAgentBinary, err = gexec.Build("github.com/vmware-tanzu/cluster-api-provider-bringyourownhost/agent")
+		Expect(err).NotTo(HaveOccurred())
 
 		// set up a Namespace where to host objects for this spec and create a watcher for the namespace events.
 		namespace, cancelWatches = setupSpecNamespace(ctx, specName, bootstrapClusterProxy, artifactFolder)
@@ -74,6 +79,7 @@ var _ = Describe("When BYOH joins existing cluster [PR-Blocking]", func() {
 			ctx:                   ctx,
 			clusterConName:        clusterConName,
 			namespace:             namespace.Name,
+			pathToHostAgentBinary: pathToHostAgentBinary,
 			dockerClient:          dockerClient,
 			bootstrapClusterProxy: bootstrapClusterProxy,
 			commandArgs: map[string]string{
