@@ -171,7 +171,7 @@ func createDockerContainer(ctx context.Context, networkInterface, byoHostName st
 		nil, byoHostName)
 }
 
-func copyKubeconfig(dockerConfig byoHostConfig, config cpConfig, listopt types.ContainerListOptions, e2eTest bool) error {
+func copyKubeconfig(dockerConfig *byoHostConfig, config cpConfig, listopt types.ContainerListOptions, e2eTest bool) error {
 	var kubeconfig []byte
 	if e2eTest {
 		listopt.Filters.Add("name", dockerConfig.clusterConName+"-control-plane")
@@ -209,7 +209,7 @@ func copyKubeconfig(dockerConfig byoHostConfig, config cpConfig, listopt types.C
 	return err
 }
 
-func setupByoDockerHost(dockerConfig byoHostConfig, e2eTest bool) (types.HijackedResponse, string, error) {
+func setupByoDockerHost(dockerConfig *byoHostConfig, e2eTest bool) (types.HijackedResponse, string, error) {
 	var byohost container.ContainerCreateCreatedBody
 	var err error
 	if e2eTest {

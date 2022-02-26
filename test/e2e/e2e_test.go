@@ -85,7 +85,7 @@ var _ = Describe("When BYOH joins existing cluster [PR-Blocking]", func() {
 
 		var output types.HijackedResponse
 		config.byoHostName = byoHostName1
-		output, byohostContainerID, err := setupByoDockerHost(config, true)
+		output, byohostContainerID, err := setupByoDockerHost(&config, true)
 		Expect(err).NotTo(HaveOccurred())
 		defer output.Close()
 		byohostContainerIDs = append(byohostContainerIDs, byohostContainerID)
@@ -98,7 +98,7 @@ var _ = Describe("When BYOH joins existing cluster [PR-Blocking]", func() {
 		}()
 
 		config.byoHostName = byoHostName2
-		output, byohostContainerID, err = setupByoDockerHost(config, true)
+		output, byohostContainerID, err = setupByoDockerHost(&config, true)
 		Expect(err).NotTo(HaveOccurred())
 		defer output.Close()
 		byohostContainerIDs = append(byohostContainerIDs, byohostContainerID)

@@ -78,7 +78,7 @@ var _ = Describe("When testing MachineDeployment scale out/in", func() {
 					"--v":          "1",
 				},
 			}
-			output, byohostContainerID, err := setupByoDockerHost(config, true)
+			output, byohostContainerID, err := setupByoDockerHost(&config, true)
 			allbyohostContainerIDs = append(allbyohostContainerIDs, byohostContainerID)
 			Expect(err).NotTo(HaveOccurred())
 
