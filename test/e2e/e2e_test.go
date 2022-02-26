@@ -70,8 +70,22 @@ var _ = Describe("When BYOH joins existing cluster [PR-Blocking]", func() {
 		dockerClient, err = client.NewClientWithOpts(client.FromEnv)
 		Expect(err).NotTo(HaveOccurred())
 
+		config := byoHostConfig{
+			ctx:                   ctx,
+			clusterConName:        clusterConName,
+			namespace:             namespace.Name,
+			dockerClient:          dockerClient,
+			bootstrapClusterProxy: bootstrapClusterProxy,
+			commandArgs: map[string]string{
+				"--kubeconfig": "/mgmt.conf",
+				"--namespace":  namespace.Name,
+				"--v":          "1",
+			},
+		}
+
 		var output types.HijackedResponse
-		output, byohostContainerID, err := setupByoDockerHost(ctx, clusterConName, byoHostName1, namespace.Name, dockerClient, bootstrapClusterProxy)
+		config.byoHostName = byoHostName1
+		output, byohostContainerID, err := setupByoDockerHost(config, true)
 		Expect(err).NotTo(HaveOccurred())
 		defer output.Close()
 		byohostContainerIDs = append(byohostContainerIDs, byohostContainerID)
@@ -83,7 +97,8 @@ var _ = Describe("When BYOH joins existing cluster [PR-Blocking]", func() {
 			}
 		}()
 
-		output, byohostContainerID, err = setupByoDockerHost(ctx, clusterConName, byoHostName2, namespace.Name, dockerClient, bootstrapClusterProxy)
+		config.byoHostName = byoHostName2
+		output, byohostContainerID, err = setupByoDockerHost(config, true)
 		Expect(err).NotTo(HaveOccurred())
 		defer output.Close()
 		byohostContainerIDs = append(byohostContainerIDs, byohostContainerID)

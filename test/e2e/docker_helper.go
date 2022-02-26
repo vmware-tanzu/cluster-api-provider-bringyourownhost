@@ -38,6 +38,18 @@ type cpConfig struct {
 	container  string
 }
 
+type byoHostConfig struct {
+	ctx                   context.Context
+	clusterConName        string
+	byoHostName           string
+	namespace             string
+	dockerClient          *client.Client
+	bootstrapClusterProxy framework.ClusterProxy
+	commandArgs           map[string]string
+	port                  string
+	kubeconfigFile        *os.File
+}
+
 func resolveLocalPath(localPath string) (absPath string, err error) {
 	if absPath, err = filepath.Abs(localPath); err != nil {
 		return
@@ -142,24 +154,7 @@ func copyToContainer(ctx context.Context, cli *client.Client, copyConfig cpConfi
 	return cli.CopyToContainer(ctx, copyConfig.container, resolvedDstPath, content, options)
 }
 
-func createDockerContainer(ctx context.Context, byoHostName string, dockerClient *client.Client) (container.ContainerCreateCreatedBody, error) {
-	tmpfs := map[string]string{"/run": "", "/tmp": ""}
-
-	return dockerClient.ContainerCreate(ctx,
-		&container.Config{Hostname: byoHostName,
-			Image: KindImage,
-		},
-		&container.HostConfig{Privileged: true,
-			SecurityOpt: []string{"seccomp=unconfined"},
-			Tmpfs:       tmpfs,
-			NetworkMode: "kind",
-			Binds:       []string{"/var", "/lib/modules:/lib/modules:ro"},
-		},
-		&network.NetworkingConfig{EndpointsConfig: map[string]*network.EndpointSettings{"kind": {}}},
-		nil, byoHostName)
-}
-
-func createDockerContainerWithNetwork(ctx context.Context, networkInterface, byoHostName string, dockerClient *client.Client) (container.ContainerCreateCreatedBody, error) {
+func createDockerContainer(ctx context.Context, networkInterface, byoHostName string, dockerClient *client.Client) (container.ContainerCreateCreatedBody, error) {
 	tmpfs := map[string]string{"/run": "", "/tmp": ""}
 
 	return dockerClient.ContainerCreate(ctx,
@@ -176,66 +171,54 @@ func createDockerContainerWithNetwork(ctx context.Context, networkInterface, byo
 		nil, byoHostName)
 }
 
+func copyKubeconfig(dockerConfig byoHostConfig, config cpConfig, listopt types.ContainerListOptions, e2eTest bool) error {
+	var kubeconfig []byte
+	if e2eTest {
+		listopt.Filters.Add("name", dockerConfig.clusterConName+"-control-plane")
 
-func setupByoDockerHost(ctx context.Context, clusterConName, byoHostName, namespace string, dockerClient *client.Client, bootstrapClusterProxy framework.ClusterProxy) (types.HijackedResponse, string, error) {
-	byohost, err := createDockerContainer(ctx, byoHostName, dockerClient)
-	Expect(err).NotTo(HaveOccurred())
+		containers, err := dockerConfig.dockerClient.ContainerList(dockerConfig.ctx, listopt)
+		Expect(err).NotTo(HaveOccurred())
+		Expect(len(containers)).To(Equal(1))
 
-	Expect(dockerClient.ContainerStart(ctx, byohost.ID, types.ContainerStartOptions{})).NotTo(HaveOccurred())
+		profile, err := dockerConfig.dockerClient.ContainerInspect(dockerConfig.ctx, containers[0].ID)
+		Expect(err).NotTo(HaveOccurred())
 
-	pathToHostAgentBinary, err := gexec.Build("github.com/vmware-tanzu/cluster-api-provider-bringyourownhost/agent")
-	Expect(err).NotTo(HaveOccurred())
+		kubeconfig, err = os.ReadFile(dockerConfig.bootstrapClusterProxy.GetKubeconfigPath())
+		Expect(err).NotTo(HaveOccurred())
 
-	config := cpConfig{
-		sourcePath: pathToHostAgentBinary,
-		destPath:   "/agent",
-		container:  byohost.ID,
+		re := regexp.MustCompile("server:.*")
+		kubeconfig = re.ReplaceAll(kubeconfig, []byte("server: https://"+profile.NetworkSettings.Networks["kind"].IPAddress+":6443"))
+	} else {
+		listopt.Filters.Add("name", dockerConfig.byoHostName)
+
+		containers, err := dockerConfig.dockerClient.ContainerList(dockerConfig.ctx, listopt)
+		Expect(err).NotTo(HaveOccurred())
+		Expect(len(containers)).To(Equal(1))
+
+		kubeconfig, err = os.ReadFile(dockerConfig.kubeconfigFile.Name())
+		Expect(err).NotTo(HaveOccurred())
+
+		re := regexp.MustCompile("server:.*")
+		kubeconfig = re.ReplaceAll(kubeconfig, []byte("server: https://127.0.0.1:" + dockerConfig.port))
 	}
-
-	Expect(copyToContainer(ctx, dockerClient, config)).NotTo(HaveOccurred())
-
-	listopt := types.ContainerListOptions{}
-	listopt.Filters = filters.NewArgs()
-	listopt.Filters.Add("name", clusterConName+"-control-plane")
-
-	containers, err := dockerClient.ContainerList(ctx, listopt)
-	Expect(err).NotTo(HaveOccurred())
-	Expect(len(containers)).To(Equal(1))
-
-	profile, err := dockerClient.ContainerInspect(ctx, containers[0].ID)
-	Expect(err).NotTo(HaveOccurred())
-
-	kubeconfig, err := os.ReadFile(bootstrapClusterProxy.GetKubeconfigPath())
-	Expect(err).NotTo(HaveOccurred())
-
-	re := regexp.MustCompile("server:.*")
-	kubeconfig = re.ReplaceAll(kubeconfig, []byte("server: https://"+profile.NetworkSettings.Networks["kind"].IPAddress+":6443"))
-
 	Expect(os.WriteFile(TempKubeconfigPath, kubeconfig, 0644)).NotTo(HaveOccurred()) // nolint: gosec,gomnd
 
 	config.sourcePath = TempKubeconfigPath
-	config.destPath = "/mgmt.conf"
-	Expect(copyToContainer(ctx, dockerClient, config)).NotTo(HaveOccurred())
-
-	rconfig := types.ExecConfig{
-		AttachStdout: true,
-		AttachStderr: true,
-		Cmd:          []string{"./agent", "--kubeconfig", "/mgmt.conf", "--namespace", namespace},
-	}
-
-	resp, err := dockerClient.ContainerExecCreate(ctx, byohost.ID, rconfig)
-	Expect(err).NotTo(HaveOccurred())
-
-	output, err := dockerClient.ContainerExecAttach(ctx, resp.ID, types.ExecStartCheck{})
-
-	return output, byohost.ID, err
+	config.destPath = dockerConfig.commandArgs["--kubeconfig"]
+	err := copyToContainer(dockerConfig.ctx, dockerConfig.dockerClient, config)
+	return err
 }
 
-func SetupByoDockerHostWithConfig(ctx context.Context, byoHostName, port, namespace string, dockerClient *client.Client, kubeconfigFile *os.File, flags map[string]string) (types.HijackedResponse, string, error) {
-	byohost, err := createDockerContainerWithNetwork(ctx, "host", byoHostName, dockerClient)
+func setupByoDockerHost(dockerConfig byoHostConfig, e2eTest bool) (types.HijackedResponse, string, error) {
+	var byohost container.ContainerCreateCreatedBody
+	var err error
+	if e2eTest {
+		byohost, err = createDockerContainer(dockerConfig.ctx, "kind", dockerConfig.byoHostName, dockerConfig.dockerClient)
+	} else {
+		byohost, err = createDockerContainer(dockerConfig.ctx, "host", dockerConfig.byoHostName, dockerConfig.dockerClient)
+	}
 	Expect(err).NotTo(HaveOccurred())
-
-	Expect(dockerClient.ContainerStart(ctx, byohost.ID, types.ContainerStartOptions{})).NotTo(HaveOccurred())
+	Expect(dockerConfig.dockerClient.ContainerStart(dockerConfig.ctx, byohost.ID, types.ContainerStartOptions{})).NotTo(HaveOccurred())
 
 	pathToHostAgentBinary, err := gexec.Build("github.com/vmware-tanzu/cluster-api-provider-bringyourownhost/agent")
 	Expect(err).NotTo(HaveOccurred())
@@ -245,31 +228,15 @@ func SetupByoDockerHostWithConfig(ctx context.Context, byoHostName, port, namesp
 		destPath:   "/agent",
 		container:  byohost.ID,
 	}
-
-	Expect(copyToContainer(ctx, dockerClient, config)).NotTo(HaveOccurred())
+	Expect(copyToContainer(dockerConfig.ctx, dockerConfig.dockerClient, config)).NotTo(HaveOccurred())
 
 	listopt := types.ContainerListOptions{}
 	listopt.Filters = filters.NewArgs()
-	listopt.Filters.Add("name", byoHostName)
 
-	containers, err := dockerClient.ContainerList(ctx, listopt)
-	Expect(err).NotTo(HaveOccurred())
-	Expect(len(containers)).To(Equal(1))
-
-	kubeconfig, err := os.ReadFile(kubeconfigFile.Name())
-	Expect(err).NotTo(HaveOccurred())
-
-	re := regexp.MustCompile("server:.*")
-	kubeconfig = re.ReplaceAll(kubeconfig, []byte("server: https://127.0.0.1:" + port))
-
-	Expect(os.WriteFile(TempKubeconfigPath, kubeconfig, 0644)).NotTo(HaveOccurred()) // nolint: gosec,gomnd
-
-	config.sourcePath = TempKubeconfigPath
-	config.destPath = flags["--kubeconfig"]
-	Expect(copyToContainer(ctx, dockerClient, config)).NotTo(HaveOccurred())
-	var cmdArgs []string 
+	Expect(copyKubeconfig(dockerConfig, config, listopt, e2eTest)).NotTo(HaveOccurred())
+	var cmdArgs []string
 	cmdArgs = append(cmdArgs, "./agent")
-	for flag, arg := range flags {
+	for flag, arg := range dockerConfig.commandArgs {
 		cmdArgs = append(cmdArgs, flag, arg)
 	}
 	rconfig := types.ExecConfig{
@@ -277,9 +244,11 @@ func SetupByoDockerHostWithConfig(ctx context.Context, byoHostName, port, namesp
 		AttachStderr: true,
 		Cmd:          cmdArgs,
 	}
-	resp, err := dockerClient.ContainerExecCreate(ctx, byohost.ID, rconfig)
+
+	resp, err := dockerConfig.dockerClient.ContainerExecCreate(dockerConfig.ctx, byohost.ID, rconfig)
 	Expect(err).NotTo(HaveOccurred())
-	output, err := dockerClient.ContainerExecAttach(ctx, resp.ID, types.ExecStartCheck{})
+
+	output, err := dockerConfig.dockerClient.ContainerExecAttach(dockerConfig.ctx, resp.ID, types.ExecStartCheck{})
 	return output, byohost.ID, err
 }
 
