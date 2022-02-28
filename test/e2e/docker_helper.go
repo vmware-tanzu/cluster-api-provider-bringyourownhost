@@ -155,7 +155,7 @@ func copyToContainer(ctx context.Context, cli *client.Client, copyConfig cpConfi
 	return cli.CopyToContainer(ctx, copyConfig.container, resolvedDstPath, content, options)
 }
 
-func (r ByoHostRunner) createDockerContainer() (container.ContainerCreateCreatedBody, error) {
+func (r *ByoHostRunner) createDockerContainer() (container.ContainerCreateCreatedBody, error) {
 	tmpfs := map[string]string{"/run": "", "/tmp": ""}
 
 	return r.DockerClient.ContainerCreate(r.Context,
@@ -175,7 +175,6 @@ func (r ByoHostRunner) createDockerContainer() (container.ContainerCreateCreated
 func (r *ByoHostRunner) copyKubeconfig(config cpConfig, listopt types.ContainerListOptions) error {
 	var kubeconfig []byte
 	if r.NetworkInterface == "host" {
-
 		listopt.Filters.Add("name", r.ByoHostName)
 		containers, err := r.DockerClient.ContainerList(r.Context, listopt)
 		Expect(err).NotTo(HaveOccurred())
@@ -187,7 +186,6 @@ func (r *ByoHostRunner) copyKubeconfig(config cpConfig, listopt types.ContainerL
 		re := regexp.MustCompile("server:.*")
 		kubeconfig = re.ReplaceAll(kubeconfig, []byte("server: https://127.0.0.1:"+r.Port))
 	} else {
-
 		listopt.Filters.Add("name", r.clusterConName+"-control-plane")
 		containers, err := r.DockerClient.ContainerList(r.Context, listopt)
 		Expect(err).NotTo(HaveOccurred())
