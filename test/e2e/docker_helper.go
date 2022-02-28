@@ -198,7 +198,7 @@ func (r *ByoHostRunner) copyKubeconfig(config cpConfig, listopt types.ContainerL
 		Expect(err).NotTo(HaveOccurred())
 
 		re := regexp.MustCompile("server:.*")
-		kubeconfig = re.ReplaceAll(kubeconfig, []byte("server: https://"+profile.NetworkSettings.Networks["kind"].IPAddress+":6443"))
+		kubeconfig = re.ReplaceAll(kubeconfig, []byte("server: https://"+profile.NetworkSettings.Networks[r.NetworkInterface].IPAddress+":6443"))
 	}
 	Expect(os.WriteFile(TempKubeconfigPath, kubeconfig, 0644)).NotTo(HaveOccurred()) // nolint: gosec,gomnd
 
@@ -208,7 +208,7 @@ func (r *ByoHostRunner) copyKubeconfig(config cpConfig, listopt types.ContainerL
 	return err
 }
 
-func (r *ByoHostRunner) SetupByoDockerHost() (*container.ContainerCreateCreatedBody, *types.ExecConfig, error) {
+func (r *ByoHostRunner) SetupByoDockerHost() (*container.ContainerCreateCreatedBody, error) {
 	var byohost container.ContainerCreateCreatedBody
 	var err error
 
@@ -228,6 +228,10 @@ func (r *ByoHostRunner) SetupByoDockerHost() (*container.ContainerCreateCreatedB
 	listopt.Filters = filters.NewArgs()
 
 	err = r.copyKubeconfig(config, listopt)
+	return &byohost, err
+}
+
+func (r *ByoHostRunner) ExecByoDockerHost(byohost *container.ContainerCreateCreatedBody) (types.HijackedResponse, string, error) {
 	var cmdArgs []string
 	cmdArgs = append(cmdArgs, "./agent")
 	for flag, arg := range r.CommandArgs {
@@ -238,11 +242,8 @@ func (r *ByoHostRunner) SetupByoDockerHost() (*container.ContainerCreateCreatedB
 		AttachStderr: true,
 		Cmd:          cmdArgs,
 	}
-	return &byohost, &rconfig, err
-}
 
-func (r *ByoHostRunner) ExecByoDockerHost(byohost *container.ContainerCreateCreatedBody, rconfig *types.ExecConfig) (types.HijackedResponse, string, error) {
-	resp, err := r.DockerClient.ContainerExecCreate(r.Context, byohost.ID, *rconfig)
+	resp, err := r.DockerClient.ContainerExecCreate(r.Context, byohost.ID, rconfig)
 	Expect(err).NotTo(HaveOccurred())
 
 	output, err := r.DockerClient.ContainerExecAttach(r.Context, resp.ID, types.ExecStartCheck{})

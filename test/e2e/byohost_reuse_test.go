@@ -90,9 +90,9 @@ var _ = Describe("When BYO Host rejoins the capacity pool", func() {
 
 		var output types.HijackedResponse
 		runner.ByoHostName = byoHostName1
-		byohost, rconfig, err := runner.SetupByoDockerHost()
+		byohost, err := runner.SetupByoDockerHost()
 		Expect(err).NotTo(HaveOccurred())
-		output, byohostContainerID, err := runner.ExecByoDockerHost(byohost, rconfig)
+		output, byohostContainerID, err := runner.ExecByoDockerHost(byohost)
 		Expect(err).NotTo(HaveOccurred())
 		defer output.Close()
 		byohostContainerIDs = append(byohostContainerIDs, byohostContainerID)
@@ -105,9 +105,9 @@ var _ = Describe("When BYO Host rejoins the capacity pool", func() {
 		}()
 
 		runner.ByoHostName = byoHostName2
-		byohost, rconfig, err = runner.SetupByoDockerHost()
+		byohost, err = runner.SetupByoDockerHost()
 		Expect(err).NotTo(HaveOccurred())
-		output, byohostContainerID, err = runner.ExecByoDockerHost(byohost, rconfig)
+		output, byohostContainerID, err = runner.ExecByoDockerHost(byohost)
 		Expect(err).NotTo(HaveOccurred())
 		defer output.Close()
 		byohostContainerIDs = append(byohostContainerIDs, byohostContainerID)
