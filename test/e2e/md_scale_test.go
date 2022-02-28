@@ -77,7 +77,8 @@ var _ = Describe("When testing MachineDeployment scale out/in", func() {
 				ByoHostName:           byoHostName,
 				Namespace:             namespace.Name,
 				PathToHostAgentBinary: pathToHostAgentBinary,
-				dockerClient:          dockerClient,
+				DockerClient:          dockerClient,
+				NetworkInterface: "kind",
 				bootstrapClusterProxy: bootstrapClusterProxy,
 				CommandArgs: map[string]string{
 					"--kubeconfig": "/mgmt.conf",
@@ -85,7 +86,9 @@ var _ = Describe("When testing MachineDeployment scale out/in", func() {
 					"--v":          "1",
 				},
 			}
-			output, byohostContainerID, err := runner.SetupByoDockerHost(true)
+			byohost, rconfig, err := runner.SetupByoDockerHost()
+			Expect(err).NotTo(HaveOccurred())
+			output, byohostContainerID, err := runner.ExecByoDockerHost(byohost, rconfig)
 			allbyohostContainerIDs = append(allbyohostContainerIDs, byohostContainerID)
 			Expect(err).NotTo(HaveOccurred())
 

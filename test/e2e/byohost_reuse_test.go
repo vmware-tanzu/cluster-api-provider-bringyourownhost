@@ -78,7 +78,8 @@ var _ = Describe("When BYO Host rejoins the capacity pool", func() {
 			clusterConName:        clusterConName,
 			Namespace:             namespace.Name,
 			PathToHostAgentBinary: pathToHostAgentBinary,
-			dockerClient:          dockerClient,
+			DockerClient:          dockerClient,
+			NetworkInterface:      "kind",
 			bootstrapClusterProxy: bootstrapClusterProxy,
 			CommandArgs: map[string]string{
 				"--kubeconfig": "/mgmt.conf",
@@ -89,7 +90,9 @@ var _ = Describe("When BYO Host rejoins the capacity pool", func() {
 
 		var output types.HijackedResponse
 		runner.ByoHostName = byoHostName1
-		output, byohostContainerID, err := runner.SetupByoDockerHost(true)
+		byohost, rconfig, err := runner.SetupByoDockerHost()
+		Expect(err).NotTo(HaveOccurred())
+		output, byohostContainerID, err := runner.ExecByoDockerHost(byohost, rconfig)
 		Expect(err).NotTo(HaveOccurred())
 		defer output.Close()
 		byohostContainerIDs = append(byohostContainerIDs, byohostContainerID)
@@ -102,7 +105,9 @@ var _ = Describe("When BYO Host rejoins the capacity pool", func() {
 		}()
 
 		runner.ByoHostName = byoHostName2
-		output, byohostContainerID, err = runner.SetupByoDockerHost(true)
+		byohost, rconfig, err = runner.SetupByoDockerHost()
+		Expect(err).NotTo(HaveOccurred())
+		output, byohostContainerID, err = runner.ExecByoDockerHost(byohost, rconfig)
 		Expect(err).NotTo(HaveOccurred())
 		defer output.Close()
 		byohostContainerIDs = append(byohostContainerIDs, byohostContainerID)
