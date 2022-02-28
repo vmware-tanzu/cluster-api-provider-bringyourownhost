@@ -35,6 +35,7 @@ var (
 	klogger logr.Logger
 )
 
+// Main entry point for the installer dev/test CLI
 func Main() {
 	klogger = klogr.New()
 

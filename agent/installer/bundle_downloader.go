@@ -16,6 +16,7 @@ import (
 )
 
 var (
+	// DownloadPathPermissions file mode permissions for download path
 	DownloadPathPermissions fs.FileMode = 0777
 )
 
@@ -53,7 +54,13 @@ func (bd *bundleDownloader) DownloadFromRepo(
 	downloadPathWithRepo := bd.getBundlePathWithRepo()
 
 	err := ensureDirExist(downloadPathWithRepo)
-	defer os.Remove(downloadPathWithRepo)
+	defer func(name string) {
+		err = os.Remove(name)
+		if err != nil {
+			bd.logger.Error(err, "Failed to remove directory", "path", name)
+		}
+	}(downloadPathWithRepo)
+
 	if err != nil {
 		return err
 	}

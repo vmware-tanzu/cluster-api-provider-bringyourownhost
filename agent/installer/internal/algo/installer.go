@@ -36,11 +36,13 @@ are required in order to:
 6) disable unattended OS updates
 */
 
+// Step execute/rollback interface
 type Step interface {
 	do() error
 	undo() error
 }
 
+// K8sStepProvider steps provider for k8s installer
 type K8sStepProvider interface {
 	getSteps(*BaseK8sInstaller) []Step
 
@@ -68,6 +70,7 @@ type BaseK8sInstaller struct {
 	OutputBuilder
 }
 
+// Install installation of k8s cluster as per configured steps in the provider
 func (b *BaseK8sInstaller) Install() error {
 	steps := b.getSteps(b)
 
@@ -83,6 +86,7 @@ func (b *BaseK8sInstaller) Install() error {
 	return nil
 }
 
+// Uninstall uninstallation of k8s cluster as per configured steps in the provider
 func (b *BaseK8sInstaller) Uninstall() error {
 	lastStepIdx := len(b.getSteps(b)) - 1
 	b.rollback(lastStepIdx)

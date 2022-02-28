@@ -14,11 +14,15 @@ import (
 )
 
 const (
-	DefaultFileMode                       fs.FileMode = 0777
-	ReadByohControllerManagerLogShellFile string      = "/tmp/read-byoh-controller-manager-log.sh"
-	ReadAllPodsShellFile                  string      = "/tmp/read-all-pods.sh"
+	// DefaultFileMode the default file mode of files created for tests
+	DefaultFileMode fs.FileMode = 0777
+	// ReadByohControllerManagerLogShellFile location of script to read the controller manager log
+	ReadByohControllerManagerLogShellFile string = "/tmp/read-byoh-controller-manager-log.sh"
+	// ReadAllPodsShellFile location of script to read all pods logs
+	ReadAllPodsShellFile string = "/tmp/read-all-pods.sh"
 )
 
+// WriteDockerLog redirects the docker logs to the given file
 func WriteDockerLog(output types.HijackedResponse, outputFile string) *os.File {
 	s := make(chan string)
 	e := make(chan error)
@@ -62,11 +66,13 @@ func WriteDockerLog(output types.HijackedResponse, outputFile string) *os.File {
 	return f
 }
 
+// Showf prints formatted string to stdout
 func Showf(format string, a ...interface{}) {
 	fmt.Printf(format, a...)
 	fmt.Printf("\n")
 }
 
+// ShowFileContent prints to stdout the content of the given file
 func ShowFileContent(fileName string) {
 	content, err := os.ReadFile(fileName)
 	if err != nil {
@@ -79,6 +85,7 @@ func ShowFileContent(fileName string) {
 	Showf("######################End: Content of %s##################", fileName)
 }
 
+// ExecuteShellScript executes a given shell script file location
 func ExecuteShellScript(shellFileName string) {
 	cmd := exec.Command("/bin/sh", "-x", shellFileName)
 	output, err := cmd.Output()
@@ -91,6 +98,7 @@ func ExecuteShellScript(shellFileName string) {
 	Showf("######################End: execute result of %s##################", shellFileName)
 }
 
+// WriteShellScript writes shell script contents/commands to the given file location
 func WriteShellScript(shellFileName string, shellFileContent []string) {
 	f, err := os.OpenFile(shellFileName, os.O_APPEND|os.O_WRONLY|os.O_CREATE, DefaultFileMode)
 	if err != nil {
@@ -117,6 +125,7 @@ func WriteShellScript(shellFileName string, shellFileContent []string) {
 	}
 }
 
+// ShowInfo shows all the pods status, agent logs, and controller manager logs
 func ShowInfo(allAgentLogFiles []string) {
 	// show swap status
 	// showFileContent("/proc/swaps")

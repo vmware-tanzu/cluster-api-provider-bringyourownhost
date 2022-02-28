@@ -29,6 +29,7 @@ func newRegistry() registry {
 	return registry{osk8sInstallerMap: make(osk8sInstallerMap)}
 }
 
+// AddBundleInstaller adds a bundle installer to the registry
 func (r *registry) AddBundleInstaller(os, k8sVer string, installer osk8sInstaller) {
 	if _, ok := r.osk8sInstallerMap[os]; !ok {
 		r.osk8sInstallerMap[os] = make(k8sInstallerMap)
@@ -41,10 +42,12 @@ func (r *registry) AddBundleInstaller(os, k8sVer string, installer osk8sInstalle
 	r.osk8sInstallerMap[os][k8sVer] = installer
 }
 
+// AddOsFilter adds an OS filter to the filtered bundle list of registry
 func (r *registry) AddOsFilter(osFilter, osBundle string) {
 	r.filterBundleList = append(r.filterBundleList, filterBundlePair{osFilter: osFilter, osBundle: osBundle})
 }
 
+// ListOS returns a list of OSes supported by the registry
 func (r *registry) ListOS() (osFilter, osBundle []string) {
 	osFilter = make([]string, 0, len(r.filterBundleList))
 	osBundle = make([]string, 0, len(r.filterBundleList))
@@ -57,6 +60,7 @@ func (r *registry) ListOS() (osFilter, osBundle []string) {
 	return
 }
 
+// ListK8s returns a list of K8s versions supported by the registry
 func (r *registry) ListK8s(osBundleHost string) []string {
 	var result []string
 
@@ -77,6 +81,7 @@ func (r *registry) ListK8s(osBundleHost string) []string {
 	return result
 }
 
+// GetInstaller returns the bundle installer for the given os and k8s version
 func (r *registry) GetInstaller(osHost, k8sVer string) (osk8si osk8sInstaller, osBundle string) {
 	osBundle = r.resolveOsToOsBundle(osHost)
 	osk8si = r.osk8sInstallerMap[osBundle][k8sVer]

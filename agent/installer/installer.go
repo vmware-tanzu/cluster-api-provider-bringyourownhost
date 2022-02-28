@@ -12,17 +12,24 @@ import (
 	"github.com/vmware-tanzu/cluster-api-provider-bringyourownhost/agent/installer/internal/algo"
 )
 
+// Error string wrapper for errors returned by the installer
 type Error string
 
 func (e Error) Error() string { return string(e) }
 
 const (
-	ErrDetectOs          = Error("Error detecting OS")
+	// ErrDetectOs error type when supported OS could not be detected
+	ErrDetectOs = Error("Error detecting OS")
+	// ErrOsK8sNotSupported error type when the OS is not supported by the k8s installer
 	ErrOsK8sNotSupported = Error("No k8s support for OS")
-	ErrBundleDownload    = Error("Error downloading bundle")
-	ErrBundleExtract     = Error("Error extracting bundle")
-	ErrBundleInstall     = Error("Error installing bundle")
-	ErrBundleUninstall   = Error("Error uninstalling bundle")
+	// ErrBundleDownload error type when the bundle download fails
+	ErrBundleDownload = Error("Error downloading bundle")
+	// ErrBundleExtract error type when the bundle extraction fails
+	ErrBundleExtract = Error("Error extracting bundle")
+	// ErrBundleInstall error type when the bundle installation fails
+	ErrBundleInstall = Error("Error installing bundle")
+	// ErrBundleUninstall error type when the bundle uninstallation fails
+	ErrBundleUninstall = Error("Error uninstalling bundle")
 )
 
 var preRequisitePackages = []string{"socat", "ebtables", "ethtool", "conntrack"}
@@ -79,6 +86,7 @@ func (bd *bundleDownloader) getBundlePathDirOrPreview(k8s, tag string) string {
 	return bd.GetBundleDirPath(k8s, tag)
 }
 
+// DownloadOrPreview downloads the bundle if bundleDownloader is configured with a download path else runs in preview mode without downloading
 func (bd *bundleDownloader) DownloadOrPreview(os, k8s, tag string) error {
 	if bd == nil || bd.downloadPath == "" {
 		bd.logger.Info("Running in preview mode, skip bundle download")
@@ -149,7 +157,7 @@ func (i *installer) Install(bundleRepo, k8sVer, tag string) error {
 	return nil
 }
 
-// Uninstal uninstalls the specified k8s version on the current OS
+// Uninstall uninstalls the specified k8s version on the current OS
 func (i *installer) Uninstall(bundleRepo, k8sVer, tag string) error {
 	i.setBundleRepo(bundleRepo)
 	algoInst, err := i.getAlgoInstallerWithBundle(k8sVer, tag)
@@ -238,11 +246,20 @@ type logPrinter struct {
 	logger logr.Logger
 }
 
+// Desc logPrinter implementation of OutputBuilder Desc method
 func (lp *logPrinter) Desc(s string) { lp.logger.Info(s) }
-func (lp *logPrinter) Cmd(s string)  { lp.logger.Info(s) }
-func (lp *logPrinter) Out(s string)  { lp.logger.Info(s) }
-func (lp *logPrinter) Err(s string)  { lp.logger.Info(s) }
-func (lp *logPrinter) Msg(s string)  { lp.logger.Info(s) }
+
+// Cmd logPrinter implementation of OutputBuilder Cmd method
+func (lp *logPrinter) Cmd(s string) { lp.logger.Info(s) }
+
+// Out logPrinter implementation of OutputBuilder Out method
+func (lp *logPrinter) Out(s string) { lp.logger.Info(s) }
+
+// Err logPrinter implementation of OutputBuilder Err method
+func (lp *logPrinter) Err(s string) { lp.logger.Info(s) }
+
+// Msg logPrinter implementation of OutputBuilder Msg method
+func (lp *logPrinter) Msg(s string) { lp.logger.Info(s) }
 
 // stringPrinter is an adapter of OutputBuilder to string
 type stringPrinter struct {
@@ -255,11 +272,20 @@ type stringPrinter struct {
 	strDivider string
 }
 
+// Desc stringPrinter implementation of description output
 func (obp *stringPrinter) Desc(s string) { obp.steps = append(obp.steps, applyFmt(obp.descFmt, s)) }
-func (obp *stringPrinter) Cmd(s string)  { obp.steps = append(obp.steps, applyFmt(obp.cmdFmt, s)) }
-func (obp *stringPrinter) Out(s string)  { obp.steps = append(obp.steps, applyFmt(obp.outFmt, s)) }
-func (obp *stringPrinter) Err(s string)  { obp.steps = append(obp.steps, applyFmt(obp.errFmt, s)) }
-func (obp *stringPrinter) Msg(s string)  { obp.steps = append(obp.steps, applyFmt(obp.msgFmt, s)) }
+
+// Cmd stringPrinter implementation of command output
+func (obp *stringPrinter) Cmd(s string) { obp.steps = append(obp.steps, applyFmt(obp.cmdFmt, s)) }
+
+// Out stringPrinter implementation of info/content output
+func (obp *stringPrinter) Out(s string) { obp.steps = append(obp.steps, applyFmt(obp.outFmt, s)) }
+
+// Err stringPrinter implementation of error output
+func (obp *stringPrinter) Err(s string) { obp.steps = append(obp.steps, applyFmt(obp.errFmt, s)) }
+
+// Msg stringPrinter implementation of message output
+func (obp *stringPrinter) Msg(s string) { obp.steps = append(obp.steps, applyFmt(obp.msgFmt, s)) }
 
 // String implements the Stringer interface
 // It joins the string array by adding new lines between the strings and returns it as a single string

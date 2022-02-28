@@ -9,6 +9,7 @@ import (
 	"strings"
 )
 
+// NewAptStep returns a new step to install apt package
 func NewAptStep(k *BaseK8sInstaller, aptPkg string) Step {
 	return NewAptStepEx(k, aptPkg, false)
 }
