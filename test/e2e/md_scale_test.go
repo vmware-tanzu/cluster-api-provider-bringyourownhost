@@ -71,21 +71,21 @@ var _ = Describe("When testing MachineDeployment scale out/in", func() {
 
 			byoHostName = fmt.Sprintf("byohost-%s", util.RandomString(6))
 
-			config := byoHostConfig{
-				ctx:                   ctx,
+			runner := ByoHostRunner{
+				Context:                   ctx,
 				clusterConName:        clusterConName,
-				byoHostName:           byoHostName,
-				namespace:             namespace.Name,
-				pathToHostAgentBinary: pathToHostAgentBinary,
+				ByoHostName:           byoHostName,
+				Namespace:             namespace.Name,
+				PathToHostAgentBinary: pathToHostAgentBinary,
 				dockerClient:          dockerClient,
 				bootstrapClusterProxy: bootstrapClusterProxy,
-				commandArgs: map[string]string{
+				CommandArgs: map[string]string{
 					"--kubeconfig": "/mgmt.conf",
 					"--namespace":  namespace.Name,
 					"--v":          "1",
 				},
 			}
-			output, byohostContainerID, err := setupByoDockerHost(&config, true)
+			output, byohostContainerID, err := runner.SetupByoDockerHost(true)
 			allbyohostContainerIDs = append(allbyohostContainerIDs, byohostContainerID)
 			Expect(err).NotTo(HaveOccurred())
 
