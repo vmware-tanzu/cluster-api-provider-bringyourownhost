@@ -297,11 +297,11 @@ function readArgs() {
                 shift 
                 ;;
             -m|--md) 
-                workerNums=$2
+                workerCount=$2
                 shift 2 
                 ;;
             -c|--cp) 
-                controlPlaneNums=$2
+                controlPlaneCount=$2
                 shift 2 
                 ;;
             -k|--kv) 
@@ -314,7 +314,7 @@ function readArgs() {
         esac
     done
 
-    byohNums=$[${workerNums}+${controlPlaneNums}]
+    byohNums=$[${workerCount}+${controlPlaneCount}]
 }
 
 function installCNI(){
@@ -478,7 +478,7 @@ function createWorkloadCluster() {
     # Find a available IP for control plane endpoint
     calcControlPlaneIP
 
-    CONTROL_PLANE_ENDPOINT_IP=${controlPlaneEndPointIp} clusterctl generate cluster ${workerClusterName} --infrastructure byoh --kubernetes-version ${kubernetesVersion} --control-plane-machine-count ${controlPlaneNums}  --worker-machine-count ${workerNums} --flavor docker > "${clusterYamlFile}"
+    CONTROL_PLANE_ENDPOINT_IP=${controlPlaneEndPointIp} clusterctl generate cluster ${workerClusterName} --infrastructure byoh --kubernetes-version ${kubernetesVersion} --control-plane-machine-count ${controlPlaneCount}  --worker-machine-count ${workerCount} --flavor docker > "${clusterYamlFile}"
     if [ $? -ne 0 ]; then
         echo "Generate ${clusterYamlFile} failed, exiting..."
         exit 1
@@ -529,8 +529,8 @@ byohImageTag="v1.22.3"
 managerClusterName="kind-byoh"
 workerClusterName="worker-byoh"
 controlPlaneEndPointIp=""
-workerNums=1
-controlPlaneNums=1
+workerCount=1
+controlPlaneCount=1
 byohNums=2
 defaultCni="0"
 manageClusterConfFile="${HOME}/.kube/management-cluster.conf"
