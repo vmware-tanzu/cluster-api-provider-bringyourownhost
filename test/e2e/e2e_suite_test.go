@@ -12,13 +12,15 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+	"time"
 
+	"github.com/docker/docker/api/types"
+	"github.com/docker/docker/client"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	infraproviderv1 "github.com/vmware-tanzu/cluster-api-provider-bringyourownhost/apis/infrastructure/v1beta1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/runtime"
-	clusterv1 "sigs.k8s.io/cluster-api/api/v1beta1"
 	"sigs.k8s.io/cluster-api/test/framework"
 	"sigs.k8s.io/cluster-api/test/framework/bootstrap"
 	"sigs.k8s.io/cluster-api/test/framework/clusterctl"
@@ -57,14 +59,34 @@ var (
 
 	// TODO: Remove this later
 	clusterConName string
+
+	testScope string
+
+	// added by huchen
+	alltestsTime time.Time
+
+	byoHostCapacityPool int
+
+	ctx context.Context
+
+	dockerClient           *client.Client
+	allbyohostContainerIDs []string
+	allAgentLogFiles       []string
+	namespace              *corev1.Namespace
+	allClusterNames        []string
+
+	specGeneralName = "e2e"
+	cancelWatches   context.CancelFunc
 )
 
 func init() {
+	By("huchen: suit-init")
 	flag.StringVar(&configPath, "e2e.config", "", "path to the e2e config file")
 	flag.StringVar(&artifactFolder, "e2e.artifacts-folder", "", "folder where e2e test artifact should be stored")
 	flag.BoolVar(&skipCleanup, "e2e.skip-resource-cleanup", false, "if true, the resource cleanup after tests will be skipped")
 	flag.BoolVar(&useExistingCluster, "e2e.use-existing-cluster", false, "if true, the test uses the current cluster instead of creating a new one (default discovery rules apply)")
 	flag.StringVar(&existingClusterKubeConfig, "e2e.existing-cluster-kubeconfig-path", "", "path to the existing cluster's kubeconfig")
+	flag.StringVar(&testScope, "e2e.test-scope", "", "test scope")
 }
 
 func TestE2E(t *testing.T) {
@@ -76,7 +98,7 @@ func TestE2E(t *testing.T) {
 // The local clusterctl repository & the bootstrap cluster are created once and shared across all the tests.
 var _ = SynchronizedBeforeSuite(func() []byte {
 	// Before all ParallelNodes.
-
+	By("huchen: SynchronizedBeforeSuite-1")
 	Expect(configPath).To(BeAnExistingFile(), "Invalid test suite argument. e2e.config should be an existing file.")
 	Expect(os.MkdirAll(artifactFolder, 0755)).To(Succeed(), "Invalid test suite argument. Can't create e2e.artifacts-folder %q", artifactFolder)
 
@@ -106,7 +128,7 @@ var _ = SynchronizedBeforeSuite(func() []byte {
 	)
 }, func(data []byte) {
 	// Before each ParallelNode.
-
+	By("huchen: suit-2")
 	parts := strings.Split(string(data), ",")
 	Expect(parts).To(HaveLen(4))
 
@@ -117,6 +139,14 @@ var _ = SynchronizedBeforeSuite(func() []byte {
 
 	e2eConfig = loadE2EConfig(configPath)
 	bootstrapClusterProxy = framework.NewClusterProxy("bootstrap", kubeconfigPath, initScheme(), framework.WithMachineLogCollector(framework.DockerLogCollector{}))
+
+	check()
+
+	// set up a Namespace where to host objects for this spec and create a watcher for the namespace events.
+	namespace, cancelWatches = setupSpecNamespace(ctx, specGeneralName, bootstrapClusterProxy, artifactFolder)
+
+	createByohostCapacityPool()
+
 })
 
 // Using a SynchronizedAfterSuite for controlling how to delete resources shared across ParallelNodes (~ginkgo threads).
@@ -126,11 +156,21 @@ var _ = SynchronizedAfterSuite(func() {
 	// After each ParallelNode.
 }, func() {
 	// After all ParallelNodes.
+	By("huchen: SynchronizedAfterSuite-1")
+
+	if CurrentGinkgoTestDescription().Failed {
+		ShowInfo(allAgentLogFiles)
+	}
+
+	cleanUp()
 
 	By("Tearing down the management cluster")
 	if !skipCleanup {
 		tearDown(bootstrapClusterProvider, bootstrapClusterProxy)
 	}
+
+	// added by huchen
+	Showf("huchen: all tests: time elapse: %v", time.Since(alltestsTime))
 })
 
 func initScheme() *runtime.Scheme {
@@ -138,6 +178,79 @@ func initScheme() *runtime.Scheme {
 	framework.TryAddDefaultSchemes(sc)
 	Expect(infraproviderv1.AddToScheme(sc)).NotTo(HaveOccurred())
 	return sc
+}
+
+func cleanUp() {
+	// Dumps all the resources in the spec namespace, then cleanups the cluster object and the spec namespace itself.
+	dumpSpecResourcesAndCleanup(ctx, specGeneralName, bootstrapClusterProxy, artifactFolder, namespace, cancelWatches, e2eConfig.GetIntervals, skipCleanup)
+
+	if dockerClient != nil {
+		for _, byohostContainerID := range allbyohostContainerIDs {
+			err := dockerClient.ContainerStop(ctx, byohostContainerID, nil)
+			Expect(err).NotTo(HaveOccurred())
+
+			err = dockerClient.ContainerRemove(ctx, byohostContainerID, types.ContainerRemoveOptions{})
+			Expect(err).NotTo(HaveOccurred())
+		}
+
+	}
+
+	for _, agentLogFile := range allAgentLogFiles {
+		err := os.Remove(agentLogFile)
+		if err != nil {
+			Showf("error removing file %s: %v", agentLogFile, err)
+		}
+	}
+	err := os.Remove(ReadByohControllerManagerLogShellFile)
+	if err != nil {
+		Showf("error removing file %s: %v", ReadByohControllerManagerLogShellFile, err)
+	}
+	err = os.Remove(ReadAllPodsShellFile)
+	if err != nil {
+		Showf("error removing file %s: %v", ReadAllPodsShellFile, err)
+	}
+}
+
+func check() {
+
+	ctx = context.TODO()
+	Expect(ctx).NotTo(BeNil(), "ctx is required for spec")
+
+	Expect(e2eConfig).NotTo(BeNil(), "Invalid argument. e2eConfig can't be nil when calling spec")
+	Expect(clusterctlConfigPath).To(BeAnExistingFile(), "Invalid argument. clusterctlConfigPath must be an existing file when calling spec")
+	Expect(bootstrapClusterProxy).NotTo(BeNil(), "Invalid argument. bootstrapClusterProxy can't be nil when calling spec")
+	Expect(os.MkdirAll(artifactFolder, 0755)).To(Succeed(), "Invalid argument. artifactFolder can't be created for spec")
+
+	Expect(e2eConfig.Variables).To(HaveKey(KubernetesVersion))
+}
+
+func createByohostCapacityPool() {
+	if testScope == "" {
+		byoHostCapacityPool = 6
+	} else {
+		byoHostCapacityPool = 2
+	}
+
+	By("Creating byohost capacity pool containing serveral hosts")
+	for i := 0; i < byoHostCapacityPool; i++ {
+		byoHostName := fmt.Sprintf("byohost-%s", util.RandomString(6))
+		output, byohostContainerID, err := setupByoDockerHost(ctx, clusterConName, byoHostName, namespace.Name, dockerClient, bootstrapClusterProxy)
+		allbyohostContainerIDs = append(allbyohostContainerIDs, byohostContainerID)
+		Expect(err).NotTo(HaveOccurred())
+
+		// read the log of host agent container in backend, and write it
+		agentLogFile := fmt.Sprintf("/tmp/host-agent-%d.log", i)
+		func() {
+			f := WriteDockerLog(output, agentLogFile)
+			defer func() {
+				deferredErr := f.Close()
+				if deferredErr != nil {
+					Showf("error closing file %s:, %v", agentLogFile, deferredErr)
+				}
+			}()
+		}()
+		allAgentLogFiles = append(allAgentLogFiles, agentLogFile)
+	}
 }
 
 func loadE2EConfig(configPath string) *clusterctl.E2EConfig {
@@ -217,14 +330,22 @@ func setupSpecNamespace(ctx context.Context, specName string, clusterProxy frame
 	return namespace, cancelWatches
 }
 
-func dumpSpecResourcesAndCleanup(ctx context.Context, specName string, clusterProxy framework.ClusterProxy, artifactFolder string, namespace *corev1.Namespace, cancelWatches context.CancelFunc, cluster *clusterv1.Cluster, intervalsGetter func(spec, key string) []interface{}, skipCleanup bool) {
-	Byf("Dumping logs from the %q workload cluster", cluster.Name)
+func dumpSpecResourcesAndCleanup(ctx context.Context, specName string, clusterProxy framework.ClusterProxy, artifactFolder string, namespace *corev1.Namespace, cancelWatches context.CancelFunc, intervalsGetter func(spec, key string) []interface{}, skipCleanup bool) {
 
-	// Dump all the logs from the workload cluster before deleting them.
-	clusterProxy.CollectWorkloadClusterLogs(ctx, cluster.Namespace, cluster.Name, filepath.Join(artifactFolder, "clusters", cluster.Name, "machines"))
+	clusters := framework.GetAllClustersByNamespace(ctx, framework.GetAllClustersByNamespaceInput{
+		Lister:    clusterProxy.GetClient(),
+		Namespace: namespace.Name,
+	})
+
+	for _, cluster := range clusters {
+
+		Byf("Dumping logs from the %q workload cluster", cluster.Name)
+		// Dump all the logs from the workload cluster before deleting them.
+		clusterProxy.CollectWorkloadClusterLogs(ctx, cluster.Namespace, cluster.Name, filepath.Join(artifactFolder, "clusters", cluster.Name, "machines"))
+
+	}
 
 	Byf("Dumping all the Cluster API resources in the %q namespace", namespace.Name)
-
 	// Dump all Cluster API related resources to artifacts before deleting them.
 	framework.DumpAllResources(ctx, framework.DumpAllResourcesInput{
 		Lister:    clusterProxy.GetClient(),
@@ -233,7 +354,7 @@ func dumpSpecResourcesAndCleanup(ctx context.Context, specName string, clusterPr
 	})
 
 	if !skipCleanup {
-		Byf("Deleting cluster %s/%s", cluster.Namespace, cluster.Name)
+		Byf("Deleting all clusters")
 		// While https://github.com/kubernetes-sigs/cluster-api/issues/2955 is addressed in future iterations, there is a chance
 		// that cluster variable is not set even if the cluster exists, so we are calling DeleteAllClustersAndWait
 		// instead of DeleteClusterAndWait
@@ -242,12 +363,13 @@ func dumpSpecResourcesAndCleanup(ctx context.Context, specName string, clusterPr
 			Namespace: namespace.Name,
 		}, intervalsGetter(specName, "wait-delete-cluster")...)
 
-		Byf("Deleting namespace used for hosting the %q test spec", specName)
+		Byf("Deleting namespace", specName)
 		framework.DeleteNamespace(ctx, framework.DeleteNamespaceInput{
 			Deleter: clusterProxy.GetClient(),
 			Name:    namespace.Name,
 		})
 	}
+
 	cancelWatches()
 }
 

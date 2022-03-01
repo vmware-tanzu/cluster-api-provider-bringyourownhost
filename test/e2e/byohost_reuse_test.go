@@ -7,16 +7,12 @@ package e2e
 import (
 	"context"
 	"fmt"
-	"os"
 	"path/filepath"
 
-	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/client"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	infrastructurev1beta1 "github.com/vmware-tanzu/cluster-api-provider-bringyourownhost/apis/infrastructure/v1beta1"
-	corev1 "k8s.io/api/core/v1"
-	k8stypes "k8s.io/apimachinery/pkg/types"
 	"k8s.io/utils/pointer"
 	clusterv1 "sigs.k8s.io/cluster-api/api/v1beta1"
 	"sigs.k8s.io/cluster-api/test/framework"
@@ -24,78 +20,19 @@ import (
 	"sigs.k8s.io/cluster-api/util"
 )
 
-var (
-	dockerClient *client.Client
-)
-
 var _ = Describe("When BYO Host rejoins the capacity pool", func() {
 
 	var (
-		ctx                 context.Context
-		specName            = "byohost-reuse"
-		namespace           *corev1.Namespace
-		cancelWatches       context.CancelFunc
-		clusterResources    *clusterctl.ApplyClusterTemplateAndWaitResult
-		byohostContainerIDs []string
-		agentLogFile1       = "/tmp/host-agent1.log"
-		agentLogFile2       = "/tmp/host-agent-reuse.log"
+		specName = "byohost-reuse"
 	)
 
-	BeforeEach(func() {
-
-		ctx = context.TODO()
-		Expect(ctx).NotTo(BeNil(), "ctx is required for %s spec", specName)
-
-		Expect(e2eConfig).NotTo(BeNil(), "Invalid argument. e2eConfig can't be nil when calling %s spec", specName)
-		Expect(clusterctlConfigPath).To(BeAnExistingFile(), "Invalid argument. clusterctlConfigPath must be an existing file when calling %s spec", specName)
-		Expect(bootstrapClusterProxy).NotTo(BeNil(), "Invalid argument. bootstrapClusterProxy can't be nil when calling %s spec", specName)
-		Expect(os.MkdirAll(artifactFolder, 0755)).To(Succeed(), "Invalid argument. artifactFolder can't be created for %s spec", specName)
-
-		Expect(e2eConfig.Variables).To(HaveKey(KubernetesVersion))
-
-		// set up a Namespace where to host objects for this spec and create a watcher for the namespace events.
-		namespace, cancelWatches = setupSpecNamespace(ctx, specName, bootstrapClusterProxy, artifactFolder)
-		clusterResources = new(clusterctl.ApplyClusterTemplateAndWaitResult)
-	})
-
 	It("Should reuse the same BYO Host after it is reset", func() {
+
+		clusterResources := new(clusterctl.ApplyClusterTemplateAndWaitResult)
+
 		clusterName := fmt.Sprintf("%s-%s", specName, util.RandomString(6))
-		byoHostName1 := "byohost-1"
-		byoHostName2 := "byohost-for-reuse"
-
-		client, err := client.NewClientWithOpts(client.FromEnv)
-		Expect(err).NotTo(HaveOccurred())
-		setDockerClient(client)
-
-		var output types.HijackedResponse
-		output, byohostContainerID, err := setupByoDockerHost(ctx, clusterConName, byoHostName1, namespace.Name, getDockerClient(), bootstrapClusterProxy)
-		Expect(err).NotTo(HaveOccurred())
-		defer output.Close()
-		byohostContainerIDs = append(byohostContainerIDs, byohostContainerID)
-		f := WriteDockerLog(output, agentLogFile1)
-		defer func() {
-			deferredErr := f.Close()
-			if deferredErr != nil {
-				Showf("Error closing file %s: %v", agentLogFile1, deferredErr)
-			}
-		}()
-
-		output, byohostContainerID, err = setupByoDockerHost(ctx, clusterConName, byoHostName2, namespace.Name, getDockerClient(), bootstrapClusterProxy)
-		Expect(err).NotTo(HaveOccurred())
-		defer output.Close()
-		byohostContainerIDs = append(byohostContainerIDs, byohostContainerID)
-
-		// read the log of host agent container in backend, and write it
-		f = WriteDockerLog(output, agentLogFile2)
-		defer func() {
-			deferredErr := f.Close()
-			if deferredErr != nil {
-				Showf("Error closing file %s: %v", agentLogFile2, deferredErr)
-			}
-		}()
 
 		By("Creating a cluster")
-
 		setControlPlaneIP(context.Background(), dockerClient)
 		clusterctl.ApplyClusterTemplateAndWait(ctx, clusterctl.ApplyClusterTemplateAndWaitInput{
 			ClusterProxy: bootstrapClusterProxy,
@@ -165,45 +102,6 @@ var _ = Describe("When BYO Host rejoins the capacity pool", func() {
 		cluster, ok = byoHostToBeReused.Labels[clusterv1.ClusterLabelName]
 		Expect(ok).To(BeTrue())
 		Expect(cluster).To(Equal(clusterName))
-
-	})
-
-	JustAfterEach(func() {
-		if CurrentGinkgoTestDescription().Failed {
-			ShowInfo([]string{agentLogFile1, agentLogFile2})
-		}
-	})
-
-	AfterEach(func() {
-		// Dumps all the resources in the spec namespace, then cleanups the cluster object and the spec namespace itself.
-		dumpSpecResourcesAndCleanup(ctx, specName, bootstrapClusterProxy, artifactFolder, namespace, cancelWatches, clusterResources.Cluster, e2eConfig.GetIntervals, skipCleanup)
-
-		if getDockerClient() != nil && len(byohostContainerIDs) != 0 {
-			for _, byohostContainerID := range byohostContainerIDs {
-				err := getDockerClient().ContainerStop(ctx, byohostContainerID, nil)
-				Expect(err).NotTo(HaveOccurred())
-
-				err = getDockerClient().ContainerRemove(ctx, byohostContainerID, types.ContainerRemoveOptions{})
-				Expect(err).NotTo(HaveOccurred())
-			}
-		}
-
-		err := os.Remove(agentLogFile1)
-		if err != nil {
-			Showf("Failed to remove file %s: %v", agentLogFile1, err)
-		}
-		err = os.Remove(agentLogFile2)
-		if err != nil {
-			Showf("Failed to remove file %s: %v", agentLogFile2, err)
-		}
-		err = os.Remove(ReadByohControllerManagerLogShellFile)
-		if err != nil {
-			Showf("Failed to remove file %s: %v", ReadByohControllerManagerLogShellFile, err)
-		}
-		err = os.Remove(ReadAllPodsShellFile)
-		if err != nil {
-			Showf("Failed to remove file %s: %v", ReadAllPodsShellFile, err)
-		}
 	})
 })
 

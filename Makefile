@@ -130,7 +130,9 @@ test-e2e: take-user-input docker-build prepare-byoh-docker-host-image $(GINKGO) 
 	    -e2e.artifacts-folder="$(ARTIFACTS)" \
 	    -e2e.config="$(E2E_CONF_FILE)" \
 	    -e2e.skip-resource-cleanup=$(SKIP_RESOURCE_CLEANUP) -e2e.use-existing-cluster=$(USE_EXISTING_CLUSTER) \
-		-e2e.existing-cluster-kubeconfig-path=$(EXISTING_CLUSTER_KUBECONFIG_PATH)
+		-e2e.existing-cluster-kubeconfig-path=$(EXISTING_CLUSTER_KUBECONFIG_PATH) \
+		-e2e.test-scope=$(GINKGO_FOCUS)
+
 
 cluster-templates: kustomize cluster-templates-v1beta1
 
