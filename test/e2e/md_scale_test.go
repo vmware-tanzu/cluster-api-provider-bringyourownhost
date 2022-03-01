@@ -64,21 +64,21 @@ var _ = Describe("When testing MachineDeployment scale out/in", func() {
 		for i := 0; i < byoHostCapacityPool; i++ {
 
 			byoHostName = fmt.Sprintf("byohost-%s", util.RandomString(6))
-			output, byohostContainerID, err := setupByoDockerHost(ctx, clusterConName, byoHostName, namespace.Name, dockerClient, bootstrapClusterProxy)
+			output, byohostContainerID, err := setupByoDockerHost(ctx, clusterConName, byoHostName, namespace.Name, pathToHostAgentBinary, dockerClient, bootstrapClusterProxy)
 			allbyohostContainerIDs = append(allbyohostContainerIDs, byohostContainerID)
 			Expect(err).NotTo(HaveOccurred())
 
 			// read the log of host agent container in backend, and write it
 			agentLogFile := fmt.Sprintf("/tmp/host-agent-%d.log", i)
-			func() {
-				f := WriteDockerLog(output, agentLogFile)
-				defer func() {
-					deferredErr := f.Close()
-					if deferredErr != nil {
-						Showf("error closing file %s:, %v", agentLogFile, deferredErr)
-					}
-				}()
+
+			f := WriteDockerLog(output, agentLogFile)
+			defer func() {
+				deferredErr := f.Close()
+				if deferredErr != nil {
+					Showf("error closing file %s:, %v", agentLogFile, deferredErr)
+				}
 			}()
+
 			allAgentLogFiles = append(allAgentLogFiles, agentLogFile)
 		}
 		// TODO: Write agent logs to files for better debugging

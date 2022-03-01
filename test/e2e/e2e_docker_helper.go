@@ -20,7 +20,6 @@ import (
 	"github.com/docker/docker/pkg/archive"
 	"github.com/docker/docker/pkg/system"
 	. "github.com/onsi/gomega" // nolint: stylecheck
-	"github.com/onsi/gomega/gexec"
 	"github.com/pkg/errors"
 	"sigs.k8s.io/cluster-api/test/framework"
 )
@@ -159,17 +158,14 @@ func createDockerContainer(ctx context.Context, byoHostName string, dockerClient
 		nil, byoHostName)
 }
 
-func setupByoDockerHost(ctx context.Context, clusterConName, byoHostName, namespace string, dockerClient *client.Client, bootstrapClusterProxy framework.ClusterProxy) (types.HijackedResponse, string, error) {
+func setupByoDockerHost(ctx context.Context, clusterConName, byoHostName, namespace, byoBinaryPath string, dockerClient *client.Client, bootstrapClusterProxy framework.ClusterProxy) (types.HijackedResponse, string, error) {
 	byohost, err := createDockerContainer(ctx, byoHostName, dockerClient)
 	Expect(err).NotTo(HaveOccurred())
 
 	Expect(dockerClient.ContainerStart(ctx, byohost.ID, types.ContainerStartOptions{})).NotTo(HaveOccurred())
 
-	pathToHostAgentBinary, err := gexec.Build("github.com/vmware-tanzu/cluster-api-provider-bringyourownhost/agent")
-	Expect(err).NotTo(HaveOccurred())
-
 	config := cpConfig{
-		sourcePath: pathToHostAgentBinary,
+		sourcePath: byoBinaryPath,
 		destPath:   "/agent",
 		container:  byohost.ID,
 	}
