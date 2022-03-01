@@ -48,7 +48,7 @@ type ByoHostRunner struct {
 	bootstrapClusterProxy framework.ClusterProxy
 	CommandArgs           map[string]string
 	Port                  string
-	KubeconfigFile        *os.File
+	KubeconfigFile        string
 }
 
 func resolveLocalPath(localPath string) (absPath string, err error) {
@@ -180,7 +180,7 @@ func (r *ByoHostRunner) copyKubeconfig(config cpConfig, listopt types.ContainerL
 		Expect(err).NotTo(HaveOccurred())
 		Expect(len(containers)).To(Equal(1))
 
-		kubeconfig, err = os.ReadFile(r.KubeconfigFile.Name())
+		kubeconfig, err = os.ReadFile(r.KubeconfigFile)
 		Expect(err).NotTo(HaveOccurred())
 
 		re := regexp.MustCompile("server:.*")
