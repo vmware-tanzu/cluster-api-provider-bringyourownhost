@@ -14,6 +14,7 @@ import (
 	"github.com/docker/docker/client"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+	"github.com/onsi/gomega/gexec"
 	infrastructurev1beta1 "github.com/vmware-tanzu/cluster-api-provider-bringyourownhost/apis/infrastructure/v1beta1"
 	corev1 "k8s.io/api/core/v1"
 	k8stypes "k8s.io/apimachinery/pkg/types"
@@ -31,14 +32,16 @@ var (
 var _ = Describe("When BYO Host rejoins the capacity pool", func() {
 
 	var (
-		ctx                 context.Context
-		specName            = "byohost-reuse"
-		namespace           *corev1.Namespace
-		cancelWatches       context.CancelFunc
-		clusterResources    *clusterctl.ApplyClusterTemplateAndWaitResult
-		byohostContainerIDs []string
-		agentLogFile1       = "/tmp/host-agent1.log"
-		agentLogFile2       = "/tmp/host-agent-reuse.log"
+		ctx                   context.Context
+		specName              = "byohost-reuse"
+		namespace             *corev1.Namespace
+		cancelWatches         context.CancelFunc
+		clusterResources      *clusterctl.ApplyClusterTemplateAndWaitResult
+		byohostContainerIDs   []string
+		agentLogFile1         = "/tmp/host-agent1.log"
+		agentLogFile2         = "/tmp/host-agent-reuse.log"
+		pathToHostAgentBinary string
+		err                   error
 	)
 
 	BeforeEach(func() {
@@ -52,6 +55,9 @@ var _ = Describe("When BYO Host rejoins the capacity pool", func() {
 		Expect(os.MkdirAll(artifactFolder, 0755)).To(Succeed(), "Invalid argument. artifactFolder can't be created for %s spec", specName)
 
 		Expect(e2eConfig.Variables).To(HaveKey(KubernetesVersion))
+
+		pathToHostAgentBinary, err = gexec.Build("github.com/vmware-tanzu/cluster-api-provider-bringyourownhost/agent")
+		Expect(err).NotTo(HaveOccurred())
 
 		// set up a Namespace where to host objects for this spec and create a watcher for the namespace events.
 		namespace, cancelWatches = setupSpecNamespace(ctx, specName, bootstrapClusterProxy, artifactFolder)
@@ -67,8 +73,26 @@ var _ = Describe("When BYO Host rejoins the capacity pool", func() {
 		Expect(err).NotTo(HaveOccurred())
 		setDockerClient(client)
 
+		runner := ByoHostRunner{
+			Context:                   ctx,
+			clusterConName:        clusterConName,
+			Namespace:             namespace.Name,
+			PathToHostAgentBinary: pathToHostAgentBinary,
+			DockerClient:          dockerClient,
+			NetworkInterface:      "kind",
+			bootstrapClusterProxy: bootstrapClusterProxy,
+			CommandArgs: map[string]string{
+				"--kubeconfig": "/mgmt.conf",
+				"--namespace":  namespace.Name,
+				"--v":          "1",
+			},
+		}
+
 		var output types.HijackedResponse
-		output, byohostContainerID, err := setupByoDockerHost(ctx, clusterConName, byoHostName1, namespace.Name, getDockerClient(), bootstrapClusterProxy)
+		runner.ByoHostName = byoHostName1
+		byohost, err := runner.SetupByoDockerHost()
+		Expect(err).NotTo(HaveOccurred())
+		output, byohostContainerID, err := runner.ExecByoDockerHost(byohost)
 		Expect(err).NotTo(HaveOccurred())
 		defer output.Close()
 		byohostContainerIDs = append(byohostContainerIDs, byohostContainerID)
@@ -80,7 +104,10 @@ var _ = Describe("When BYO Host rejoins the capacity pool", func() {
 			}
 		}()
 
-		output, byohostContainerID, err = setupByoDockerHost(ctx, clusterConName, byoHostName2, namespace.Name, getDockerClient(), bootstrapClusterProxy)
+		runner.ByoHostName = byoHostName2
+		byohost, err = runner.SetupByoDockerHost()
+		Expect(err).NotTo(HaveOccurred())
+		output, byohostContainerID, err = runner.ExecByoDockerHost(byohost)
 		Expect(err).NotTo(HaveOccurred())
 		defer output.Close()
 		byohostContainerIDs = append(byohostContainerIDs, byohostContainerID)

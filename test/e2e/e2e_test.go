@@ -7,6 +7,7 @@ package e2e
 import (
 	"context"
 	"fmt"
+	"github.com/onsi/gomega/gexec"
 	"os"
 	"path/filepath"
 
@@ -32,17 +33,18 @@ const (
 var _ = Describe("When BYOH joins existing cluster [PR-Blocking]", func() {
 
 	var (
-		ctx                 context.Context
-		specName            = "quick-start"
-		namespace           *corev1.Namespace
-		clusterName         string
-		cancelWatches       context.CancelFunc
-		clusterResources    *clusterctl.ApplyClusterTemplateAndWaitResult
-		dockerClient        *client.Client
-		err                 error
-		byohostContainerIDs []string
-		agentLogFile1       = "/tmp/host-agent1.log"
-		agentLogFile2       = "/tmp/host-agent2.log"
+		ctx                   context.Context
+		specName              = "quick-start"
+		namespace             *corev1.Namespace
+		clusterName           string
+		cancelWatches         context.CancelFunc
+		clusterResources      *clusterctl.ApplyClusterTemplateAndWaitResult
+		dockerClient          *client.Client
+		err                   error
+		byohostContainerIDs   []string
+		agentLogFile1         = "/tmp/host-agent1.log"
+		agentLogFile2         = "/tmp/host-agent2.log"
+		pathToHostAgentBinary string
 	)
 
 	BeforeEach(func() {
@@ -57,6 +59,9 @@ var _ = Describe("When BYOH joins existing cluster [PR-Blocking]", func() {
 
 		Expect(e2eConfig.Variables).To(HaveKey(KubernetesVersion))
 
+		pathToHostAgentBinary, err = gexec.Build("github.com/vmware-tanzu/cluster-api-provider-bringyourownhost/agent")
+		Expect(err).NotTo(HaveOccurred())
+
 		// set up a Namespace where to host objects for this spec and create a watcher for the namespace events.
 		namespace, cancelWatches = setupSpecNamespace(ctx, specName, bootstrapClusterProxy, artifactFolder)
 		clusterResources = new(clusterctl.ApplyClusterTemplateAndWaitResult)
@@ -70,8 +75,26 @@ var _ = Describe("When BYOH joins existing cluster [PR-Blocking]", func() {
 		dockerClient, err = client.NewClientWithOpts(client.FromEnv)
 		Expect(err).NotTo(HaveOccurred())
 
+		runner := ByoHostRunner{
+			Context:               ctx,
+			clusterConName:        clusterConName,
+			Namespace:             namespace.Name,
+			PathToHostAgentBinary: pathToHostAgentBinary,
+			DockerClient:          dockerClient,
+			NetworkInterface:      "kind",
+			bootstrapClusterProxy: bootstrapClusterProxy,
+			CommandArgs: map[string]string{
+				"--kubeconfig": "/mgmt.conf",
+				"--namespace":  namespace.Name,
+				"--v":          "1",
+			},
+		}
+
 		var output types.HijackedResponse
-		output, byohostContainerID, err := setupByoDockerHost(ctx, clusterConName, byoHostName1, namespace.Name, dockerClient, bootstrapClusterProxy)
+		runner.ByoHostName = byoHostName1
+		byohost, err := runner.SetupByoDockerHost()
+		Expect(err).NotTo(HaveOccurred())
+		output, byohostContainerID, err := runner.ExecByoDockerHost(byohost)
 		Expect(err).NotTo(HaveOccurred())
 		defer output.Close()
 		byohostContainerIDs = append(byohostContainerIDs, byohostContainerID)
@@ -83,7 +106,10 @@ var _ = Describe("When BYOH joins existing cluster [PR-Blocking]", func() {
 			}
 		}()
 
-		output, byohostContainerID, err = setupByoDockerHost(ctx, clusterConName, byoHostName2, namespace.Name, dockerClient, bootstrapClusterProxy)
+		runner.ByoHostName = byoHostName2
+		byohost, err = runner.SetupByoDockerHost()
+		Expect(err).NotTo(HaveOccurred())
+		output, byohostContainerID, err = runner.ExecByoDockerHost(byohost)
 		Expect(err).NotTo(HaveOccurred())
 		defer output.Close()
 		byohostContainerIDs = append(byohostContainerIDs, byohostContainerID)

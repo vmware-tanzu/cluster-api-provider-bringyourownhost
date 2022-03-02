@@ -53,6 +53,7 @@ var _ = BeforeSuite(func() {
 			filepath.Join("..", "config", "crd", "bases"),
 			filepath.Join(build.Default.GOPATH, "pkg", "mod", "sigs.k8s.io", "cluster-api@v1.0.4", "config", "crd", "bases"),
 		},
+
 		ErrorIfCRDPathMissing: true,
 	}
 
