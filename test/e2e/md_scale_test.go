@@ -70,14 +70,12 @@ var _ = Describe("When testing MachineDeployment scale out/in", func() {
 
 			// read the log of host agent container in backend, and write it
 			agentLogFile := fmt.Sprintf("/tmp/host-agent-%d.log", i)
-			func() {
-				f := WriteDockerLog(output, agentLogFile)
-				defer func() {
-					deferredErr := f.Close()
-					if deferredErr != nil {
-						Showf("error closing file %s:, %v", agentLogFile, deferredErr)
-					}
-				}()
+			f := WriteDockerLog(output, agentLogFile)
+			defer func() {
+				deferredErr := f.Close()
+				if deferredErr != nil {
+					Showf("error closing file %s:, %v", agentLogFile, deferredErr)
+				}
 			}()
 			allAgentLogFiles = append(allAgentLogFiles, agentLogFile)
 		}
