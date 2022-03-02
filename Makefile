@@ -50,6 +50,8 @@ endif
 SHELL = /usr/bin/env bash -o pipefail
 .SHELLFLAGS = -ec
 
+.DEFAULT_GOAL := help
+
 all: build
 
 HOST_AGENT_DIR ?= agent
