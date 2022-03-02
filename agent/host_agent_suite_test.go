@@ -5,6 +5,7 @@
 package main
 
 import (
+	"context"
 	"go/build"
 	"io/ioutil"
 	"os"
@@ -12,10 +13,13 @@ import (
 	"testing"
 	"time"
 
+	dClient "github.com/docker/docker/client"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+	"github.com/docker/docker/api/types/container"
 	"github.com/onsi/gomega/gexec"
 	infrastructurev1beta1 "github.com/vmware-tanzu/cluster-api-provider-bringyourownhost/apis/infrastructure/v1beta1"
+	"github.com/vmware-tanzu/cluster-api-provider-bringyourownhost/test/e2e"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	clusterv1 "sigs.k8s.io/cluster-api/api/v1beta1"
@@ -23,6 +27,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/envtest"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
+	dockertypes "github.com/docker/docker/api/types"
 )
 
 var (
@@ -31,6 +36,7 @@ var (
 	k8sClient             client.Client
 	tmpFilePrefix         = "kubeconfigFile-"
 	testEnv               *envtest.Environment
+	dockerClient          *dClient.Client
 )
 
 func TestHostAgent(t *testing.T) {
@@ -74,10 +80,14 @@ var _ = BeforeSuite(func() {
 
 	k8sClient, err = client.New(cfg, client.Options{Scheme: scheme})
 	Expect(err).NotTo(HaveOccurred())
-	writeKubeConfig()
+
+	dockerClient, err = dClient.NewClientWithOpts(dClient.FromEnv)
+	Expect(err).NotTo(HaveOccurred())
 
 	pathToHostAgentBinary, err = gexec.Build("github.com/vmware-tanzu/cluster-api-provider-bringyourownhost/agent")
 	Expect(err).NotTo(HaveOccurred())
+
+	writeKubeConfig()
 })
 
 var _ = AfterSuite(func() {
@@ -109,4 +119,42 @@ func writeKubeConfig() {
 
 	_, err = getKubeConfig().Write(kubeConfigData)
 	Expect(err).NotTo(HaveOccurred())
+}
+
+func setupTestInfra(ctx context.Context, kubeconfig string, namespace *corev1.Namespace) (*e2e.ByoHostRunner) {
+	
+
+	byohostRunner := e2e.ByoHostRunner{
+		Context:               ctx,
+		Namespace:             namespace.Name,
+		PathToHostAgentBinary: pathToHostAgentBinary,
+		DockerClient:          dockerClient,
+		NetworkInterface:      "host",
+		ByoHostName:           "byo-integration-host",
+		Port: testEnv.ControlPlane.APIServer.Port,
+		CommandArgs: map[string]string{
+			"--kubeconfig": "/mgmt.conf",
+			"--namespace":  namespace.Name,
+			"--v":          "1",
+		},
+		KubeconfigFile: kubeconfig,
+	}
+	
+	return &byohostRunner
+}
+
+func CleanupBuildArtifacts(context context.Context, byoHostContainer *container.ContainerCreateCreatedBody, namespace *corev1.Namespace, agentLogFile string) {
+	err := dockerClient.ContainerStop(context, byoHostContainer.ID, nil)
+	Expect(err).NotTo(HaveOccurred())
+
+	err = dockerClient.ContainerRemove(context, byoHostContainer.ID, dockertypes.ContainerRemoveOptions{})
+	Expect(err).NotTo(HaveOccurred())
+
+	err = k8sClient.Delete(context, namespace)
+	Expect(err).NotTo(HaveOccurred(), "failed to delete test namespace")
+	
+	err = os.Remove(agentLogFile)
+	if err != nil {
+		e2e.Showf("error removing log file %s: %v", agentLogFile, err)
+	}
 }

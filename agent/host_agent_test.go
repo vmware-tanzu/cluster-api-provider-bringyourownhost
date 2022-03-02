@@ -12,10 +12,10 @@ import (
 	"os"
 	"os/exec"
 	"runtime"
-	
+	"strings"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-
+	"github.com/docker/docker/api/types/container"
 	"github.com/jackpal/gateway"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -24,6 +24,7 @@ import (
 	"github.com/vmware-tanzu/cluster-api-provider-bringyourownhost/agent/version"
 	infrastructurev1beta1 "github.com/vmware-tanzu/cluster-api-provider-bringyourownhost/apis/infrastructure/v1beta1"
 	"github.com/vmware-tanzu/cluster-api-provider-bringyourownhost/test/builder"
+	"github.com/vmware-tanzu/cluster-api-provider-bringyourownhost/test/e2e"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/types"
 )
@@ -33,25 +34,32 @@ var _ = Describe("Agent", func() {
 	Context("When the host is unable to register with the API server", func() {
 		var (
 			ns               *corev1.Namespace
+			ctx context.Context
 			err              error
 			hostName         string
 			fakedKubeConfig  = "fake-kubeconfig-path"
 			fakeDownloadPath = "fake-download-path"
-			session          *gexec.Session
+			agentLogFile = "/tmp/agent-integration.log"
+			runner    *e2e.ByoHostRunner
+			byoHostContainer *container.ContainerCreateCreatedBody
 		)
 
 		BeforeEach(func() {
 			ns = builder.Namespace("testns").Build()
+			ctx = context.TODO()
 			Expect(k8sClient.Create(context.TODO(), ns)).NotTo(HaveOccurred(), "failed to create test namespace")
 
 			hostName, err = os.Hostname()
 			Expect(err).NotTo(HaveOccurred())
+			runner = setupTestInfra(ctx, getKubeConfig().Name(), ns)
+			
+			byoHostContainer, err = runner.SetupByoDockerHost()
+			Expect(err).NotTo(HaveOccurred())
+
 		})
 
 		AfterEach(func() {
-			err = k8sClient.Delete(context.TODO(), ns)
-			Expect(err).NotTo(HaveOccurred(), "failed to delete test namespace")
-			session.Terminate().Wait()
+			CleanupBuildArtifacts(runner.Context, byoHostContainer, ns, agentLogFile)
 		})
 
 		It("should not error out if the host already exists", func() {
@@ -71,17 +79,61 @@ var _ = Describe("Agent", func() {
 			}
 			Expect(k8sClient.Create(context.TODO(), byoHost)).NotTo(HaveOccurred())
 
-			command := exec.Command(pathToHostAgentBinary, "--kubeconfig", kubeconfigFile.Name(), "--namespace", ns.Name, "--downloadpath", fakeDownloadPath)
-			session, err = gexec.Start(command, GinkgoWriter, GinkgoWriter)
+			runner.CommandArgs["--downloadpath"] = fakeDownloadPath
+			output, _, err := runner.ExecByoDockerHost(byoHostContainer)
 			Expect(err).NotTo(HaveOccurred())
-			Consistently(session).ShouldNot(gexec.Exit(0))
+
+			defer output.Close()
+			f := e2e.WriteDockerLog(output, agentLogFile)
+			defer func() {
+				deferredErr := f.Close()
+				if deferredErr != nil {
+					e2e.Showf("error closing file %s: %v", agentLogFile, deferredErr)
+				}
+			}()
+			Consistently(func() (done bool) {
+				_, err := os.Stat(agentLogFile);
+				if  err == nil {
+					data, err := os.ReadFile(agentLogFile)
+					if err == nil {
+						e2e.Showf(string(data))
+					}
+					if err == nil && strings.Contains(string(data), "\"msg\"=\"error\"")  {
+						return true
+					}
+				}
+				return false
+			}).Should(BeFalse())
+			// command := exec.Command(pathToHostAgentBinary, "--kubeconfig", kubeconfigFile.Name(), "--namespace", ns.Name, "--downloadpath", fakeDownloadPath)
+			// session, err = gexec.Start(command, GinkgoWriter, GinkgoWriter)
+			// Expect(err).NotTo(HaveOccurred())
+			// Consistently(session).ShouldNot(gexec.Exit(0))
 		})
 
 		It("should return an error when invalid kubeconfig is passed in", func() {
-			command := exec.Command(pathToHostAgentBinary, "--kubeconfig", fakedKubeConfig)
-			session, err = gexec.Start(command, GinkgoWriter, GinkgoWriter)
+
+			runner.CommandArgs["--kubeconfig"] = fakedKubeConfig
+			output, _, err := runner.ExecByoDockerHost(byoHostContainer)
 			Expect(err).NotTo(HaveOccurred())
-			Eventually(session).Should(gexec.Exit(0))
+			defer output.Close()
+			
+			f := e2e.WriteDockerLog(output, agentLogFile)
+			defer func() {
+				deferredErr := f.Close()
+				if deferredErr != nil {
+					e2e.Showf("error closing file %s: %v", agentLogFile, deferredErr)
+				}
+			}()
+			Eventually(func() (done bool) {
+				_, err := os.Stat(agentLogFile);
+				if  err == nil {
+					data, err := os.ReadFile(agentLogFile)
+					if err == nil && strings.Contains(string(data), "\"msg\"=\"error getting kubeconfig\"")  {
+						return true
+					}
+				}
+				return false
+			}).Should(BeTrue())
 		})
 	})
 
