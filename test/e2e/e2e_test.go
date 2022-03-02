@@ -20,13 +20,6 @@ import (
 	"sigs.k8s.io/cluster-api/util"
 )
 
-const (
-	KubernetesVersion = "KUBERNETES_VERSION"
-	CNIPath           = "CNI"
-	CNIResources      = "CNI_RESOURCES"
-	IPFamily          = "IP_FAMILY"
-)
-
 // creating a workload cluster
 // This test is meant to provide a first, fast signal to detect regression; it is recommended to use it as a PR blocker test.
 var _ = Describe("When BYOH joins existing cluster [PR-Blocking]", func() {
@@ -71,7 +64,7 @@ var _ = Describe("When BYOH joins existing cluster [PR-Blocking]", func() {
 		Expect(err).NotTo(HaveOccurred())
 
 		var output types.HijackedResponse
-		output, byohostContainerID, err := setupByoDockerHost(ctx, clusterConName, byoHostName1, namespace.Name, dockerClient, bootstrapClusterProxy)
+		output, byohostContainerID, err := setupByoDockerHost(ctx, clusterConName, byoHostName1, namespace.Name, pathToHostAgentBinary, dockerClient, bootstrapClusterProxy)
 		Expect(err).NotTo(HaveOccurred())
 		defer output.Close()
 		byohostContainerIDs = append(byohostContainerIDs, byohostContainerID)
@@ -83,7 +76,7 @@ var _ = Describe("When BYOH joins existing cluster [PR-Blocking]", func() {
 			}
 		}()
 
-		output, byohostContainerID, err = setupByoDockerHost(ctx, clusterConName, byoHostName2, namespace.Name, dockerClient, bootstrapClusterProxy)
+		output, byohostContainerID, err = setupByoDockerHost(ctx, clusterConName, byoHostName2, namespace.Name, pathToHostAgentBinary, dockerClient, bootstrapClusterProxy)
 		Expect(err).NotTo(HaveOccurred())
 		defer output.Close()
 		byohostContainerIDs = append(byohostContainerIDs, byohostContainerID)

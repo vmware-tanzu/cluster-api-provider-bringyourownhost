@@ -68,7 +68,7 @@ var _ = Describe("When BYO Host rejoins the capacity pool", func() {
 		setDockerClient(client)
 
 		var output types.HijackedResponse
-		output, byohostContainerID, err := setupByoDockerHost(ctx, clusterConName, byoHostName1, namespace.Name, getDockerClient(), bootstrapClusterProxy)
+		output, byohostContainerID, err := setupByoDockerHost(ctx, clusterConName, byoHostName1, namespace.Name, pathToHostAgentBinary, getDockerClient(), bootstrapClusterProxy)
 		Expect(err).NotTo(HaveOccurred())
 		defer output.Close()
 		byohostContainerIDs = append(byohostContainerIDs, byohostContainerID)
@@ -80,7 +80,7 @@ var _ = Describe("When BYO Host rejoins the capacity pool", func() {
 			}
 		}()
 
-		output, byohostContainerID, err = setupByoDockerHost(ctx, clusterConName, byoHostName2, namespace.Name, getDockerClient(), bootstrapClusterProxy)
+		output, byohostContainerID, err = setupByoDockerHost(ctx, clusterConName, byoHostName2, namespace.Name, pathToHostAgentBinary, getDockerClient(), bootstrapClusterProxy)
 		Expect(err).NotTo(HaveOccurred())
 		defer output.Close()
 		byohostContainerIDs = append(byohostContainerIDs, byohostContainerID)
