@@ -7,7 +7,6 @@ package e2e
 import (
 	"context"
 	"fmt"
-	"github.com/onsi/gomega/gexec"
 	"os"
 	"path/filepath"
 
@@ -21,30 +20,22 @@ import (
 	"sigs.k8s.io/cluster-api/util"
 )
 
-const (
-	KubernetesVersion = "KUBERNETES_VERSION"
-	CNIPath           = "CNI"
-	CNIResources      = "CNI_RESOURCES"
-	IPFamily          = "IP_FAMILY"
-)
-
 // creating a workload cluster
 // This test is meant to provide a first, fast signal to detect regression; it is recommended to use it as a PR blocker test.
 var _ = Describe("When BYOH joins existing cluster [PR-Blocking]", func() {
 
 	var (
-		ctx                   context.Context
-		specName              = "quick-start"
-		namespace             *corev1.Namespace
-		clusterName           string
-		cancelWatches         context.CancelFunc
-		clusterResources      *clusterctl.ApplyClusterTemplateAndWaitResult
-		dockerClient          *client.Client
-		err                   error
-		byohostContainerIDs   []string
-		agentLogFile1         = "/tmp/host-agent1.log"
-		agentLogFile2         = "/tmp/host-agent2.log"
-		pathToHostAgentBinary string
+		ctx                 context.Context
+		specName            = "quick-start"
+		namespace           *corev1.Namespace
+		clusterName         string
+		cancelWatches       context.CancelFunc
+		clusterResources    *clusterctl.ApplyClusterTemplateAndWaitResult
+		dockerClient        *client.Client
+		err                 error
+		byohostContainerIDs []string
+		agentLogFile1       = "/tmp/host-agent1.log"
+		agentLogFile2       = "/tmp/host-agent2.log"
 	)
 
 	BeforeEach(func() {
@@ -58,9 +49,6 @@ var _ = Describe("When BYOH joins existing cluster [PR-Blocking]", func() {
 		Expect(os.MkdirAll(artifactFolder, 0755)).To(Succeed(), "Invalid argument. artifactFolder can't be created for %s spec", specName)
 
 		Expect(e2eConfig.Variables).To(HaveKey(KubernetesVersion))
-
-		pathToHostAgentBinary, err = gexec.Build("github.com/vmware-tanzu/cluster-api-provider-bringyourownhost/agent")
-		Expect(err).NotTo(HaveOccurred())
 
 		// set up a Namespace where to host objects for this spec and create a watcher for the namespace events.
 		namespace, cancelWatches = setupSpecNamespace(ctx, specName, bootstrapClusterProxy, artifactFolder)
