@@ -1,5 +1,10 @@
 name: advance-e2e-suite
 
+on:
+  pull_request:
+    types: 
+      - ready_for_review
+      - review_requested
 
 jobs:
   e2e-before-merge:
