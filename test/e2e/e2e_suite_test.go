@@ -106,7 +106,7 @@ var _ = SynchronizedBeforeSuite(func() []byte {
 	initBootstrapCluster(bootstrapClusterProxy, e2eConfig, clusterctlConfigPath, artifactFolder)
 
 	var err error
-	By("huchen: Start to build host agent binary")
+	By("building host agent binary")
 	pathToHostAgentBinary, err = gexec.Build("github.com/vmware-tanzu/cluster-api-provider-bringyourownhost/agent")
 	Expect(err).NotTo(HaveOccurred())
 
