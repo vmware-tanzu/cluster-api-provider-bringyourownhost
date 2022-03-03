@@ -29,7 +29,7 @@ var (
 	dockerClient *client.Client
 )
 
-var _ = Describe("When BYO Host rejoins the capacity pool", func() {
+var _ = Describe("When BYO Host rejoins the capacity pool [Before-PR-Merging]", func() {
 
 	var (
 		ctx                   context.Context
@@ -74,7 +74,7 @@ var _ = Describe("When BYO Host rejoins the capacity pool", func() {
 		setDockerClient(client)
 
 		runner := ByoHostRunner{
-			Context:                   ctx,
+			Context:               ctx,
 			clusterConName:        clusterConName,
 			Namespace:             namespace.Name,
 			PathToHostAgentBinary: pathToHostAgentBinary,
