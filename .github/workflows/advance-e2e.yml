@@ -1,7 +1,10 @@
 name: advance-e2e-suite
 
 on:
+  push:
+    branches: [ main ]
   pull_request:
+    branches: [ main ]
     types: 
       - ready_for_review
       - review_requested
