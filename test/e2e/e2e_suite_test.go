@@ -15,6 +15,7 @@ import (
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+	"github.com/onsi/gomega/gexec"
 	infraproviderv1 "github.com/vmware-tanzu/cluster-api-provider-bringyourownhost/apis/infrastructure/v1beta1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -23,6 +24,13 @@ import (
 	"sigs.k8s.io/cluster-api/test/framework/bootstrap"
 	"sigs.k8s.io/cluster-api/test/framework/clusterctl"
 	"sigs.k8s.io/cluster-api/util"
+)
+
+const (
+	KubernetesVersion = "KUBERNETES_VERSION"
+	CNIPath           = "CNI"
+	CNIResources      = "CNI_RESOURCES"
+	IPFamily          = "IP_FAMILY"
 )
 
 // Test suite flags
@@ -57,6 +65,8 @@ var (
 
 	// TODO: Remove this later
 	clusterConName string
+
+	pathToHostAgentBinary string
 )
 
 func init() {
@@ -94,6 +104,11 @@ var _ = SynchronizedBeforeSuite(func() []byte {
 
 	By("Initializing the bootstrap cluster")
 	initBootstrapCluster(bootstrapClusterProxy, e2eConfig, clusterctlConfigPath, artifactFolder)
+
+	var err error
+	By("building host agent binary")
+	pathToHostAgentBinary, err = gexec.Build("github.com/vmware-tanzu/cluster-api-provider-bringyourownhost/agent")
+	Expect(err).NotTo(HaveOccurred())
 
 	clusterConName = e2eConfig.ManagementClusterName
 	return []byte(
