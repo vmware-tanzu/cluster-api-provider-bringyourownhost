@@ -6,7 +6,7 @@ on:
 
 jobs:
   e2e-before-merge:
-    if: ${{ github.event.label.name == 'merge main' }}
+    if: ${{ github.event.label.name == 'merge not-run-e2e' }}
       runs-on: ubuntu-latest
       steps:
       - name: Checkout code
