@@ -1,12 +1,19 @@
 # Contributing Guidelines
 
-## As a Developer
+## As a Contributor
 ### Fork and branch
 Local development has to be done in the forked repo of [cluster-api-provider-bringyourownhost](https://github.com/vmware-tanzu/cluster-api-provider-bringyourownhost). Here are some examples of meaningful branch names
 * add-host-reservation-logic
 * update-readme
 * fix-byomachine-controller-flakes
 * refactor-agent-unit-tests
+
+### Writing tests
+We expect our contributors to write unit / integration tests when making any code change. For tests like e2e, feel free to create a child issue and work on it separately.
+
+#### Testing Framework
+- We use [Ginkgo](https://onsi.github.io/ginkgo/) and [Gomega](https://onsi.github.io/gomega/) extensively for testing (unit / integration and e2e)
+- For mocking interfaces and methods, we use the [Counterfeiter](https://github.com/maxbrunsfeld/counterfeiter) tool. Use this to generate fake implementations for your unit tests.
 
 ### Commit Message
 If you are pairing on a PR, make sure to use [git-duet](https://github.com/git-duet/git-duet)
@@ -19,6 +26,7 @@ At the minimum,
 
 ### Raising a PR
 * all PRs should be raised against the main branch of [cluster-api-provider-bringyourownhost](https://github.com/vmware-tanzu/cluster-api-provider-bringyourownhost)
+* all code changes should be accompanied with corresponding unit / integration tests (if for some reason, the code is not unit / integration testable, add enough justification in the PR. Although, this almost should never be the case.)
 
 ### Contributor License Agreement
 All contributors to this project must have a signed Contributor License
