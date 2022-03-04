@@ -313,7 +313,7 @@ var _ = Describe("Agent", func() {
 						}
 					}
 					return corev1.ConditionFalse
-				}, 600).Should(Equal(corev1.ConditionTrue))
+				}, 60).Should(Equal(corev1.ConditionTrue))
 			})
 		})
 	})

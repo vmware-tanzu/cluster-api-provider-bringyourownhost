@@ -47,7 +47,6 @@ func WriteDockerLog(output types.HijackedResponse, outputFile string) *os.File {
 			select {
 			case line := <-s:
 				_, err2 := f.WriteString(line + "\n")
-				Showf(line + "\n")
 				if err2 != nil {
 					Showf("Write String to file failed, err2=%v", err2)
 				}
