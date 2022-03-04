@@ -72,13 +72,13 @@ var _ = Describe("When testing MachineDeployment scale out/in", func() {
 			byoHostName = fmt.Sprintf("byohost-%s", util.RandomString(6))
 
 			runner := ByoHostRunner{
-				Context:                   ctx,
+				Context:               ctx,
 				clusterConName:        clusterConName,
 				ByoHostName:           byoHostName,
 				Namespace:             namespace.Name,
 				PathToHostAgentBinary: pathToHostAgentBinary,
 				DockerClient:          dockerClient,
-				NetworkInterface: "kind",
+				NetworkInterface:      "kind",
 				bootstrapClusterProxy: bootstrapClusterProxy,
 				CommandArgs: map[string]string{
 					"--kubeconfig": "/mgmt.conf",

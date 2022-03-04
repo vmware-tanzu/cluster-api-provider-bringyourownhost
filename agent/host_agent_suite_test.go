@@ -13,10 +13,11 @@ import (
 	"testing"
 	"time"
 
+	dockertypes "github.com/docker/docker/api/types"
+	"github.com/docker/docker/api/types/container"
 	dClient "github.com/docker/docker/client"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-	"github.com/docker/docker/api/types/container"
 	"github.com/onsi/gomega/gexec"
 	infrastructurev1beta1 "github.com/vmware-tanzu/cluster-api-provider-bringyourownhost/apis/infrastructure/v1beta1"
 	"github.com/vmware-tanzu/cluster-api-provider-bringyourownhost/test/e2e"
@@ -27,7 +28,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/envtest"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
-	dockertypes "github.com/docker/docker/api/types"
 )
 
 var (
@@ -35,8 +35,19 @@ var (
 	kubeconfigFile        *os.File
 	k8sClient             client.Client
 	tmpFilePrefix         = "kubeconfigFile-"
+	defaultByoMachineName = "my-byomachine"
+	agentLogFile          = "/tmp/agent-integration.log"
+	fakedKubeConfig       = "fake-kubeconfig-path"
+	fakeDownloadPath      = "fake-download-path"
+	fakeBootstrapSecret   = "fake-bootstrap-secret"
 	testEnv               *envtest.Environment
 	dockerClient          *dClient.Client
+)
+
+const (
+	bundleLookupBaseRegistry = "projects.registry.vmware.com/cluster_api_provider_bringyourownhost"
+	BundleLookupTag          = "v0.1.0_alpha.2"
+	K8sVersion               = "v1.22.3"
 )
 
 func TestHostAgent(t *testing.T) {
@@ -58,6 +69,7 @@ var _ = BeforeSuite(func() {
 		CRDDirectoryPaths: []string{
 			filepath.Join("..", "config", "crd", "bases"),
 			filepath.Join(build.Default.GOPATH, "pkg", "mod", "sigs.k8s.io", "cluster-api@v1.0.4", "config", "crd", "bases"),
+			filepath.Join(build.Default.GOPATH, "pkg", "mod", "sigs.k8s.io", "cluster-api@v1.0.4", "bootstrap", "kubeadm", "config", "crd", "bases"),
 		},
 
 		ErrorIfCRDPathMissing: true,
@@ -121,29 +133,27 @@ func writeKubeConfig() {
 	Expect(err).NotTo(HaveOccurred())
 }
 
-func setupTestInfra(ctx context.Context, kubeconfig string, namespace *corev1.Namespace) (*e2e.ByoHostRunner) {
-	
-
+func setupTestInfra(ctx context.Context, hostname, kubeconfig string, namespace *corev1.Namespace) *e2e.ByoHostRunner {
 	byohostRunner := e2e.ByoHostRunner{
 		Context:               ctx,
 		Namespace:             namespace.Name,
 		PathToHostAgentBinary: pathToHostAgentBinary,
 		DockerClient:          dockerClient,
 		NetworkInterface:      "host",
-		ByoHostName:           "byo-integration-host",
-		Port: testEnv.ControlPlane.APIServer.Port,
+		ByoHostName:           hostname,
+		Port:                  testEnv.ControlPlane.APIServer.Port,
 		CommandArgs: map[string]string{
 			"--kubeconfig": "/mgmt.conf",
 			"--namespace":  namespace.Name,
-			"--v":          "1",
+			"-v":           "1",
 		},
 		KubeconfigFile: kubeconfig,
 	}
-	
+
 	return &byohostRunner
 }
 
-func CleanupBuildArtifacts(context context.Context, byoHostContainer *container.ContainerCreateCreatedBody, namespace *corev1.Namespace, agentLogFile string) {
+func cleanup(context context.Context, byoHostContainer *container.ContainerCreateCreatedBody, namespace *corev1.Namespace, agentLogFile string) {
 	err := dockerClient.ContainerStop(context, byoHostContainer.ID, nil)
 	Expect(err).NotTo(HaveOccurred())
 
@@ -152,9 +162,12 @@ func CleanupBuildArtifacts(context context.Context, byoHostContainer *container.
 
 	err = k8sClient.Delete(context, namespace)
 	Expect(err).NotTo(HaveOccurred(), "failed to delete test namespace")
-	
-	err = os.Remove(agentLogFile)
-	if err != nil {
-		e2e.Showf("error removing log file %s: %v", agentLogFile, err)
+
+	_, err = os.Stat(agentLogFile)
+	if err == nil {
+		err = os.Remove(agentLogFile)
+		if err != nil {
+			e2e.Showf("error removing log file %s: %v", agentLogFile, err)
+		}
 	}
 }
