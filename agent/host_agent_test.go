@@ -133,7 +133,6 @@ var _ = Describe("Agent", func() {
 		var (
 			ns               *corev1.Namespace
 			ctx              context.Context
-			err              error
 			hostName         string
 			fakeDownloadPath = "fake-download-path"
 			runner           *e2e.ByoHostRunner
@@ -145,7 +144,7 @@ var _ = Describe("Agent", func() {
 			ns = builder.Namespace("testns").Build()
 			Expect(k8sClient.Create(context.TODO(), ns)).NotTo(HaveOccurred(), "failed to create test namespace")
 			ctx = context.TODO()
-			hostName, err = os.Hostname()
+			hostName, err := os.Hostname()
 			Expect(err).NotTo(HaveOccurred())
 
 			runner = setupTestInfra(ctx, hostName, getKubeConfig().Name(), ns)
@@ -282,7 +281,8 @@ var _ = Describe("Agent", func() {
 				byoHost.Annotations[infrastructurev1beta1.BundleLookupTagAnnotation] = BundleLookupTag
 
 				fakeBootstrapSecret := builder.Secret(ns.Name, fakeBootstrapSecret).Build()
-				k8sClient.Create(ctx, fakeBootstrapSecret)
+				err := k8sClient.Create(ctx, fakeBootstrapSecret)
+				Expect(err).ToNot(HaveOccurred())
 				byoHost.Spec.BootstrapSecret = &corev1.ObjectReference{
 					Kind:      "Secret",
 					Namespace: byoMachine.Namespace,
@@ -304,8 +304,10 @@ var _ = Describe("Agent", func() {
 				}()
 				updatedByoHost := &infrastructurev1beta1.ByoHost{}
 				Eventually(func() (condition corev1.ConditionStatus) {
-					err = k8sClient.Get(ctx, namespace, updatedByoHost)
-					Expect(err).ToNot(HaveOccurred())
+					err := k8sClient.Get(ctx, namespace, updatedByoHost)
+					if err != nil {
+						return corev1.ConditionFalse
+					}
 
 					kubeInstallStatus := conditions.Get(updatedByoHost, infrastructurev1beta1.K8sComponentsInstallationSucceeded)
 					if kubeInstallStatus != nil {

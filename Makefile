@@ -54,21 +54,6 @@ all: build
 
 HOST_AGENT_DIR ?= agent
 
-# Run tests
-test: generate fmt vet manifests test-coverage
-
-test-coverage:
-	source ./scripts/fetch_ext_bins.sh; fetch_tools; setup_envs; ginkgo --randomizeAllSpecs -r --cover --coverprofile=cover.out --outputdir=. --skipPackage=test .
-
-agent-test:
-	source ./scripts/fetch_ext_bins.sh; fetch_tools; setup_envs; ginkgo --randomizeAllSpecs -r $(HOST_AGENT_DIR) -coverprofile cover.out
-
-controller-test:
-	source ./scripts/fetch_ext_bins.sh; fetch_tools; setup_envs; ginkgo --randomizeAllSpecs controllers/infrastructure -coverprofile cover.out
-
-webhook-test:
-	source ./scripts/fetch_ext_bins.sh; fetch_tools; setup_envs; ginkgo apis/infrastructure/v1beta1 -coverprofile cover.out
-
 ##@ General
 
 # The help target prints out all targets with their descriptions organized
@@ -124,6 +109,22 @@ prepare-byoh-docker-host-image:
 
 prepare-byoh-docker-host-image-dev:
 	docker build test/e2e -f docs/BYOHDockerFileDev -t ${BYOH_BASE_IMG_DEV}
+
+
+# Run tests
+test: generate fmt vet manifests test-coverage
+
+test-coverage:
+	source ./scripts/fetch_ext_bins.sh; fetch_tools; setup_envs; ginkgo --randomizeAllSpecs -r --cover --coverprofile=cover.out --outputdir=. --skipPackage=test .
+
+agent-test: docker-build prepare-byoh-docker-host-image 
+	source ./scripts/fetch_ext_bins.sh; fetch_tools; setup_envs; ginkgo --randomizeAllSpecs -r $(HOST_AGENT_DIR) -coverprofile cover.out
+
+controller-test:
+	source ./scripts/fetch_ext_bins.sh; fetch_tools; setup_envs; ginkgo --randomizeAllSpecs controllers/infrastructure -coverprofile cover.out
+
+webhook-test:
+	source ./scripts/fetch_ext_bins.sh; fetch_tools; setup_envs; ginkgo apis/infrastructure/v1beta1 -coverprofile cover.out
 
 test-e2e: take-user-input docker-build prepare-byoh-docker-host-image $(GINKGO) cluster-templates-e2e ## Run the end-to-end tests
 	$(GINKGO) -v -trace -tags=e2e -focus="$(GINKGO_FOCUS)" $(_SKIP_ARGS) -nodes=$(GINKGO_NODES) --noColor=$(GINKGO_NOCOLOR) $(GINKGO_ARGS) test/e2e -- \

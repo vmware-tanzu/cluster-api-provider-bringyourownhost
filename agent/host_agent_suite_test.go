@@ -153,14 +153,14 @@ func setupTestInfra(ctx context.Context, hostname, kubeconfig string, namespace 
 	return &byohostRunner
 }
 
-func cleanup(context context.Context, byoHostContainer *container.ContainerCreateCreatedBody, namespace *corev1.Namespace, agentLogFile string) {
-	err := dockerClient.ContainerStop(context, byoHostContainer.ID, nil)
+func cleanup(ctx context.Context, byoHostContainer *container.ContainerCreateCreatedBody, namespace *corev1.Namespace, agentLogFile string) {
+	err := dockerClient.ContainerStop(ctx, byoHostContainer.ID, nil)
 	Expect(err).NotTo(HaveOccurred())
 
-	err = dockerClient.ContainerRemove(context, byoHostContainer.ID, dockertypes.ContainerRemoveOptions{})
+	err = dockerClient.ContainerRemove(ctx, byoHostContainer.ID, dockertypes.ContainerRemoveOptions{})
 	Expect(err).NotTo(HaveOccurred())
 
-	err = k8sClient.Delete(context, namespace)
+	err = k8sClient.Delete(ctx, namespace)
 	Expect(err).NotTo(HaveOccurred(), "failed to delete test namespace")
 
 	_, err = os.Stat(agentLogFile)
