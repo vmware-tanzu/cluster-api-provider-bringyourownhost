@@ -144,7 +144,8 @@ var _ = Describe("Agent", func() {
 			ns = builder.Namespace("testns").Build()
 			Expect(k8sClient.Create(context.TODO(), ns)).NotTo(HaveOccurred(), "failed to create test namespace")
 			ctx = context.TODO()
-			hostName, err := os.Hostname()
+			var err error
+			hostName, err = os.Hostname()
 			Expect(err).NotTo(HaveOccurred())
 
 			runner = setupTestInfra(ctx, hostName, getKubeConfig().Name(), ns)
@@ -305,13 +306,11 @@ var _ = Describe("Agent", func() {
 				updatedByoHost := &infrastructurev1beta1.ByoHost{}
 				Eventually(func() (condition corev1.ConditionStatus) {
 					err := k8sClient.Get(ctx, namespace, updatedByoHost)
-					if err != nil {
-						return corev1.ConditionFalse
-					}
-
-					kubeInstallStatus := conditions.Get(updatedByoHost, infrastructurev1beta1.K8sComponentsInstallationSucceeded)
-					if kubeInstallStatus != nil {
-						return kubeInstallStatus.Status
+					if err == nil {
+						kubeInstallStatus := conditions.Get(updatedByoHost, infrastructurev1beta1.K8sComponentsInstallationSucceeded)
+						if kubeInstallStatus != nil {
+							return kubeInstallStatus.Status
+						}
 					}
 					return corev1.ConditionFalse
 				}, 60).Should(Equal(corev1.ConditionTrue))
