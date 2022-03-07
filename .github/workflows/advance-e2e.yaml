@@ -1,12 +1,12 @@
 name: advance-e2e-suite
 
 on:
-  label:
+  pull_request:
     types: [labeled]
 
 jobs:
   e2e-before-merge:
-    if: ${{ github.event.label.name == 'merge not-run-e2e' }}
+      if: ${{ contains(github.event.pull_request.labels.*.name, 'ready-for-merge') }}
       runs-on: ubuntu-latest
       steps:
       - name: Checkout code
