@@ -28,6 +28,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
+// huchen
 // labelFlags is a flag that holds a map of label key values.
 // One or more key value pairs can be passed using the same flag
 // The following example sets labelFlags with two items:
@@ -85,8 +86,8 @@ func setupflags() {
 	flag.BoolVar(&printVersion, "version", false, "Print the version of the agent")
 
 	pflag.CommandLine.AddGoFlagSet(flag.CommandLine)
-	hiddenFlags := [] string{"log-flush-frequency", "alsologtostderr", "log-backtrace-at", "log-dir", "logtostderr", "stderrthreshold", "vmodule", "azure-container-registry-config",
-							 "log_backtrace_at", "log_dir", "log_file", "log_file_max_size", "add_dir_header", "skip_headers", "skip_log_headers"}
+	hiddenFlags := []string{"log-flush-frequency", "alsologtostderr", "log-backtrace-at", "log-dir", "logtostderr", "stderrthreshold", "vmodule", "azure-container-registry-config",
+		"log_backtrace_at", "log_dir", "log_file", "log_file_max_size", "add_dir_header", "skip_headers", "skip_log_headers"}
 	for _, hiddenFlag := range hiddenFlags {
 		_ = pflag.CommandLine.MarkHidden(hiddenFlag)
 	}
