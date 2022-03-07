@@ -3,7 +3,7 @@ name: Dump GitHub context
 
 on:
   pull_request:
-    branches: [ main ]
+    types: [labeled]
 
 jobs:
   e2e-pr-blocking:
