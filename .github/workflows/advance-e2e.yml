@@ -1,8 +1,8 @@
 name: advance-e2e-suite
 
 on:
-  pull_request:
-    types: [labeled]
+  label:
+    types: [created]
 
 jobs:
   e2e-before-merge:
