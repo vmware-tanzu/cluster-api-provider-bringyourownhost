@@ -1,0 +1,17 @@
+
+name: Dump GitHub context
+
+on:
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  e2e-pr-blocking:
+    runs-on: ubuntu-latest
+    steps:
+    - name: Dump GitHub context
+      env:
+          GITHUB_CONTEXT: ${{ toJson(github) }}
+      run: echo "$GITHUB_CONTEXT"
+
+   
