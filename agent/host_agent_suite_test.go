@@ -37,7 +37,7 @@ var (
 	tmpFilePrefix         = "kubeconfigFile-"
 	defaultByoMachineName = "my-byomachine"
 	agentLogFile          = "/tmp/agent-integration.log"
-	fakedKubeConfig       = "fake-kubeconfig-path"
+	fakeKubeConfig        = "fake-kubeconfig-path"
 	fakeDownloadPath      = "fake-download-path"
 	fakeBootstrapSecret   = "fake-bootstrap-secret"
 	testEnv               *envtest.Environment

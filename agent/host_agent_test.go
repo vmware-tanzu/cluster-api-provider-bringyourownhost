@@ -98,12 +98,12 @@ var _ = Describe("Agent", func() {
 					}
 				}
 				return false
-			}, 10).Should(BeFalse())
+			}).Should(BeFalse())
 		})
 
 		It("should return an error when invalid kubeconfig is passed in", func() {
 
-			runner.CommandArgs["--kubeconfig"] = fakedKubeConfig
+			runner.CommandArgs["--kubeconfig"] = fakeKubeConfig
 			output, _, err := runner.ExecByoDockerHost(byoHostContainer)
 			Expect(err).NotTo(HaveOccurred())
 			defer output.Close()
@@ -124,7 +124,7 @@ var _ = Describe("Agent", func() {
 					}
 				}
 				return false
-			}, 10).Should(BeTrue())
+			}).Should(BeTrue())
 		})
 	})
 
@@ -172,7 +172,7 @@ var _ = Describe("Agent", func() {
 					return nil
 				}
 				return createdByoHost
-			}, 30).ShouldNot(BeNil())
+			}).ShouldNot(BeNil())
 		})
 
 		It("should register the BYOHost with the passed labels", func() {
@@ -184,7 +184,7 @@ var _ = Describe("Agent", func() {
 					return nil
 				}
 				return createdByoHost.ObjectMeta.Labels
-			}, 30).Should(Equal(map[string]string{"site": "apac"}))
+			}).Should(Equal(map[string]string{"site": "apac"}))
 		})
 
 		It("should fetch networkstatus when register the BYOHost with the management cluster", func() {
@@ -225,7 +225,7 @@ var _ = Describe("Agent", func() {
 					}
 				}
 				return false
-			}, 30).Should(BeTrue())
+			}).Should(BeTrue())
 
 		})
 
@@ -253,7 +253,7 @@ var _ = Describe("Agent", func() {
 				return false
 			}, 10, 1).ShouldNot(BeTrue())
 		})
-		Context("when machineref & bootstrap is assigned", func() {
+		Context("when machineref & bootstrap secret is assigned", func() {
 			var (
 				byoMachine *infrastructurev1beta1.ByoMachine
 				namespace  types.NamespacedName

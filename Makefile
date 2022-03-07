@@ -114,10 +114,10 @@ prepare-byoh-docker-host-image-dev:
 # Run tests
 test: generate fmt vet manifests test-coverage
 
-test-coverage: docker-build prepare-byoh-docker-host-image
+test-coverage: prepare-byoh-docker-host-image
 	source ./scripts/fetch_ext_bins.sh; fetch_tools; setup_envs; ginkgo --randomizeAllSpecs -r --cover --coverprofile=cover.out --outputdir=. --skipPackage=test .
 
-agent-test: docker-build prepare-byoh-docker-host-image
+agent-test: prepare-byoh-docker-host-image
 	source ./scripts/fetch_ext_bins.sh; fetch_tools; setup_envs; ginkgo --randomizeAllSpecs -r $(HOST_AGENT_DIR) -coverprofile cover.out
 
 controller-test:
