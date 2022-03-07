@@ -8,6 +8,7 @@ on:
 jobs:
   e2e-pr-blocking:
     runs-on: ubuntu-latest
+    if: ${{ contains(github.event.pull_request.labels.*.name, 'ready-for-merge') }}
     steps:
     - name: Dump GitHub context
       env:
