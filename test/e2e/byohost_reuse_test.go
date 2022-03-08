@@ -23,10 +23,6 @@ import (
 	"sigs.k8s.io/cluster-api/util"
 )
 
-var (
-	dockerClient *client.Client
-)
-
 var _ = Describe("When BYO Host rejoins the capacity pool [Before-PR-Merging]", func() {
 
 	var (

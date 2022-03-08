@@ -239,14 +239,14 @@ func tearDown(bootstrapClusterProvider bootstrap.ClusterProvider, bootstrapClust
 
 func setupSpecNamespace(ctx context.Context, specName string, clusterProxy framework.ClusterProxy, artifactFolder string) (*corev1.Namespace, context.CancelFunc) {
 	Byf("Creating a namespace for hosting the %q test spec", specName)
-	namespace, cancelWatches := framework.CreateNamespaceAndWatchEvents(ctx, framework.CreateNamespaceAndWatchEventsInput{
+	ns, cw := framework.CreateNamespaceAndWatchEvents(ctx, framework.CreateNamespaceAndWatchEventsInput{
 		Creator:   clusterProxy.GetClient(),
 		ClientSet: clusterProxy.GetClientSet(),
 		Name:      fmt.Sprintf("%s-%s", specName, util.RandomString(6)),
 		LogFolder: filepath.Join(artifactFolder, "clusters", clusterProxy.GetName()),
 	})
 
-	return namespace, cancelWatches
+	return ns, cw
 }
 
 func dumpSpecResourcesAndCleanup(ctx context.Context, specName string, clusterProxy framework.ClusterProxy, artifactFolder string, namespace *corev1.Namespace, cancelWatches context.CancelFunc, cluster *clusterv1.Cluster, intervalsGetter func(spec, key string) []interface{}, skipCleanup bool) {
