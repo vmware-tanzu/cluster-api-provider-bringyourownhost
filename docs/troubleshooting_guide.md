@@ -77,7 +77,7 @@ sudo apt-get install socat ethtool conntrack
 
 ## Error downloading bundle
 ### Problem
-After successful pre-requisite package prechecks when the bundle is not found locally the installer will try to download it from the given repo but can fail with error Error downloading bundle".
+After successful pre-requisite package prechecks when the bundle is not found locally the installer will try to download it from the given repo but can fail with error `Error downloading bundle`.
 ```
 I0307 06:15:24.903253   19079 installer.go:104]  "msg"="Detected"  "OS"="Ubuntu_20.04.2_x86-64"
 I0307 06:15:24.903551   19079 installer.go:175]  "msg"="Current OS will be handled as"  "OS"="Ubuntu_20.04.1_x86-64"
@@ -85,6 +85,27 @@ I0307 06:15:24.903807   19079 bundle_downloader.go:69]  "msg"="Cache miss"  "pat
 I0307 06:15:24.904267   19079 bundle_downloader.go:95]  "msg"="Downloading bundle"  "from"="projects.registry.vmware.com/cluster_api_provider_bringyourownhost/byoh-bundle-ubuntu_20.04.1_x86-64_k8s_v1.22.3:v0.1.0_alpha.2"
 E0307 06:15:29.452444   19079 cli-dev.go:151]  "msg"="error installing/uninstalling" "error"="Error downloading bundle" 
 ```
+
 ### Solution
 Check your internet connection and if you can reach the repo.
 
+Another thing that can be attempted is to download the bundle manually using docker with the command 
+
+`docker pull <repo>/<bundle-name>:<tag>` 
+
+where each element with brackets needs to be replaced with the corresponding string:
+```
+<repo> - The address of the repo 
+<bundle-name> - The name of the BYOH bundle
+<tag> - The tag of the BYOH bundle
+```
+
+## Error installing/uninstalling, No k8s support for OS
+### Problem
+After successful pre-requisite package prechecks, the installer cannot find the BYOH bundle for the given combination of OS and K8s version.
+```
+I0308 05:18:54.733467   11351 installer.go:104]  "msg"="Detected"  "OS"="Ubuntu_20.04.2_x86-64"
+E0308 05:18:54.733622   11351 cli-dev.go:151]  "msg"="error installing/uninstalling" "error"="No k8s support for OS"
+```
+### Solution
+Use the `--skip-installation` flag. This flag will skip k8s installation attempt on the host.
