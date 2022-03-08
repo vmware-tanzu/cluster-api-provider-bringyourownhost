@@ -117,7 +117,7 @@ func WriteShellScript(shellFileName string, shellFileContent []string) {
 	}
 }
 
-func ShowInfo(allAgentLogFiles []string) {
+func ShowInfo(allAgentLogFiles []*os.File) {
 	// show swap status
 	// showFileContent("/proc/swaps")
 
@@ -131,7 +131,7 @@ func ShowInfo(allAgentLogFiles []string) {
 
 	// show the agent log
 	for _, agentLogFile := range allAgentLogFiles {
-		ShowFileContent(agentLogFile)
+		ShowFileContent(agentLogFile.Name())
 	}
 
 	// show byoh-controller-manager logs

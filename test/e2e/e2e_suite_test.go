@@ -67,6 +67,10 @@ var (
 	clusterConName string
 
 	pathToHostAgentBinary string
+	ctx                   context.Context
+	namespace             *corev1.Namespace
+	cancelWatches         context.CancelFunc
+	clusterResources      *clusterctl.ApplyClusterTemplateAndWaitResult
 )
 
 func init() {
@@ -85,6 +89,7 @@ func TestE2E(t *testing.T) {
 // Using a SynchronizedBeforeSuite for controlling how to create resources shared across ParallelNodes (~ginkgo threads).
 // The local clusterctl repository & the bootstrap cluster are created once and shared across all the tests.
 var _ = SynchronizedBeforeSuite(func() []byte {
+
 	// Before all ParallelNodes.
 
 	Expect(configPath).To(BeAnExistingFile(), "Invalid test suite argument. e2e.config should be an existing file.")
@@ -105,6 +110,20 @@ var _ = SynchronizedBeforeSuite(func() []byte {
 	By("Initializing the bootstrap cluster")
 	initBootstrapCluster(bootstrapClusterProxy, e2eConfig, clusterctlConfigPath, artifactFolder)
 
+	ctx = context.TODO()
+	Expect(ctx).NotTo(BeNil(), "ctx is required")
+
+	Expect(e2eConfig).NotTo(BeNil(), "Invalid argument. e2eConfig can't be nil")
+	Expect(clusterctlConfigPath).To(BeAnExistingFile(), "Invalid argument. clusterctlConfigPath must be an existing file")
+	Expect(bootstrapClusterProxy).NotTo(BeNil(), "Invalid argument. bootstrapClusterProxy can't be nil")
+	Expect(os.MkdirAll(artifactFolder, 0755)).To(Succeed(), "Invalid argument. artifactFolder can't be created")
+
+	Expect(e2eConfig.Variables).To(HaveKey(KubernetesVersion))
+
+	// set up a Namespace where to host objects for this spec and create a watcher for the namespace events.
+	namespace, cancelWatches = setupSpecNamespace(ctx, "e2e", bootstrapClusterProxy, artifactFolder)
+	clusterResources = new(clusterctl.ApplyClusterTemplateAndWaitResult)
+
 	var err error
 	By("building host agent binary")
 	pathToHostAgentBinary, err = gexec.Build("github.com/vmware-tanzu/cluster-api-provider-bringyourownhost/agent")
@@ -121,7 +140,6 @@ var _ = SynchronizedBeforeSuite(func() []byte {
 	)
 }, func(data []byte) {
 	// Before each ParallelNode.
-
 	parts := strings.Split(string(data), ",")
 	Expect(parts).To(HaveLen(4))
 
@@ -141,7 +159,6 @@ var _ = SynchronizedAfterSuite(func() {
 	// After each ParallelNode.
 }, func() {
 	// After all ParallelNodes.
-
 	By("Tearing down the management cluster")
 	if !skipCleanup {
 		tearDown(bootstrapClusterProvider, bootstrapClusterProxy)
