@@ -108,4 +108,4 @@ I0308 05:18:54.733467   11351 installer.go:104]  "msg"="Detected"  "OS"="Ubuntu_
 E0308 05:18:54.733622   11351 cli-dev.go:151]  "msg"="error installing/uninstalling" "error"="No k8s support for OS"
 ```
 ### Solution
-Use the `--skip-installation` flag. This flag will skip k8s installation attempt on the host.
+Sometimes it may happen that the OS and K8s version combination used is not supported by `BYOH` out of the box. This will require manually installing all the dependencies and using the `--skip-installation` flag. This flag will skip k8s installation attempt on the host.
