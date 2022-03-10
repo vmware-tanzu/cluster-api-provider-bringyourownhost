@@ -41,6 +41,9 @@ var _ = Describe("Byohost Installer Tests", func() {
 			Expect(func() { r.AddBundleInstaller("rhel", "1.24", dummy124) }).NotTo(Panic())
 			r.AddOsFilter("ubuntu.*", "ubuntu")
 			r.AddOsFilter("rhel.*", "rhel")
+			r.AddK8sFilter("1.22.*", "1.22")
+			r.AddK8sFilter("1.23.*", "1.23")
+			r.AddK8sFilter("1.24.*", "1.24")
 
 			inst, osBundle := r.GetInstaller("ubuntu-1", "1.22")
 			Expect(inst).To(Equal(dummy122))
@@ -78,6 +81,7 @@ var _ = Describe("Byohost Installer Tests", func() {
 			// Bundle OS does not match filter OS
 			r.AddBundleInstaller("UBUNTU", "1.22", dummy122)
 			r.AddOsFilter("ubuntu.*", "UBUNTU")
+			r.AddK8sFilter("1.22.*", "1.22")
 
 			inst, osBundle := r.GetInstaller("ubuntu-1", "1.22")
 			Expect(inst).To(Equal(dummy122))
