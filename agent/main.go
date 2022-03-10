@@ -12,6 +12,7 @@ import (
 
 	pflag "github.com/spf13/pflag"
 	"github.com/vmware-tanzu/cluster-api-provider-bringyourownhost/agent/cloudinit"
+	"github.com/vmware-tanzu/cluster-api-provider-bringyourownhost/agent/feature"
 	"github.com/vmware-tanzu/cluster-api-provider-bringyourownhost/agent/installer"
 	"github.com/vmware-tanzu/cluster-api-provider-bringyourownhost/agent/reconciler"
 	"github.com/vmware-tanzu/cluster-api-provider-bringyourownhost/agent/registration"
@@ -90,6 +91,7 @@ func setupflags() {
 	for _, hiddenFlag := range hiddenFlags {
 		_ = pflag.CommandLine.MarkHidden(hiddenFlag)
 	}
+	feature.MutableGates.AddFlag(pflag.CommandLine)
 }
 
 var (
@@ -189,6 +191,11 @@ func main() {
 		Recorder:     mgr.GetEventRecorderFor("hostagent-controller"),
 		K8sInstaller: k8sInstaller,
 	}
+
+	if feature.Gates.Enabled(feature.SecureAccess) {
+		logger.Info("secure access enabled")
+	}
+
 	if err = hostReconciler.SetupWithManager(context.TODO(), mgr); err != nil {
 		logger.Error(err, "unable to create controller")
 		return
