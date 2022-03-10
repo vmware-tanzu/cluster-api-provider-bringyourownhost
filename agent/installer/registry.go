@@ -11,16 +11,11 @@ import (
 type osk8sInstaller interface{}
 type k8sInstallerMap map[string]osk8sInstaller
 type osk8sInstallerMap map[string]k8sInstallerMap
-type filterOsBundleMap struct {
+type filterBundlePair struct {
 	osFilter string
 	osBundle string
 }
-type filterK8sBundleMap struct {
-	k8sFilter string
-	k8sVer    string
-}
-type filterBundleList []filterOsBundleMap
-type filterBundleK8sList []filterK8sBundleMap
+type filterBundleList []filterBundlePair
 
 // Registry contains
 // 1. Entries associating BYOH Bundle i.e. (OS,K8sVersion) in the Repository with Installer in Host Agent
@@ -28,7 +23,6 @@ type filterBundleK8sList []filterK8sBundleMap
 type registry struct {
 	osk8sInstallerMap
 	filterBundleList
-	filterBundleK8sList
 }
 
 func newRegistry() registry {
@@ -48,11 +42,7 @@ func (r *registry) AddBundleInstaller(os, k8sVer string, installer osk8sInstalle
 }
 
 func (r *registry) AddOsFilter(osFilter, osBundle string) {
-	r.filterBundleList = append(r.filterBundleList, filterOsBundleMap{osFilter: osFilter, osBundle: osBundle})
-}
-
-func (r *registry) AddK8sFilter(k8sFilter, k8sVer string) {
-	r.filterBundleK8sList = append(r.filterBundleK8sList, filterK8sBundleMap{k8sFilter: k8sFilter, k8sVer: k8sVer})
+	r.filterBundleList = append(r.filterBundleList, filterBundlePair{osFilter: osFilter, osBundle: osBundle})
 }
 
 func (r *registry) ListOS() (osFilter, osBundle []string) {
@@ -89,8 +79,7 @@ func (r *registry) ListK8s(osBundleHost string) []string {
 
 func (r *registry) GetInstaller(osHost, k8sVer string) (osk8si osk8sInstaller, osBundle string) {
 	osBundle = r.resolveOsToOsBundle(osHost)
-	k := r.resolveK8sToK8sBundle(k8sVer)
-	osk8si = r.osk8sInstallerMap[osBundle][k]
+	osk8si = r.osk8sInstallerMap[osBundle][k8sVer]
 	return
 }
 
@@ -99,17 +88,6 @@ func (r *registry) resolveOsToOsBundle(os string) string {
 		matched, _ := regexp.MatchString(fbp.osFilter, os)
 		if matched {
 			return fbp.osBundle
-		}
-	}
-
-	return ""
-}
-
-func (r *registry) resolveK8sToK8sBundle(k8s string) string {
-	for _, fbp := range r.filterBundleK8sList {
-		matched, _ := regexp.MatchString(fbp.k8sFilter, k8s)
-		if matched {
-			return fbp.k8sVer
 		}
 	}
 
