@@ -47,8 +47,7 @@ func (r *registry) AddOsFilter(osFilter, osBundle string) {
 	r.filterBundleList = append(r.filterBundleList, filterOsBundleMap{osFilter: osFilter, osBundle: osBundle})
 }
 
-func (r *registry) AddK8sFilter(k8sFilter, k8sVer string) {
-	//r.filterBundleK8sList = append(r.filterBundleK8sList, filterK8sBundleMap{k8sFilter: k8sFilter, k8sVer: k8sVer})
+func (r *registry) AddK8sFilter(k8sFilter string) {
 	r.k8sFilters = append(r.k8sFilters, k8sFilter)
 }
 

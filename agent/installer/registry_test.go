@@ -14,10 +14,10 @@ var _ = Describe("Byohost Installer Tests", func() {
 		type dummyinstaller int
 
 		const (
-			dummy122  = dummyinstaller(122)
+			dummy122  = dummyinstaller(1221)
 			dummy1122 = dummyinstaller(1122)
-			dummy123  = dummyinstaller(123)
-			dummy124  = dummyinstaller(124)
+			dummy123  = dummyinstaller(1232)
+			dummy124  = dummyinstaller(1243)
 		)
 
 		var (
@@ -41,9 +41,9 @@ var _ = Describe("Byohost Installer Tests", func() {
 			Expect(func() { r.AddBundleInstaller("rhel", "1.24.3", dummy124) }).NotTo(Panic())
 			r.AddOsFilter("ubuntu.*", "ubuntu")
 			r.AddOsFilter("rhel.*", "rhel")
-			r.AddK8sFilter("1.22.*", "1.22.1")
-			r.AddK8sFilter("1.23.*", "1.23.2")
-			r.AddK8sFilter("1.24.*", "1.24.3")
+			r.AddK8sFilter("1.22.*")
+			r.AddK8sFilter("1.23.*")
+			r.AddK8sFilter("1.24.*")
 
 			inst, osBundle := r.GetInstaller("ubuntu-1", "1.22.1")
 			Expect(inst).To(Equal(dummy122))
@@ -79,9 +79,9 @@ var _ = Describe("Byohost Installer Tests", func() {
 		})
 		It("Should decouple host os from bundle os", func() {
 			// Bundle OS does not match filter OS
-			r.AddBundleInstaller("UBUNTU", "1.22", dummy122)
+			r.AddBundleInstaller("UBUNTU", "1.22.1", dummy122)
 			r.AddOsFilter("ubuntu.*", "UBUNTU")
-			r.AddK8sFilter("1.22.*", "1.22.1")
+			r.AddK8sFilter("1.22.*")
 
 			inst, osBundle := r.GetInstaller("ubuntu-1", "1.22.1")
 			Expect(inst).To(Equal(dummy122))
