@@ -21,7 +21,9 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/healthz"
 
+	"github.com/spf13/pflag"
 	byohcontrollers "github.com/vmware-tanzu/cluster-api-provider-bringyourownhost/controllers/infrastructure"
+	"github.com/vmware-tanzu/cluster-api-provider-bringyourownhost/feature"
 
 	infrastructurev1beta1 "github.com/vmware-tanzu/cluster-api-provider-bringyourownhost/apis/infrastructure/v1beta1"
 	//+kubebuilder:scaffold:imports
@@ -54,7 +56,8 @@ func main() {
 	flag.BoolVar(&enableLeaderElection, "enable-leader-election", false,
 		"Enable leader election for controller manager. Enabling this will ensure there is only one active controller manager.")
 	flag.StringVar(&probeAddr, "health-probe-bind-address", ":8081", "The address the probe endpoint binds to.")
-	flag.Parse()
+	feature.MutableGates.AddFlag(pflag.CommandLine)
+	pflag.Parse()
 
 	ctrl.SetLogger(klogr.New())
 
@@ -140,6 +143,10 @@ func main() {
 	if err := mgr.Start(ctrl.SetupSignalHandler()); err != nil {
 		setupLog.Error(err, "problem running manager")
 		os.Exit(1)
+	}
+
+	if feature.Gates.Enabled(feature.SecureAccess) {
+		setupLog.Info("secure access enabled for management cluster")
 	}
 }
 
