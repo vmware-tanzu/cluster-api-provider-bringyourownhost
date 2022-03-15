@@ -10,14 +10,15 @@ import (
 	"os"
 	"strings"
 
-	"github.com/spf13/pflag"
+	"github.com/go-logr/logr"
+	pflag "github.com/spf13/pflag"
 	"github.com/vmware-tanzu/cluster-api-provider-bringyourownhost/agent/cloudinit"
-	"github.com/vmware-tanzu/cluster-api-provider-bringyourownhost/agent/feature"
 	"github.com/vmware-tanzu/cluster-api-provider-bringyourownhost/agent/installer"
 	"github.com/vmware-tanzu/cluster-api-provider-bringyourownhost/agent/reconciler"
 	"github.com/vmware-tanzu/cluster-api-provider-bringyourownhost/agent/registration"
 	"github.com/vmware-tanzu/cluster-api-provider-bringyourownhost/agent/version"
 	infrastructurev1beta1 "github.com/vmware-tanzu/cluster-api-provider-bringyourownhost/apis/infrastructure/v1beta1"
+	"github.com/vmware-tanzu/cluster-api-provider-bringyourownhost/feature"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/fields"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -94,6 +95,17 @@ func setupflags() {
 	feature.MutableGates.AddFlag(pflag.CommandLine)
 }
 
+func handleHostRegistration(k8sClient client.Client, hostName string, logger logr.Logger) (err error) {
+	if feature.Gates.Enabled(feature.SecureAccess) {
+		logger.Info("secure access enabled, waiting for host to be registered by ByoAdmission Controller")
+	} else {
+		registration.LocalHostRegistrar = &registration.HostRegistrar{K8sClient: k8sClient}
+		err := registration.LocalHostRegistrar.Register(hostName, namespace, labels)
+		return err
+	}
+	return nil
+}
+
 var (
 	namespace          string
 	scheme             *runtime.Scheme
@@ -141,8 +153,7 @@ func main() {
 		return
 	}
 
-	registration.LocalHostRegistrar = &registration.HostRegistrar{K8sClient: k8sClient}
-	err = registration.LocalHostRegistrar.Register(hostName, namespace, labels)
+	err = handleHostRegistration(k8sClient, hostName, logger)
 	if err != nil {
 		logger.Error(err, "error registering host %s registration in namespace %s", hostName, namespace)
 		return
@@ -190,10 +201,6 @@ func main() {
 		},
 		Recorder:     mgr.GetEventRecorderFor("hostagent-controller"),
 		K8sInstaller: k8sInstaller,
-	}
-
-	if feature.Gates.Enabled(feature.SecureAccess) {
-		logger.Info("secure access enabled")
 	}
 
 	if err = hostReconciler.SetupWithManager(context.TODO(), mgr); err != nil {

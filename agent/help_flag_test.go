@@ -25,6 +25,7 @@ var _ = Describe("Help flag for host agent", func() {
 				"--skip-installation",
 				"--version",
 				"-v, --v",
+				"--feature-gates mapStringBool",
 			}
 		)
 
