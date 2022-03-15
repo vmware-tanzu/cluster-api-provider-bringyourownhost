@@ -18,6 +18,7 @@ var _ = Describe("Help flag for host agent", func() {
 		var (
 			expectedOptions = []string{
 				"--downloadpath string",
+				"--feature-gates mapStringBool",
 				"--kubeconfig string",
 				"--label labelFlags",
 				"--metricsbindaddress string",
