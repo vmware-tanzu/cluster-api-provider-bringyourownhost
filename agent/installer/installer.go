@@ -37,9 +37,6 @@ type installer struct {
 // getSupportedRegistry returns a registry with installers for the supported OS and K8s
 func getSupportedRegistry(k8sVer string, ob algo.OutputBuilder) registry {
 	reg := newRegistry()
-	if k8sVer == "" {
-		k8sVer = "v1.22.3"
-	}
 
 	addBundleInstaller := func(osBundle, k8sBundle string, stepProvider algo.K8sStepProvider) {
 		a := algo.BaseK8sInstaller{
@@ -55,12 +52,16 @@ func getSupportedRegistry(k8sVer string, ob algo.OutputBuilder) registry {
 
 		// BYOH Bundle Repository. Associate bundle with installer
 		linuxDistro := "Ubuntu_20.04.1_x86-64"
+		// If no version specified use the minimum v1.22 supported
+		if k8sVer == "" {
+			k8sVer = "v1.22"
+		}
 		addBundleInstaller(linuxDistro, k8sVer, &algo.Ubuntu20_4K8s1_22{})
 		/*
 		 * PLACEHOLDER - ADD MORE K8S VERSIONS HERE
 		 */
 
-		// Match concrete k8s version to repository k8s version
+		// Match any patch version of the specified Major & Minor K8s version
 		reg.AddK8sFilter("v1.22.*")
 
 		// Match concrete os version to repository os version
