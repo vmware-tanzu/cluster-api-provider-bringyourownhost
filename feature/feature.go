@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 package feature
+
 import (
 	"k8s.io/apimachinery/pkg/util/runtime"
 	"k8s.io/component-base/featuregate"
@@ -13,7 +14,7 @@ const (
 
 var (
 	MutableGates featuregate.MutableFeatureGate = featuregate.NewFeatureGate()
-	Gates featuregate.FeatureGate = MutableGates
+	Gates        featuregate.FeatureGate        = MutableGates
 )
 
 func init() {
