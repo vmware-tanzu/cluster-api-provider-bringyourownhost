@@ -27,6 +27,12 @@ jobs:
     - name: Checkout code
       uses: actions/checkout@v2
 
+    - name: turn off swap
+      run: sudo swapoff -a
+    
+    - name: Set netfilter conntrack max
+      run: sudo sysctl -w net.netfilter.nf_conntrack_max=131072
+
     - name: Set up Go
       uses: actions/setup-go@v2
       with:
