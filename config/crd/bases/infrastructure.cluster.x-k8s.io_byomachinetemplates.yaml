@@ -38,6 +38,8 @@ spec:
             description: ByoMachineTemplateSpec defines the desired state of ByoMachineTemplate
             properties:
               template:
+                description: ByoMachineTemplateResource defines the desired state
+                  of ByoMachineTemplateResource
                 properties:
                   spec:
                     description: Spec is the specification of the desired behavior
