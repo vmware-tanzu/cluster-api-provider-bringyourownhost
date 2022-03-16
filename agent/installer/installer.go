@@ -62,9 +62,7 @@ func getSupportedRegistry(k8sVer string, ob algo.OutputBuilder) registry {
 		 */
 
 		// Match any patch version of the specified Major & Minor K8s version
-		reg.AddK8sFilter("v1.21.*")
 		reg.AddK8sFilter("v1.22.*")
-		reg.AddK8sFilter("v1.23.*")
 
 		// Match concrete os version to repository os version
 		reg.AddOsFilter("Ubuntu_20.04.*_x86-64", linuxDistro)
