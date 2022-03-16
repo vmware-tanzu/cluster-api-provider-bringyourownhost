@@ -363,7 +363,6 @@ var _ = Describe("Agent", func() {
 			ctx              context.Context
 			err              error
 			hostName         string
-			agentLogFile     = "/tmp/agent-integration.log"
 			fakeDownloadPath = "fake-download-path"
 			runner           *e2e.ByoHostRunner
 			byoHostContainer *container.ContainerCreateCreatedBody
