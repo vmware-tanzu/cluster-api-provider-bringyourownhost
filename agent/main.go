@@ -106,6 +106,21 @@ func handleHostRegistration(k8sClient client.Client, hostName string, logger log
 	return nil
 }
 
+func setupTemplateParser() *cloudinit.TemplateParser {
+	var templateParser *cloudinit.TemplateParser
+	if feature.Gates.Enabled(feature.SecureAccess) {
+		templateParser = nil
+	} else {
+		templateParser = &cloudinit.TemplateParser{
+			Template: registration.HostInfo{
+				DefaultNetworkInterfaceName: registration.LocalHostRegistrar.ByoHostInfo.DefaultNetworkInterfaceName,
+			},
+		}
+	}
+
+	return templateParser
+}
+
 var (
 	namespace          string
 	scheme             *runtime.Scheme
@@ -191,16 +206,12 @@ func main() {
 	}
 
 	hostReconciler := &reconciler.HostReconciler{
-		Client:     k8sClient,
-		CmdRunner:  cloudinit.CmdRunner{},
-		FileWriter: cloudinit.FileWriter{},
-		TemplateParser: cloudinit.TemplateParser{
-			Template: registration.HostInfo{
-				DefaultNetworkInterfaceName: registration.LocalHostRegistrar.ByoHostInfo.DefaultNetworkInterfaceName,
-			},
-		},
-		Recorder:     mgr.GetEventRecorderFor("hostagent-controller"),
-		K8sInstaller: k8sInstaller,
+		Client:         k8sClient,
+		CmdRunner:      cloudinit.CmdRunner{},
+		FileWriter:     cloudinit.FileWriter{},
+		TemplateParser: setupTemplateParser(),
+		Recorder:       mgr.GetEventRecorderFor("hostagent-controller"),
+		K8sInstaller:   k8sInstaller,
 	}
 
 	if err = hostReconciler.SetupWithManager(context.TODO(), mgr); err != nil {

@@ -413,4 +413,72 @@ var _ = Describe("Agent", func() {
 			}, 30).Should(BeTrue())
 		})
 	})
+
+	Context("When the host agent is executed with SecureAccess feature flag", func() {
+
+		var (
+			ns               *corev1.Namespace
+			ctx              context.Context
+			hostName         string
+			runner           *e2e.ByoHostRunner
+			byoHostContainer *container.ContainerCreateCreatedBody
+			output           dockertypes.HijackedResponse
+		)
+
+		BeforeEach(func() {
+			ns = builder.Namespace("testns").Build()
+			Expect(k8sClient.Create(context.TODO(), ns)).NotTo(HaveOccurred(), "failed to create test namespace")
+			ctx = context.TODO()
+			var err error
+			hostName, err = os.Hostname()
+			Expect(err).NotTo(HaveOccurred())
+
+			runner = setupTestInfra(ctx, hostName, getKubeConfig().Name(), ns)
+			runner.CommandArgs["--feature-gates"] = "SecureAccess=true"
+
+			byoHostContainer, err = runner.SetupByoDockerHost()
+			Expect(err).NotTo(HaveOccurred())
+
+			output, _, err = runner.ExecByoDockerHost(byoHostContainer)
+			Expect(err).NotTo(HaveOccurred())
+		})
+
+		AfterEach(func() {
+			cleanup(runner.Context, byoHostContainer, ns, agentLogFile)
+		})
+
+		It("should enable the SecureAccess feature gate", func() {
+			defer output.Close()
+			f := e2e.WriteDockerLog(output, agentLogFile)
+			defer func() {
+				deferredErr := f.Close()
+				if deferredErr != nil {
+					e2e.Showf("error closing file %s: %v", agentLogFile, deferredErr)
+				}
+			}()
+			Eventually(func() (done bool) {
+				_, err := os.Stat(agentLogFile)
+				if err == nil {
+					data, err := os.ReadFile(agentLogFile)
+					if err == nil && strings.Contains(string(data), "\"msg\"=\"secure access enabled, waiting for host to be registered by ByoAdmission Controller\"") {
+						return true
+					}
+				}
+				return false
+			}).Should(BeTrue())
+		})
+
+		It("should not register the BYOHost with the management cluster", func() {
+			byoHostLookupKey := types.NamespacedName{Name: hostName, Namespace: ns.Name}
+			createdByoHost := &infrastructurev1beta1.ByoHost{}
+			Consistently(func() *infrastructurev1beta1.ByoHost {
+				err := k8sClient.Get(context.TODO(), byoHostLookupKey, createdByoHost)
+				if err != nil {
+					return nil
+				}
+				return createdByoHost
+			}).Should(BeNil())
+		})
+
+	})
 })
