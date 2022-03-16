@@ -35,7 +35,7 @@ type installer struct {
 }
 
 // getSupportedRegistry returns a registry with installers for the supported OS and K8s
-func getSupportedRegistry(k8sVer string, ob algo.OutputBuilder) registry {
+func getSupportedRegistry(ob algo.OutputBuilder) registry {
 	reg := newRegistry()
 
 	addBundleInstaller := func(osBundle, k8sBundle string, stepProvider algo.K8sStepProvider) {
@@ -52,11 +52,7 @@ func getSupportedRegistry(k8sVer string, ob algo.OutputBuilder) registry {
 
 		// BYOH Bundle Repository. Associate bundle with installer
 		linuxDistro := "Ubuntu_20.04.1_x86-64"
-		// If no version specified use the minimum v1.22 supported
-		if k8sVer == "" {
-			k8sVer = "v1.22"
-		}
-		addBundleInstaller(linuxDistro, k8sVer, &algo.Ubuntu20_4K8s1_22{})
+		addBundleInstaller(linuxDistro, "v1.22.*", &algo.Ubuntu20_4K8s1_22{})
 		/*
 		 * PLACEHOLDER - ADD MORE K8S VERSIONS HERE
 		 */
@@ -124,7 +120,7 @@ func New(downloadPath string, logger logr.Logger) (*installer, error) {
 func newUnchecked(currentOs, downloadPath string, logger logr.Logger, outputBuilder algo.OutputBuilder) (*installer, error) {
 	bd := bundleDownloader{repoAddr: "", downloadPath: downloadPath, logger: logger}
 
-	reg := getSupportedRegistry("", outputBuilder)
+	reg := getSupportedRegistry(outputBuilder)
 	if len(reg.ListK8s(currentOs)) == 0 {
 		return nil, ErrOsK8sNotSupported
 	}
@@ -210,7 +206,7 @@ func ListSupportedK8s(os string) []string {
 // getSupportedRegistryDescription returns a description registry of supported OS and k8s.
 // It that can only be queried for OS and k8s but cannot be used for install/uninstall.
 func getSupportedRegistryDescription() registry {
-	return getSupportedRegistry("", nil)
+	return getSupportedRegistry(nil)
 }
 
 // PreviewChanges describes the changes to install and uninstall K8s on OS without actually applying them.
@@ -218,7 +214,7 @@ func getSupportedRegistryDescription() registry {
 // Can be invoked on a non-supported OS
 func PreviewChanges(os, k8sVer string) (install, uninstall string, err error) {
 	stepPreviewer := stringPrinter{msgFmt: "# %s"}
-	reg := getSupportedRegistry(k8sVer, &stepPreviewer)
+	reg := getSupportedRegistry(&stepPreviewer)
 	installer, _ := reg.GetInstaller(os, k8sVer)
 
 	if installer == nil {

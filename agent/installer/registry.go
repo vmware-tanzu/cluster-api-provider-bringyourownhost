@@ -105,7 +105,7 @@ func (r *registry) resolveK8sToK8sBundle(k8s string) string {
 	for _, k8sFilter := range r.k8sFilters {
 		matched, _ := regexp.MatchString(k8sFilter, k8s)
 		if matched {
-			return k8s
+			return k8sFilter
 		}
 	}
 
