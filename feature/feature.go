@@ -1,4 +1,4 @@
-// Copyright 2021 VMware, Inc. All Rights Reserved.
+// Copyright 2022 VMware, Inc. All Rights Reserved.
 // SPDX-License-Identifier: Apache-2.0
 
 package feature
@@ -18,11 +18,11 @@ var (
 )
 
 func init() {
-	runtime.Must(MutableGates.Add(defaultClusterAPIFeatureGates))
+	runtime.Must(MutableGates.Add(defaultClusterAPIBYOHFeatureGates))
 }
 
 // defaultClusterAPIFeatureGates consists of all known cluster-api-specific feature keys.
 // To add a new feature, define a key for it above and add it here.
-var defaultClusterAPIFeatureGates = map[featuregate.Feature]featuregate.FeatureSpec{
+var defaultClusterAPIBYOHFeatureGates = map[featuregate.Feature]featuregate.FeatureSpec{
 	SecureAccess: {Default: false, PreRelease: featuregate.Alpha},
 }
