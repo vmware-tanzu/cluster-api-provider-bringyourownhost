@@ -21,7 +21,7 @@ func init() {
 	runtime.Must(MutableGates.Add(defaultClusterAPIBYOHFeatureGates))
 }
 
-// defaultClusterAPIFeatureGates consists of all known cluster-api-specific feature keys.
+// defaultClusterAPIBYOHFeatureGates consists of all known cluster-api-byoh feature keys.
 // To add a new feature, define a key for it above and add it here.
 var defaultClusterAPIBYOHFeatureGates = map[featuregate.Feature]featuregate.FeatureSpec{
 	SecureAccess: {Default: false, PreRelease: featuregate.Alpha},
