@@ -37,25 +37,15 @@ var _ = Describe("Byohost Installer Tests", func() {
 		})
 		It("Should allow working with installers", func() {
 			Expect(func() { r.AddBundleInstaller("ubuntu", "v1.22.*", dummy122) }).NotTo(Panic())
-			Expect(func() { r.AddBundleInstaller("ubuntu", "v1.23.*", dummy123) }).NotTo(Panic())
-			Expect(func() { r.AddBundleInstaller("rhel", "v1.24.*", dummy124) }).NotTo(Panic())
+			Expect(func() { r.AddBundleInstaller("rhel", "v1.22.*", dummy124) }).NotTo(Panic())
+
 			r.AddOsFilter("ubuntu.*", "ubuntu")
 			r.AddOsFilter("rhel.*", "rhel")
 			r.AddK8sFilter("v1.22.*")
-			r.AddK8sFilter("v1.23.*")
-			r.AddK8sFilter("v1.24.*")
 
 			inst, osBundle := r.GetInstaller("ubuntu-1", "v1.22.1")
 			Expect(inst).To(Equal(dummy122))
 			Expect(osBundle).To(Equal("ubuntu"))
-
-			inst, osBundle = r.GetInstaller("ubuntu-2", "v1.23.2")
-			Expect(inst).To(Equal(dummy123))
-			Expect(osBundle).To(Equal("ubuntu"))
-
-			inst, osBundle = r.GetInstaller("rhel-1", "v1.24.3")
-			Expect(inst).To(Equal(dummy124))
-			Expect(osBundle).To(Equal("rhel"))
 
 			osFilters, osBundles := r.ListOS()
 			Expect(osFilters).To(ContainElements("rhel.*", "ubuntu.*"))
@@ -63,10 +53,10 @@ var _ = Describe("Byohost Installer Tests", func() {
 			Expect(osBundles).To(ContainElements("rhel", "ubuntu"))
 			Expect(osBundles).To(HaveLen(2))
 
-			Expect(r.ListK8s("ubuntu")).To(ContainElements("v1.22.*", "v1.23.*"))
-			Expect(r.ListK8s("ubuntu")).To(HaveLen(2))
+			Expect(r.ListK8s("ubuntu")).To(ContainElements("v1.22.*"))
+			Expect(r.ListK8s("ubuntu")).To(HaveLen(1))
 
-			Expect(r.ListK8s("rhel")).To(ContainElement("v1.24.*"))
+			Expect(r.ListK8s("rhel")).To(ContainElement("v1.22.*"))
 			Expect(r.ListK8s("rhel")).To(HaveLen(1))
 
 			Expect(r.GetInstaller("photon", "v1.22.1")).To(BeNil())
@@ -109,6 +99,22 @@ var _ = Describe("Byohost Installer Tests", func() {
 			 */
 			Expect(func() { r.AddBundleInstaller("ubuntu", "v1.22.*", dummy122) }).NotTo(Panic())
 			Expect(func() { r.AddBundleInstaller("ubuntu", "v1.22.*", dummy1122) }).To(Panic())
+		})
+		It("Should not find unsupported K8s versions", func() {
+			Expect(func() { r.AddBundleInstaller("ubuntu", "v1.22.*", dummy122) }).NotTo(Panic())
+			Expect(func() { r.AddBundleInstaller("rhel", "v1.22.*", dummy122) }).NotTo(Panic())
+
+			// Intentionally skip adding the following filters for unsuported K8s:
+			// AddK8sFilter("v1.93.*")
+			// AddK8sFilter("v1.94.*")
+
+			inst, osBundle := r.GetInstaller("ubuntu", "v1.93.2")
+			Expect(inst).To(BeNil())
+			Expect(osBundle).To(Equal(""))
+
+			inst, osBundle = r.GetInstaller("rhel", "v1.94.3")
+			Expect(inst).To(BeNil())
+			Expect(osBundle).To(Equal(""))
 		})
 	})
 })
