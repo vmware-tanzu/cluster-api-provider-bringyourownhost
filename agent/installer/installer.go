@@ -53,6 +53,7 @@ func getSupportedRegistry(ob algo.OutputBuilder) registry {
 		// BYOH Bundle Repository. Associate bundle with installer
 		linuxDistro := "Ubuntu_20.04.1_x86-64"
 		addBundleInstaller(linuxDistro, "v1.22.*", &algo.Ubuntu20_4K8s1_22{})
+
 		/*
 		 * PLACEHOLDER - ADD MORE K8S VERSIONS HERE
 		 */
@@ -62,6 +63,7 @@ func getSupportedRegistry(ob algo.OutputBuilder) registry {
 
 		// Match concrete os version to repository os version
 		reg.AddOsFilter("Ubuntu_20.04.*_x86-64", linuxDistro)
+
 		/*
 		 * PLACEHOLDER - POINT MORE DISTRO VERSIONS
 		 */
