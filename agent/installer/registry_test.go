@@ -16,7 +16,6 @@ var _ = Describe("Byohost Installer Tests", func() {
 		const (
 			dummy122  = dummyinstaller(1221)
 			dummy1122 = dummyinstaller(1122)
-			dummy123  = dummyinstaller(1232)
 			dummy124  = dummyinstaller(1243)
 		)
 
