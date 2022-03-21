@@ -20,7 +20,7 @@ type filterK8sBundle struct {
 	k8sFilter string
 }
 
-type filterBundleList []filterOsBundlePair
+type filterOSBundleList []filterOsBundlePair
 type filterK8sBundleList []filterK8sBundle
 
 // Registry contains
@@ -29,7 +29,7 @@ type filterK8sBundleList []filterK8sBundle
 // 3. Entries that match a Major & Minor versions of K8s to any of their patch sub-versions (e.g.: 1.22.3 -> 1.22.*)
 type registry struct {
 	osk8sInstallerMap
-	filterBundleList
+	filterOSBundleList
 	filterK8sBundleList
 }
 
@@ -50,7 +50,7 @@ func (r *registry) AddBundleInstaller(os, k8sVer string, installer osk8sInstalle
 }
 
 func (r *registry) AddOsFilter(osFilter, osBundle string) {
-	r.filterBundleList = append(r.filterBundleList, filterOsBundlePair{osFilter: osFilter, osBundle: osBundle})
+	r.filterOSBundleList = append(r.filterOSBundleList, filterOsBundlePair{osFilter: osFilter, osBundle: osBundle})
 }
 
 func (r *registry) AddK8sFilter(k8sFilter string) {
@@ -58,10 +58,10 @@ func (r *registry) AddK8sFilter(k8sFilter string) {
 }
 
 func (r *registry) ListOS() (osFilter, osBundle []string) {
-	osFilter = make([]string, 0, len(r.filterBundleList))
-	osBundle = make([]string, 0, len(r.filterBundleList))
+	osFilter = make([]string, 0, len(r.filterOSBundleList))
+	osBundle = make([]string, 0, len(r.filterOSBundleList))
 
-	for _, fbp := range r.filterBundleList {
+	for _, fbp := range r.filterOSBundleList {
 		osFilter = append(osFilter, fbp.osFilter)
 		osBundle = append(osBundle, fbp.osBundle)
 	}
@@ -97,7 +97,7 @@ func (r *registry) GetInstaller(osHost, k8sVer string) (osk8si osk8sInstaller, o
 }
 
 func (r *registry) resolveOsToOsBundle(os string) string {
-	for _, fbp := range r.filterBundleList {
+	for _, fbp := range r.filterOSBundleList {
 		matched, _ := regexp.MatchString(fbp.osFilter, os)
 		if matched {
 			return fbp.osBundle
