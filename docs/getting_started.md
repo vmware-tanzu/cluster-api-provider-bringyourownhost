@@ -16,20 +16,20 @@ Kubernetes cluster will be transformed into a [management cluster](https://clust
 
 1. **Existing Management Cluster**
 
-   For production use-cases a "real" Kubernetes cluster should be used with appropriate backup and DR policies and procedures in place. The Kubernetes cluster must be at least v1.19.1.
+    For production use-cases a "real" Kubernetes cluster should be used with appropriate backup and DR policies and procedures in place. The Kubernetes cluster must be at least v1.19.1.
 
-   ```bash
-   export KUBECONFIG=<...>
-   ```
+    ```bash
+    export KUBECONFIG=<...>
+    ```
 **OR**
 
 2. **Kind**
 
-If you are testing locally, you can use [Kind][kind] to create a cluster with the following command:
+    If you are testing locally, you can use [Kind][kind] to create a cluster with the following command:
 
-```shell
-kind create cluster
-```
+    ```shell
+    kind create cluster
+    ```
 
 ---
 [kind] is not designed for production use.
@@ -52,7 +52,11 @@ providers:
     type: InfrastructureProvider
 ```
 
-running `clusterctl config repositories`.
+running
+
+```shell
+clusterctl config repositories
+```
 
 You should be able to see the new `BYOH` provider there.
 ```shell
@@ -95,10 +99,10 @@ do
 done
 ```
 
-### Register BYOH host to management cluster
+## Register BYOH host to management cluster
 
 ---
-#### VM Prerequisites
+### VM Prerequisites
 - The following packages must be pre-installed on the VMs
   - socat
   - ebtables
@@ -123,10 +127,10 @@ $ cat /etc/hosts
 
 If you are trying this on your own hosts, then for each host
 1. Download the [byoh-hostagent-linux-amd64](https://github.com/vmware-tanzu/cluster-api-provider-bringyourownhost/releases/download/v0.1.0/byoh-hostagent-linux-amd64)
-2. Copy the management cluster `kubeconfig` file as `management.conf`
+2. Copy the management cluster `kubeconfig` file as `management-cluster.conf`
 3. Start the agent 
 ```shell
-./byoh-hostagent-linux-amd64 -kubeconfig management.conf > byoh-agent.log 2>&1 &
+./byoh-hostagent-linux-amd64 -kubeconfig management-cluster.conf > byoh-agent.log 2>&1 &
 ```
 
 ---
@@ -166,7 +170,7 @@ You should be able to view your registered hosts using
 kubectl get byohosts
 ```
 
-### Create workload cluster
+## Create workload cluster
 Running the following command(on the host where you execute `clusterctl` in previous steps)
 
 **NOTE:** The `CONTROL_PLANE_ENDPOINT_IP` is an IP that must be an IP on the same subnet as the control plane machines, it should be also an IP that is not part of your DHCP range.
@@ -181,29 +185,36 @@ Randomly assign any free IP within the network subnet to the `CONTROL_PLANE_ENDP
 ```shell
 docker network inspect kind | jq -r 'map(.Containers[].IPv4Address) []'
 ```
-Create the workload cluster
 
+### Create the workload cluster
+Generate the cluster.yaml for workload cluster
+ - for vms as byohosts
+    ```shell
+    CONTROL_PLANE_ENDPOINT_IP=10.10.10.10 clusterctl generate cluster byoh-cluster \
+      --infrastructure byoh \
+      --kubernetes-version v1.22.3 \
+      --control-plane-machine-count 1 \
+      --worker-machine-count 1 > cluster.yaml
+    ```
+
+ - for docker hosts use the --flavor argument
+    ```shell
+    CONTROL_PLANE_ENDPOINT_IP=10.10.10.10 clusterctl generate cluster byoh-cluster \
+        --infrastructure byoh \
+        --kubernetes-version v1.22.3 \
+        --control-plane-machine-count 1 \
+        --worker-machine-count 1 \
+        --flavor docker > cluster.yaml
+    ```
+
+Inspect and make any changes
 ```shell
-# for vms as byohosts
-$ CONTROL_PLANE_ENDPOINT_IP=10.10.10.10 clusterctl generate cluster byoh-cluster \
-    --infrastructure byoh \
-    --kubernetes-version v1.22.3 \
-    --control-plane-machine-count 1 \
-    --worker-machine-count 1 > cluster.yaml
+vi cluster.yaml
+```
 
-# for docker hosts use the --flavor argument
-$ CONTROL_PLANE_ENDPOINT_IP=10.10.10.10 clusterctl generate cluster byoh-cluster \
-    --infrastructure byoh \
-    --kubernetes-version v1.22.3 \
-    --control-plane-machine-count 1 \
-    --worker-machine-count 1 \
-    --flavor docker > cluster.yaml
-
-# Inspect and make any changes
-$ vi cluster.yaml
-
-# Create the workload cluster in the current namespace on the management cluster
-$ kubectl apply -f cluster.yaml
+Create the workload cluster in the current namespace on the management cluster
+```shell
+kubectl apply -f cluster.yaml
 ```
 
 ## Accessing the workload cluster
@@ -212,7 +223,7 @@ The `kubeconfig` for the workload cluster will be stored in a secret, which can
 be retrieved using:
 
 ``` shell
-$ kubectl get secret/byoh-cluster-kubeconfig -o json \
+kubectl get secret/byoh-cluster-kubeconfig -o json \
   | jq -r .data.value \
   | base64 --decode \
   > ./byoh-cluster.kubeconfig
