@@ -157,6 +157,18 @@ var _ = Describe("Agent", func() {
 
 			output, _, err = runner.ExecByoDockerHost(byoHostContainer)
 			Expect(err).NotTo(HaveOccurred())
+
+			// wait until the agent process starts inside the byoh host container
+			Eventually(func() bool {
+				containerTop, _ := runner.DockerClient.ContainerTop(ctx, byoHostContainer.ID, []string{})
+				for _, proc := range containerTop.Processes {
+					if strings.Contains(proc[len(containerTop.Titles)-1], "agent") {
+						return true
+					}
+
+				}
+				return false
+			}).Should(BeTrue())
 		})
 
 		AfterEach(func() {
@@ -313,7 +325,7 @@ var _ = Describe("Agent", func() {
 						}
 					}
 					return corev1.ConditionFalse
-				}, 60).Should(Equal(corev1.ConditionTrue))
+				}, 100).Should(Equal(corev1.ConditionTrue)) // installing K8s components is a lengthy operation, setting the timeout to 100s
 			})
 		})
 	})
