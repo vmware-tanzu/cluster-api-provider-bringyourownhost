@@ -11,18 +11,26 @@ import (
 type osk8sInstaller interface{}
 type k8sInstallerMap map[string]osk8sInstaller
 type osk8sInstallerMap map[string]k8sInstallerMap
-type filterBundlePair struct {
+type filterOsBundlePair struct {
 	osFilter string
 	osBundle string
 }
-type filterBundleList []filterBundlePair
+
+type filterK8sBundle struct {
+	k8sFilter string
+}
+
+type filterOSBundleList []filterOsBundlePair
+type filterK8sBundleList []filterK8sBundle
 
 // Registry contains
 // 1. Entries associating BYOH Bundle i.e. (OS,K8sVersion) in the Repository with Installer in Host Agent
 // 2. Entries that match a concrete OS to a BYOH Bundle OS from the Repository
+// 3. Entries that match a Major & Minor versions of K8s to any of their patch sub-versions (e.g.: 1.22.3 -> 1.22.*)
 type registry struct {
 	osk8sInstallerMap
-	filterBundleList
+	filterOSBundleList
+	filterK8sBundleList
 }
 
 func newRegistry() registry {
@@ -42,14 +50,18 @@ func (r *registry) AddBundleInstaller(os, k8sVer string, installer osk8sInstalle
 }
 
 func (r *registry) AddOsFilter(osFilter, osBundle string) {
-	r.filterBundleList = append(r.filterBundleList, filterBundlePair{osFilter: osFilter, osBundle: osBundle})
+	r.filterOSBundleList = append(r.filterOSBundleList, filterOsBundlePair{osFilter: osFilter, osBundle: osBundle})
+}
+
+func (r *registry) AddK8sFilter(k8sFilter string) {
+	r.filterK8sBundleList = append(r.filterK8sBundleList, filterK8sBundle{k8sFilter: k8sFilter})
 }
 
 func (r *registry) ListOS() (osFilter, osBundle []string) {
-	osFilter = make([]string, 0, len(r.filterBundleList))
-	osBundle = make([]string, 0, len(r.filterBundleList))
+	osFilter = make([]string, 0, len(r.filterOSBundleList))
+	osBundle = make([]string, 0, len(r.filterOSBundleList))
 
-	for _, fbp := range r.filterBundleList {
+	for _, fbp := range r.filterOSBundleList {
 		osFilter = append(osFilter, fbp.osFilter)
 		osBundle = append(osBundle, fbp.osBundle)
 	}
@@ -79,15 +91,27 @@ func (r *registry) ListK8s(osBundleHost string) []string {
 
 func (r *registry) GetInstaller(osHost, k8sVer string) (osk8si osk8sInstaller, osBundle string) {
 	osBundle = r.resolveOsToOsBundle(osHost)
-	osk8si = r.osk8sInstallerMap[osBundle][k8sVer]
+	k8sBundle := r.resolveK8sToK8sBundle(k8sVer)
+	osk8si = r.osk8sInstallerMap[osBundle][k8sBundle]
 	return
 }
 
 func (r *registry) resolveOsToOsBundle(os string) string {
-	for _, fbp := range r.filterBundleList {
+	for _, fbp := range r.filterOSBundleList {
 		matched, _ := regexp.MatchString(fbp.osFilter, os)
 		if matched {
 			return fbp.osBundle
+		}
+	}
+
+	return ""
+}
+
+func (r *registry) resolveK8sToK8sBundle(k8s string) string {
+	for _, k8sBundle := range r.filterK8sBundleList {
+		matched, _ := regexp.MatchString(k8sBundle.k8sFilter, k8s)
+		if matched {
+			return k8sBundle.k8sFilter
 		}
 	}
 
