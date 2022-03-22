@@ -35,6 +35,7 @@ type IK8sInstaller interface {
 	Uninstall(string, string, string) error
 }
 
+// HostReconciler encapsulates the data/logic needed to reconcile a ByoHost
 type HostReconciler struct {
 	Client         client.Client
 	CmdRunner      cloudinit.ICmdRunner
@@ -46,7 +47,8 @@ type HostReconciler struct {
 
 const (
 	bootstrapSentinelFile = "/run/cluster-api/bootstrap-success.complete"
-	KubeadmResetCommand   = "kubeadm reset --force"
+	// KubeadmResetCommand is the command to run to force reset/remove nodes' local file system of the files created by kubeadm
+	KubeadmResetCommand = "kubeadm reset --force"
 )
 
 // Reconcile handles events for the ByoHost that is registered by this agent process
@@ -161,6 +163,7 @@ func (r *HostReconciler) getBootstrapScript(ctx context.Context, dataSecretName,
 	return bootstrapSecret, nil
 }
 
+// SetupWithManager sets up the controller with the manager
 func (r *HostReconciler) SetupWithManager(ctx context.Context, mgr manager.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&infrastructurev1beta1.ByoHost{}).

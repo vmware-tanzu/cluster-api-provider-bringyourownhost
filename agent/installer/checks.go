@@ -13,7 +13,7 @@ import (
 
 func checkPreRequsitePackages() error {
 	if runtime.GOOS == "linux" {
-		unavailablePackages := []string{}
+		unavailablePackages := make([]string, 0)
 		execr := utilsexec.New()
 		for _, pkgName := range preRequisitePackages {
 			_, err := execr.LookPath(pkgName)

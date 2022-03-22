@@ -23,6 +23,7 @@ func (s *mockStep) undo() error {
 	return s.Err
 }
 
+// MockUbuntuWithError is a mock implementation of BaseK8sInstaller that returns an error on the steps
 type MockUbuntuWithError struct {
 	BaseK8sInstaller
 	errorOnStep int

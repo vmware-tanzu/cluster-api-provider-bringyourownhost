@@ -41,9 +41,12 @@ import (
 )
 
 const (
-	ProviderIDPrefix       = "byoh://"
+	// ProviderIDPrefix prefix for provider id
+	ProviderIDPrefix = "byoh://"
+	// ProviderIDSuffixLength length of provider id suffix
 	ProviderIDSuffixLength = 6
-	RequeueForbyohost      = 10 * time.Second
+	// RequeueForbyohost requeue delay for byoh host
+	RequeueForbyohost = 10 * time.Second
 )
 
 // ByoMachineReconciler reconciles a ByoMachine object
@@ -177,6 +180,7 @@ func (r *ByoMachineReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 	return r.reconcileNormal(ctx, machineScope)
 }
 
+// FetchAttachedByoHost fetches BYOHost attached to this machine
 func (r *ByoMachineReconciler) FetchAttachedByoHost(ctx context.Context, byomachineName, byomachineNamespace string) (*infrav1.ByoHost, error) {
 	logger := log.FromContext(ctx)
 	logger.Info("Fetching an attached ByoHost")

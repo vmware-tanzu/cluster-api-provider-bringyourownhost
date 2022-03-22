@@ -41,7 +41,7 @@ var _ = Describe("Help flag for host agent", func() {
 					continue
 				}
 				words := strings.Split(line, " ")
-				line = (words[0] + " " + words[1]) // checking the first two words
+				line = words[0] + " " + words[1] // checking the first two words
 				// Any option not belongs to expectedOptions is not allowed.
 				Expect(strings.TrimSpace(line)).To(BeElementOf(expectedOptions))
 			}

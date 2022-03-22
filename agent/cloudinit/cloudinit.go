@@ -14,6 +14,7 @@ import (
 	"sigs.k8s.io/yaml"
 )
 
+// ScriptExecutor bootstrap script executor
 type ScriptExecutor struct {
 	WriteFilesExecutor    IFileWriter
 	RunCmdExecutor        ICmdRunner
@@ -25,6 +26,7 @@ type bootstrapConfig struct {
 	CommandsToExecute []string `json:"runCmd"`
 }
 
+// Files details required for files written by bootstrap script
 type Files struct {
 	Path        string `json:"path,"`
 	Encoding    string `json:"encoding,omitempty"`

@@ -27,6 +27,7 @@ type IFileWriter interface {
 	WriteToFile(*Files) error
 }
 
+// FileWriter default implementation of IFileWriter
 type FileWriter struct {
 }
 

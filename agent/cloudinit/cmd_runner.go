@@ -13,6 +13,8 @@ type ICmdRunner interface {
 	RunCmd(string) error
 }
 
+// CmdRunner default implementer of ICmdRunner
+// TODO reevaluate empty interface/struct
 type CmdRunner struct {
 }
 

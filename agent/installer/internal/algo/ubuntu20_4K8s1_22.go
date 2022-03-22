@@ -8,6 +8,7 @@ import (
 	"path/filepath"
 )
 
+// Ubuntu20_4K8s1_22 is the configuration for Ubuntu 20.4.X, K8s 1.22.X extending BaseK8sInstaller
 type Ubuntu20_4K8s1_22 struct {
 	BaseK8sInstaller
 }

@@ -10,13 +10,16 @@ import (
 )
 
 var (
-	Version   string
+	// Version is the version of the agent.
+	Version string
+	// BuildDate is the date the agent was built.
 	BuildDate string
 )
 
 const (
+	// Dev development version string
 	Dev          = "dev"
-	GitTagLength = 3
+	gitTagLength = 3
 )
 
 // Info exposes information about the version used for the current running code.
@@ -52,7 +55,7 @@ func extractVersion(major, minor, patch *string) {
 	}
 
 	version := strings.Split(Version, ".")
-	if len(version) != GitTagLength {
+	if len(version) != gitTagLength {
 		return
 	}
 
