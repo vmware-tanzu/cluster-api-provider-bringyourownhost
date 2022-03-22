@@ -14,7 +14,7 @@ require (
 	github.com/jackpal/gateway v1.0.7
 	github.com/k14s/imgpkg v0.18.0
 	github.com/kube-vip/kube-vip v0.3.8
-	github.com/maxbrunsfeld/counterfeiter/v6 v6.4.1
+	github.com/maxbrunsfeld/counterfeiter/v6 v6.5.0
 	github.com/moby/sys/mount v0.2.0 // indirect
 	github.com/onsi/ginkgo v1.16.5
 	github.com/onsi/gomega v1.18.1
