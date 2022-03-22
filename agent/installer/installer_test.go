@@ -43,7 +43,7 @@ var _ = Describe("Byohost Installer Tests", func() {
 	Context("When installer is created", func() {
 		It("Install/uninstall should return error for unsupported Minor and/or Major K8s", func() {
 
-			//Currently supported versions: v1.21.*, v1.22.*, v1.23.*
+			// Currently supported versions: v1.21.*, v1.22.*, v1.23.*
 			unsupportedMinorVer := "v1.20.1"
 			unsupportedMajorVer := "v0.21.1"
 
