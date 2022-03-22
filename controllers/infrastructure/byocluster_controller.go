@@ -29,6 +29,7 @@ import (
 )
 
 var (
+	// DefaultAPIEndpointPort default port for the API endpoint
 	DefaultAPIEndpointPort    = 6443
 	clusterControlledType     = &infrav1.ByoCluster{}
 	clusterControlledTypeName = reflect.TypeOf(clusterControlledType).Elem().Name()
@@ -46,6 +47,7 @@ type ByoClusterReconciler struct {
 //+kubebuilder:rbac:groups=infrastructure.cluster.x-k8s.io,resources=byoclusters/finalizers,verbs=update
 // +kubebuilder:rbac:groups=cluster.x-k8s.io,resources=clusters;clusters/status,verbs=get;list;watch
 
+// Reconcile handles the byo cluster reconciliations
 func (r *ByoClusterReconciler) Reconcile(ctx context.Context, req ctrl.Request) (_ ctrl.Result, reterr error) {
 	logger := log.FromContext(ctx)
 

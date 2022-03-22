@@ -17,6 +17,7 @@ import (
 // log is for logging in this package.
 var byoclusterlog = logf.Log.WithName("byocluster-resource")
 
+// SetupWebhookWithManager sets up the webhook for the byocluster resource
 func (byoCluster *ByoCluster) SetupWebhookWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewWebhookManagedBy(mgr).
 		For(byoCluster).

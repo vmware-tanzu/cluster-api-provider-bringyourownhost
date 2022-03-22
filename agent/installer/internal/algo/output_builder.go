@@ -3,6 +3,7 @@
 
 package algo
 
+// OutputBuilder is an interface for building output as the algorithm runs.
 type OutputBuilder interface {
 	Out(string)
 	Err(string)

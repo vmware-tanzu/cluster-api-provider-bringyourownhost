@@ -18,13 +18,16 @@ import (
 )
 
 var (
+	// LocalHostRegistrar is a HostRegistrar that registers the local host.
 	LocalHostRegistrar *HostRegistrar
 )
 
+// HostInfo contains information about the host network interface.
 type HostInfo struct {
 	DefaultNetworkInterfaceName string
 }
 
+// HostRegistrar used to register a host.
 type HostRegistrar struct {
 	K8sClient   client.Client
 	ByoHostInfo HostInfo
@@ -67,6 +70,7 @@ func (hr *HostRegistrar) Register(hostName, namespace string, hostLabels map[str
 	return hr.UpdateNetwork(ctx, byoHost)
 }
 
+// UpdateNetwork updates the network interface status for the host
 func (hr *HostRegistrar) UpdateNetwork(ctx context.Context, byoHost *infrastructurev1beta1.ByoHost) error {
 	klog.Info("Add Network Info")
 	helper, err := patch.NewHelper(byoHost, hr.K8sClient)
@@ -79,6 +83,7 @@ func (hr *HostRegistrar) UpdateNetwork(ctx context.Context, byoHost *infrastruct
 	return helper.Patch(ctx, byoHost)
 }
 
+// GetNetworkStatus returns the network interface(s) status for the host
 func (hr *HostRegistrar) GetNetworkStatus() []infrastructurev1beta1.NetworkStatus {
 	Network := make([]infrastructurev1beta1.NetworkStatus, 0)
 

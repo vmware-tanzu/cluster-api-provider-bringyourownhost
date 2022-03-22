@@ -25,8 +25,8 @@ import (
 )
 
 const (
-	KindImage          = "byoh/node:v1.22.3"
-	TempKubeconfigPath = "/tmp/mgmt.conf"
+	kindImage          = "byoh/node:v1.22.3"
+	tempKubeconfigPath = "/tmp/mgmt.conf"
 )
 
 type cpConfig struct {
@@ -37,6 +37,7 @@ type cpConfig struct {
 	container  string
 }
 
+// ByoHostRunner runs bring-you-own-host cluster in docker
 type ByoHostRunner struct {
 	Context               context.Context
 	clusterConName        string
@@ -160,7 +161,7 @@ func (r *ByoHostRunner) createDockerContainer() (container.ContainerCreateCreate
 
 	return r.DockerClient.ContainerCreate(r.Context,
 		&container.Config{Hostname: r.ByoHostName,
-			Image: KindImage,
+			Image: kindImage,
 		},
 		&container.HostConfig{Privileged: true,
 			SecurityOpt: []string{"seccomp=unconfined"},
@@ -200,14 +201,15 @@ func (r *ByoHostRunner) copyKubeconfig(config cpConfig, listopt types.ContainerL
 		re := regexp.MustCompile("server:.*")
 		kubeconfig = re.ReplaceAll(kubeconfig, []byte("server: https://"+profile.NetworkSettings.Networks[r.NetworkInterface].IPAddress+":6443"))
 	}
-	Expect(os.WriteFile(TempKubeconfigPath, kubeconfig, 0644)).NotTo(HaveOccurred()) // nolint: gosec,gomnd
+	Expect(os.WriteFile(tempKubeconfigPath, kubeconfig, 0644)).NotTo(HaveOccurred()) // nolint: gosec,gomnd
 
-	config.sourcePath = TempKubeconfigPath
+	config.sourcePath = tempKubeconfigPath
 	config.destPath = r.CommandArgs["--kubeconfig"]
 	err := copyToContainer(r.Context, r.DockerClient, config)
 	return err
 }
 
+// SetupByoDockerHost sets up the byohost docker container
 func (r *ByoHostRunner) SetupByoDockerHost() (*container.ContainerCreateCreatedBody, error) {
 	var byohost container.ContainerCreateCreatedBody
 	var err error
@@ -231,6 +233,7 @@ func (r *ByoHostRunner) SetupByoDockerHost() (*container.ContainerCreateCreatedB
 	return &byohost, err
 }
 
+// ExecByoDockerHost runs the exec command in the byohost docker container
 func (r *ByoHostRunner) ExecByoDockerHost(byohost *container.ContainerCreateCreatedBody) (types.HijackedResponse, string, error) {
 	var cmdArgs []string
 	cmdArgs = append(cmdArgs, "./agent")
@@ -264,5 +267,8 @@ func setControlPlaneIP(ctx context.Context, dockerClient *client.Client) {
 	// can safely use this IP for the ControlPlaneEndpoint
 	ipOctets[3] = "151"
 	ip := strings.Join(ipOctets, ".")
-	os.Setenv("CONTROL_PLANE_ENDPOINT_IP", ip)
+	err := os.Setenv("CONTROL_PLANE_ENDPOINT_IP", ip)
+	if err != nil {
+		Expect(err).NotTo(HaveOccurred())
+	}
 }

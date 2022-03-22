@@ -17,6 +17,7 @@ import (
 // log is for logging in this package
 var byohostlog = logf.Log.WithName("byohost-resource")
 
+// SetupWebhookWithManager sets up the webhook for the byohost resource
 func (byoHost *ByoHost) SetupWebhookWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewWebhookManagedBy(mgr).
 		For(byoHost).
