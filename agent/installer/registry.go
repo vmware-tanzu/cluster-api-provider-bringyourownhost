@@ -8,6 +8,8 @@ import (
 	"regexp"
 )
 
+var k8sFilterBundleMap map[string]string
+
 type osk8sInstaller interface{}
 type k8sInstallerMap map[string]osk8sInstaller
 type osk8sInstallerMap map[string]k8sInstallerMap
@@ -55,8 +57,15 @@ func (r *registry) AddOsFilter(osFilter, osBundle string) {
 	r.filterOSBundleList = append(r.filterOSBundleList, filterOsBundlePair{osFilter: osFilter, osBundle: osBundle})
 }
 
-func (r *registry) AddK8sFilter(k8sFilter string) {
+func (r *registry) AddK8sFilter(k8sFilter, k8sBundle string) {
 	r.filterK8sBundleList = append(r.filterK8sBundleList, filterK8sBundle{k8sFilter: k8sFilter})
+	if k8sFilterBundleMap == nil {
+		k8sFilterBundleMap = make(map[string]string)
+	}
+	k8sFilterBundleMap[k8sFilter] = k8sBundle
+}
+func GetK8sBundle(k8sFilter string) string {
+	return k8sFilterBundleMap[k8sFilter]
 }
 
 // ListOS returns a list of OSes supported by the registry
