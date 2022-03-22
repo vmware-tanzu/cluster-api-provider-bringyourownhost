@@ -96,10 +96,10 @@ func setupflags() {
 }
 
 func handleHostRegistration(k8sClient client.Client, hostName string, logger logr.Logger) (err error) {
+	registration.LocalHostRegistrar = &registration.HostRegistrar{K8sClient: k8sClient}
 	if feature.Gates.Enabled(feature.SecureAccess) {
 		logger.Info("secure access enabled, waiting for host to be registered by ByoAdmission Controller")
 	} else {
-		registration.LocalHostRegistrar = &registration.HostRegistrar{K8sClient: k8sClient}
 		err := registration.LocalHostRegistrar.Register(hostName, namespace, labels)
 		return err
 	}
@@ -108,7 +108,7 @@ func handleHostRegistration(k8sClient client.Client, hostName string, logger log
 
 func setupTemplateParser() *cloudinit.TemplateParser {
 	var templateParser *cloudinit.TemplateParser
-	if feature.Gates.Enabled(feature.SecureAccess) {
+	if registration.LocalHostRegistrar.ByoHostInfo.DefaultNetworkInterfaceName == "" {
 		templateParser = nil
 	} else {
 		templateParser = &cloudinit.TemplateParser{
