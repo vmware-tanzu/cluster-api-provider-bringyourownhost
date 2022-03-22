@@ -22,6 +22,7 @@ var (
 
 // bundleDownloader for downloading an OCI image.
 type bundleDownloader struct {
+	bundleType   bundleType
 	repoAddr     string
 	downloadPath string
 	logger       logr.Logger
@@ -65,7 +66,7 @@ func (bd *bundleDownloader) DownloadFromRepo(
 		return err
 	}
 
-	bundleDirPath := bd.GetBundleDirPath(k8sVersion, tag)
+	bundleDirPath := bd.GetBundleDirPath(k8sVersion)
 
 	// cache hit
 	if checkDirExist(bundleDirPath) {
@@ -130,16 +131,16 @@ func convertError(err error) error {
 }
 
 // GetBundleDirPath returns the path to directory containing the required bundle.
-func (bd *bundleDownloader) GetBundleDirPath(k8sVersion, tag string) string {
+func (bd *bundleDownloader) GetBundleDirPath(k8sVersion string) string {
 	// Not storing tag as a subdir of k8s because we can't atomically move
 	// the temp bundle dir to a non-existing dir.
 	// Using "-" instead of ":" because Windows doesn't like the latter
-	return fmt.Sprintf("%s-%s", filepath.Join(bd.getBundlePathWithRepo(), k8sVersion), tag)
+	return fmt.Sprintf("%s-%s", filepath.Join(bd.getBundlePathWithRepo(), string(bd.bundleType)), k8sVersion)
 }
 
 // GetBundleName returns the name of the bundle in normalized format.
 func GetBundleName(normalizedOsVersion string) string {
-	return strings.ToLower(fmt.Sprintf("byoh-bundle-%s", normalizedOsVersion))
+	return strings.ToLower(fmt.Sprintf("byoh-bundle-%s_k8s", normalizedOsVersion))
 }
 
 // getBundlePathWithRepo returns the path

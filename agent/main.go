@@ -199,7 +199,7 @@ func main() {
 		logger.Info("skip-installation flag set, skipping installer initialisation")
 	} else {
 		// increasing installer log level to 1, so that it wont be logged by default
-		k8sInstaller, err = installer.New(downloadpath, logger.V(1))
+		k8sInstaller, err = installer.New(downloadpath, installer.BundleTypeK8s, logger.V(1))
 		if err != nil {
 			logger.Error(err, "failed to instantiate installer")
 		}

@@ -32,6 +32,14 @@ const (
 	ErrBundleUninstall = Error("Error uninstalling bundle")
 )
 
+// BundleType is used to support various bundles
+type bundleType string
+
+const (
+	// BundleTypeK8s represents a vanilla k8s bundle
+	BundleTypeK8s bundleType = "k8s"
+)
+
 var preRequisitePackages = []string{"socat", "ebtables", "ethtool", "conntrack"}
 
 type installer struct {
@@ -92,7 +100,7 @@ func (bd *bundleDownloader) getBundlePathDirOrPreview(k8s, tag string) string {
 		return ""
 	}
 
-	return bd.GetBundleDirPath(k8s, tag)
+	return bd.GetBundleDirPath(k8s)
 }
 
 // DownloadOrPreview downloads the bundle if bundleDownloader is configured with a download path else runs in preview mode without downloading
@@ -108,7 +116,7 @@ func (bd *bundleDownloader) DownloadOrPreview(os, k8s, tag string) error {
 // New returns an installer that downloads bundles for the current OS from OCI repository with
 // address bundleRepo and stores them under downloadPath. Download path is created,
 // if it does not exist.
-func New(downloadPath string, logger logr.Logger) (*installer, error) {
+func New(downloadPath string, bundleType bundleType, logger logr.Logger) (*installer, error) {
 	if downloadPath == "" {
 		return nil, fmt.Errorf("empty download path")
 	}
@@ -125,14 +133,14 @@ func New(downloadPath string, logger logr.Logger) (*installer, error) {
 		return nil, errors.New("precheck failed")
 	}
 
-	return newUnchecked(os, downloadPath, logger, &logPrinter{logger})
+	return newUnchecked(os, bundleType, downloadPath, logger, &logPrinter{logger})
 }
 
 // newUnchecked returns an installer bypassing os detection and checks of downloadPath.
 // If it is empty, returned installer will run in preview mode, i.e.
 // executes everything except the actual commands.
-func newUnchecked(currentOs, downloadPath string, logger logr.Logger, outputBuilder algo.OutputBuilder) (*installer, error) {
-	bd := bundleDownloader{repoAddr: "", downloadPath: downloadPath, logger: logger}
+func newUnchecked(currentOs string, bundleType bundleType, downloadPath string, logger logr.Logger, outputBuilder algo.OutputBuilder) (*installer, error) {
+	bd := bundleDownloader{repoAddr: "", bundleType: bundleType, downloadPath: downloadPath, logger: logger}
 
 	reg := getSupportedRegistry(outputBuilder)
 	if len(reg.ListK8s(currentOs)) == 0 {

@@ -107,7 +107,7 @@ func listSupported() {
 	osFilters, osBundles := ListSupportedOS()
 	for i := range osFilters {
 		for _, k8s := range ListSupportedK8s(osBundles[i]) {
-			_, err = fmt.Fprintf(w, "%s\t %s\t%s\n", osFilters[i], k8s, GetBundleName(osBundles[i]))
+			_, err = fmt.Fprintf(w, "%s\t %s\t%s:%s\n", osFilters[i], k8s, GetBundleName(osBundles[i]), k8s)
 			if err != nil {
 				klogger.Error(err, "Failed to write to tabwriter")
 			}
@@ -131,13 +131,13 @@ func runInstaller(install bool) {
 	var err error
 	if *osFlag != "" {
 		// Override current OS detection
-		i, err = newUnchecked(*osFlag, *cachePathFlag, klogger, &logPrinter{klogger})
+		i, err = newUnchecked(*osFlag, BundleTypeK8s, *cachePathFlag, klogger, &logPrinter{klogger})
 		if err != nil {
 			klogger.Error(err, "unable to create installer")
 			return
 		}
 	} else {
-		i, err = New(*cachePathFlag, klogger)
+		i, err = New(*cachePathFlag, BundleTypeK8s, klogger)
 		if err != nil {
 			klogger.Error(err, "unable to create installer")
 			return

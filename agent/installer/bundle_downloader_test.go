@@ -40,14 +40,14 @@ var _ = Describe("Byohost Installer Tests", func() {
 
 	BeforeEach(func() {
 		normalizedOsVersion = "Ubuntu_20.04.3_x64"
-		k8sVersion = "1.22"
+		k8sVersion = "v1.22.5"
 		repoAddr = ""
 		var err error
 		downloadPath, err = os.MkdirTemp("", "downloaderTest")
 		if err != nil {
 			log.Fatal(err)
 		}
-		bd = &bundleDownloader{repoAddr, downloadPath, logr.Discard()}
+		bd = &bundleDownloader{BundleTypeK8s, repoAddr, downloadPath, logr.Discard()}
 		mi = &mockImgpkg{}
 	})
 	AfterEach(func() {
@@ -93,12 +93,12 @@ var _ = Describe("Byohost Installer Tests", func() {
 				testTag,
 				mi.Get)
 			Expect(err).ShouldNot(HaveOccurred())
-			_, err = os.Stat(bd.GetBundleDirPath(k8sVersion, testTag))
+			_, err = os.Stat(bd.GetBundleDirPath(k8sVersion))
 			Expect(err).ShouldNot(HaveOccurred())
 			notExist := os.IsNotExist(err)
 			Expect(notExist).ShouldNot(BeTrue())
 
-			_, err = os.Stat(bd.GetBundleDirPath(k8sVersion+"a", testTag))
+			_, err = os.Stat(bd.GetBundleDirPath(k8sVersion + "a"))
 			Expect(err).Should(HaveOccurred())
 			notExist = os.IsNotExist(err)
 			Expect(notExist).Should(BeTrue())
