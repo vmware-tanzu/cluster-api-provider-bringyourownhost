@@ -41,6 +41,31 @@ var _ = Describe("Byohost Installer Tests", func() {
 		})
 	})
 	Context("When installer is created", func() {
+		It("Install/uninstall should return error for unsupported Minor and/or Major K8s", func() {
+
+			//Currently supported versions: v1.21.*, v1.22.*, v1.23.*
+			unsupportedMinorVer := "v1.20.1"
+			unsupportedMajorVer := "v0.21.1"
+
+			_, osList := ListSupportedOS()
+			for _, os := range osList {
+				i := NewPreviewInstaller(os, nil)
+
+				err := i.Install("", unsupportedMinorVer, testTag)
+				Expect(err).Should(HaveOccurred())
+
+				err = i.Uninstall("", unsupportedMinorVer, testTag)
+				Expect(err).Should(HaveOccurred())
+
+				err = i.Install("", unsupportedMajorVer, testTag)
+				Expect(err).Should(HaveOccurred())
+
+				err = i.Uninstall("", unsupportedMajorVer, testTag)
+				Expect(err).Should(HaveOccurred())
+			}
+		})
+	})
+	Context("When installer is created", func() {
 		It("Install/uninstall should call only the output builder", func() {
 			_, osList := ListSupportedOS()
 			for _, os := range osList {
