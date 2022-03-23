@@ -12,119 +12,116 @@ import (
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+	"github.com/onsi/gomega/gexec"
 )
 
 var _ = Describe("Agent version", func() {
 
-	Context("When the version number and date are not set", func() {
-
-		It("Leaves the version and date fields empty in response", func() {
-			expected := version.Info{
-				Major:     "",
-				Minor:     "",
-				Patch:     "",
-				BuildDate: "",
-				GoVersion: runtime.Version(),
-				Compiler:  runtime.Compiler,
-				Platform:  fmt.Sprintf("%s/%s", runtime.GOOS, runtime.GOARCH),
-			}
-			Expect(version.Get()).Should(Equal(expected))
-		})
-	})
-
-	Context("When only date is set", func() {
+	Context("When some fields are not set", func() {
+		var (
+			tmpHostAgentBinary string
+		)
 		BeforeEach(func() {
 			date, err := exec.Command("date").Output()
 			Expect(err).NotTo(HaveOccurred())
+
+			version.GitMajor = "0"
+			version.GitMinor = "1"
+			version.GitTreeState = "dirty"
 			version.BuildDate = string(date)
+
+			ldflags := fmt.Sprintf("-X 'github.com/vmware-tanzu/cluster-api-provider-bringyourownhost/agent/version.GitMajor=%s'"+
+				"-X 'github.com/vmware-tanzu/cluster-api-provider-bringyourownhost/agent/version.GitMinor=%s'"+
+				"-X 'github.com/vmware-tanzu/cluster-api-provider-bringyourownhost/agent/version.GitTreeState=%s'"+
+				"-X 'github.com/vmware-tanzu/cluster-api-provider-bringyourownhost/agent/version.BuildDate=%s'",
+				version.GitMajor, version.GitMinor, version.GitTreeState, version.BuildDate)
+
+			tmpHostAgentBinary, err = gexec.Build("github.com/vmware-tanzu/cluster-api-provider-bringyourownhost/agent", "-ldflags", string(ldflags))
+			Expect(err).NotTo(HaveOccurred())
 		})
 
 		AfterEach(func() {
+			version.GitMajor = ""
+			version.GitMinor = ""
+			version.GitTreeState = ""
 			version.BuildDate = ""
+			tmpHostAgentBinary = ""
 		})
 
-		It("Leaves version field empty in response", func() {
-			expected := version.Info{
-				Major:     "",
-				Minor:     "",
-				Patch:     "",
-				BuildDate: version.BuildDate,
-				GoVersion: runtime.Version(),
-				Compiler:  runtime.Compiler,
-				Platform:  fmt.Sprintf("%s/%s", runtime.GOOS, runtime.GOARCH),
+		It("Skips the unset fields in response", func() {
+			expectedStruct := version.Info{
+				Major:        "0",
+				Minor:        "1",
+				GitVersion:   "",
+				GitCommit:    "",
+				GitTreeState: "dirty",
+				BuildDate:    version.BuildDate,
+				GoVersion:    runtime.Version(),
+				Compiler:     runtime.Compiler,
+				Platform:     fmt.Sprintf("%s/%s", runtime.GOOS, runtime.GOARCH),
 			}
-			Expect(version.Get()).Should(Equal(expected))
+			expected := fmt.Sprintf("byoh-hostagent version: %#v\n", expectedStruct)
+			out, err := exec.Command(tmpHostAgentBinary, "--version").Output()
+			Expect(err).NotTo(HaveOccurred())
+			output := string(out)
+			Expect(output).Should(Equal(expected))
 		})
 	})
 
-	Context("When version is set", func() {
-		Context("When version is set to dev", func() {
-			BeforeEach(func() {
-				version.Version = version.Dev
-			})
+	Context("When all fields are set", func() {
+		var (
+			tmpHostAgentBinary string
+		)
+		BeforeEach(func() {
+			date, err := exec.Command("date").Output()
+			Expect(err).NotTo(HaveOccurred())
 
-			AfterEach(func() {
-				version.Version = ""
-			})
+			version.GitMajor = "0"
+			version.GitMinor = "1"
+			version.GitVersion = "v0.1.0-79-42e700c78428bb-dirty"
+			version.GitCommit = "42e700c78428bb4c2096a85f5641565375d6"
+			version.GitTreeState = "dirty"
+			version.BuildDate = string(date)
 
-			It("Shows the version major to be dev", func() {
-				expected := version.Info{
-					Major:     version.Dev,
-					Minor:     "",
-					Patch:     "",
-					BuildDate: "",
-					GoVersion: runtime.Version(),
-					Compiler:  runtime.Compiler,
-					Platform:  fmt.Sprintf("%s/%s", runtime.GOOS, runtime.GOARCH),
-				}
-				Expect(version.Get()).Should(Equal(expected))
-			})
+			ldflags := fmt.Sprintf("-X 'github.com/vmware-tanzu/cluster-api-provider-bringyourownhost/agent/version.GitMajor=%s'"+
+				"-X 'github.com/vmware-tanzu/cluster-api-provider-bringyourownhost/agent/version.GitMinor=%s'"+
+				"-X 'github.com/vmware-tanzu/cluster-api-provider-bringyourownhost/agent/version.GitVersion=%s'"+
+				"-X 'github.com/vmware-tanzu/cluster-api-provider-bringyourownhost/agent/version.GitCommit=%s'"+
+				"-X 'github.com/vmware-tanzu/cluster-api-provider-bringyourownhost/agent/version.GitTreeState=%s'"+
+				"-X 'github.com/vmware-tanzu/cluster-api-provider-bringyourownhost/agent/version.BuildDate=%s'",
+				version.GitMajor, version.GitMinor, version.GitVersion, version.GitCommit, version.GitTreeState, version.BuildDate)
+
+			tmpHostAgentBinary, err = gexec.Build("github.com/vmware-tanzu/cluster-api-provider-bringyourownhost/agent", "-ldflags", string(ldflags))
+			Expect(err).NotTo(HaveOccurred())
 		})
 
-		Context("When version is set as git tag", func() {
-			BeforeEach(func() {
-				version.Version = "v1.2.3"
-			})
-
-			AfterEach(func() {
-				version.Version = ""
-			})
-
-			It("Shows the version according to the git tag passed", func() {
-				expected := version.Info{
-					Major:     "1",
-					Minor:     "2",
-					Patch:     "3",
-					BuildDate: "",
-					GoVersion: runtime.Version(),
-					Compiler:  runtime.Compiler,
-					Platform:  fmt.Sprintf("%s/%s", runtime.GOOS, runtime.GOARCH),
-				}
-				Expect(version.Get()).Should(Equal(expected))
-			})
+		AfterEach(func() {
+			version.GitMajor = ""
+			version.GitMinor = ""
+			version.GitVersion = ""
+			version.GitCommit = ""
+			version.GitTreeState = ""
+			version.BuildDate = ""
+			tmpHostAgentBinary = ""
 		})
 
-		Context("When version is set as invalid git tag", func() {
-			BeforeEach(func() {
-				version.Version = "1.2.3"
-			})
-
-			AfterEach(func() {
-				version.Version = ""
-			})
-
-			It("Leaves the version fields empty", func() {
-				expected := version.Info{
-					Major:     "",
-					Minor:     "",
-					Patch:     "",
-					BuildDate: "",
-					GoVersion: runtime.Version(),
-					Compiler:  runtime.Compiler,
-					Platform:  fmt.Sprintf("%s/%s", runtime.GOOS, runtime.GOARCH),
-				}
-				Expect(version.Get()).Should(Equal(expected))
-			})
+		It("Shows the correct versions in response", func() {
+			expectedStruct := version.Info{
+				Major:        "0",
+				Minor:        "1",
+				GitVersion:   "v0.1.0-79-42e700c78428bb-dirty",
+				GitCommit:    "42e700c78428bb4c2096a85f5641565375d6",
+				GitTreeState: "dirty",
+				BuildDate:    version.BuildDate,
+				GoVersion:    runtime.Version(),
+				Compiler:     runtime.Compiler,
+				Platform:     fmt.Sprintf("%s/%s", runtime.GOOS, runtime.GOARCH),
+			}
+			expected := fmt.Sprintf("byoh-hostagent version: %#v\n", expectedStruct)
+			out, err := exec.Command(tmpHostAgentBinary, "--version").Output()
+			Expect(err).NotTo(HaveOccurred())
+			output := string(out)
+			Expect(output).Should(Equal(expected))
 		})
 	})
 })
