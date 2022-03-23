@@ -168,7 +168,7 @@ var _ = Describe("Agent", func() {
 
 				}
 				return false
-			}).Should(BeTrue())
+			}, 60).Should(BeTrue())
 		})
 
 		AfterEach(func() {
