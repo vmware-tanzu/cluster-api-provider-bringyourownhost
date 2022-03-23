@@ -95,8 +95,13 @@ func listSupported() {
 			klogger.Error(err, "Failed to flush the tabwriter")
 		}
 	}()
-
-	_, err := fmt.Fprintf(w, "%s\t%s\t%s\n", "OS", "K8S Version", "BYOH Bundle Name")
+	_, err := fmt.Fprintf(w, "The corresponding bundles (particular to a patch version) should be pushed to the OCI registry of choice\n"+
+		"By default, BYOH uses projects.registry.vmware.com\n\n"+
+		"Note: It may happen that a specific patch version of a k8s minor release is not available in the OCI registry\n\n")
+	if err != nil {
+		klogger.Error(err, "Failed to write to tabwriter")
+	}
+	_, err = fmt.Fprintf(w, "%s\t%s\t%s\n", "OS", "K8S Version", "BYOH Bundle Name")
 	if err != nil {
 		klogger.Error(err, "Failed to write to tabwriter")
 	}
