@@ -325,29 +325,47 @@ var _ = Describe("Agent", func() {
 		BeforeEach(func() {
 			date, err := exec.Command("date").Output()
 			Expect(err).NotTo(HaveOccurred())
+
+			version.GitMajor = "0"
+			version.GitMinor = "1"
+			version.GitVersion = "v0.1.0-79-42e700c78428bb-dirty"
+			version.GitCommit = "42e700c78428bb4c2096a85f5641565375d6"
+			version.GitTreeState = "dirty"
 			version.BuildDate = string(date)
-			version.Version = "v1.2.3"
-			ldflags := fmt.Sprintf("-X 'github.com/vmware-tanzu/cluster-api-provider-bringyourownhost/agent/version.Version=%s'"+
-				" -X 'github.com/vmware-tanzu/cluster-api-provider-bringyourownhost/agent/version.BuildDate=%s'", version.Version, version.BuildDate)
-			tmpHostAgentBinary, err = gexec.Build("github.com/vmware-tanzu/cluster-api-provider-bringyourownhost/agent", "-ldflags", ldflags)
+
+			ldflags := fmt.Sprintf("-X 'github.com/vmware-tanzu/cluster-api-provider-bringyourownhost/agent/version.GitMajor=%s'"+
+				"-X 'github.com/vmware-tanzu/cluster-api-provider-bringyourownhost/agent/version.GitMinor=%s'"+
+				"-X 'github.com/vmware-tanzu/cluster-api-provider-bringyourownhost/agent/version.GitVersion=%s'"+
+				"-X 'github.com/vmware-tanzu/cluster-api-provider-bringyourownhost/agent/version.GitCommit=%s'"+
+				"-X 'github.com/vmware-tanzu/cluster-api-provider-bringyourownhost/agent/version.GitTreeState=%s'"+
+				"-X 'github.com/vmware-tanzu/cluster-api-provider-bringyourownhost/agent/version.BuildDate=%s'",
+				version.GitMajor, version.GitMinor, version.GitVersion, version.GitCommit, version.GitTreeState, version.BuildDate)
+
+			tmpHostAgentBinary, err = gexec.Build("github.com/vmware-tanzu/cluster-api-provider-bringyourownhost/agent", "-ldflags", string(ldflags))
 			Expect(err).NotTo(HaveOccurred())
 		})
 
 		AfterEach(func() {
+			version.GitMajor = ""
+			version.GitMinor = ""
+			version.GitVersion = ""
+			version.GitCommit = ""
+			version.GitTreeState = ""
 			version.BuildDate = ""
-			version.Version = ""
 			tmpHostAgentBinary = ""
 		})
 
 		It("Shows the appropriate version of the agent", func() {
 			expectedStruct := version.Info{
-				Major:     "1",
-				Minor:     "2",
-				Patch:     "3",
-				BuildDate: version.BuildDate,
-				GoVersion: runtime.Version(),
-				Compiler:  runtime.Compiler,
-				Platform:  fmt.Sprintf("%s/%s", runtime.GOOS, runtime.GOARCH),
+				Major:        "0",
+				Minor:        "1",
+				GitVersion:   "v0.1.0-79-42e700c78428bb-dirty",
+				GitCommit:    "42e700c78428bb4c2096a85f5641565375d6",
+				GitTreeState: "dirty",
+				BuildDate:    version.BuildDate,
+				GoVersion:    runtime.Version(),
+				Compiler:     runtime.Compiler,
+				Platform:     fmt.Sprintf("%s/%s", runtime.GOOS, runtime.GOARCH),
 			}
 			expected := fmt.Sprintf("byoh-hostagent version: %#v\n", expectedStruct)
 			out, err := exec.Command(tmpHostAgentBinary, "--version").Output()

@@ -6,62 +6,41 @@ package version
 import (
 	"fmt"
 	"runtime"
-	"strings"
 )
 
 var (
-	Version   string
-	BuildDate string
-)
-
-const (
-	Dev          = "dev"
-	GitTagLength = 3
+	GitMajor     string // major version, always numeric
+	GitMinor     string // minor version, numeric possibly followed by "+"
+	GitVersion   string // semantic version, derived by build scripts
+	GitCommit    string // sha1 from git, output of $(git rev-parse HEAD)
+	GitTreeState string // state of git tree, either "clean" or "dirty"
+	BuildDate    string // build date in ISO8601 format, output of $(date -u +'%Y-%m-%dT%H:%M:%SZ')
 )
 
 // Info exposes information about the version used for the current running code.
 type Info struct {
-	Major     string `json:"major,omitempty"`
-	Minor     string `json:"minor,omitempty"`
-	Patch     string `json:"patch,omitempty"`
-	BuildDate string `json:"BuildDate,omitempty"`
-	GoVersion string `json:"goVersion,omitempty"`
-	Platform  string `json:"platform,omitempty"`
-	Compiler  string `json:"compiler,omitempty"`
+	Major        string `json:"major,omitempty"`
+	Minor        string `json:"minor,omitempty"`
+	GitVersion   string `json:"gitVersion,omitempty"`
+	GitCommit    string `json:"gitCommit,omitempty"`
+	GitTreeState string `json:"gitTreeState,omitempty"`
+	BuildDate    string `json:"buildDate,omitempty"`
+	GoVersion    string `json:"goVersion,omitempty"`
+	Compiler     string `json:"compiler,omitempty"`
+	Platform     string `json:"platform,omitempty"`
 }
 
 // Get returns an Info object with all the information about the current running code.
 func Get() Info {
-	var major, minor, patch string
-	extractVersion(&major, &minor, &patch)
 	return Info{
-		Major:     major,
-		Minor:     minor,
-		Patch:     patch,
-		BuildDate: BuildDate,
-		GoVersion: runtime.Version(),
-		Compiler:  runtime.Compiler,
-		Platform:  fmt.Sprintf("%s/%s", runtime.GOOS, runtime.GOARCH),
+		Major:        GitMajor,
+		Minor:        GitMinor,
+		GitVersion:   GitVersion,
+		GitCommit:    GitCommit,
+		GitTreeState: GitTreeState,
+		BuildDate:    BuildDate,
+		GoVersion:    runtime.Version(),
+		Compiler:     runtime.Compiler,
+		Platform:     fmt.Sprintf("%s/%s", runtime.GOOS, runtime.GOARCH),
 	}
-}
-
-func extractVersion(major, minor, patch *string) {
-	if Version == Dev {
-		*major = Dev
-		return
-	}
-
-	version := strings.Split(Version, ".")
-	if len(version) != GitTagLength {
-		return
-	}
-
-	// The git tag is preceded by a 'v', eg. v1.2.3
-	if len(version[0]) != 2 || version[0][0:1] != "v" {
-		return
-	}
-
-	*major = version[0][1:2]
-	*minor = version[1]
-	*patch = version[2]
 }
