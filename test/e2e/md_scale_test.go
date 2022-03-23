@@ -21,7 +21,7 @@ import (
 	"sigs.k8s.io/cluster-api/util"
 )
 
-var _ = Describe("When testing MachineDeployment scale out/in [Before-PR-Merging]", func() {
+var _ = Describe("When testing MachineDeployment scale out/in", func() {
 
 	var (
 		ctx                    context.Context
