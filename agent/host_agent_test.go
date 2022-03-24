@@ -340,8 +340,8 @@ var _ = Describe("Agent", func() {
 
 			version.GitMajor = "1"
 			version.GitMinor = "3"
-			version.GitVersion = "1.3.0-alpha.3"
-			version.GitCommit = "5e58841cce77d4bc13713ad2b91fa0d961e69192"
+			version.GitVersion = "v1.2.3"
+			version.GitCommit = "abc"
 			version.GitTreeState = "clean"
 			version.BuildDate = string(date)
 
@@ -371,8 +371,8 @@ var _ = Describe("Agent", func() {
 			expectedStruct := version.Info{
 				Major:        "1",
 				Minor:        "3",
-				GitVersion:   "1.3.0-alpha.3",
-				GitCommit:    "5e58841cce77d4bc13713ad2b91fa0d961e69192",
+				GitVersion:   "v1.2.3",
+				GitCommit:    "abc",
 				GitTreeState: "clean",
 				BuildDate:    version.BuildDate,
 				GoVersion:    runtime.Version(),
