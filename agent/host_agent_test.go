@@ -338,11 +338,11 @@ var _ = Describe("Agent", func() {
 			date, err := exec.Command("date").Output()
 			Expect(err).NotTo(HaveOccurred())
 
-			version.GitMajor = "0"
-			version.GitMinor = "1"
-			version.GitVersion = "v0.1.0-79-42e700c78428bb-dirty"
-			version.GitCommit = "42e700c78428bb4c2096a85f5641565375d6"
-			version.GitTreeState = "dirty"
+			version.GitMajor = "1"
+			version.GitMinor = "3"
+			version.GitVersion = "1.3.0-alpha.3"
+			version.GitCommit = "5e58841cce77d4bc13713ad2b91fa0d961e69192"
+			version.GitTreeState = "clean"
 			version.BuildDate = string(date)
 
 			ldflags := fmt.Sprintf("-X 'github.com/vmware-tanzu/cluster-api-provider-bringyourownhost/agent/version.GitMajor=%s'"+
@@ -353,7 +353,7 @@ var _ = Describe("Agent", func() {
 				"-X 'github.com/vmware-tanzu/cluster-api-provider-bringyourownhost/agent/version.BuildDate=%s'",
 				version.GitMajor, version.GitMinor, version.GitVersion, version.GitCommit, version.GitTreeState, version.BuildDate)
 
-			tmpHostAgentBinary, err = gexec.Build("github.com/vmware-tanzu/cluster-api-provider-bringyourownhost/agent", "-ldflags", string(ldflags))
+			tmpHostAgentBinary, err = gexec.Build("github.com/vmware-tanzu/cluster-api-provider-bringyourownhost/agent", "-ldflags", ldflags)
 			Expect(err).NotTo(HaveOccurred())
 		})
 
@@ -369,11 +369,11 @@ var _ = Describe("Agent", func() {
 
 		It("Shows the appropriate version of the agent", func() {
 			expectedStruct := version.Info{
-				Major:        "0",
-				Minor:        "1",
-				GitVersion:   "v0.1.0-79-42e700c78428bb-dirty",
-				GitCommit:    "42e700c78428bb4c2096a85f5641565375d6",
-				GitTreeState: "dirty",
+				Major:        "1",
+				Minor:        "3",
+				GitVersion:   "1.3.0-alpha.3",
+				GitCommit:    "5e58841cce77d4bc13713ad2b91fa0d961e69192",
+				GitTreeState: "clean",
 				BuildDate:    version.BuildDate,
 				GoVersion:    runtime.Version(),
 				Compiler:     runtime.Compiler,

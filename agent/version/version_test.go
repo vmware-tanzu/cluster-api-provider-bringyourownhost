@@ -36,7 +36,7 @@ var _ = Describe("Agent version", func() {
 				"-X 'github.com/vmware-tanzu/cluster-api-provider-bringyourownhost/agent/version.BuildDate=%s'",
 				version.GitMajor, version.GitMinor, version.GitTreeState, version.BuildDate)
 
-			tmpHostAgentBinary, err = gexec.Build("github.com/vmware-tanzu/cluster-api-provider-bringyourownhost/agent", "-ldflags", string(ldflags))
+			tmpHostAgentBinary, err = gexec.Build("github.com/vmware-tanzu/cluster-api-provider-bringyourownhost/agent", "-ldflags", ldflags)
 			Expect(err).NotTo(HaveOccurred())
 		})
 
@@ -78,9 +78,9 @@ var _ = Describe("Agent version", func() {
 
 			version.GitMajor = "0"
 			version.GitMinor = "1"
-			version.GitVersion = "v0.1.0-79-42e700c78428bb-dirty"
-			version.GitCommit = "42e700c78428bb4c2096a85f5641565375d6"
-			version.GitTreeState = "dirty"
+			version.GitVersion = "v0.1.0"
+			version.GitCommit = "e6c093d87ea4cbb530a7b2ae91e54c0842d8308a"
+			version.GitTreeState = "clean"
 			version.BuildDate = string(date)
 
 			ldflags := fmt.Sprintf("-X 'github.com/vmware-tanzu/cluster-api-provider-bringyourownhost/agent/version.GitMajor=%s'"+
@@ -91,7 +91,7 @@ var _ = Describe("Agent version", func() {
 				"-X 'github.com/vmware-tanzu/cluster-api-provider-bringyourownhost/agent/version.BuildDate=%s'",
 				version.GitMajor, version.GitMinor, version.GitVersion, version.GitCommit, version.GitTreeState, version.BuildDate)
 
-			tmpHostAgentBinary, err = gexec.Build("github.com/vmware-tanzu/cluster-api-provider-bringyourownhost/agent", "-ldflags", string(ldflags))
+			tmpHostAgentBinary, err = gexec.Build("github.com/vmware-tanzu/cluster-api-provider-bringyourownhost/agent", "-ldflags", ldflags)
 			Expect(err).NotTo(HaveOccurred())
 		})
 
@@ -109,9 +109,9 @@ var _ = Describe("Agent version", func() {
 			expectedStruct := version.Info{
 				Major:        "0",
 				Minor:        "1",
-				GitVersion:   "v0.1.0-79-42e700c78428bb-dirty",
-				GitCommit:    "42e700c78428bb4c2096a85f5641565375d6",
-				GitTreeState: "dirty",
+				GitVersion:   "v0.1.0",
+				GitCommit:    "e6c093d87ea4cbb530a7b2ae91e54c0842d8308a",
+				GitTreeState: "clean",
 				BuildDate:    version.BuildDate,
 				GoVersion:    runtime.Version(),
 				Compiler:     runtime.Compiler,
