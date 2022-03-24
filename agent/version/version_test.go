@@ -79,7 +79,7 @@ var _ = Describe("Agent version", func() {
 			version.GitMajor = "0"
 			version.GitMinor = "1"
 			version.GitVersion = "v0.1.0"
-			version.GitCommit = "e6c093d87ea4cbb530a7b2ae91e54c0842d8308a"
+			version.GitCommit = "abc"
 			version.GitTreeState = "clean"
 			version.BuildDate = string(date)
 
@@ -110,7 +110,7 @@ var _ = Describe("Agent version", func() {
 				Major:        "0",
 				Minor:        "1",
 				GitVersion:   "v0.1.0",
-				GitCommit:    "e6c093d87ea4cbb530a7b2ae91e54c0842d8308a",
+				GitCommit:    "abc",
 				GitTreeState: "clean",
 				BuildDate:    version.BuildDate,
 				GoVersion:    runtime.Version(),
