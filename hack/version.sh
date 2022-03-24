@@ -60,8 +60,6 @@ version::get_version_vars() {
     fi
 
     GIT_RELEASE_TAG=$(git describe --abbrev=0 --tags)
-    # TODO: Is release commit required?
-    GIT_RELEASE_COMMIT=$(git rev-list -n 1  "${GIT_RELEASE_TAG}")
 }
 
 # stolen from sigs.k8s.io/cluster-api/hack/version.sh and modified
@@ -84,7 +82,6 @@ version::ldflags() {
     add_ldflag "GitCommit" "${GIT_COMMIT}"
     add_ldflag "GitTreeState" "${GIT_TREE_STATE}"
     add_ldflag "BuildDate" "$(date ${SOURCE_DATE_EPOCH:+"--date=@${SOURCE_DATE_EPOCH}"} -u +'%Y-%m-%dT%H:%M:%SZ')"
-    add_ldflag "GitReleaseCommit" "${GIT_RELEASE_COMMIT}"
 
     # The -ldflags parameter takes a single string, so join the output.
     echo "${ldflags[*]-}"

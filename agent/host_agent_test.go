@@ -10,6 +10,7 @@ import (
 	"net"
 	"os"
 	"os/exec"
+	"regexp"
 	"runtime"
 	"strings"
 
@@ -384,6 +385,79 @@ var _ = Describe("Agent", func() {
 			Expect(err).NotTo(HaveOccurred())
 			output := string(out)
 			Expect(output).Should(Equal(expected))
+		})
+	})
+
+	Context("When --version flag is created using 'version.sh' script", func() {
+		var (
+			tmpHostAgentBinary string
+			gitMajor           string
+			gitMinor           string
+			gitVersion         string
+			gitTreeState       string
+			err                error
+		)
+		BeforeEach(func() {
+			command := exec.Command("/bin/sh", "-c", "git describe --tags --abbrev=14 --match 'v[0-9]*' 2>/dev/null")
+			command.Stderr = os.Stderr
+			cmdOut, _ := command.Output()
+			gitVersion = strings.TrimSuffix(string(cmdOut), "\n")
+
+			command = exec.Command("/bin/sh", "-c", "git status --porcelain 2>/dev/null")
+			command.Stderr = os.Stderr
+			cmdOut, _ = command.Output()
+			gitTreeState = string(cmdOut)
+			if gitTreeState != "" {
+				gitTreeState = "dirty"
+				gitVersion = gitVersion + "-" + gitTreeState
+			} else {
+				gitTreeState = "clean"
+			}
+
+			gitVars := strings.Split(string(gitVersion), ".")
+
+			gitMajor = gitVars[0][1:]
+			gitMinor = gitVars[1]
+			root, _ := exec.Command("/bin/sh", "-c", "git rev-parse --show-toplevel").Output()
+			cmd := exec.Command("/bin/sh", "-c", strings.TrimSuffix(string(root), "\n")+"/hack/version.sh")
+			ldflags, _ := cmd.Output()
+			tmpHostAgentBinary, err = gexec.Build("github.com/vmware-tanzu/cluster-api-provider-bringyourownhost/agent", "-ldflags", string(ldflags))
+			Expect(err).NotTo(HaveOccurred())
+		})
+
+		AfterEach(func() {
+			tmpHostAgentBinary = ""
+			gitMajor = ""
+			gitMinor = ""
+			gitVersion = ""
+			gitTreeState = ""
+		})
+
+		It("should match local generated git values", func() {
+			expectedStruct := version.Info{
+				Major:        gitMajor,
+				Minor:        gitMinor,
+				GitTreeState: gitTreeState,
+			}
+			expected := fmt.Sprintf("byoh-hostagent version: %#v\n", expectedStruct)
+			out, err := exec.Command(tmpHostAgentBinary, "--version").Output()
+			Expect(err).NotTo(HaveOccurred())
+
+			re := regexp.MustCompile("Major:\"" + gitMajor + "\"")
+			majorOut := re.Find(out)
+			majorExpected := re.Find([]byte(expected))
+
+			re = regexp.MustCompile("Minor:\"" + gitMinor + "\"")
+			minorOut := re.Find(out)
+			minorExpected := re.Find([]byte(expected))
+
+			re = regexp.MustCompile("GitTreeState:\"" + gitTreeState + "\"")
+			gitTreeStateOut := re.Find(out)
+			gitTreeStateExpected := re.Find([]byte(expected))
+
+			Expect(majorOut).Should(Equal(majorExpected))
+			Expect(minorOut).Should(Equal(minorExpected))
+			Expect(gitTreeStateOut).Should(Equal(gitTreeStateExpected))
 		})
 	})
 
