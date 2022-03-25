@@ -414,10 +414,12 @@ var _ = Describe("Agent", func() {
 				gitTreeState = "clean"
 			}
 
-			gitVars := strings.Split(string(gitVersion), ".")
+			gitVars := strings.Split(gitVersion, ".")
+			if len(gitVars) > 1 {
+				gitMajor = gitVars[0][1:]
+				gitMinor = gitVars[1]
+			}
 
-			gitMajor = gitVars[0][1:]
-			gitMinor = gitVars[1]
 			root, _ := exec.Command("/bin/sh", "-c", "git rev-parse --show-toplevel").Output()
 			cmd := exec.Command("/bin/sh", "-c", strings.TrimSuffix(string(root), "\n")+"/hack/version.sh")
 			ldflags, _ := cmd.Output()
