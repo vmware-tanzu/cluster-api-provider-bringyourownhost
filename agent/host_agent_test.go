@@ -340,7 +340,7 @@ var _ = Describe("Agent", func() {
 			Expect(err).NotTo(HaveOccurred())
 
 			version.GitMajor = "1"
-			version.GitMinor = "3"
+			version.GitMinor = "2"
 			version.GitVersion = "v1.2.3"
 			version.GitCommit = "abc"
 			version.GitTreeState = "clean"
@@ -371,7 +371,7 @@ var _ = Describe("Agent", func() {
 		It("Shows the appropriate version of the agent", func() {
 			expectedStruct := version.Info{
 				Major:        "1",
-				Minor:        "3",
+				Minor:        "2",
 				GitVersion:   "v1.2.3",
 				GitCommit:    "abc",
 				GitTreeState: "clean",
@@ -432,27 +432,22 @@ var _ = Describe("Agent", func() {
 			expected := fmt.Sprintf("byoh-hostagent version: %#v\n", expectedStruct)
 			out, err := exec.Command(tmpHostAgentBinary, "--version").Output()
 			Expect(err).NotTo(HaveOccurred())
-			fmt.Println(string(expected))
-			fmt.Println(string(out))
 
-			re := regexp.MustCompile("Major:\"" + gitMajor + "\"")
+			re := regexp.MustCompile(`Major:\"(.*?)\"`)
 			majorOut := re.Find(out)
 			majorExpected := re.Find([]byte(expected))
 
-			re = regexp.MustCompile("Minor:\"" + gitMinor + "\"")
+			re = regexp.MustCompile(`Minor:\"(.*?)\"`)
 			minorOut := re.Find(out)
 			minorExpected := re.Find([]byte(expected))
 
-			re = regexp.MustCompile("GitVersion:\"(.*?)")
-			gitVersionOut := re.Find(out)
-			gitVersionExpected := re.Find([]byte(expected))
-
-			fmt.Println(string(gitVersionOut))
-			fmt.Println(string(gitVersionExpected))
+			re = regexp.MustCompile(`GitVersion:\"(.*?)\"`)
+			gitVersionOut := re.FindSubmatch(out)
+			gitVersionExpected := re.FindSubmatch([]byte(expected))
 
 			Expect(majorOut).Should(Equal(majorExpected))
 			Expect(minorOut).Should(Equal(minorExpected))
-			Expect(gitVersionOut).Should(ContainSubstring(string(gitVersionExpected)))
+			Expect(gitVersionOut[1]).Should(ContainSubstring(string(gitVersionExpected[1])))
 		})
 	})
 
