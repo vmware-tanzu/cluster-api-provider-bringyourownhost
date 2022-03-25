@@ -388,7 +388,7 @@ var _ = Describe("Agent", func() {
 		})
 	})
 
-	Context("When --version flag is created using 'version.sh' script", func() {
+	FContext("When --version flag is created using 'version.sh' script", func() {
 		var (
 			tmpHostAgentBinary string
 			gitMajor           string
@@ -444,6 +444,8 @@ var _ = Describe("Agent", func() {
 			expected := fmt.Sprintf("byoh-hostagent version: %#v\n", expectedStruct)
 			out, err := exec.Command(tmpHostAgentBinary, "--version").Output()
 			Expect(err).NotTo(HaveOccurred())
+			fmt.Println(string(expected))
+			fmt.Println(string(out))
 
 			re := regexp.MustCompile("Major:\"" + gitMajor + "\"")
 			majorOut := re.Find(out)
