@@ -388,13 +388,12 @@ var _ = Describe("Agent", func() {
 		})
 	})
 
-	FContext("When --version flag is created using 'version.sh' script", func() {
+	Context("When --version flag is created using 'version.sh' script", func() {
 		var (
 			tmpHostAgentBinary string
 			gitMajor           string
 			gitMinor           string
 			gitVersion         string
-			gitTreeState       string
 			err                error
 		)
 		BeforeEach(func() {
@@ -403,17 +402,7 @@ var _ = Describe("Agent", func() {
 			cmdOut, _ := command.Output()
 			gitVersion = strings.TrimSuffix(string(cmdOut), "\n")
 
-			command = exec.Command("/bin/sh", "-c", "git status --porcelain 2>/dev/null")
-			command.Stderr = os.Stderr
-			cmdOut, _ = command.Output()
-			gitTreeState = string(cmdOut)
-			if gitTreeState != "" {
-				gitTreeState = "dirty"
-				gitVersion = gitVersion + "-" + gitTreeState
-			} else {
-				gitTreeState = "clean"
-			}
-
+			gitVersion = strings.Split(gitVersion, "-")[0]
 			gitVars := strings.Split(gitVersion, ".")
 			if len(gitVars) > 1 {
 				gitMajor = gitVars[0][1:]
@@ -432,14 +421,13 @@ var _ = Describe("Agent", func() {
 			gitMajor = ""
 			gitMinor = ""
 			gitVersion = ""
-			gitTreeState = ""
 		})
 
 		It("should match local generated git values", func() {
 			expectedStruct := version.Info{
-				Major:        gitMajor,
-				Minor:        gitMinor,
-				GitTreeState: gitTreeState,
+				Major:      gitMajor,
+				Minor:      gitMinor,
+				GitVersion: gitVersion,
 			}
 			expected := fmt.Sprintf("byoh-hostagent version: %#v\n", expectedStruct)
 			out, err := exec.Command(tmpHostAgentBinary, "--version").Output()
@@ -455,13 +443,16 @@ var _ = Describe("Agent", func() {
 			minorOut := re.Find(out)
 			minorExpected := re.Find([]byte(expected))
 
-			re = regexp.MustCompile("GitTreeState:\"" + gitTreeState + "\"")
-			gitTreeStateOut := re.Find(out)
-			gitTreeStateExpected := re.Find([]byte(expected))
+			re = regexp.MustCompile("GitVersion:\"(.*?)")
+			gitVersionOut := re.Find(out)
+			gitVersionExpected := re.Find([]byte(expected))
+
+			fmt.Println(string(gitVersionOut))
+			fmt.Println(string(gitVersionExpected))
 
 			Expect(majorOut).Should(Equal(majorExpected))
 			Expect(minorOut).Should(Equal(minorExpected))
-			Expect(gitTreeStateOut).Should(Equal(gitTreeStateExpected))
+			Expect(gitVersionOut).Should(ContainSubstring(string(gitVersionExpected)))
 		})
 	})
 
