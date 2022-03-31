@@ -10,7 +10,6 @@ import (
 	"net"
 	"os"
 	"os/exec"
-	"regexp"
 	"runtime"
 	"strings"
 
@@ -424,30 +423,18 @@ var _ = Describe("Agent", func() {
 		})
 
 		It("should match local generated git values", func() {
-			expectedStruct := version.Info{
-				Major:      gitMajor,
-				Minor:      gitMinor,
-				GitVersion: gitVersion,
-			}
-			expected := fmt.Sprintf("byoh-hostagent version: %#v\n", expectedStruct)
 			out, err := exec.Command(tmpHostAgentBinary, "--version").Output()
 			Expect(err).NotTo(HaveOccurred())
 
-			re := regexp.MustCompile(`Major:\"(.*?)\"`)
-			majorOut := re.Find(out)
-			majorExpected := re.Find([]byte(expected))
+			majorExpected := "Major:\"" + gitMajor + "\""
+			Expect(out).Should(ContainSubstring(majorExpected))
 
-			re = regexp.MustCompile(`Minor:\"(.*?)\"`)
-			minorOut := re.Find(out)
-			minorExpected := re.Find([]byte(expected))
+			minorExpected := "Minor:\"" + gitMinor + "\""
+			Expect(out).Should(ContainSubstring(minorExpected))
 
-			re = regexp.MustCompile(`GitVersion:\"(.*?)\"`)
-			gitVersionOut := re.FindSubmatch(out)
-			gitVersionExpected := re.FindSubmatch([]byte(expected))
+			gitVersionExpected := "GitVersion:\"" + gitVersion
+			Expect(out).Should(ContainSubstring(gitVersionExpected))
 
-			Expect(majorOut).Should(Equal(majorExpected))
-			Expect(minorOut).Should(Equal(minorExpected))
-			Expect(gitVersionOut[1]).Should(ContainSubstring(string(gitVersionExpected[1])))
 		})
 	})
 
