@@ -337,35 +337,104 @@ var _ = Describe("Agent", func() {
 		BeforeEach(func() {
 			date, err := exec.Command("date").Output()
 			Expect(err).NotTo(HaveOccurred())
+
+			version.GitMajor = "1"
+			version.GitMinor = "2"
+			version.GitVersion = "v1.2.3"
+			version.GitCommit = "abc"
+			version.GitTreeState = "clean"
 			version.BuildDate = string(date)
-			version.Version = "v1.2.3"
-			ldflags := fmt.Sprintf("-X 'github.com/vmware-tanzu/cluster-api-provider-bringyourownhost/agent/version.Version=%s'"+
-				" -X 'github.com/vmware-tanzu/cluster-api-provider-bringyourownhost/agent/version.BuildDate=%s'", version.Version, version.BuildDate)
+
+			ldflags := fmt.Sprintf("-X 'github.com/vmware-tanzu/cluster-api-provider-bringyourownhost/agent/version.GitMajor=%s'"+
+				"-X 'github.com/vmware-tanzu/cluster-api-provider-bringyourownhost/agent/version.GitMinor=%s'"+
+				"-X 'github.com/vmware-tanzu/cluster-api-provider-bringyourownhost/agent/version.GitVersion=%s'"+
+				"-X 'github.com/vmware-tanzu/cluster-api-provider-bringyourownhost/agent/version.GitCommit=%s'"+
+				"-X 'github.com/vmware-tanzu/cluster-api-provider-bringyourownhost/agent/version.GitTreeState=%s'"+
+				"-X 'github.com/vmware-tanzu/cluster-api-provider-bringyourownhost/agent/version.BuildDate=%s'",
+				version.GitMajor, version.GitMinor, version.GitVersion, version.GitCommit, version.GitTreeState, version.BuildDate)
+
 			tmpHostAgentBinary, err = gexec.Build("github.com/vmware-tanzu/cluster-api-provider-bringyourownhost/agent", "-ldflags", ldflags)
 			Expect(err).NotTo(HaveOccurred())
 		})
 
 		AfterEach(func() {
+			version.GitMajor = ""
+			version.GitMinor = ""
+			version.GitVersion = ""
+			version.GitCommit = ""
+			version.GitTreeState = ""
 			version.BuildDate = ""
-			version.Version = ""
 			tmpHostAgentBinary = ""
 		})
 
 		It("Shows the appropriate version of the agent", func() {
 			expectedStruct := version.Info{
-				Major:     "1",
-				Minor:     "2",
-				Patch:     "3",
-				BuildDate: version.BuildDate,
-				GoVersion: runtime.Version(),
-				Compiler:  runtime.Compiler,
-				Platform:  fmt.Sprintf("%s/%s", runtime.GOOS, runtime.GOARCH),
+				Major:        "1",
+				Minor:        "2",
+				GitVersion:   "v1.2.3",
+				GitCommit:    "abc",
+				GitTreeState: "clean",
+				BuildDate:    version.BuildDate,
+				GoVersion:    runtime.Version(),
+				Compiler:     runtime.Compiler,
+				Platform:     fmt.Sprintf("%s/%s", runtime.GOOS, runtime.GOARCH),
 			}
 			expected := fmt.Sprintf("byoh-hostagent version: %#v\n", expectedStruct)
 			out, err := exec.Command(tmpHostAgentBinary, "--version").Output()
 			Expect(err).NotTo(HaveOccurred())
 			output := string(out)
 			Expect(output).Should(Equal(expected))
+		})
+	})
+
+	Context("When --version flag is created using 'version.sh' script", func() {
+		var (
+			tmpHostAgentBinary string
+			gitMajor           string
+			gitMinor           string
+			gitVersion         string
+			err                error
+		)
+		BeforeEach(func() {
+			command := exec.Command("/bin/sh", "-c", "git describe --tags --abbrev=14 --match 'v[0-9]*' 2>/dev/null")
+			command.Stderr = os.Stderr
+			cmdOut, _ := command.Output()
+			gitVersion = strings.TrimSuffix(string(cmdOut), "\n")
+
+			gitVersion = strings.Split(gitVersion, "-")[0]
+			gitVars := strings.Split(gitVersion, ".")
+			if len(gitVars) > 1 {
+				gitMajor = gitVars[0][1:]
+				gitMinor = gitVars[1]
+			}
+
+			root, _ := exec.Command("/bin/sh", "-c", "git rev-parse --show-toplevel").Output()
+			cmd := exec.Command("/bin/sh", "-c", strings.TrimSuffix(string(root), "\n")+"/hack/version.sh")
+			ldflags, _ := cmd.Output()
+			tmpHostAgentBinary, err = gexec.Build("github.com/vmware-tanzu/cluster-api-provider-bringyourownhost/agent", "-ldflags", string(ldflags))
+			Expect(err).NotTo(HaveOccurred())
+		})
+
+		AfterEach(func() {
+			tmpHostAgentBinary = ""
+			gitMajor = ""
+			gitMinor = ""
+			gitVersion = ""
+		})
+
+		It("should match local generated git values", func() {
+			out, err := exec.Command(tmpHostAgentBinary, "--version").Output()
+			Expect(err).NotTo(HaveOccurred())
+
+			majorExpected := "Major:\"" + gitMajor + "\""
+			Expect(out).Should(ContainSubstring(majorExpected))
+
+			minorExpected := "Minor:\"" + gitMinor + "\""
+			Expect(out).Should(ContainSubstring(minorExpected))
+
+			gitVersionExpected := "GitVersion:\"" + gitVersion
+			Expect(out).Should(ContainSubstring(gitVersionExpected))
+
 		})
 	})
 

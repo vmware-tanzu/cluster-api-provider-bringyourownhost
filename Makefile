@@ -33,9 +33,8 @@ GINKGO := $(TOOLS_BIN_DIR)/ginkgo
 
 BYOH_TEMPLATES := $(REPO_ROOT)/test/e2e/data/infrastructure-provider-byoh
 
-LDFLAGS=-w -s
+LDFLAGS := -w -s $(shell hack/version.sh)
 STATIC=-extldflags '-static'
-AGENT_BINARY_VERSION ?= dev
 
 # Get the currently used golang install path (in GOPATH/bin, unless GOBIN is set)
 ifeq (,$(shell go env GOBIN))
@@ -201,9 +200,7 @@ kustomize: ## Download kustomize locally if necessary.
 	$(call go-get-tool,$(KUSTOMIZE),sigs.k8s.io/kustomize/kustomize/v3@v3.9.1)
 
 host-agent-binaries: ## Builds the binaries for the host-agent
-	RELEASE_BINARY=./byoh-hostagent GOOS=linux GOARCH=amd64 GOLDFLAGS="$(LDFLAGS) $(STATIC) \
-	-X 'github.com/vmware-tanzu/cluster-api-provider-bringyourownhost/agent/version.Version=${AGENT_BINARY_VERSION}' \
-	-X 'github.com/vmware-tanzu/cluster-api-provider-bringyourownhost/agent/version.BuildDate=$(shell date -u +\"%Y-%m-%dT%H:%M:%SZ\")'" \
+	RELEASE_BINARY=./byoh-hostagent GOOS=linux GOARCH=amd64 GOLDFLAGS="$(LDFLAGS) $(STATIC)" \
 	HOST_AGENT_DIR=./$(HOST_AGENT_DIR) $(MAKE) host-agent-binary
 
 host-agent-binary: $(RELEASE_DIR)
