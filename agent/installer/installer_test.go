@@ -16,13 +16,13 @@ var _ = Describe("Byohost Installer Tests", func() {
 
 	Context("When installer is created for unsupported OS", func() {
 		It("Should return error", func() {
-			_, err := newUnchecked("Ubuntu_99.04.3_x86-64", "", logr.Discard(), nil)
+			_, err := newUnchecked("Ubuntu_99.04.3_x86-64", "k8s", "", logr.Discard(), nil)
 			Expect(err).Should(HaveOccurred())
 		})
 	})
 	Context("When installer is created with empty download path", func() {
 		It("Should return error", func() {
-			_, err := New("", logr.Discard())
+			_, err := New("", "k8s", logr.Discard())
 			Expect(err).Should(HaveOccurred())
 		})
 	})
@@ -142,7 +142,7 @@ var _ = Describe("Byohost Installer Tests", func() {
 })
 
 func NewPreviewInstaller(os string, ob algo.OutputBuilder) *installer {
-	i, err := newUnchecked(os, "", logr.Discard(), ob)
+	i, err := newUnchecked(os, "k8s", "", logr.Discard(), ob)
 	if err != nil {
 		panic(err)
 	}
