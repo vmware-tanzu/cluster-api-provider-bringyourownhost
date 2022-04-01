@@ -157,6 +157,18 @@ var _ = Describe("Agent", func() {
 
 			output, _, err = runner.ExecByoDockerHost(byoHostContainer)
 			Expect(err).NotTo(HaveOccurred())
+
+			// wait until the agent process starts inside the byoh host container
+			Eventually(func() bool {
+				containerTop, _ := runner.DockerClient.ContainerTop(ctx, byoHostContainer.ID, []string{})
+				for _, proc := range containerTop.Processes {
+					if strings.Contains(proc[len(containerTop.Titles)-1], "agent") {
+						return true
+					}
+
+				}
+				return false
+			}, 60).Should(BeTrue())
 		})
 
 		AfterEach(func() {
@@ -313,7 +325,7 @@ var _ = Describe("Agent", func() {
 						}
 					}
 					return corev1.ConditionFalse
-				}, 60).Should(Equal(corev1.ConditionTrue))
+				}, 100).Should(Equal(corev1.ConditionTrue)) // installing K8s components is a lengthy operation, setting the timeout to 100s
 			})
 		})
 	})
@@ -325,29 +337,47 @@ var _ = Describe("Agent", func() {
 		BeforeEach(func() {
 			date, err := exec.Command("date").Output()
 			Expect(err).NotTo(HaveOccurred())
+
+			version.GitMajor = "1"
+			version.GitMinor = "2"
+			version.GitVersion = "v1.2.3"
+			version.GitCommit = "abc"
+			version.GitTreeState = "clean"
 			version.BuildDate = string(date)
-			version.Version = "v1.2.3"
-			ldflags := fmt.Sprintf("-X 'github.com/vmware-tanzu/cluster-api-provider-bringyourownhost/agent/version.Version=%s'"+
-				" -X 'github.com/vmware-tanzu/cluster-api-provider-bringyourownhost/agent/version.BuildDate=%s'", version.Version, version.BuildDate)
+
+			ldflags := fmt.Sprintf("-X 'github.com/vmware-tanzu/cluster-api-provider-bringyourownhost/agent/version.GitMajor=%s'"+
+				"-X 'github.com/vmware-tanzu/cluster-api-provider-bringyourownhost/agent/version.GitMinor=%s'"+
+				"-X 'github.com/vmware-tanzu/cluster-api-provider-bringyourownhost/agent/version.GitVersion=%s'"+
+				"-X 'github.com/vmware-tanzu/cluster-api-provider-bringyourownhost/agent/version.GitCommit=%s'"+
+				"-X 'github.com/vmware-tanzu/cluster-api-provider-bringyourownhost/agent/version.GitTreeState=%s'"+
+				"-X 'github.com/vmware-tanzu/cluster-api-provider-bringyourownhost/agent/version.BuildDate=%s'",
+				version.GitMajor, version.GitMinor, version.GitVersion, version.GitCommit, version.GitTreeState, version.BuildDate)
+
 			tmpHostAgentBinary, err = gexec.Build("github.com/vmware-tanzu/cluster-api-provider-bringyourownhost/agent", "-ldflags", ldflags)
 			Expect(err).NotTo(HaveOccurred())
 		})
 
 		AfterEach(func() {
+			version.GitMajor = ""
+			version.GitMinor = ""
+			version.GitVersion = ""
+			version.GitCommit = ""
+			version.GitTreeState = ""
 			version.BuildDate = ""
-			version.Version = ""
 			tmpHostAgentBinary = ""
 		})
 
 		It("Shows the appropriate version of the agent", func() {
 			expectedStruct := version.Info{
-				Major:     "1",
-				Minor:     "2",
-				Patch:     "3",
-				BuildDate: version.BuildDate,
-				GoVersion: runtime.Version(),
-				Compiler:  runtime.Compiler,
-				Platform:  fmt.Sprintf("%s/%s", runtime.GOOS, runtime.GOARCH),
+				Major:        "1",
+				Minor:        "2",
+				GitVersion:   "v1.2.3",
+				GitCommit:    "abc",
+				GitTreeState: "clean",
+				BuildDate:    version.BuildDate,
+				GoVersion:    runtime.Version(),
+				Compiler:     runtime.Compiler,
+				Platform:     fmt.Sprintf("%s/%s", runtime.GOOS, runtime.GOARCH),
 			}
 			expected := fmt.Sprintf("byoh-hostagent version: %#v\n", expectedStruct)
 			out, err := exec.Command(tmpHostAgentBinary, "--version").Output()
@@ -357,13 +387,63 @@ var _ = Describe("Agent", func() {
 		})
 	})
 
+	Context("When --version flag is created using 'version.sh' script", func() {
+		var (
+			tmpHostAgentBinary string
+			gitMajor           string
+			gitMinor           string
+			gitVersion         string
+			err                error
+		)
+		BeforeEach(func() {
+			command := exec.Command("/bin/sh", "-c", "git describe --tags --abbrev=14 --match 'v[0-9]*' 2>/dev/null")
+			command.Stderr = os.Stderr
+			cmdOut, _ := command.Output()
+			gitVersion = strings.TrimSuffix(string(cmdOut), "\n")
+
+			gitVersion = strings.Split(gitVersion, "-")[0]
+			gitVars := strings.Split(gitVersion, ".")
+			if len(gitVars) > 1 {
+				gitMajor = gitVars[0][1:]
+				gitMinor = gitVars[1]
+			}
+
+			root, _ := exec.Command("/bin/sh", "-c", "git rev-parse --show-toplevel").Output()
+			cmd := exec.Command("/bin/sh", "-c", strings.TrimSuffix(string(root), "\n")+"/hack/version.sh")
+			ldflags, _ := cmd.Output()
+			tmpHostAgentBinary, err = gexec.Build("github.com/vmware-tanzu/cluster-api-provider-bringyourownhost/agent", "-ldflags", string(ldflags))
+			Expect(err).NotTo(HaveOccurred())
+		})
+
+		AfterEach(func() {
+			tmpHostAgentBinary = ""
+			gitMajor = ""
+			gitMinor = ""
+			gitVersion = ""
+		})
+
+		It("should match local generated git values", func() {
+			out, err := exec.Command(tmpHostAgentBinary, "--version").Output()
+			Expect(err).NotTo(HaveOccurred())
+
+			majorExpected := "Major:\"" + gitMajor + "\""
+			Expect(out).Should(ContainSubstring(majorExpected))
+
+			minorExpected := "Minor:\"" + gitMinor + "\""
+			Expect(out).Should(ContainSubstring(minorExpected))
+
+			gitVersionExpected := "GitVersion:\"" + gitVersion
+			Expect(out).Should(ContainSubstring(gitVersionExpected))
+
+		})
+	})
+
 	Context("When the host agent is executed with --skip-installation flag", func() {
 		var (
 			ns               *corev1.Namespace
 			ctx              context.Context
 			err              error
 			hostName         string
-			agentLogFile     = "/tmp/agent-integration.log"
 			fakeDownloadPath = "fake-download-path"
 			runner           *e2e.ByoHostRunner
 			byoHostContainer *container.ContainerCreateCreatedBody
@@ -412,5 +492,73 @@ var _ = Describe("Agent", func() {
 				return false
 			}, 30).Should(BeTrue())
 		})
+	})
+
+	Context("When the host agent is executed with SecureAccess feature flag", func() {
+
+		var (
+			ns               *corev1.Namespace
+			ctx              context.Context
+			hostName         string
+			runner           *e2e.ByoHostRunner
+			byoHostContainer *container.ContainerCreateCreatedBody
+			output           dockertypes.HijackedResponse
+		)
+
+		BeforeEach(func() {
+			ns = builder.Namespace("testns").Build()
+			Expect(k8sClient.Create(context.TODO(), ns)).NotTo(HaveOccurred(), "failed to create test namespace")
+			ctx = context.TODO()
+			var err error
+			hostName, err = os.Hostname()
+			Expect(err).NotTo(HaveOccurred())
+
+			runner = setupTestInfra(ctx, hostName, getKubeConfig().Name(), ns)
+			runner.CommandArgs["--feature-gates"] = "SecureAccess=true"
+
+			byoHostContainer, err = runner.SetupByoDockerHost()
+			Expect(err).NotTo(HaveOccurred())
+
+			output, _, err = runner.ExecByoDockerHost(byoHostContainer)
+			Expect(err).NotTo(HaveOccurred())
+		})
+
+		AfterEach(func() {
+			cleanup(runner.Context, byoHostContainer, ns, agentLogFile)
+		})
+
+		It("should enable the SecureAccess feature gate", func() {
+			defer output.Close()
+			f := e2e.WriteDockerLog(output, agentLogFile)
+			defer func() {
+				deferredErr := f.Close()
+				if deferredErr != nil {
+					e2e.Showf("error closing file %s: %v", agentLogFile, deferredErr)
+				}
+			}()
+			Eventually(func() (done bool) {
+				_, err := os.Stat(agentLogFile)
+				if err == nil {
+					data, err := os.ReadFile(agentLogFile)
+					if err == nil && strings.Contains(string(data), "\"msg\"=\"secure access enabled, waiting for host to be registered by ByoAdmission Controller\"") {
+						return true
+					}
+				}
+				return false
+			}).Should(BeTrue())
+		})
+
+		It("should not register the BYOHost with the management cluster", func() {
+			byoHostLookupKey := types.NamespacedName{Name: hostName, Namespace: ns.Name}
+			createdByoHost := &infrastructurev1beta1.ByoHost{}
+			Consistently(func() *infrastructurev1beta1.ByoHost {
+				err := k8sClient.Get(context.TODO(), byoHostLookupKey, createdByoHost)
+				if err != nil {
+					return nil
+				}
+				return createdByoHost
+			}).Should(BeNil())
+		})
+
 	})
 })

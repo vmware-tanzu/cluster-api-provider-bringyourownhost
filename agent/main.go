@@ -10,13 +10,15 @@ import (
 	"os"
 	"strings"
 
-	"github.com/spf13/pflag"
+	"github.com/go-logr/logr"
+	pflag "github.com/spf13/pflag"
 	"github.com/vmware-tanzu/cluster-api-provider-bringyourownhost/agent/cloudinit"
 	"github.com/vmware-tanzu/cluster-api-provider-bringyourownhost/agent/installer"
 	"github.com/vmware-tanzu/cluster-api-provider-bringyourownhost/agent/reconciler"
 	"github.com/vmware-tanzu/cluster-api-provider-bringyourownhost/agent/registration"
 	"github.com/vmware-tanzu/cluster-api-provider-bringyourownhost/agent/version"
 	infrastructurev1beta1 "github.com/vmware-tanzu/cluster-api-provider-bringyourownhost/apis/infrastructure/v1beta1"
+	"github.com/vmware-tanzu/cluster-api-provider-bringyourownhost/feature"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/fields"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -90,6 +92,33 @@ func setupflags() {
 	for _, hiddenFlag := range hiddenFlags {
 		_ = pflag.CommandLine.MarkHidden(hiddenFlag)
 	}
+	feature.MutableGates.AddFlag(pflag.CommandLine)
+}
+
+func handleHostRegistration(k8sClient client.Client, hostName string, logger logr.Logger) (err error) {
+	registration.LocalHostRegistrar = &registration.HostRegistrar{K8sClient: k8sClient}
+	if feature.Gates.Enabled(feature.SecureAccess) {
+		logger.Info("secure access enabled, waiting for host to be registered by ByoAdmission Controller")
+	} else {
+		err := registration.LocalHostRegistrar.Register(hostName, namespace, labels)
+		return err
+	}
+	return nil
+}
+
+func setupTemplateParser() *cloudinit.TemplateParser {
+	var templateParser *cloudinit.TemplateParser
+	if registration.LocalHostRegistrar.ByoHostInfo.DefaultNetworkInterfaceName == "" {
+		templateParser = nil
+	} else {
+		templateParser = &cloudinit.TemplateParser{
+			Template: registration.HostInfo{
+				DefaultNetworkInterfaceName: registration.LocalHostRegistrar.ByoHostInfo.DefaultNetworkInterfaceName,
+			},
+		}
+	}
+
+	return templateParser
 }
 
 var (
@@ -139,8 +168,7 @@ func main() {
 		return
 	}
 
-	registration.LocalHostRegistrar = &registration.HostRegistrar{K8sClient: k8sClient}
-	err = registration.LocalHostRegistrar.Register(hostName, namespace, labels)
+	err = handleHostRegistration(k8sClient, hostName, logger)
 	if err != nil {
 		logger.Error(err, "error registering host %s registration in namespace %s", hostName, namespace)
 		return
@@ -171,24 +199,21 @@ func main() {
 		logger.Info("skip-installation flag set, skipping installer initialisation")
 	} else {
 		// increasing installer log level to 1, so that it wont be logged by default
-		k8sInstaller, err = installer.New(downloadpath, logger.V(1))
+		k8sInstaller, err = installer.New(downloadpath, installer.BundleTypeK8s, logger.V(1))
 		if err != nil {
 			logger.Error(err, "failed to instantiate installer")
 		}
 	}
 
 	hostReconciler := &reconciler.HostReconciler{
-		Client:     k8sClient,
-		CmdRunner:  cloudinit.CmdRunner{},
-		FileWriter: cloudinit.FileWriter{},
-		TemplateParser: cloudinit.TemplateParser{
-			Template: registration.HostInfo{
-				DefaultNetworkInterfaceName: registration.LocalHostRegistrar.ByoHostInfo.DefaultNetworkInterfaceName,
-			},
-		},
-		Recorder:     mgr.GetEventRecorderFor("hostagent-controller"),
-		K8sInstaller: k8sInstaller,
+		Client:         k8sClient,
+		CmdRunner:      cloudinit.CmdRunner{},
+		FileWriter:     cloudinit.FileWriter{},
+		TemplateParser: setupTemplateParser(),
+		Recorder:       mgr.GetEventRecorderFor("hostagent-controller"),
+		K8sInstaller:   k8sInstaller,
 	}
+
 	if err = hostReconciler.SetupWithManager(context.TODO(), mgr); err != nil {
 		logger.Error(err, "unable to create controller")
 		return
