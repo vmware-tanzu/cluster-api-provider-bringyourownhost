@@ -95,8 +95,13 @@ func listSupported() {
 			klogger.Error(err, "Failed to flush the tabwriter")
 		}
 	}()
-
-	_, err := fmt.Fprintf(w, "%s\t%s\t%s\n", "OS", "K8S Version", "BYOH Bundle Name")
+	_, err := fmt.Fprintf(w, "The corresponding bundles (particular to a patch version) should be pushed to the OCI registry of choice\n"+
+		"By default, BYOH uses projects.registry.vmware.com\n\n"+
+		"Note: It may happen that a specific patch version of a k8s minor release is not available in the OCI registry\n\n")
+	if err != nil {
+		klogger.Error(err, "Failed to write to tabwriter")
+	}
+	_, err = fmt.Fprintf(w, "%s\t%s\t%s\n", "OS", "K8S Version", "BYOH Bundle Name")
 	if err != nil {
 		klogger.Error(err, "Failed to write to tabwriter")
 	}
@@ -107,7 +112,7 @@ func listSupported() {
 	osFilters, osBundles := ListSupportedOS()
 	for i := range osFilters {
 		for _, k8s := range ListSupportedK8s(osBundles[i]) {
-			_, err = fmt.Fprintf(w, "%s\t %s\t%s\n", osFilters[i], k8s, GetBundleName(osBundles[i], k8s))
+			_, err = fmt.Fprintf(w, "%s\t %s\t%s:%s\n", osFilters[i], k8s, GetBundleName(osBundles[i]), k8s)
 			if err != nil {
 				klogger.Error(err, "Failed to write to tabwriter")
 			}
@@ -131,13 +136,13 @@ func runInstaller(install bool) {
 	var err error
 	if *osFlag != "" {
 		// Override current OS detection
-		i, err = newUnchecked(*osFlag, *cachePathFlag, klogger, &logPrinter{klogger})
+		i, err = newUnchecked(*osFlag, BundleTypeK8s, *cachePathFlag, klogger, &logPrinter{klogger})
 		if err != nil {
 			klogger.Error(err, "unable to create installer")
 			return
 		}
 	} else {
-		i, err = New(*cachePathFlag, klogger)
+		i, err = New(*cachePathFlag, BundleTypeK8s, klogger)
 		if err != nil {
 			klogger.Error(err, "unable to create installer")
 			return

@@ -190,6 +190,12 @@ The current list of supported tuples of OS, kubernetes Version, BYOH Bundle Name
 ./cli --list-supported
 ```
 An example output looks like:
+
+The corresponding bundles (particular to a patch version) should be pushed to the OCI registry of choice
+By default, BYOH uses projects.registry.vmware.com
+
+Note: It may happen that a specific patch version of a k8s minor release is not available in the OCI registry
+
 <table>
     <tr>
         <td>OS</td>
@@ -198,11 +204,23 @@ An example output looks like:
     </tr>
     <tr>
         <td>Ubuntu_20.04.*_x86-64</td>
-        <td>v1.22.3</td>
-        <td>byoh-bundle-ubuntu_20.04.1_x86-64_k8s_v1.22.3</td>
+        <td>v1.21.*</td>
+        <td>byoh-bundle-ubuntu_20.04.1_x86-64_k8s:v1.21.*</td>
+    </tr>
+        <tr>
+        <td>Ubuntu_20.04.*_x86-64</td>
+        <td>v1.22.*</td>
+        <td>byoh-bundle-ubuntu_20.04.1_x86-64_k8s:v1.22.*</td>
+    </tr>
+        <tr>
+        <td>Ubuntu_20.04.*_x86-64</td>
+        <td>v1.23.*</td>
+        <td>byoh-bundle-ubuntu_20.04.1_x86-64_k8s:v1.23.*</td>
     </tr>
 </table>
 The '*' in OS means that all Ubuntu 20.04 patches will be handled by this BYOH bundle.
+
+The '*' in the K8S Version means that the k8s minor release is supported but it may happen that a byoh bundle for a specific patch may not exist n the OCI registry,
 
 ## Pre-requisites
 As of writing this, the following packages must be pre-installed on the BYOH host:
