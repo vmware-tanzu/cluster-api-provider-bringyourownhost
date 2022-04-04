@@ -80,6 +80,8 @@ Check out the [developer guide](./docs/local_dev.md) for launching a BYOH cluste
 
 More about development and contributing practices can be found in [`CONTRIBUTING.md`](./CONTRIBUTING.md).
 
+In case any errors appear, possible causes and solutions can be found in [troubleshooting_guide.md](./docs/troubleshooting_guide.md).
+
 ------
 
 ## Compatibility with Cluster API and Kubernetes Versions
