@@ -5,9 +5,7 @@ package registration
 
 import (
 	"context"
-	"net"
 
-	"github.com/jackpal/gateway"
 	infrastructurev1beta1 "github.com/vmware-tanzu/cluster-api-provider-bringyourownhost/apis/infrastructure/v1beta1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -66,66 +64,10 @@ func (hr *HostRegistrar) Register(hostName, namespace string, hostLabels map[str
 		}
 	}
 
-	// run it at startup or reboot
-	return hr.UpdateNetwork(ctx, byoHost)
-}
-
-// UpdateNetwork updates the network interface status for the host
-func (hr *HostRegistrar) UpdateNetwork(ctx context.Context, byoHost *infrastructurev1beta1.ByoHost) error {
-	klog.Info("Add Network Info")
 	helper, err := patch.NewHelper(byoHost, hr.K8sClient)
 	if err != nil {
 		return err
 	}
 
-	byoHost.Status.Network = hr.GetNetworkStatus()
-
 	return helper.Patch(ctx, byoHost)
-}
-
-// GetNetworkStatus returns the network interface(s) status for the host
-func (hr *HostRegistrar) GetNetworkStatus() []infrastructurev1beta1.NetworkStatus {
-	Network := make([]infrastructurev1beta1.NetworkStatus, 0)
-
-	defaultIP, err := gateway.DiscoverInterface()
-	if err != nil {
-		return Network
-	}
-
-	ifaces, err := net.Interfaces()
-	if err != nil {
-		return Network
-	}
-
-	for _, iface := range ifaces {
-		netStatus := infrastructurev1beta1.NetworkStatus{}
-
-		if iface.Flags&net.FlagUp > 0 {
-			netStatus.Connected = true
-		}
-
-		netStatus.MACAddr = iface.HardwareAddr.String()
-		addrs, err := iface.Addrs()
-		if err != nil {
-			continue
-		}
-
-		netStatus.NetworkInterfaceName = iface.Name
-		for _, addr := range addrs {
-			var ip net.IP
-			switch v := addr.(type) {
-			case *net.IPNet:
-				ip = v.IP
-			case *net.IPAddr:
-				ip = v.IP
-			}
-			if ip.String() == defaultIP.String() {
-				netStatus.IsDefault = true
-				hr.ByoHostInfo.DefaultNetworkInterfaceName = netStatus.NetworkInterfaceName
-			}
-			netStatus.IPAddrs = append(netStatus.IPAddrs, addr.String())
-		}
-		Network = append(Network, netStatus)
-	}
-	return Network
 }
