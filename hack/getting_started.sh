@@ -525,7 +525,7 @@ It locally will change the following host config
 
 export PATH=/snap/bin:${PATH}
 byohImageName="byoh/node"
-byohImageTag="v1.22.3"
+byohImageTag="e2e"
 managerClusterName="kind-byoh"
 workerClusterName="worker-byoh"
 controlPlaneEndPointIp=""
@@ -537,7 +537,7 @@ manageClusterConfFile="${HOME}/.kube/management-cluster.conf"
 kubeConfigFile=/tmp/byoh-cluster-kubeconfig
 reposDir=$(dirname $0)/../
 byohBinaryFile=${reposDir}/bin/byoh-hostagent-linux-amd64
-kubernetesVersion="v1.22.3"
+kubernetesVersion="v1.23.4"
 
 readArgs $@
 userConfirmation

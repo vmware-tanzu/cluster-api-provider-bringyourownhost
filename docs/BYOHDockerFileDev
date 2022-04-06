@@ -16,7 +16,7 @@ RUN echo "Installing kubectl kubeadm kubelet" \
     && curl -s https://packages.cloud.google.com/apt/doc/apt-key.gpg | apt-key add - \
     && apt-get update \
     && apt-get install -y linux-image-$(uname -r) \
-    && apt-get install -y kubelet=1.22.3-00 kubeadm=1.22.3-00 kubectl=1.22.3-00 \
+    && apt-get install -y kubelet=1.23.4-00 kubeadm=1.23.4-00 kubectl=1.23.4-00 \
     && apt-mark hold containerd kubelet kubeadm kubectl \
     && apt-get clean \
     && systemctl enable kubelet.service \
