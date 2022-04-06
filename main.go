@@ -71,7 +71,8 @@ func main() {
 		os.Exit(1)
 	}
 
-	options := remote.ClusterCacheTrackerOptions{Log: ctrl.Log.WithName("remote").WithName("ClusterCacheTracker")}
+	remoteLogger := ctrl.Log.WithName("remote").WithName("ClusterCacheTracker")
+	options := remote.ClusterCacheTrackerOptions{Log: &remoteLogger}
 	tracker, err := remote.NewClusterCacheTracker(mgr, options)
 	if err != nil {
 		setupLog.Error(err, "unable to create cluster cache tracker")
