@@ -95,7 +95,7 @@ Once the image is ready, lets start 2 docker containers for our deployment. One 
 for i in {1..2}
 do
   echo "Creating docker container named host$i"
-  docker run --detach --tty --hostname host$i --name host$i --privileged --security-opt seccomp=unconfined --tmpfs /tmp --tmpfs /run --volume /var --volume /lib/modules:/lib/modules:ro --network kind byoh-dev/node:v1.22.3
+  docker run --detach --tty --hostname host$i --name host$i --privileged --security-opt seccomp=unconfined --tmpfs /tmp --tmpfs /run --volume /var --volume /lib/modules:/lib/modules:ro --network kind byoh/node:dev
 done
 ```
 
@@ -126,8 +126,8 @@ $ cat /etc/hosts
 ```
 
 If you are trying this on your own hosts, then for each host
-1. Download the [byoh-hostagent-linux-amd64](https://github.com/vmware-tanzu/cluster-api-provider-bringyourownhost/releases/download/v0.1.0/byoh-hostagent-linux-amd64)
-2. Copy the management cluster `kubeconfig` file as `management-cluster.conf`
+1. Download the [byoh-hostagent-linux-amd64](https://github.com/vmware-tanzu/cluster-api-provider-bringyourownhost/releases/download/v0.1.1/byoh-hostagent-linux-amd64)
+2. Copy the management cluster `kubeconfig` file as `management.conf`
 3. Start the agent 
 ```shell
 ./byoh-hostagent-linux-amd64 -kubeconfig management-cluster.conf > byoh-agent.log 2>&1 &
@@ -209,8 +209,23 @@ Generate the cluster.yaml for workload cluster
 
 Inspect and make any changes
 ```shell
-vi cluster.yaml
-```
+# for vms as byohosts
+$ BUNDLE_LOOKUP_TAG=v1.23.5 CONTROL_PLANE_ENDPOINT_IP=10.10.10.10 clusterctl generate cluster byoh-cluster \
+    --infrastructure byoh \
+    --kubernetes-version v1.23.5 \
+    --control-plane-machine-count 1 \
+    --worker-machine-count 1 > cluster.yaml
+
+# for docker hosts use the --flavor argument
+$ BUNDLE_LOOKUP_TAG=v1.23.5 CONTROL_PLANE_ENDPOINT_IP=10.10.10.10 clusterctl generate cluster byoh-cluster \
+    --infrastructure byoh \
+    --kubernetes-version v1.23.5 \
+    --control-plane-machine-count 1 \
+    --worker-machine-count 1 \
+    --flavor docker > cluster.yaml
+
+# Inspect and make any changes
+$ vi cluster.yaml
 
 Create the workload cluster in the current namespace on the management cluster
 ```shell
@@ -240,7 +255,7 @@ after that you should see your nodes turn into ready:
 ```shell
 $ KUBECONFIG=byoh-cluster.kubeconfig kubectl get nodes
 NAME                                                          STATUS     ROLES    AGE   VERSION
-byoh-cluster-8siai8                                           Ready      master   5m   v1.22.3
+byoh-cluster-8siai8                                           Ready      master   5m   v1.23.5
 
 ```
 

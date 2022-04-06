@@ -261,14 +261,14 @@ This step describes providing custom kubernetes host components. They can be cop
 
 ```shell
 # Build a BYOH bundle and publish it to an OCI-compliant repo
-docker run --rm -v `pwd`/byoh-ingredients-download:/ingredients --env BUILD_ONLY=0 build-push-bundle <REPO>/<BYOH Bundle name>
+docker run --rm -v `pwd`/byoh-ingredients-download:/ingredients --env BUILD_ONLY=0 byoh-build-push-bundle <REPO>/<BYOH Bundle name>
 ```
 
 The specified above BYOH Bundle name must match one of the [Supported OS and kubernetes BYOH bundle names](##supported-OS-and-kubernetes)
 
 ```shell
 # You can also build a tarball of the bundle without publishing. This will create a bundler.tar in the current directory and can be used for custom pushing
-docker run --rm -v `pwd`/byoh-ingredients-download:/ingredients -v`pwd`:/bundle --env BUILD_ONLY=1 build-push-bundle
+docker run --rm -v `pwd`/byoh-ingredients-download:/ingredients -v`pwd`:/bundle --env BUILD_ONLY=1 byoh-build-push-bundle
 ```
 
 ```shell

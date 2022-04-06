@@ -8,12 +8,12 @@
 # 2. Run the image
 #
 
-ARG BASE_IMAGE=ubuntu:18.04
+ARG BASE_IMAGE=ubuntu:20.04
 FROM $BASE_IMAGE as build
 
 # Override to download other version
-ENV CONTAINERD_VERSION=1.5.7
-ENV KUBERNETES_VERSION=1.21.2-00
+ENV CONTAINERD_VERSION=1.6.0
+ENV KUBERNETES_VERSION=1.23.5-00
 ENV ARCH=amd64
 
 RUN apt-get update \
