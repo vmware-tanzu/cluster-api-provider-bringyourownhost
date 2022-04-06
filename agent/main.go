@@ -22,8 +22,8 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/fields"
 	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/klog"
-	"k8s.io/klog/klogr"
+	klog "k8s.io/klog/v2"
+	"k8s.io/klog/v2/klogr"
 	clusterv1 "sigs.k8s.io/cluster-api/api/v1beta1"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/cache"
@@ -78,6 +78,8 @@ func (l *labelFlags) Set(value string) error {
 
 func setupflags() {
 	klog.InitFlags(nil)
+	// clear any discard loggers set by dependecies
+	klog.ClearLogger()
 
 	flag.StringVar(&namespace, "namespace", "default", "Namespace in the management cluster where you would like to register this host")
 	flag.Var(&labels, "label", "labels to attach to the ByoHost CR in the form labelname=labelVal for e.g. '--label site=apac --label cores=2'")
@@ -88,7 +90,7 @@ func setupflags() {
 
 	pflag.CommandLine.AddGoFlagSet(flag.CommandLine)
 	hiddenFlags := []string{"log-flush-frequency", "alsologtostderr", "log-backtrace-at", "log-dir", "logtostderr", "stderrthreshold", "vmodule", "azure-container-registry-config",
-		"log_backtrace_at", "log_dir", "log_file", "log_file_max_size", "add_dir_header", "skip_headers", "skip_log_headers"}
+		"log_backtrace_at", "log_dir", "log_file", "log_file_max_size", "add_dir_header", "skip_headers", "skip_log_headers", "one_output"}
 	for _, hiddenFlag := range hiddenFlags {
 		_ = pflag.CommandLine.MarkHidden(hiddenFlag)
 	}

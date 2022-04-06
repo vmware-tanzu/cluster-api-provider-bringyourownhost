@@ -10,8 +10,8 @@ RELEASE_DIR := _dist
 
 # Image URL to use all building/pushing image targets
 IMG ?= ${STAGING_REGISTRY}/${IMAGE_NAME}:${TAG}
-BYOH_BASE_IMG = byoh/node:v1.22.3
-BYOH_BASE_IMG_DEV = byoh-dev/node:v1.22.3
+BYOH_BASE_IMG = byoh/node:e2e
+BYOH_BASE_IMG_DEV = byoh/node:dev
 # Produce CRDs that work back to Kubernetes 1.11 (no version conversion)
 CRD_OPTIONS ?= "crd:trivialVersions=true,preserveUnknownFields=false"
 
@@ -211,7 +211,7 @@ host-agent-binary: $(RELEASE_DIR)
 		-e GOARCH=$(GOARCH) \
 		-v "$$(pwd):/workspace$(DOCKER_VOL_OPTS)" \
 		-w /workspace \
-		golang:1.16.6 \
+		golang:1.17.8 \
 		go build -a -ldflags "$(GOLDFLAGS)" \
 		-o ./bin/$(notdir $(RELEASE_BINARY))-$(GOOS)-$(GOARCH) $(HOST_AGENT_DIR)
 

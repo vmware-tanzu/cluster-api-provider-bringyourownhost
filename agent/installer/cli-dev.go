@@ -10,7 +10,7 @@ import (
 	"text/tabwriter"
 
 	"github.com/go-logr/logr"
-	"k8s.io/klog/klogr"
+	"k8s.io/klog/v2/klogr"
 )
 
 var (

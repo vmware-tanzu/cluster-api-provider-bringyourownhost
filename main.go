@@ -11,8 +11,8 @@ import (
 	// Import all Kubernetes client auth plugins (e.g. Azure, GCP, OIDC, etc.)
 	// to ensure that exec-entrypoint and run can make use of them.
 	_ "k8s.io/client-go/plugin/pkg/client/auth"
-	"k8s.io/klog"
-	"k8s.io/klog/klogr"
+	klog "k8s.io/klog/v2"
+	"k8s.io/klog/v2/klogr"
 
 	admissionv1beta1 "k8s.io/api/admission/v1beta1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -71,7 +71,8 @@ func main() {
 		os.Exit(1)
 	}
 
-	options := remote.ClusterCacheTrackerOptions{Log: ctrl.Log.WithName("remote").WithName("ClusterCacheTracker")}
+	remoteLogger := ctrl.Log.WithName("remote").WithName("ClusterCacheTracker")
+	options := remote.ClusterCacheTrackerOptions{Log: &remoteLogger}
 	tracker, err := remote.NewClusterCacheTracker(mgr, options)
 	if err != nil {
 		setupLog.Error(err, "unable to create cluster cache tracker")
