@@ -8,7 +8,7 @@ require (
 	github.com/cppforlife/go-cli-ui v0.0.0-20200716203538-1e47f820817f
 	github.com/docker/cli v20.10.14+incompatible
 	github.com/docker/docker v20.10.14+incompatible
-	github.com/go-logr/logr v0.4.0
+	github.com/go-logr/logr v1.2.0
 	github.com/jackpal/gateway v1.0.7
 	github.com/k14s/imgpkg v0.18.0
 	github.com/kube-vip/kube-vip v0.3.8
@@ -21,7 +21,7 @@ require (
 	k8s.io/apimachinery v0.22.2
 	k8s.io/client-go v0.22.2
 	k8s.io/component-base v0.22.2
-	k8s.io/klog v1.0.0
+	k8s.io/klog/v2 v2.60.1
 	k8s.io/kubectl v0.22.2
 	k8s.io/utils v0.0.0-20210930125809-cb0fa318a74b
 	sigs.k8s.io/cluster-api v1.0.4
@@ -164,7 +164,6 @@ require (
 	k8s.io/apiserver v0.22.2 // indirect
 	k8s.io/cloud-provider v0.21.0 // indirect
 	k8s.io/cluster-bootstrap v0.22.2 // indirect
-	k8s.io/klog/v2 v2.9.0 // indirect
 	k8s.io/kube-openapi v0.0.0-20210421082810-95288971da7e // indirect
 	k8s.io/legacy-cloud-providers v0.21.0 // indirect
 	sigs.k8s.io/kind v0.11.1 // indirect
