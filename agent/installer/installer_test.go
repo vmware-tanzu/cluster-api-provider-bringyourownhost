@@ -16,18 +16,23 @@ var _ = Describe("Byohost Installer Tests", func() {
 
 	Context("When installer is created for unsupported OS", func() {
 		It("Should return error", func() {
-			_, err := newUnchecked("Ubuntu_99.04.3_x86-64", BundleTypeK8s, "", logr.Discard(), nil)
+			_, err := newUnchecked("Ubuntu_99.04.3_x86-64", "k8s", "", logr.Discard(), nil)
 			Expect(err).Should(HaveOccurred())
 		})
 	})
 	Context("When installer is created with empty download path", func() {
 		It("Should return error", func() {
-			_, err := New("", BundleTypeK8s, logr.Discard())
+			_, err := New("", "k8s", logr.Discard())
 			Expect(err).Should(HaveOccurred())
 		})
 	})
 	Context("When installer is created", func() {
 		It("Install/uninstall should return error for unsupported k8s", func() {
+
+			// Currently supported versions: v1.21.*, v1.22.*, v1.23.*
+			unsupportedMinorVer := "v1.20.1"
+			unsupportedMajorVer := "v0.21.1"
+
 			_, osList := ListSupportedOS()
 			for _, os := range osList {
 				i := NewPreviewInstaller(os, nil)
@@ -36,6 +41,18 @@ var _ = Describe("Byohost Installer Tests", func() {
 				Expect(err).Should(HaveOccurred())
 
 				err = i.Uninstall("", "unsupported-k8s", testTag)
+				Expect(err).Should(HaveOccurred())
+
+				err = i.Install("", unsupportedMinorVer, testTag)
+				Expect(err).Should(HaveOccurred())
+
+				err = i.Uninstall("", unsupportedMinorVer, testTag)
+				Expect(err).Should(HaveOccurred())
+
+				err = i.Install("", unsupportedMajorVer, testTag)
+				Expect(err).Should(HaveOccurred())
+
+				err = i.Uninstall("", unsupportedMajorVer, testTag)
 				Expect(err).Should(HaveOccurred())
 			}
 		})
@@ -125,7 +142,7 @@ var _ = Describe("Byohost Installer Tests", func() {
 })
 
 func NewPreviewInstaller(os string, ob algo.OutputBuilder) *installer {
-	i, err := newUnchecked(os, BundleTypeK8s, "", logr.Discard(), ob)
+	i, err := newUnchecked(os, "k8s", "", logr.Discard(), ob)
 	if err != nil {
 		panic(err)
 	}
