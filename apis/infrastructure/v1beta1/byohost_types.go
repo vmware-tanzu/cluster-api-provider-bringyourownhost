@@ -32,21 +32,13 @@ type ByoHostSpec struct {
 	BootstrapSecret *corev1.ObjectReference `json:"bootstrapSecret,omitempty"`
 }
 
-// HostStatus is a set of details about the host platform.
-type HostStatus struct {
-	// MachineID reported by the host. For unique machine identification
-	// in the cluster this field is preferred. Learn more from man(5)
-	// machine-id: http://man7.org/linux/man-pages/man5/machine-id.5.html
-	HostID string `json:"hostid,omitempty"`
-
+// HostInfo is a set of details about the host platform.
+type HostInfo struct {
 	// The Operating System reported by the host.
 	OSName string `json:"osname,omitempty"`
 
 	// OS Image reported by the host.
 	OSImage string `json:"osimage,omitempty"`
-
-	// Kernel Version reported by the host.
-	KernelVersion string `json:"kernelversion,omitempty"`
 
 	// The Architecture reported by the host.
 	Architecture string `json:"architecture,omitempty"`
@@ -63,9 +55,9 @@ type ByoHostStatus struct {
 	// +optional
 	Conditions clusterv1.Conditions `json:"conditions,omitempty"`
 
-	// HostInfo returns the platform details of the host.
+	// HostDetails returns the platform details of the host.
 	// +optional
-	HostInfo HostStatus `json:"hostinfo,omitempty"`
+	HostDetails HostInfo `json:"hostinfo,omitempty"`
 
 	// Network returns the network status for each of the host's configured
 	// network interfaces.
