@@ -42,33 +42,6 @@ Note for macOS users: you may need to [increase the memory available](https://do
 
 ## Initialize the management cluster and install the BringYourOwnHost provider
 
-To initialize Cluster API Provider BringYourOwnHost, `clusterctl` requires the following settings, which should
-be set in `~/.cluster-api/clusterctl.yaml` as the following:
-
-``` yaml
-providers:
-  - name: byoh
-    url: https://github.com/vmware-tanzu/cluster-api-provider-bringyourownhost/releases/latest/infrastructure-components.yaml
-    type: InfrastructureProvider
-```
-
-running
-
-```shell
-clusterctl config repositories
-```
-
-You should be able to see the new `BYOH` provider there.
-```shell
-clusterctl config repositories
-NAME           TYPE                     URL                                                                                          FILE
-cluster-api    CoreProvider             https://github.com/kubernetes-sigs/cluster-api/releases/latest/                              core-components.yaml
-...
-byoh           InfrastructureProvider   https://github.com/vmware-tanzu/cluster-api-provider-bringyourownhost/releases/latest/       infrastructure-components.yaml
-...
-vsphere        InfrastructureProvider   https://github.com/kubernetes-sigs/cluster-api-provider-vsphere/releases/latest/             infrastructure-components.yaml
-```
-
 Now that we've got clusterctl installed and all the prerequisites in place, let's transform the Kubernetes cluster
 into a management cluster by using `clusterctl init`.
 
@@ -86,7 +59,7 @@ If not, you could create containers to deploy your workload clusters on. We have
 
 ```shell
 cd cluster-api-provider-bringyourownhost
-make prepare-byoh-docker-host-image-dev
+make prepare-byoh-docker-host-image
 ```
 
 Once the image is ready, lets start 2 docker containers for our deployment. One for the control plane, and one for the worker. (you could of course run more)
@@ -95,7 +68,7 @@ Once the image is ready, lets start 2 docker containers for our deployment. One 
 for i in {1..2}
 do
   echo "Creating docker container named host$i"
-  docker run --detach --tty --hostname host$i --name host$i --privileged --security-opt seccomp=unconfined --tmpfs /tmp --tmpfs /run --volume /var --volume /lib/modules:/lib/modules:ro --network kind byoh/node:dev
+  docker run --detach --tty --hostname host$i --name host$i --privileged --security-opt seccomp=unconfined --tmpfs /tmp --tmpfs /run --volume /var --volume /lib/modules:/lib/modules:ro --network kind byoh/node:e2e
 done
 ```
 
@@ -126,7 +99,7 @@ $ cat /etc/hosts
 ```
 
 If you are trying this on your own hosts, then for each host
-1. Download the [byoh-hostagent-linux-amd64](https://github.com/vmware-tanzu/cluster-api-provider-bringyourownhost/releases/download/v0.1.1/byoh-hostagent-linux-amd64)
+1. Download the [byoh-hostagent-linux-amd64](https://github.com/vmware-tanzu/cluster-api-provider-bringyourownhost/releases/download/v0.2.0/byoh-hostagent-linux-amd64)
 2. Copy the management cluster `kubeconfig` file as `management.conf`
 3. Start the agent 
 ```shell
@@ -152,15 +125,15 @@ echo "Copy kubeconfig to host $i"
 docker cp ~/.kube/management-cluster.conf host$i:/management-cluster.conf
 done
 ```
-Start the host agent on each of the hosts and keep it running. Use the `--skip-installation` flag as we already have k8s components included in the docker image. This flag will skip k8s installation attempt on the host
+Start the host agent on each of the hosts and keep it running. Use the `--skip-installation` flag if you already have k8s components included in the docker image. This flag will skip k8s installation attempt on the host
 
 ```shell
 export HOST_NAME=host1
-docker exec -it $HOST_NAME sh -c "chmod +x byoh-hostagent && ./byoh-hostagent --kubeconfig management-cluster.conf --skip-installation"
+docker exec -it $HOST_NAME sh -c "chmod +x byoh-hostagent && ./byoh-hostagent --kubeconfig management-cluster.conf"
 
 # do the same for host2 in a separate tab
 export HOST_NAME=host2
-docker exec -it $HOST_NAME sh -c "chmod +x byoh-hostagent && ./byoh-hostagent --kubeconfig management-cluster.conf --skip-installation"
+docker exec -it $HOST_NAME sh -c "chmod +x byoh-hostagent && ./byoh-hostagent --kubeconfig management-cluster.conf"
 ```
 ---
 
