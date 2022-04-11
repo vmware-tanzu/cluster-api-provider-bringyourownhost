@@ -1,0 +1,61 @@
+@startuml installer-flow
+skinparam BoxPadding 40
+title
+Installer Flow
+end title
+
+actor User as user <<(U,#ADD1B2)>>
+' participant HostAgent as hagent <<(A,#ADD1B2)>>
+
+
+box "Management Cluster"
+    participant APIServer as mc <<(S,#ADD1B2) >>
+    participant "ByoMachineController" as bmc <<(C,#ADD1B2)>>
+    participant "ByoInstaller" as installer <<(C,#ADD1B2)>>
+    participant "ByoMachine" as byom <<(R,#ADD1B2)>>
+    participant "ByoHost" as byoh <<(R,#ADD1B2)>>
+    participant "InstallerConfig" as installerconfig <<(R,#ADD1B2)>>
+    participant "InstallationSecret" as secret <<(R,#ADD1B2)>>
+
+end box
+
+box "VM/Baremetal Host"
+    participant hostagent as hagent <<(H,#ADD1B2) >>
+end box 
+
+
+database "OCI Registry\n(Harbor)" as oci  
+
+== Register BYO Host ==
+user --> hagent: ./byoh-agent --kubeconfig config
+hagent -> byoh: register <i>ByoHost</i> CRD
+mc <- hagent: watches <i>ByoHost</i> CRD
+mc <- installer: watches <i>ByoMachine</i> CRD
+mc <- installer: watches <i>InstallerConfig</i> CRD
+mc <- bmc: Watches <i>InstallerConfig</i> CRD
+
+== Generate Installation Secret ==
+mc -> installer: receive reconcile event for <i>ByoMachine</i>, <i>InstallerConfig</i> CRD
+note right of installer
+    If InstallationSecretNotAvailableReason for
+        BYOHostReady Condiiton
+    - Get OS, ARCH, k8sVersion from ByoMachine
+    - Get BundleRepo, BundleType from InstallerConfig
+end note
+installer -> secret: Create <i>InstallationSecret</i>
+installer -> installerconfig: Patch with <i>InstallationSecret</i> and status.ready
+
+== Patch InstallationSecret to ByoHost ==
+mc -> bmc: receive reconcile event for <i>InstallerConfig</i>
+note right of bmc
+    If InstallerConfig.status.ready 
+end note
+bmc -> byoh: Patch <i>InstallationSecret</i> 
+
+== Install K8s bits ==
+note right of hagent
+    If Byohost.spec.InstallationSecret is available
+end note    
+hagent -> hagent: Decode, Parse & Execute installation script
+
+@enduml
