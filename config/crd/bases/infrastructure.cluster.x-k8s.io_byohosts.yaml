@@ -124,6 +124,19 @@ spec:
                   - type
                   type: object
                 type: array
+              hostinfo:
+                description: HostDetails returns the platform details of the host.
+                properties:
+                  architecture:
+                    description: The Architecture reported by the host.
+                    type: string
+                  osimage:
+                    description: OS Image reported by the host.
+                    type: string
+                  osname:
+                    description: The Operating System reported by the host.
+                    type: string
+                type: object
               machineRef:
                 description: MachineRef is an optional reference to a Cluster API
                   Machine using this host.

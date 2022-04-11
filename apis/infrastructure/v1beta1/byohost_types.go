@@ -32,6 +32,18 @@ type ByoHostSpec struct {
 	BootstrapSecret *corev1.ObjectReference `json:"bootstrapSecret,omitempty"`
 }
 
+// HostInfo is a set of details about the host platform.
+type HostInfo struct {
+	// The Operating System reported by the host.
+	OSName string `json:"osname,omitempty"`
+
+	// OS Image reported by the host.
+	OSImage string `json:"osimage,omitempty"`
+
+	// The Architecture reported by the host.
+	Architecture string `json:"architecture,omitempty"`
+}
+
 // ByoHostStatus defines the observed state of ByoHost
 type ByoHostStatus struct {
 	// MachineRef is an optional reference to a Cluster API Machine
@@ -42,6 +54,10 @@ type ByoHostStatus struct {
 	// Conditions defines current service state of the BYOMachine.
 	// +optional
 	Conditions clusterv1.Conditions `json:"conditions,omitempty"`
+
+	// HostDetails returns the platform details of the host.
+	// +optional
+	HostDetails HostInfo `json:"hostinfo,omitempty"`
 
 	// Network returns the network status for each of the host's configured
 	// network interfaces.
