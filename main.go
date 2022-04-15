@@ -151,6 +151,8 @@ func main() {
 
 	mgr.GetWebhookServer().Register("/validate-infrastructure-cluster-x-k8s-io-v1beta1-byohost", &webhook.Admission{Handler: &infrastructurev1beta1.ByoHostValidator{}})
 
+	mgr.GetWebhookServer().Register("/mutate-v1-pod", &webhook.Admission{Handler: &infrastructurev1beta1.BootstrapTokenValidator{Client: mgr.GetClient()}})
+
 	//+kubebuilder:scaffold:builder
 
 	if err := mgr.AddHealthzCheck("healthz", healthz.Ping); err != nil {
