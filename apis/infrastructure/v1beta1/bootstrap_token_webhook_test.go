@@ -44,7 +44,7 @@ var _ = Describe("BoostrapTokenWebhook", func() {
 		It("should deny secret creation is namespace is other than kube-system", func() {
 			err := k8sClientUncached.Create(ctx, bootstrapTokenSecret)
 			Expect(err).To(HaveOccurred())
-			Expect(err).To(MatchError("boostrap secrets can only be created in kube-system namespace and not default"))
+			Expect(err).To(MatchError("admission webhook \"vsecret.kb.io\" denied the request: boostrap secrets can only be created in kube-system namespace and not default"))
 		})
 	})
 })

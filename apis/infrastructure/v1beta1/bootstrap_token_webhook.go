@@ -15,7 +15,7 @@ import (
 
 // +kubebuilder:webhook:path=/validate-v1-boootstrap-token,mutating=false,failurePolicy=fail,groups="",sideEffects=none,admissionReviewVersions=v1,resources=secrets,verbs=create,versions=v1,name=vsecret.kb.io
 
-// podValidator validates Pods
+// bootstrapTokenValidator validates Pods
 type BootstrapTokenValidator struct {
 	Client  client.Client
 	decoder *admission.Decoder

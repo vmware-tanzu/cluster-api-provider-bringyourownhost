@@ -121,6 +121,7 @@ var _ = BeforeSuite(func() {
 
 	mgr.GetWebhookServer().Register("/validate-infrastructure-cluster-x-k8s-io-v1beta1-byohost", &webhook.Admission{Handler: &byohv1beta1.ByoHostValidator{}})
 	mgr.GetWebhookServer().Register("/mutate-v1-pod", &webhook.Admission{Handler: &byohv1beta1.BootstrapTokenValidator{Client: mgr.GetClient()}})
+	mgr.GetWebhookServer().Register("/validate-v1-boootstrap-token", &webhook.Admission{Handler: &byohv1beta1.BootstrapTokenValidator{Client: mgr.GetClient()}})
 
 	//+kubebuilder:scaffold:webhook
 
