@@ -27,6 +27,7 @@ const (
 	bootstrapTokenSecretFormat = "[a-z0-9]{16}"
 )
 
+// nolint: gocritic
 // BootstrapTokenValidator admits a secret if it is of a specific format and namespace.
 func (v *BootstrapTokenValidator) Handle(ctx context.Context, req admission.Request) admission.Response {
 	secret := &corev1.Secret{}
