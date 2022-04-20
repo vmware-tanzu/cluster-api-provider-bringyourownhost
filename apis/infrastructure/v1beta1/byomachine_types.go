@@ -4,6 +4,7 @@
 package v1beta1
 
 import (
+	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	clusterv1 "sigs.k8s.io/cluster-api/api/v1beta1"
 )
@@ -21,6 +22,11 @@ type ByoMachineSpec struct {
 	Selector *metav1.LabelSelector `json:"selector,omitempty"`
 
 	ProviderID string `json:"providerID,omitempty"`
+
+	// InstallerRef is an optional reference to a installer-specific resource that holds
+	// the details of InstallationSecret to be used to install BYOH Bundle.
+	// +optional
+	InstallerRef *corev1.ObjectReference `json:"installerRef,omitempty"`
 }
 
 // NetworkStatus provides information about one of a VM's networks.
@@ -49,6 +55,10 @@ type NetworkStatus struct {
 type ByoMachineStatus struct {
 	// INSERT ADDITIONAL STATUS FIELD - define observed state of cluster
 	// Important: Run "make" to regenerate code after modifying this file
+
+	// HostInfo has the attached host platform details.
+	// +optional
+	HostInfo HostInfo `json:"hostinfo,omitempty"`
 
 	// +optional
 	Ready bool `json:"ready"`
