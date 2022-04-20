@@ -82,11 +82,18 @@ More about development and contributing practices can be found in [`CONTRIBUTING
 
 ------
 
-## Compatibility with Cluster API and Kubernetes Versions
+## Compatibility with Cluster API
 
 - BYOH is currently compatible wth Cluster API v1beta1 (v1.0)
-- BYOH installer support is present and tested only for Kubernetes version `v1.22.3`. You may however use it to provision clusters of a different version by manually installing the Kubernetes components (use the `--skip-installation` flag when starting the agent)
 
+## Supported OS and Kubernetes versions
+| Operating System  | Architecture  | Kubernetes v1.21.* | Kubernetes v1.22.* | Kubernetes v1.23.* |
+| ------------------|---------------| :----------------: | :----------------: | :----------------: |
+| Ubuntu 20.04.*    | amd64         |        ✓           |        ✓           |        ✓           |
+
+**NOTE:**  The '*' in OS means that all Ubuntu 20.04 patches are supported.
+
+**NOTE:**  The '*' in the K8s version means that the K8s minor release is supported but it may happen that a BYOH bundle for a specific patch may not exist in the OCI registry.
 
 ## BYOH in News
 - [TGIK episode on BYOH](https://www.youtube.com/watch?v=Xwm5Ka27-Io&t=2838s)
