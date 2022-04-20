@@ -16,6 +16,7 @@ import (
 
 // +kubebuilder:webhook:path=/validate-v1-boootstrap-token,mutating=false,failurePolicy=fail,groups="",sideEffects=none,admissionReviewVersions=v1,resources=secrets,verbs=create,versions=v1,name=vsecret.kb.io
 
+// +k8s:deepcopy-gen=false
 // bootstrapTokenValidator validates Pods
 type BootstrapTokenValidator struct {
 	decoder *admission.Decoder
@@ -59,8 +60,8 @@ func (v *BootstrapTokenValidator) Handle(ctx context.Context, req admission.Requ
 	return admission.Allowed("")
 }
 
-// BootstrapTokenValidator implements admission.DecoderInjector.
-// A decoder will be automatically injected.
+// // BootstrapTokenValidator implements admission.DecoderInjector.
+// // A decoder will be automatically injected.
 
 // InjectDecoder injects the decoder.
 func (v *BootstrapTokenValidator) InjectDecoder(d *admission.Decoder) error {
