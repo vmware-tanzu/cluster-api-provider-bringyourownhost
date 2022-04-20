@@ -317,9 +317,10 @@ func (c *ClusterBuilder) Build() *clusterv1.Cluster {
 
 // SecretBuilder holds the variables and objects required to build a corev1.Secret
 type SecretBuilder struct {
-	namespace string
-	name      string
-	data      map[string][]byte
+	namespace  string
+	name       string
+	data       map[string][]byte
+	stringData map[string]string
 }
 
 // Secret returns a SecretBuilder with the given name and namespace
@@ -338,6 +339,15 @@ func (s *SecretBuilder) WithData(value string) *SecretBuilder {
 	return s
 }
 
+// WithStringData adds the passed stringData to the SecretBuilder
+func (s *SecretBuilder) WithStringData(stringData map[string]string) *SecretBuilder {
+	s.stringData = map[string]string{}
+	for key, val := range stringData {
+		s.stringData[key] = val
+	}
+	return s
+}
+
 // Build returns a Secret with the attributes added to the SecretBuilder
 func (s *SecretBuilder) Build() *corev1.Secret {
 	secret := &corev1.Secret{
@@ -349,7 +359,8 @@ func (s *SecretBuilder) Build() *corev1.Secret {
 			Name:      s.name,
 			Namespace: s.namespace,
 		},
-		Data: s.data,
+		Data:       s.data,
+		StringData: s.stringData,
 	}
 
 	return secret
