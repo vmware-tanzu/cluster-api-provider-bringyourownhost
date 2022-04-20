@@ -100,7 +100,7 @@ $ cat /etc/hosts
 
 If you are trying this on your own hosts, then for each host
 1. Download the [byoh-hostagent-linux-amd64](https://github.com/vmware-tanzu/cluster-api-provider-bringyourownhost/releases/download/v0.2.0/byoh-hostagent-linux-amd64)
-2. Copy the management cluster `kubeconfig` file as `management.conf`
+2. Copy the management cluster `kubeconfig` file as `management-cluster.conf`
 3. Start the agent 
 ```shell
 ./byoh-hostagent-linux-amd64 -kubeconfig management-cluster.conf > byoh-agent.log 2>&1 &
@@ -125,7 +125,8 @@ echo "Copy kubeconfig to host $i"
 docker cp ~/.kube/management-cluster.conf host$i:/management-cluster.conf
 done
 ```
-Start the host agent on each of the hosts and keep it running. Use the `--skip-installation` flag if you already have k8s components included in the docker image. This flag will skip k8s installation attempt on the host
+
+Start the host agent on each of the hosts and keep it running. Use the `--skip-installation` flag as we already have k8s components included in the docker image. This flag will skip k8s installation attempt on the host.
 
 ```shell
 export HOST_NAME=host1
@@ -163,18 +164,18 @@ docker network inspect kind | jq -r 'map(.Containers[].IPv4Address) []'
 Generate the cluster.yaml for workload cluster
  - for vms as byohosts
     ```shell
-    CONTROL_PLANE_ENDPOINT_IP=10.10.10.10 clusterctl generate cluster byoh-cluster \
+    BUNDLE_LOOKUP_TAG=v1.23.5 CONTROL_PLANE_ENDPOINT_IP=10.10.10.10 clusterctl generate cluster byoh-cluster \
       --infrastructure byoh \
-      --kubernetes-version v1.22.3 \
+      --kubernetes-version v1.23.5 \
       --control-plane-machine-count 1 \
       --worker-machine-count 1 > cluster.yaml
     ```
 
  - for docker hosts use the --flavor argument
     ```shell
-    CONTROL_PLANE_ENDPOINT_IP=10.10.10.10 clusterctl generate cluster byoh-cluster \
+    BUNDLE_LOOKUP_TAG=v1.23.5 CONTROL_PLANE_ENDPOINT_IP=10.10.10.10 clusterctl generate cluster byoh-cluster \
         --infrastructure byoh \
-        --kubernetes-version v1.22.3 \
+        --kubernetes-version v1.23.5 \
         --control-plane-machine-count 1 \
         --worker-machine-count 1 \
         --flavor docker > cluster.yaml
@@ -182,23 +183,8 @@ Generate the cluster.yaml for workload cluster
 
 Inspect and make any changes
 ```shell
-# for vms as byohosts
-$ BUNDLE_LOOKUP_TAG=v1.23.5 CONTROL_PLANE_ENDPOINT_IP=10.10.10.10 clusterctl generate cluster byoh-cluster \
-    --infrastructure byoh \
-    --kubernetes-version v1.23.5 \
-    --control-plane-machine-count 1 \
-    --worker-machine-count 1 > cluster.yaml
-
-# for docker hosts use the --flavor argument
-$ BUNDLE_LOOKUP_TAG=v1.23.5 CONTROL_PLANE_ENDPOINT_IP=10.10.10.10 clusterctl generate cluster byoh-cluster \
-    --infrastructure byoh \
-    --kubernetes-version v1.23.5 \
-    --control-plane-machine-count 1 \
-    --worker-machine-count 1 \
-    --flavor docker > cluster.yaml
-
-# Inspect and make any changes
-$ vi cluster.yaml
+vi cluster.yaml
+```
 
 Create the workload cluster in the current namespace on the management cluster
 ```shell
@@ -229,7 +215,6 @@ after that you should see your nodes turn into ready:
 $ KUBECONFIG=byoh-cluster.kubeconfig kubectl get nodes
 NAME                                                          STATUS     ROLES    AGE   VERSION
 byoh-cluster-8siai8                                           Ready      master   5m   v1.23.5
-
 ```
 
 
