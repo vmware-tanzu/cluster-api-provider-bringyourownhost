@@ -7,6 +7,7 @@ import (
 	"context"
 	"fmt"
 	"net/http"
+	"regexp"
 
 	corev1 "k8s.io/api/core/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -32,6 +33,14 @@ func (v *BootstrapTokenValidator) Handle(ctx context.Context, req admission.Requ
 
 	if secret.Namespace != "kube-system" {
 		return admission.Denied(fmt.Sprintf("boostrap secrets can only be created in kube-system namespace and not %s", secret.Namespace))
+	}
+
+	bootstrapTokenFormat := "[a-z0-9]{6}.[a-z0-9]{16}"
+	incomingBootstrapTokenSecret := string(secret.Data["token-id"]) + "." + string(secret.Data["token-secret"])
+	bootstrapTokenFormatMatch, err := regexp.MatchString(bootstrapTokenFormat, incomingBootstrapTokenSecret)
+
+	if !bootstrapTokenFormatMatch {
+		return admission.Denied(fmt.Sprintf("incorrect format for token-id and token-secret"))
 	}
 
 	return admission.Allowed("")
