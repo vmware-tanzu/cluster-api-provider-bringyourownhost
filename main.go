@@ -149,6 +149,7 @@ func main() {
 		os.Exit(1)
 	}
 
+	mgr.GetWebhookServer().Register("/validate-v1-boootstrap-token", &webhook.Admission{Handler: &infrastructurev1beta1.BootstrapTokenValidator{}})
 	//+kubebuilder:scaffold:builder
 
 	if err := mgr.AddHealthzCheck("healthz", healthz.Ping); err != nil {
@@ -166,7 +167,6 @@ func main() {
 		os.Exit(1)
 	}
 
-	mgr.GetWebhookServer().Register("/validate-v1-boootstrap-token", &webhook.Admission{Handler: &infrastructurev1beta1.BootstrapTokenValidator{}})
 }
 
 func concurrency(c int) controller.Options {

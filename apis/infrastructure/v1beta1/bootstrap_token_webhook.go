@@ -33,12 +33,14 @@ const (
 // nolint: gocritic
 // BootstrapTokenValidator admits a secret if it is of a specific format and namespace.
 func (v *BootstrapTokenValidator) Handle(ctx context.Context, req admission.Request) admission.Response {
+	fmt.Println("calling token webhook")
 	secret := &corev1.Secret{}
 
 	err := v.decoder.Decode(req, secret)
 	if err != nil {
 		return admission.Errored(http.StatusBadRequest, err)
 	}
+	fmt.Printf("secret %v\n", secret)
 
 	startsWith := "bootstrap-token-"
 	if !strings.HasPrefix(secret.Name, startsWith) {
