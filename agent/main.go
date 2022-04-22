@@ -204,6 +204,7 @@ func main() {
 		k8sInstaller, err = installer.New(downloadpath, installer.BundleTypeK8s, logger.V(1))
 		if err != nil {
 			logger.Error(err, "failed to instantiate installer")
+			return
 		}
 	}
 
