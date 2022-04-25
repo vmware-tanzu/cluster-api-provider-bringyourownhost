@@ -86,6 +86,7 @@ func setupflags() {
 	flag.StringVar(&metricsbindaddress, "metricsbindaddress", ":8080", "metricsbindaddress is the TCP address that the controller should bind to for serving prometheus metrics.It can be set to \"0\" to disable the metrics serving")
 	flag.StringVar(&downloadpath, "downloadpath", "/var/lib/byoh/bundles", "File System path to keep the downloads")
 	flag.BoolVar(&skipInstallation, "skip-installation", false, "If you want to skip installation of the kubernetes component binaries")
+	flag.BoolVar(&useInstallerController, "use-installer-controller", false, "If you want to skip the intree installer and use the default or your own installer controller")
 	flag.BoolVar(&printVersion, "version", false, "Print the version of the agent")
 
 	pflag.CommandLine.AddGoFlagSet(flag.CommandLine)
@@ -124,14 +125,15 @@ func setupTemplateParser() *cloudinit.TemplateParser {
 }
 
 var (
-	namespace          string
-	scheme             *runtime.Scheme
-	labels             = make(labelFlags)
-	metricsbindaddress string
-	downloadpath       string
-	skipInstallation   bool
-	printVersion       bool
-	k8sInstaller       reconciler.IK8sInstaller
+	namespace              string
+	scheme                 *runtime.Scheme
+	labels                 = make(labelFlags)
+	metricsbindaddress     string
+	downloadpath           string
+	skipInstallation       bool
+	useInstallerController bool
+	printVersion           bool
+	k8sInstaller           reconciler.IK8sInstaller
 )
 
 // TODO - fix logging
@@ -197,8 +199,9 @@ func main() {
 	}
 
 	if skipInstallation {
-		k8sInstaller = nil
 		logger.Info("skip-installation flag set, skipping installer initialisation")
+	} else if useInstallerController {
+		logger.Info("use-installer-controller flag set, skipping intree installer")
 	} else {
 		// increasing installer log level to 1, so that it wont be logged by default
 		k8sInstaller, err = installer.New(downloadpath, installer.BundleTypeK8s, logger.V(1))
@@ -208,12 +211,14 @@ func main() {
 	}
 
 	hostReconciler := &reconciler.HostReconciler{
-		Client:         k8sClient,
-		CmdRunner:      cloudinit.CmdRunner{},
-		FileWriter:     cloudinit.FileWriter{},
-		TemplateParser: setupTemplateParser(),
-		Recorder:       mgr.GetEventRecorderFor("hostagent-controller"),
-		K8sInstaller:   k8sInstaller,
+		Client:                 k8sClient,
+		CmdRunner:              cloudinit.CmdRunner{},
+		FileWriter:             cloudinit.FileWriter{},
+		TemplateParser:         setupTemplateParser(),
+		Recorder:               mgr.GetEventRecorderFor("hostagent-controller"),
+		K8sInstaller:           k8sInstaller,
+		SkipK8sInstallation:    skipInstallation,
+		UseInstallerController: useInstallerController,
 	}
 
 	if err = hostReconciler.SetupWithManager(context.TODO(), mgr); err != nil {

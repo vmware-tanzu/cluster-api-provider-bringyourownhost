@@ -45,12 +45,13 @@ var _ = Describe("Byohost Agent Tests", func() {
 		fakeInstaller = &reconcilerfakes.FakeIK8sInstaller{}
 		recorder = record.NewFakeRecorder(32)
 		hostReconciler = &reconciler.HostReconciler{
-			Client:         k8sClient,
-			CmdRunner:      fakeCommandRunner,
-			FileWriter:     fakeFileWriter,
-			TemplateParser: fakeTemplateParser,
-			Recorder:       recorder,
-			K8sInstaller:   nil,
+			Client:              k8sClient,
+			CmdRunner:           fakeCommandRunner,
+			FileWriter:          fakeFileWriter,
+			TemplateParser:      fakeTemplateParser,
+			Recorder:            recorder,
+			K8sInstaller:        nil,
+			SkipK8sInstallation: false,
 		}
 	})
 
@@ -177,6 +178,36 @@ runCmd:
 					Expect(patchHelper.Patch(ctx, byoHost, patch.WithStatusObservedGeneration{})).NotTo(HaveOccurred())
 				})
 
+				Context("When use-installer-controller is set", func() {
+					BeforeEach(func() {
+						hostReconciler.UseInstallerController = true
+					})
+
+					It("should set the Reason to InstallationSecretUnavailableReason", func() {
+						result, reconcilerErr := hostReconciler.Reconcile(ctx, controllerruntime.Request{
+							NamespacedName: byoHostLookupKey,
+						})
+						Expect(result).To(Equal(controllerruntime.Result{}))
+						Expect(reconcilerErr).ToNot(HaveOccurred())
+
+						updatedByoHost := &infrastructurev1beta1.ByoHost{}
+						err := k8sClient.Get(ctx, byoHostLookupKey, updatedByoHost)
+						Expect(err).ToNot(HaveOccurred())
+
+						byoHostRegistrationSucceeded := conditions.Get(updatedByoHost, infrastructurev1beta1.K8sNodeBootstrapSucceeded)
+						Expect(*byoHostRegistrationSucceeded).To(conditions.MatchCondition(clusterv1.Condition{
+							Type:     infrastructurev1beta1.K8sNodeBootstrapSucceeded,
+							Status:   corev1.ConditionFalse,
+							Reason:   infrastructurev1beta1.K8sInstallationSecretUnavailableReason,
+							Severity: clusterv1.ConditionSeverityInfo,
+						}))
+					})
+
+					AfterEach(func() {
+						hostReconciler.UseInstallerController = false
+					})
+				})
+
 				It("should set K8sComponentsInstallationSucceeded to false with Reason K8sComponentsInstallationFailedReason if Install fails", func() {
 					hostReconciler.K8sInstaller = fakeInstaller
 					fakeInstaller.InstallReturns(errors.New("k8s components install failed"))
@@ -259,6 +290,7 @@ runCmd:
 				})
 
 				It("should skip k8s installation if skip-installation is set", func() {
+					hostReconciler.SkipK8sInstallation = true
 					result, reconcilerErr := hostReconciler.Reconcile(ctx, controllerruntime.Request{
 						NamespacedName: byoHostLookupKey,
 					})
@@ -299,6 +331,7 @@ runCmd:
 
 				AfterEach(func() {
 					Expect(k8sClient.Delete(ctx, bootstrapSecret)).NotTo(HaveOccurred())
+					hostReconciler.SkipK8sInstallation = false
 				})
 			})
 
@@ -386,6 +419,7 @@ runCmd:
 			})
 
 			It("should skip uninstallation if skip-installation flag is set", func() {
+				hostReconciler.SkipK8sInstallation = true
 				result, reconcilerErr := hostReconciler.Reconcile(ctx, controllerruntime.Request{
 					NamespacedName: byoHostLookupKey,
 				})
@@ -455,6 +489,7 @@ runCmd:
 
 		AfterEach(func() {
 			Expect(k8sClient.Delete(ctx, byoHost)).NotTo(HaveOccurred())
+			hostReconciler.SkipK8sInstallation = false
 		})
 	})
 })
