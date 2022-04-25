@@ -12,6 +12,7 @@ import (
 
 	"github.com/go-logr/logr"
 	pflag "github.com/spf13/pflag"
+	"github.com/vmware-tanzu/cluster-api-provider-bringyourownhost/agent/authenticator"
 	"github.com/vmware-tanzu/cluster-api-provider-bringyourownhost/agent/cloudinit"
 	"github.com/vmware-tanzu/cluster-api-provider-bringyourownhost/agent/installer"
 	"github.com/vmware-tanzu/cluster-api-provider-bringyourownhost/agent/reconciler"
@@ -19,6 +20,7 @@ import (
 	"github.com/vmware-tanzu/cluster-api-provider-bringyourownhost/agent/version"
 	infrastructurev1beta1 "github.com/vmware-tanzu/cluster-api-provider-bringyourownhost/apis/infrastructure/v1beta1"
 	"github.com/vmware-tanzu/cluster-api-provider-bringyourownhost/feature"
+	certv1 "k8s.io/api/certificates/v1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/fields"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -151,6 +153,7 @@ func main() {
 	_ = infrastructurev1beta1.AddToScheme(scheme)
 	_ = corev1.AddToScheme(scheme)
 	_ = clusterv1.AddToScheme(scheme)
+	_ = certv1.AddToScheme(scheme)
 
 	logger := klogr.New()
 	ctrl.SetLogger(logger)
@@ -224,6 +227,28 @@ func main() {
 	if err = hostReconciler.SetupWithManager(context.TODO(), mgr); err != nil {
 		logger.Error(err, "unable to create controller")
 		return
+	}
+
+	// if secure-access is enabled create csr
+	if feature.Gates.Enabled(feature.SecureAccess) {
+		logger.Info("creating host csr")
+		byohCSR := registration.ByohCSR{K8sClient: k8sClient}
+		// TODO: persist this key across host-agent restarts
+		privKey, err := byohCSR.CreateCSR(hostName, namespace)
+		if err != nil {
+			logger.Error(err, "host csr creation failed")
+			return
+		}
+		// register Bootstrap Authenticator
+		bootstrapAuthenticator := &authenticator.BootstrapAuthenticator{
+			Client:     k8sClient,
+			HostName:   hostName,
+			PrivateKey: privKey,
+		}
+		if err = bootstrapAuthenticator.SetupWithManager(context.TODO(), mgr); err != nil {
+			logger.Error(err, "unable to create boostrap authenticator")
+			return
+		}
 	}
 
 	if err := mgr.Start(ctrl.SetupSignalHandler()); err != nil {
