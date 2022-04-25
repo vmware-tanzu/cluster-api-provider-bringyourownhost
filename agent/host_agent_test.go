@@ -584,7 +584,6 @@ var _ = Describe("Agent", func() {
 
 			runner = setupTestInfra(ctx, hostName, getKubeConfig().Name(), ns)
 			runner.CommandArgs["--use-installer-controller"] = ""
-			fmt.Printf("runner: %v\n", runner)
 
 			byoHostContainer, err = runner.SetupByoDockerHost()
 			Expect(err).NotTo(HaveOccurred())
@@ -610,7 +609,6 @@ var _ = Describe("Agent", func() {
 				_, err := os.Stat(agentLogFile)
 				if err == nil {
 					data, err := os.ReadFile(agentLogFile)
-					fmt.Printf("data: %v\n", string(data))
 					if err == nil && strings.Contains(string(data), "\"msg\"=\"use-installer-controller flag set, skipping intree installer\"") {
 						return true
 					}

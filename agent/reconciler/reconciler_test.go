@@ -233,6 +233,7 @@ runCmd:
 				})
 
 				It("should set K8sNodeBootstrapSucceeded to false with Reason CloudInitExecutionFailedReason if the bootstrap execution fails", func() {
+					hostReconciler.K8sInstaller = fakeInstaller
 					fakeCommandRunner.RunCmdReturns(errors.New("I failed"))
 
 					result, reconcilerErr := hostReconciler.Reconcile(ctx, controllerruntime.Request{
@@ -257,6 +258,7 @@ runCmd:
 					// assert events
 					events := eventutils.CollectEvents(recorder.Events)
 					Expect(events).Should(ConsistOf([]string{
+						"Normal k8sComponentInstalled Successfully Installed K8s components",
 						"Warning BootstrapK8sNodeFailed k8s Node Bootstrap failed",
 						// TODO: improve test to remove this event
 						"Warning ResetK8sNodeFailed k8s Node Reset failed",
@@ -264,6 +266,7 @@ runCmd:
 				})
 
 				It("should set K8sNodeBootstrapSucceeded to True if the boostrap execution succeeds", func() {
+					hostReconciler.K8sInstaller = fakeInstaller
 					result, reconcilerErr := hostReconciler.Reconcile(ctx, controllerruntime.Request{
 						NamespacedName: byoHostLookupKey,
 					})
@@ -286,6 +289,7 @@ runCmd:
 					// assert events
 					events := eventutils.CollectEvents(recorder.Events)
 					Expect(events).Should(ConsistOf([]string{
+						"Normal k8sComponentInstalled Successfully Installed K8s components",
 						"Normal BootstrapK8sNodeSucceeded k8s Node Bootstraped",
 					}))
 				})
@@ -316,6 +320,7 @@ runCmd:
 				})
 
 				It("should execute bootstrap secret only once ", func() {
+					hostReconciler.K8sInstaller = fakeInstaller
 					_, reconcilerErr := hostReconciler.Reconcile(ctx, controllerruntime.Request{
 						NamespacedName: byoHostLookupKey,
 					})
@@ -383,6 +388,7 @@ runCmd:
 			})
 
 			It("should reset the node and set the Reason to K8sNodeAbsentReason", func() {
+				hostReconciler.K8sInstaller = fakeInstaller
 				result, reconcilerErr := hostReconciler.Reconcile(ctx, controllerruntime.Request{
 					NamespacedName: byoHostLookupKey,
 				})
