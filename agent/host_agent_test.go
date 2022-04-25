@@ -559,10 +559,6 @@ var _ = Describe("Agent", func() {
 		AfterEach(func() {
 			// TODO: delete all CSR
 			// Expect(k8sClient.DeleteAllOf(ctx, &certv1.CertificateSigningRequest{}, client.MatchingFields{"metadata.name": fmt.Sprintf(registration.ByohCSRNameFormat, hostName)})).ShouldNot(HaveOccurred())
-			cleanup(runner.Context, byoHostContainer, ns, agentLogFile)
-		})
-
-		It("should enable the SecureAccess feature gate", func() {
 			defer output.Close()
 			f := e2e.WriteDockerLog(output, agentLogFile)
 			defer func() {
