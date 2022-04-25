@@ -5,9 +5,16 @@ package registration
 
 import (
 	"context"
+	"fmt"
+	"io/ioutil"
 	"net"
+	"os"
+	"regexp"
+	"runtime"
+	"strings"
 
 	"github.com/jackpal/gateway"
+	"github.com/pkg/errors"
 	infrastructurev1beta1 "github.com/vmware-tanzu/cluster-api-provider-bringyourownhost/apis/infrastructure/v1beta1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -80,6 +87,11 @@ func (hr *HostRegistrar) UpdateNetwork(ctx context.Context, byoHost *infrastruct
 
 	byoHost.Status.Network = hr.GetNetworkStatus()
 
+	klog.Info("Add Host Info")
+	if byoHost.Status.HostDetails, err = hr.getHostInfo(); err != nil {
+		return err
+	}
+
 	return helper.Patch(ctx, byoHost)
 }
 
@@ -128,4 +140,38 @@ func (hr *HostRegistrar) GetNetworkStatus() []infrastructurev1beta1.NetworkStatu
 		Network = append(Network, netStatus)
 	}
 	return Network
+}
+
+// getHostInfo gets the host platform details...
+func (hr *HostRegistrar) getHostInfo() (infrastructurev1beta1.HostInfo, error) {
+	hostInfo := infrastructurev1beta1.HostInfo{}
+
+	hostInfo.Architecture = runtime.GOARCH
+	hostInfo.OSName = runtime.GOOS
+
+	if distribution, err := getOperatingSystem(); err != nil {
+		return hostInfo, errors.Wrap(err, "failed to get host operating system image")
+	} else {
+		hostInfo.OSImage = distribution
+	}
+	return hostInfo, nil
+}
+
+// getOperatingSystem gets the name of the current operating system image.
+func getOperatingSystem() (string, error) {
+	rex := regexp.MustCompile("(PRETTY_NAME)=(.*)")
+
+	bytes, err := ioutil.ReadFile("/etc/os-release")
+	if err != nil && os.IsNotExist(err) {
+		// /usr/lib/os-release in stateless systems like Clear Linux
+		bytes, err = ioutil.ReadFile("/usr/lib/os-release")
+	}
+	if err != nil {
+		return "", fmt.Errorf("error opening file : %v", err)
+	}
+	line := rex.FindAllStringSubmatch(string(bytes), -1)
+	if len(line) > 0 {
+		return strings.Trim(line[0][2], "\""), nil
+	}
+	return "Linux", nil
 }
