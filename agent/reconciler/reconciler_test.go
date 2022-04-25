@@ -45,13 +45,14 @@ var _ = Describe("Byohost Agent Tests", func() {
 		fakeInstaller = &reconcilerfakes.FakeIK8sInstaller{}
 		recorder = record.NewFakeRecorder(32)
 		hostReconciler = &reconciler.HostReconciler{
-			Client:              k8sClient,
-			CmdRunner:           fakeCommandRunner,
-			FileWriter:          fakeFileWriter,
-			TemplateParser:      fakeTemplateParser,
-			Recorder:            recorder,
-			K8sInstaller:        nil,
-			SkipK8sInstallation: false,
+			Client:                 k8sClient,
+			CmdRunner:              fakeCommandRunner,
+			FileWriter:             fakeFileWriter,
+			TemplateParser:         fakeTemplateParser,
+			Recorder:               recorder,
+			K8sInstaller:           nil,
+			SkipK8sInstallation:    false,
+			UseInstallerController: false,
 		}
 	})
 
