@@ -139,7 +139,7 @@ var (
 )
 
 // TODO - fix logging
-
+// nolint: funlen
 func main() {
 	setupflags()
 	pflag.Parse()

@@ -15,7 +15,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 )
 
-var _ = Describe("Authenticator", func() {
+var _ = Describe("Bootstrap Authenticator", func() {
 
 	Context("When CSR is submitted", func() {
 		var (

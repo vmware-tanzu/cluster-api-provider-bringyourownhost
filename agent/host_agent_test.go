@@ -202,7 +202,7 @@ var _ = Describe("Agent", func() {
 			}).Should(Equal(map[string]string{"site": "apac"}))
 		})
 
-		It("should skip CSR creation", func() {
+		It("should skip CSR creation in default mode", func() {
 			defer output.Close()
 			f := e2e.WriteDockerLog(output, agentLogFile)
 			defer func() {
