@@ -1,0 +1,20 @@
+# permissions for end users to view k8sinstallerconfigs.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: k8sinstallerconfig-viewer-role
+rules:
+- apiGroups:
+  - infrastructure.cluster.x-k8s.io
+  resources:
+  - k8sinstallerconfigs
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - infrastructure.cluster.x-k8s.io
+  resources:
+  - k8sinstallerconfigs/status
+  verbs:
+  - get
