@@ -23,6 +23,7 @@ var _ = Describe("Help flag for host agent", func() {
 				"--metricsbindaddress string",
 				"--namespace string",
 				"--skip-installation",
+				"--use-installer-controller",
 				"--version",
 				"-v, --v",
 				"--feature-gates mapStringBool",

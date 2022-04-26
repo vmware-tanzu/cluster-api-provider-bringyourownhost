@@ -37,12 +37,14 @@ type IK8sInstaller interface {
 
 // HostReconciler encapsulates the data/logic needed to reconcile a ByoHost
 type HostReconciler struct {
-	Client         client.Client
-	CmdRunner      cloudinit.ICmdRunner
-	FileWriter     cloudinit.IFileWriter
-	TemplateParser cloudinit.ITemplateParser
-	Recorder       record.EventRecorder
-	K8sInstaller   IK8sInstaller
+	Client                 client.Client
+	CmdRunner              cloudinit.ICmdRunner
+	FileWriter             cloudinit.IFileWriter
+	TemplateParser         cloudinit.ITemplateParser
+	Recorder               record.EventRecorder
+	K8sInstaller           IK8sInstaller
+	SkipK8sInstallation    bool
+	UseInstallerController bool
 }
 
 const (
@@ -112,8 +114,14 @@ func (r *HostReconciler) reconcileNormal(ctx context.Context, byoHost *infrastru
 			return ctrl.Result{}, err
 		}
 
-		if r.K8sInstaller == nil {
+		if r.SkipK8sInstallation {
 			logger.Info("Skipping installation of k8s components")
+		} else if r.UseInstallerController {
+			if byoHost.Spec.InstallationSecret == nil {
+				logger.Info("K8sInstallationSecret not ready")
+				conditions.MarkFalse(byoHost, infrastructurev1beta1.K8sNodeBootstrapSucceeded, infrastructurev1beta1.K8sInstallationSecretUnavailableReason, clusterv1.ConditionSeverityInfo, "")
+				return ctrl.Result{}, nil
+			}
 		} else {
 			err = r.installK8sComponents(ctx, byoHost)
 			if err != nil {
@@ -205,7 +213,7 @@ func (r *HostReconciler) hostCleanUp(ctx context.Context, byoHost *infrastructur
 		if err != nil {
 			return err
 		}
-		if r.K8sInstaller == nil {
+		if r.SkipK8sInstallation {
 			logger.Info("Skipping uninstallation of k8s components")
 		} else {
 			err = r.uninstallk8sComponents(ctx, byoHost)
@@ -263,6 +271,7 @@ func (r *HostReconciler) installK8sComponents(ctx context.Context, byoHost *infr
 	bundleRegistry := byoHost.GetAnnotations()[infrastructurev1beta1.BundleLookupBaseRegistryAnnotation]
 	k8sVersion := byoHost.GetAnnotations()[infrastructurev1beta1.K8sVersionAnnotation]
 	byohBundleTag := byoHost.GetAnnotations()[infrastructurev1beta1.BundleLookupTagAnnotation]
+
 	err := r.K8sInstaller.Install(bundleRegistry, k8sVersion, byohBundleTag)
 	if err != nil {
 		return err

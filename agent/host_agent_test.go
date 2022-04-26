@@ -507,8 +507,9 @@ var _ = Describe("Agent", func() {
 
 		BeforeEach(func() {
 			ns = builder.Namespace("testns").Build()
-			Expect(k8sClient.Create(context.TODO(), ns)).NotTo(HaveOccurred(), "failed to create test namespace")
 			ctx = context.TODO()
+			Expect(k8sClient.Create(ctx, ns)).NotTo(HaveOccurred(), "failed to create test namespace")
+
 			var err error
 			hostName, err = os.Hostname()
 			Expect(err).NotTo(HaveOccurred())
@@ -560,5 +561,60 @@ var _ = Describe("Agent", func() {
 			}).Should(BeNil())
 		})
 
+	})
+
+	Context("When the host agent is executed with --use-installer-controller flag", func() {
+		var (
+			ns               *corev1.Namespace
+			ctx              context.Context
+			err              error
+			hostName         string
+			runner           *e2e.ByoHostRunner
+			byoHostContainer *container.ContainerCreateCreatedBody
+			output           dockertypes.HijackedResponse
+		)
+
+		BeforeEach(func() {
+			ns = builder.Namespace("testns").Build()
+			ctx = context.TODO()
+			Expect(k8sClient.Create(ctx, ns)).NotTo(HaveOccurred(), "failed to create test namespace")
+
+			hostName, err = os.Hostname()
+			Expect(err).NotTo(HaveOccurred())
+
+			runner = setupTestInfra(ctx, hostName, getKubeConfig().Name(), ns)
+			runner.CommandArgs["--use-installer-controller"] = ""
+
+			byoHostContainer, err = runner.SetupByoDockerHost()
+			Expect(err).NotTo(HaveOccurred())
+
+		})
+
+		AfterEach(func() {
+			cleanup(runner.Context, byoHostContainer, ns, agentLogFile)
+		})
+
+		It("should not call the intree installer", func() {
+			output, _, err = runner.ExecByoDockerHost(byoHostContainer)
+			Expect(err).NotTo(HaveOccurred())
+			defer output.Close()
+			f := e2e.WriteDockerLog(output, agentLogFile)
+			defer func() {
+				deferredErr := f.Close()
+				if deferredErr != nil {
+					e2e.Showf("error closing file %s: %v", agentLogFile, deferredErr)
+				}
+			}()
+			Eventually(func() (done bool) {
+				_, err := os.Stat(agentLogFile)
+				if err == nil {
+					data, err := os.ReadFile(agentLogFile)
+					if err == nil && strings.Contains(string(data), "\"msg\"=\"use-installer-controller flag set, skipping intree installer\"") {
+						return true
+					}
+				}
+				return false
+			}, 30).Should(BeTrue())
+		})
 	})
 })

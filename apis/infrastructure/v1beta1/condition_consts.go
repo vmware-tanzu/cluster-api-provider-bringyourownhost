@@ -26,6 +26,11 @@ const (
 	// This secret is available on byohost.Spec.BootstrapSecret field
 	BootstrapDataSecretUnavailableReason = "BootstrapDataSecretUnavailable"
 
+	// K8sInstallationSecretUnavailableReason indicates that the installer controller is yet to provide the
+	// secret that contains installation and uninstallation scripts
+	// This secret is available on byohost.Spec.K8sInstallationSecret field
+	K8sInstallationSecretUnavailableReason = "K8sInstallationSecretUnavailable"
+
 	// CleanK8sDirectoriesFailedReason indicates that clean k8s directories failed for some reason, please
 	// delete it manually for reconcile to proceed.
 	// The cleaned directories are /run/kubeadm and /etc/cni/net.d
