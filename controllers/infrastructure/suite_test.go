@@ -28,6 +28,7 @@ import (
 
 	//+kubebuilder:scaffold:imports
 
+	fakeclientset "k8s.io/client-go/kubernetes/fake"
 	clusterv1 "sigs.k8s.io/cluster-api/api/v1beta1"
 	bootstrapv1 "sigs.k8s.io/cluster-api/bootstrap/kubeadm/api/v1beta1"
 	"sigs.k8s.io/cluster-api/controllers/remote"
@@ -130,6 +131,12 @@ var _ = BeforeSuite(func() {
 		Client: k8sManager.GetClient(),
 	}
 	err = byoClusterReconciler.SetupWithManager(k8sManager)
+	Expect(err).NotTo(HaveOccurred())
+
+	byoAdmissionReconciler = &controllers.ByoAdmissionReconciler{
+		ClientSet: clientSetFake,
+	}
+	err = byoAdmissionReconciler.SetupWithManager(k8sManager)
 	Expect(err).NotTo(HaveOccurred())
 
 	go func() {
