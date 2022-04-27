@@ -141,7 +141,7 @@ export BUNDLE_LOOKUP_TAG=<bundle tag>
 From ```cluster-api-provider-bringyourownhost``` folder
 
 ```shell
-cat test/e2e/data/infrastructure-provider-byoh/v1beta1/cluster-template.yaml | envsubst | kubectl apply -f -
+cat test/e2e/data/infrastructure-provider-byoh/v1beta1/templates/docker/cluster-template.yaml | envsubst | kubectl apply -f -
 ```
 
 ```shell
