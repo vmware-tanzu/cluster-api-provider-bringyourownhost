@@ -12,7 +12,7 @@ import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	"github.com/vmware-tanzu/cluster-api-provider-bringyourownhost/agent/registration"
-	"github.com/vmware-tanzu/cluster-api-provider-bringyourownhost/test/utils/csr"
+	csrutils "github.com/vmware-tanzu/cluster-api-provider-bringyourownhost/test/utils/csr"
 	certv1 "k8s.io/api/certificates/v1"
 	"k8s.io/apimachinery/pkg/types"
 )
@@ -21,7 +21,6 @@ var _ = Describe("Registration", func() {
 	var (
 		ctx      = context.TODO()
 		byohcsr  = registration.ByohCSR{}
-		ns       = "default"
 		hostName = "test-host"
 	)
 	BeforeEach(func() {
@@ -29,27 +28,30 @@ var _ = Describe("Registration", func() {
 	})
 	Context("When csr does not already exist", func() {
 		It("should create csr", func() {
-			_, err := byohcsr.CreateCSR(hostName, ns)
+			_, err := byohcsr.CreateCSR(hostName)
 			Expect(err).NotTo(HaveOccurred())
 			ByohCSR := &certv1.CertificateSigningRequest{}
-			Expect(k8sClient.Get(ctx, types.NamespacedName{Name: hostName, Namespace: ns}, ByohCSR)).ToNot(HaveOccurred())
-
+			Expect(k8sClient.Get(ctx, types.NamespacedName{Name: fmt.Sprintf(registration.ByohCSRNameFormat, hostName)}, ByohCSR)).ToNot(HaveOccurred())
+			// Validate k8s CSr resource
+			Expect(ByohCSR.Spec.SignerName).Should(Equal(certv1.KubeAPIServerClientSignerName))
+			Expect(ByohCSR.Spec.Usages).Should(Equal([]certv1.KeyUsage{certv1.UsageClientAuth}))
+			Expect(*ByohCSR.Spec.ExpirationSeconds).Should(Equal(int32(registration.ExpirationSeconds)))
 			// Validate Certificate Request
 			pemData, _ := pem.Decode(ByohCSR.Spec.Request)
 			Expect(pemData).ToNot(Equal(nil))
 			csr, err := x509.ParseCertificateRequest(pemData.Bytes)
 			Expect(err).ToNot(HaveOccurred())
-			Expect(csr.Subject.CommonName).To(Equal(fmt.Sprintf("byoh:host:%s", hostName)))
+			Expect(csr.Subject.CommonName).To(Equal(fmt.Sprintf(registration.ByohCSRCNFormat, hostName)))
 			Expect(csr.Subject.Organization[0]).To(Equal("byoh:hosts"))
 		})
 	})
 
 	Context("When csr already exist", func() {
 		It("should not create csr", func() {
-			existingByohCSR, err := csr.CreateCSRResource(hostName, "test-org", ns)
+			existingByohCSR, err := csrutils.CreateCSRResource(hostName, "test-org")
 			Expect(err).NotTo(HaveOccurred())
 			Expect(k8sClient.Create(ctx, existingByohCSR)).NotTo(HaveOccurred())
-			_, err = byohcsr.CreateCSR(hostName, ns)
+			_, err = byohcsr.CreateCSR(hostName)
 			Expect(err).NotTo(HaveOccurred())
 
 			actualByohCSRs := &certv1.CertificateSigningRequestList{}

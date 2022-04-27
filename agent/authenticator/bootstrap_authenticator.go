@@ -6,6 +6,7 @@ package authenticator
 import (
 	"context"
 	"crypto/rsa"
+	"fmt"
 
 	certv1 "k8s.io/api/certificates/v1"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -14,6 +15,8 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 )
+
+const ByohCSRNameFormat = "byoh-csr-%s"
 
 // BootstrapAuthenticator encapsulates the data/logic needed to reconcile a hostCSR
 type BootstrapAuthenticator struct {
@@ -50,13 +53,13 @@ func (r *BootstrapAuthenticator) SetupWithManager(ctx context.Context, mgr manag
 		// watch only own created CSR
 		predicate.Funcs{
 			CreateFunc: func(e event.CreateEvent) bool {
-				return e.Object.GetName() == r.HostName
+				return e.Object.GetName() == fmt.Sprintf(ByohCSRNameFormat, r.HostName)
 			},
 			UpdateFunc: func(e event.UpdateEvent) bool {
-				return e.ObjectOld.GetName() == r.HostName
+				return e.ObjectOld.GetName() == fmt.Sprintf(ByohCSRNameFormat, r.HostName)
 			},
 			DeleteFunc: func(e event.DeleteEvent) bool {
-				return e.Object.GetName() == r.HostName
+				return e.Object.GetName() == fmt.Sprintf(ByohCSRNameFormat, r.HostName)
 			}}).
 		Complete(r)
 }

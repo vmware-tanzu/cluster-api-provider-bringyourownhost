@@ -23,39 +23,41 @@ import (
 
 const (
 	KeySize           = 2048
-	ExpirationSeconds = 86400
+	ExpirationSeconds = 86400 * 365
 	ByohCSROrg        = "byoh:hosts"
+	ByohCSRCNFormat   = "byoh:host:%s"
+	ByohCSRNameFormat = "byoh-csr-%s"
 )
 
 type ByohCSR struct {
 	K8sClient client.Client
 }
 
-func (bcsr *ByohCSR) CreateCSR(hostname, namespace string) (*rsa.PrivateKey, error) {
+func (bcsr *ByohCSR) CreateCSR(hostname string) (*rsa.PrivateKey, error) {
 	ctx := context.TODO()
 	privKey := &rsa.PrivateKey{}
 	byoCSR := &certv1.CertificateSigningRequest{}
-	err := bcsr.K8sClient.Get(ctx, types.NamespacedName{Name: hostname, Namespace: namespace}, byoCSR)
+	err := bcsr.K8sClient.Get(ctx, types.NamespacedName{Name: hostname}, byoCSR)
 	if err != nil {
 		if !apierrors.IsNotFound(err) {
-			klog.Errorf("error getting csr %s in namespace %s, err=%v", hostname, namespace, err)
+			klog.Errorf("error getting csr %s, err=%v", hostname, err)
 			return nil, err
 		}
-		privKey, byoCSR, err = bcsr.generateCSR(hostname, namespace)
+		privKey, byoCSR, err = bcsr.generateCSR(hostname)
 		if err != nil {
-			klog.Errorf("error generating csr %s in namespace %s, err=%v", hostname, namespace, err)
+			klog.Errorf("error generating csr %s, err=%v", hostname, err)
 			return nil, err
 		}
 		err = bcsr.K8sClient.Create(ctx, byoCSR)
 		if err != nil {
-			klog.Errorf("error creating host csr %s in namespace %s, err=%v", hostname, namespace, err)
+			klog.Errorf("error creating host csr %s, err=%v", hostname, err)
 			return nil, err
 		}
 	}
 	return privKey, nil
 }
 
-func (bcsr *ByohCSR) generateCSR(hostname, namespace string) (*rsa.PrivateKey, *certv1.CertificateSigningRequest, error) {
+func (bcsr *ByohCSR) generateCSR(hostname string) (*rsa.PrivateKey, *certv1.CertificateSigningRequest, error) {
 	// Generate Private Key
 	privateKey, err := rsa.GenerateKey(rand.Reader, KeySize)
 	if err != nil {
@@ -66,7 +68,7 @@ func (bcsr *ByohCSR) generateCSR(hostname, namespace string) (*rsa.PrivateKey, *
 	// TODO: validate template
 	csrTemplate := x509.CertificateRequest{
 		Subject: pkix.Name{
-			CommonName:   fmt.Sprintf("byoh:host:%s", hostname),
+			CommonName:   fmt.Sprintf(ByohCSRCNFormat, hostname),
 			Organization: []string{"byoh:hosts"},
 		},
 	}
@@ -79,8 +81,7 @@ func (bcsr *ByohCSR) generateCSR(hostname, namespace string) (*rsa.PrivateKey, *
 	// Create the CSR object
 	csr := &certv1.CertificateSigningRequest{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:        hostname,
-			Namespace:   namespace,
+			Name:        fmt.Sprintf(ByohCSRNameFormat, hostname),
 			Labels:      map[string]string{},
 			Annotations: map[string]string{},
 		},

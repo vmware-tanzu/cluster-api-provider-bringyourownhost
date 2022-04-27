@@ -234,7 +234,7 @@ func main() {
 		logger.Info("creating host csr")
 		byohCSR := registration.ByohCSR{K8sClient: k8sClient}
 		// TODO: persist this key across host-agent restarts
-		privKey, err := byohCSR.CreateCSR(hostName, namespace)
+		privKey, err := byohCSR.CreateCSR(hostName)
 		if err != nil {
 			logger.Error(err, "host csr creation failed")
 			return

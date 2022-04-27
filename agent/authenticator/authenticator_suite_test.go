@@ -31,17 +31,20 @@ func TestAuthenticator(t *testing.T) {
 }
 
 var (
-	ns                     = "test-ns"
 	hostName               = "test-host"
 	cfg                    *rest.Config
 	k8sClient              client.Client
 	k8sManager             manager.Manager
 	bootstrapAuthenticator *authenticator.BootstrapAuthenticator
 	testEnv                *envtest.Environment
+	ctx                    context.Context
+	cancel                 context.CancelFunc
 )
 
 var _ = BeforeSuite(func() {
 	logf.SetLogger(zap.New(zap.WriteTo(GinkgoWriter), zap.UseDevMode(true)))
+	ctx, cancel = context.WithCancel(context.TODO())
+
 	testEnv = &envtest.Environment{
 		CRDDirectoryPaths: []string{
 			filepath.Join("..", "..", "config", "crd", "bases"),
@@ -82,7 +85,7 @@ var _ = BeforeSuite(func() {
 	err = bootstrapAuthenticator.SetupWithManager(context.TODO(), k8sManager)
 	Expect(err).NotTo(HaveOccurred())
 	go func() {
-		err = k8sManager.GetCache().Start(context.TODO())
+		err = k8sManager.GetCache().Start(ctx)
 		Expect(err).NotTo(HaveOccurred())
 	}()
 
@@ -90,6 +93,7 @@ var _ = BeforeSuite(func() {
 })
 
 var _ = AfterSuite(func() {
+	cancel()
 	err := testEnv.Stop()
 	Expect(err).ToNot(HaveOccurred())
 })

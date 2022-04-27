@@ -54,6 +54,8 @@ var (
 	fakeBootstrapSecret   = "fakeBootstrapSecret"
 	k8sManager            ctrl.Manager
 	cfg                   *rest.Config
+	ctx                   context.Context
+	cancel                context.CancelFunc
 )
 
 func TestAPIs(t *testing.T) {
@@ -66,6 +68,7 @@ func TestAPIs(t *testing.T) {
 
 var _ = BeforeSuite(func() {
 	logf.SetLogger(zap.New(zap.WriteTo(GinkgoWriter), zap.UseDevMode(true)))
+	ctx, cancel = context.WithCancel(context.TODO())
 
 	By("bootstrapping test environment")
 	testEnv = &envtest.Environment{
@@ -130,7 +133,7 @@ var _ = BeforeSuite(func() {
 	Expect(err).NotTo(HaveOccurred())
 
 	go func() {
-		err = k8sManager.GetCache().Start(context.TODO())
+		err = k8sManager.GetCache().Start(ctx)
 		Expect(err).NotTo(HaveOccurred())
 	}()
 
@@ -139,6 +142,7 @@ var _ = BeforeSuite(func() {
 }, 60)
 
 var _ = AfterSuite(func() {
+	cancel()
 	By("tearing down the test environment")
 	err := testEnv.Stop()
 	Expect(err).NotTo(HaveOccurred())

@@ -603,22 +603,22 @@ var _ = Describe("Agent", func() {
 					e2e.Showf("error closing file %s: %v", agentLogFile, deferredErr)
 				}
 			}()
-			hostCSRLookupKey := types.NamespacedName{Name: hostName, Namespace: ns.Name}
-			createdHostCSR := &certv1.CertificateSigningRequest{}
+			byohCSRLookupKey := types.NamespacedName{Name: fmt.Sprintf("byoh-csr-%s", hostName)}
+			byohCSR := &certv1.CertificateSigningRequest{}
 
 			Eventually(func() string {
-				err := k8sClient.Get(context.TODO(), hostCSRLookupKey, createdHostCSR)
+				err := k8sClient.Get(context.TODO(), byohCSRLookupKey, byohCSR)
 				if err != nil {
 					return err.Error()
 				}
-				return createdHostCSR.Name
-			}, 10, 1).Should(Equal(hostName))
+				return byohCSR.Name
+			}, 10, 1).Should(Equal(fmt.Sprintf("byoh-csr-%s", hostName)))
 		})
 
 		It("should receive reconcile request for created CSR", func() {
-			CSR, err := csr.CreateCSRResource(hostName, "byoh:hosts", namespace)
+			byohCSR, err := csr.CreateCSRResource(fmt.Sprintf("byoh-csr-%s", hostName), "byoh:hosts")
 			Expect(err).NotTo(HaveOccurred())
-			Expect(k8sClient.Create(context.TODO(), CSR)).NotTo(HaveOccurred(), "failed to create csr")
+			Expect(k8sClient.Create(context.TODO(), byohCSR)).NotTo(HaveOccurred(), "failed to create csr")
 
 			defer output.Close()
 			f := e2e.WriteDockerLog(output, agentLogFile)
@@ -632,7 +632,7 @@ var _ = Describe("Agent", func() {
 				_, err := os.Stat(agentLogFile)
 				if err == nil {
 					data, err := os.ReadFile(agentLogFile)
-					if err == nil && strings.Contains(string(data), CSR.GetName()) {
+					if err == nil && strings.Contains(string(data), byohCSR.GetName()) {
 						return true
 					}
 				}
@@ -641,7 +641,7 @@ var _ = Describe("Agent", func() {
 		})
 
 		It("should not reconcile CSR resource that are not agent created", func() {
-			externalCSR, err := csr.CreateCSRResource("test-cn", "test-org", namespace)
+			externalCSR, err := csr.CreateCSRResource("test-cn", "test-org")
 			Expect(err).NotTo(HaveOccurred())
 			Expect(k8sClient.Create(context.TODO(), externalCSR)).NotTo(HaveOccurred(), "failed to create csr")
 

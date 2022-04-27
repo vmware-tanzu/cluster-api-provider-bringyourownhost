@@ -18,7 +18,7 @@ const (
 	KeySize = 2048
 )
 
-func CreateCSRResource(cn, org, namespace string) (*certv1.CertificateSigningRequest, error) {
+func CreateCSRResource(cn, org string) (*certv1.CertificateSigningRequest, error) {
 	privateKey, err := rsa.GenerateKey(rand.Reader, KeySize)
 	if err != nil {
 		return nil, err
@@ -39,7 +39,6 @@ func CreateCSRResource(cn, org, namespace string) (*certv1.CertificateSigningReq
 	CSR := &certv1.CertificateSigningRequest{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:        cn,
-			Namespace:   namespace,
 			Labels:      map[string]string{},
 			Annotations: map[string]string{},
 		},

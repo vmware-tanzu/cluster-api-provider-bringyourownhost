@@ -5,9 +5,11 @@ package authenticator_test
 
 import (
 	"context"
+	"fmt"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+	"github.com/vmware-tanzu/cluster-api-provider-bringyourownhost/agent/authenticator"
 	"github.com/vmware-tanzu/cluster-api-provider-bringyourownhost/test/utils/csr"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/kubectl/pkg/scheme"
@@ -28,16 +30,22 @@ var _ = Describe("Bootstrap Authenticator", func() {
 			k8sClientUncached, clientErr = client.New(cfg, client.Options{Scheme: scheme.Scheme})
 			Expect(clientErr).NotTo(HaveOccurred())
 
-			ByohCSR, err := csr.CreateCSRResource(hostName, "byoh:hosts", ns)
+			ByohCSR, err := csr.CreateCSRResource(fmt.Sprintf(authenticator.ByohCSRNameFormat, hostName), "byoh:hosts")
 			Expect(err).NotTo(HaveOccurred())
 			Expect(k8sClientUncached.Create(ctx, ByohCSR)).NotTo(HaveOccurred())
 			WaitForObjectsToBePopulatedInCache(ByohCSR)
 
 			_, err = bootstrapAuthenticator.Reconcile(ctx, reconcile.Request{
 				NamespacedName: types.NamespacedName{
-					Name:      hostName,
-					Namespace: ns}})
+					Name: fmt.Sprintf(authenticator.ByohCSRNameFormat, hostName)}})
 			Expect(err).NotTo(HaveOccurred())
+		})
+		It("should return error if CSR does not exist", func() {
+			ctx = context.Background()
+			_, err := bootstrapAuthenticator.Reconcile(ctx, reconcile.Request{
+				NamespacedName: types.NamespacedName{
+					Name: fmt.Sprintf(authenticator.ByohCSRNameFormat, "fake-host")}})
+			Expect(err.Error()).To(ContainSubstring("CertificateSigningRequest.certificates.k8s.io \"byoh-csr-fake-host\" not found"))
 		})
 	})
 })
