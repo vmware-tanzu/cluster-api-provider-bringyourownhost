@@ -38,6 +38,7 @@ func (r *ByoAdmissionReconciler) Reconcile(ctx context.Context, req ctrl.Request
 		}
 		return reconcile.Result{}, err
 	}
+
 	// Update the CSR.
 	csr.Status.Conditions = append(csr.Status.Conditions, certv1.CertificateSigningRequestCondition{
 		Type:   certv1.CertificateApproved,
@@ -60,7 +61,7 @@ func (r *ByoAdmissionReconciler) Reconcile(ctx context.Context, req ctrl.Request
 func (r *ByoAdmissionReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&certv1.CertificateSigningRequest{}).WithEventFilter(
-		// watch only BYOH created CSR
+		// watch only BYOH created CSRs
 		predicate.Funcs{
 			CreateFunc: func(e event.CreateEvent) bool {
 				return strings.HasPrefix(e.Object.GetName(), "byoh-csr")
