@@ -23,11 +23,16 @@ type ByoAdmissionReconciler struct {
 	ClientSet clientset.Interface
 }
 
+//+kubebuilder:rbac:groups=infrastructure.cluster.x-k8s.io,resources=byohosts,verbs=get;list;watch;create;update;patch;delete
+//+kubebuilder:rbac:groups=infrastructure.cluster.x-k8s.io,resources=byohosts/status,verbs=get;update;patch
+//+kubebuilder:rbac:groups=infrastructure.cluster.x-k8s.io,resources=byohosts/finalizers,verbs=update
+//+kubebuilder:rbac:groups=certificates.k8s.io,resources=certificatesigningrequests,verbs=create;get;watch
+
 // Reconcile continuosuly checks for CSRs and approves them
 func (r *ByoAdmissionReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 	var err error
 	logger := log.FromContext(ctx)
-	logger.Info("Reconcile request recieved", "object", req.NamespacedName)
+	logger.Info("Reconcile request received", "object", req.NamespacedName)
 
 	// Fetch the CSR from the api-server.
 	csr, err := r.ClientSet.CertificatesV1().CertificateSigningRequests().Get(ctx, req.NamespacedName.Name, metav1.GetOptions{})
