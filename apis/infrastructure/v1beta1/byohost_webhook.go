@@ -23,7 +23,6 @@ type ByohHostValidator struct {
 // nolint: gocritic
 // Handle handles all the requests for ByoHost resource
 func (v *ByohHostValidator) Handle(ctx context.Context, req admission.Request) admission.Response {
-
 	if req.Operation == v1.Delete {
 		byoHost := &ByoHost{}
 		err := v.decoder.DecodeRaw(req.OldObject, byoHost)
