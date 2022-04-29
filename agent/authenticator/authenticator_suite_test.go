@@ -31,6 +31,15 @@ func TestAuthenticator(t *testing.T) {
 }
 
 var (
+	hostName               = "test-host"
+	cfg                    *rest.Config
+	k8sClient              client.Client
+	k8sManager             manager.Manager
+	bootstrapAuthenticator *authenticator.BootstrapAuthenticator
+	testEnv                *envtest.Environment
+	ctx                    context.Context
+	cancel                 context.CancelFunc
+)
 
 var _ = BeforeSuite(func() {
 	logf.SetLogger(zap.New(zap.WriteTo(GinkgoWriter), zap.UseDevMode(true)))

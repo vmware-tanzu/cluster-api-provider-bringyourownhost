@@ -5,7 +5,6 @@ package controllers
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"strings"
 
@@ -41,7 +40,7 @@ func (r *ByoAdmissionReconciler) Reconcile(ctx context.Context, req ctrl.Request
 	if err != nil {
 		if apierrors.IsNotFound(err) {
 			logger.Error(err, "CertificateSigningRequest not found, won't reconcile")
-			return reconcile.Result{}, errors.New("CertificateSigningRequest not found")
+			return reconcile.Result{}, nil
 		}
 		return reconcile.Result{}, err
 	}

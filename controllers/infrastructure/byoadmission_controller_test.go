@@ -27,7 +27,7 @@ var _ = Describe("Controllers/ByoadmissionController", func() {
 		// Start recoincilation for a non-existing CSR
 		objectKey := types.NamespacedName{Name: defaultByoHostName}
 		_, err = byoAdmissionReconciler.Reconcile(ctx, reconcile.Request{NamespacedName: objectKey})
-		Expect(err).To(HaveOccurred())
+		Expect(err).To(BeNil())
 	})
 
 	Context("When a CSR request is made", func() {
@@ -50,7 +50,8 @@ var _ = Describe("Controllers/ByoadmissionController", func() {
 			Expect(err).ShouldNot(HaveOccurred())
 
 			// Fetch the updated CSR
-			updateByohCSR, err := clientSetFake.CertificatesV1().CertificateSigningRequests().Get(ctx, defaultByoHostName, v1.GetOptions{})
+			var updateByohCSR *certv1.CertificateSigningRequest
+			updateByohCSR, err = clientSetFake.CertificatesV1().CertificateSigningRequests().Get(ctx, defaultByoHostName, v1.GetOptions{})
 			Expect(err).ToNot(HaveOccurred())
 			Expect(updateByohCSR.Status.Conditions).Should(ContainElement(certv1.CertificateSigningRequestCondition{
 				Type:   certv1.CertificateApproved,
