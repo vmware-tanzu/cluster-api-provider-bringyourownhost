@@ -5,8 +5,7 @@ package controllers_test
 
 import (
 	"context"
-	"crypto/x509"
-	"encoding/pem"
+	"fmt"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -20,46 +19,79 @@ import (
 var _ = Describe("Controllers/ByoadmissionController", func() {
 	var (
 		ctx context.Context
+		err error
+		CSR *certv1.CertificateSigningRequest
 	)
 
-	BeforeEach(func() {
-		ctx = context.Background()
-	})
-	It("should approve the Byoh CSRs", func() {
-		// Create a dummy CSR request
-		CSR, err := csr.CreateCSRResource(defaultByoHostName, "byoh:hosts")
-		Expect(err).NotTo(HaveOccurred())
-		_, err = clientSetFake.CertificatesV1().CertificateSigningRequests().Create(ctx, CSR, v1.CreateOptions{})
-		Expect(err).ToNot(HaveOccurred())
-
-		// Start recoincilation
+	It("should return error for non-existent CSR", func() {
+		// Start recoincilation for a non-existing CSR
 		objectKey := types.NamespacedName{Name: defaultByoHostName}
 		_, err = byoAdmissionReconciler.Reconcile(ctx, reconcile.Request{NamespacedName: objectKey})
-		Expect(err).ShouldNot(HaveOccurred())
-
-		// Fetch the updated CSR
-		updateByohCSR, err := clientSetFake.CertificatesV1().CertificateSigningRequests().Get(ctx, defaultByoHostName, v1.GetOptions{})
-		Expect(err).ToNot(HaveOccurred())
-		Expect(updateByohCSR.Status.Conditions).Should(ContainElement(certv1.CertificateSigningRequestCondition{
-			Type:   certv1.CertificateApproved,
-			Reason: "Approved by ByoAdmission Controller",
-		}))
+		Expect(err).To(HaveOccurred())
 	})
 
-	It("CSR should have a proper name", func() {
-		CSR, err := csr.CreateCSRResource("byoh-csr-host1", "byoh:hosts")
-		Expect(err).NotTo(HaveOccurred())
-		_, err = clientSetFake.CertificatesV1().CertificateSigningRequests().Create(ctx, CSR, v1.CreateOptions{})
-		Expect(err).ToNot(HaveOccurred())
+	Context("When a CSR request is made", func() {
+		BeforeEach(func() {
+			ctx = context.Background()
 
-		// Validate Certificate Request and Certificate details
-		updateByohCSR, err := clientSetFake.CertificatesV1().CertificateSigningRequests().Get(ctx, "byoh-csr-host1", v1.GetOptions{})
-		Expect(err).ToNot(HaveOccurred())
-		Expect(updateByohCSR.Name).To(Equal("byoh-csr-host1"))
-		pemData, _ := pem.Decode(updateByohCSR.Spec.Request)
-		Expect(pemData).ToNot(Equal(nil))
-		csr, err := x509.ParseCertificateRequest(pemData.Bytes)
-		Expect(err).ToNot(HaveOccurred())
-		Expect(csr.Subject.Organization[0]).To(Equal("byoh:hosts"))
+			// Create a CSR resource for each test
+			CSR, err = csr.CreateCSRResource(defaultByoHostName, "byoh:hosts")
+			Expect(err).NotTo(HaveOccurred())
+		})
+
+		It("should approve the Byoh CSRs", func() {
+			// Create a dummy CSR request
+			_, err = clientSetFake.CertificatesV1().CertificateSigningRequests().Create(ctx, CSR, v1.CreateOptions{})
+			Expect(err).ToNot(HaveOccurred())
+
+			// Start recoincilation
+			objectKey := types.NamespacedName{Name: defaultByoHostName}
+			_, err = byoAdmissionReconciler.Reconcile(ctx, reconcile.Request{NamespacedName: objectKey})
+			Expect(err).ShouldNot(HaveOccurred())
+
+			// Fetch the updated CSR
+			updateByohCSR, err := clientSetFake.CertificatesV1().CertificateSigningRequests().Get(ctx, defaultByoHostName, v1.GetOptions{})
+			Expect(err).ToNot(HaveOccurred())
+			Expect(updateByohCSR.Status.Conditions).Should(ContainElement(certv1.CertificateSigningRequestCondition{
+				Type:   certv1.CertificateApproved,
+				Reason: "Approved by ByoAdmission Controller",
+			}))
+		})
+
+		It("should not approve a denied CSR", func() {
+			// Create a fake denied CSR request
+			CSR.Status.Conditions = append(CSR.Status.Conditions, certv1.CertificateSigningRequestCondition{
+				Type: certv1.CertificateDenied,
+			})
+
+			_, err = clientSetFake.CertificatesV1().CertificateSigningRequests().Create(ctx, CSR, v1.CreateOptions{})
+			Expect(err).ToNot(HaveOccurred())
+
+			// Start recoincilation
+			objectKey := types.NamespacedName{Name: defaultByoHostName}
+			_, err = byoAdmissionReconciler.Reconcile(ctx, reconcile.Request{NamespacedName: objectKey})
+			Expect(err).To(Equal(fmt.Errorf("CertificateSigningRequest %s is already denied", CSR.Name)))
+		})
+
+		It("should not approve an already approved CSR", func() {
+			// Create a fake approved CSR request
+			CSR.Status.Conditions = append(CSR.Status.Conditions, certv1.CertificateSigningRequestCondition{
+				Type: certv1.CertificateApproved,
+			})
+
+			_, err = clientSetFake.CertificatesV1().CertificateSigningRequests().Create(ctx, CSR, v1.CreateOptions{})
+			Expect(err).ToNot(HaveOccurred())
+
+			// Start recoincilation
+			objectKey := types.NamespacedName{Name: defaultByoHostName}
+			_, err = byoAdmissionReconciler.Reconcile(ctx, reconcile.Request{NamespacedName: objectKey})
+			Expect(err).To(Equal(fmt.Errorf("CertificateSigningRequest %s is already approved", CSR.Name)))
+		})
+
+		AfterEach(func() {
+			Expect(clientSetFake.CertificatesV1().CertificateSigningRequests().Delete(ctx, defaultByoHostName, v1.DeleteOptions{})).ShouldNot(HaveOccurred())
+		})
+
 	})
+
 })

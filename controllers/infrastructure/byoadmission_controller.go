@@ -5,6 +5,8 @@ package controllers
 
 import (
 	"context"
+	"errors"
+	"fmt"
 	"strings"
 
 	certv1 "k8s.io/api/certificates/v1"
@@ -34,23 +36,30 @@ func (r *ByoAdmissionReconciler) Reconcile(ctx context.Context, req ctrl.Request
 	logger := log.FromContext(ctx)
 	logger.Info("Reconcile request received", "object", req.NamespacedName)
 
-	// Fetch the CSR from the api-server.
+	// Fetch the CSR from the api-server
 	csr, err := r.ClientSet.CertificatesV1().CertificateSigningRequests().Get(ctx, req.NamespacedName.Name, metav1.GetOptions{})
 	if err != nil {
 		if apierrors.IsNotFound(err) {
 			logger.Error(err, "CertificateSigningRequest not found, won't reconcile")
-			return reconcile.Result{}, nil
+			return reconcile.Result{}, errors.New("CertificateSigningRequest not found")
 		}
 		return reconcile.Result{}, err
 	}
 
-	// Update the CSR.
+	// Check if the CSR is already approved or denied
+	if checkCSRCondition(csr.Status.Conditions, certv1.CertificateApproved) {
+		return ctrl.Result{}, fmt.Errorf("CertificateSigningRequest %s is already approved", csr.Name)
+	} else if checkCSRCondition(csr.Status.Conditions, certv1.CertificateDenied) {
+		return ctrl.Result{}, fmt.Errorf("CertificateSigningRequest %s is already denied", csr.Name)
+	}
+
+	// Update the CSR to the "Approved" condition
 	csr.Status.Conditions = append(csr.Status.Conditions, certv1.CertificateSigningRequestCondition{
 		Type:   certv1.CertificateApproved,
 		Reason: "Approved by ByoAdmission Controller",
 	})
 
-	// Approver the CSR.
+	// Approve the CSR
 	logger.Info("Approving CSR", "object", req.NamespacedName)
 	_, err = r.ClientSet.CertificatesV1().CertificateSigningRequests().UpdateApproval(ctx, csr.Name, csr, metav1.UpdateOptions{})
 	if err != nil {
@@ -60,6 +69,16 @@ func (r *ByoAdmissionReconciler) Reconcile(ctx context.Context, req ctrl.Request
 	logger.Info("CSR Approved", "object", req.NamespacedName)
 
 	return ctrl.Result{}, nil
+}
+
+// Check if the CSR has the given condition.
+func checkCSRCondition(conditions []certv1.CertificateSigningRequestCondition, conditionType certv1.RequestConditionType) bool {
+	for _, condition := range conditions {
+		if condition.Type == conditionType {
+			return true
+		}
+	}
+	return false
 }
 
 // SetupWithManager sets up the controller with the Manager.
@@ -73,9 +92,6 @@ func (r *ByoAdmissionReconciler) SetupWithManager(mgr ctrl.Manager) error {
 			},
 			UpdateFunc: func(e event.UpdateEvent) bool {
 				return strings.HasPrefix(e.ObjectOld.GetName(), "byoh-csr")
-			},
-			DeleteFunc: func(e event.DeleteEvent) bool {
-				return strings.HasPrefix(e.Object.GetName(), "byoh-csr")
 			}}).
 		Complete(r)
 }
