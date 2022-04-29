@@ -35,11 +35,12 @@ import (
 // http://onsi.github.io/ginkgo/ to learn more about Ginkgo.
 
 var (
-	cfg       *rest.Config
-	k8sClient client.Client
-	testEnv   *envtest.Environment
-	ctx       context.Context
-	cancel    context.CancelFunc
+	cfg               *rest.Config
+	k8sClient         client.Client
+	testUserK8sClient client.Client
+	testEnv           *envtest.Environment
+	ctx               context.Context
+	cancel            context.CancelFunc
 )
 
 func TestAPIs(t *testing.T) {
@@ -97,6 +98,15 @@ var _ = BeforeSuite(func() {
 		MetricsBindAddress: "0",
 	})
 	Expect(err).NotTo(HaveOccurred())
+	user, err := testEnv.ControlPlane.AddUser(envtest.User{
+		Name:   "test-user",
+		Groups: []string{"system:byoh"},
+	}, nil)
+	Expect(err).NotTo(HaveOccurred())
+
+	testUserK8sClient, err = client.New(user.Config(), client.Options{Scheme: scheme.Scheme})
+	Expect(err).NotTo(HaveOccurred())
+	Expect(k8sClient).NotTo(BeNil())
 
 	err = (&byohv1beta1.ByoCluster{}).SetupWebhookWithManager(mgr)
 	Expect(err).NotTo(HaveOccurred())
