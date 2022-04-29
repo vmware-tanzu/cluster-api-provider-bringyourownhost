@@ -1,4 +1,4 @@
-// Copyright 2021 VMware, Inc. All Rights Reserved.
+// Copyright 2022 VMware, Inc. All Rights Reserved.
 // SPDX-License-Identifier: Apache-2.0
 
 package authenticator_test
@@ -10,7 +10,7 @@ import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	"github.com/vmware-tanzu/cluster-api-provider-bringyourownhost/agent/authenticator"
-	"github.com/vmware-tanzu/cluster-api-provider-bringyourownhost/test/utils/csr"
+	"github.com/vmware-tanzu/cluster-api-provider-bringyourownhost/test/builder"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/kubectl/pkg/scheme"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -30,7 +30,7 @@ var _ = Describe("Bootstrap Authenticator", func() {
 			k8sClientUncached, clientErr = client.New(cfg, client.Options{Scheme: scheme.Scheme})
 			Expect(clientErr).NotTo(HaveOccurred())
 
-			ByohCSR, err := csr.CreateCSRResource(fmt.Sprintf(authenticator.ByohCSRNameFormat, hostName), "byoh:hosts")
+			ByohCSR, err := builder.CertificateSigningRequest(fmt.Sprintf(authenticator.ByohCSRNameFormat, hostName), fmt.Sprintf("byoh:host:%s", hostName), "byoh:hosts", 2048).Build()
 			Expect(err).NotTo(HaveOccurred())
 			Expect(k8sClientUncached.Create(ctx, ByohCSR)).NotTo(HaveOccurred())
 			WaitForObjectsToBePopulatedInCache(ByohCSR)

@@ -20,11 +20,11 @@ import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	"github.com/onsi/gomega/gexec"
+	"github.com/vmware-tanzu/cluster-api-provider-bringyourownhost/agent/registration"
 	"github.com/vmware-tanzu/cluster-api-provider-bringyourownhost/agent/version"
 	infrastructurev1beta1 "github.com/vmware-tanzu/cluster-api-provider-bringyourownhost/apis/infrastructure/v1beta1"
 	"github.com/vmware-tanzu/cluster-api-provider-bringyourownhost/test/builder"
 	"github.com/vmware-tanzu/cluster-api-provider-bringyourownhost/test/e2e"
-	"github.com/vmware-tanzu/cluster-api-provider-bringyourownhost/test/utils/csr"
 	certv1 "k8s.io/api/certificates/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -603,7 +603,7 @@ var _ = Describe("Agent", func() {
 					e2e.Showf("error closing file %s: %v", agentLogFile, deferredErr)
 				}
 			}()
-			byohCSRLookupKey := types.NamespacedName{Name: fmt.Sprintf("byoh-csr-%s", hostName)}
+			byohCSRLookupKey := types.NamespacedName{Name: fmt.Sprintf(registration.ByohCSRNameFormat, hostName)}
 			byohCSR := &certv1.CertificateSigningRequest{}
 
 			Eventually(func() string {
@@ -612,11 +612,11 @@ var _ = Describe("Agent", func() {
 					return err.Error()
 				}
 				return byohCSR.Name
-			}, 10, 1).Should(Equal(fmt.Sprintf("byoh-csr-%s", hostName)))
+			}, 10, 1).Should(Equal(fmt.Sprintf(registration.ByohCSRNameFormat, hostName)))
 		})
 
 		It("should receive reconcile request for created CSR", func() {
-			byohCSR, err := csr.CreateCSRResource(fmt.Sprintf("byoh-csr-%s", hostName), "byoh:hosts")
+			byohCSR, err := builder.CertificateSigningRequest(fmt.Sprintf(registration.ByohCSRNameFormat, hostName), fmt.Sprintf(registration.ByohCSRCNFormat, hostName), "byoh:hosts", 2048).Build()
 			Expect(err).NotTo(HaveOccurred())
 			Expect(k8sClient.Create(context.TODO(), byohCSR)).NotTo(HaveOccurred(), "failed to create csr")
 
@@ -641,7 +641,7 @@ var _ = Describe("Agent", func() {
 		})
 
 		It("should not reconcile CSR resource that are not agent created", func() {
-			externalCSR, err := csr.CreateCSRResource("test-cn", "test-org")
+			externalCSR, err := builder.CertificateSigningRequest("test-csr-name", "test-cn", "test-org", 2048).Build()
 			Expect(err).NotTo(HaveOccurred())
 			Expect(k8sClient.Create(context.TODO(), externalCSR)).NotTo(HaveOccurred(), "failed to create csr")
 

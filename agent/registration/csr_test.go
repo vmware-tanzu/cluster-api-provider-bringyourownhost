@@ -1,4 +1,4 @@
-// Copyright 2021 VMware, Inc. All Rights Reserved.
+// Copyright 2022 VMware, Inc. All Rights Reserved.
 // SPDX-License-Identifier: Apache-2.0
 
 package registration_test
@@ -12,7 +12,7 @@ import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	"github.com/vmware-tanzu/cluster-api-provider-bringyourownhost/agent/registration"
-	csrutils "github.com/vmware-tanzu/cluster-api-provider-bringyourownhost/test/utils/csr"
+	"github.com/vmware-tanzu/cluster-api-provider-bringyourownhost/test/builder"
 	certv1 "k8s.io/api/certificates/v1"
 	"k8s.io/apimachinery/pkg/types"
 )
@@ -48,7 +48,7 @@ var _ = Describe("Registration", func() {
 
 	Context("When csr already exist", func() {
 		It("should not create csr", func() {
-			existingByohCSR, err := csrutils.CreateCSRResource(hostName, "test-org")
+			existingByohCSR, err := builder.CertificateSigningRequest(hostName, hostName, "test-org", 2048).Build()
 			Expect(err).NotTo(HaveOccurred())
 			Expect(k8sClient.Create(ctx, existingByohCSR)).NotTo(HaveOccurred())
 			_, err = byohcsr.CreateCSR(hostName)
