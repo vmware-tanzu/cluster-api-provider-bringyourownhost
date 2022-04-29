@@ -557,7 +557,8 @@ var _ = Describe("Agent", func() {
 		})
 
 		AfterEach(func() {
-			Expect(k8sClient.DeleteAllOf(ctx, &certv1.CertificateSigningRequest{})).ShouldNot(HaveOccurred())
+			// TODO: delete all CSR
+			// Expect(k8sClient.DeleteAllOf(ctx, &certv1.CertificateSigningRequest{}, client.MatchingFields{"metadata.name": fmt.Sprintf(registration.ByohCSRNameFormat, hostName)})).ShouldNot(HaveOccurred())
 			cleanup(runner.Context, byoHostContainer, ns, agentLogFile)
 		})
 
@@ -618,6 +619,9 @@ var _ = Describe("Agent", func() {
 		It("should receive reconcile request for created CSR", func() {
 			byohCSR, err := builder.CertificateSigningRequest(fmt.Sprintf(registration.ByohCSRNameFormat, hostName), fmt.Sprintf(registration.ByohCSRCNFormat, hostName), "byoh:hosts", 2048).Build()
 			Expect(err).NotTo(HaveOccurred())
+			// TODO: to be moved to AfterEach
+			// nolint: errcheck
+			k8sClient.Delete(ctx, byohCSR)
 			Expect(k8sClient.Create(context.TODO(), byohCSR)).NotTo(HaveOccurred(), "failed to create csr")
 
 			defer output.Close()
