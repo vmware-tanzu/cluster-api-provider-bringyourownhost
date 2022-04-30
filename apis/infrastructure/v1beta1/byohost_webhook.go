@@ -33,17 +33,9 @@ func (v *ByohHostValidator) Handle(ctx context.Context, req admission.Request) a
 		if byoHost.Status.MachineRef != nil {
 			return admission.Denied("cannot delete ByoHost when MachineRef is assigned")
 		}
-	} else {
-		byoHost := &ByoHost{}
-		err := v.decoder.Decode(req, byoHost)
-		if err != nil {
-			return admission.Errored(http.StatusBadRequest, err)
-		}
-
-		if req.UserInfo.Username != "admin" && req.UserInfo.Username != byoHost.Name {
-			return admission.Denied("User does not have the permission to perform this operation")
-		}
 	}
+
+	// TODO: verify if req.UserInfo.Username has rbac permission to update the byohost
 
 	return admission.Allowed("")
 }
