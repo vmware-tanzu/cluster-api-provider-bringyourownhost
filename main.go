@@ -26,6 +26,7 @@ import (
 	byohcontrollers "github.com/vmware-tanzu/cluster-api-provider-bringyourownhost/controllers/infrastructure"
 
 	infrastructurev1beta1 "github.com/vmware-tanzu/cluster-api-provider-bringyourownhost/apis/infrastructure/v1beta1"
+
 	//+kubebuilder:scaffold:imports
 	clusterv1 "sigs.k8s.io/cluster-api/api/v1beta1"
 	"sigs.k8s.io/cluster-api/controllers/remote"
@@ -42,6 +43,8 @@ var (
 
 func init() {
 	klog.InitFlags(nil)
+	// clear any discard loggers set by dependecies
+	klog.ClearLogger()
 	utilruntime.Must(clientgoscheme.AddToScheme(scheme))
 
 	utilruntime.Must(infrastructurev1beta1.AddToScheme(scheme))
@@ -131,6 +134,11 @@ func main() {
 
 	if err = (&infrastructurev1beta1.ByoCluster{}).SetupWebhookWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create webhook", "webhook", "ByoCluster")
+		os.Exit(1)
+	}
+
+	if err = (&byohcontrollers.K8sInstallerConfigReconciler{Client: mgr.GetClient(), Scheme: mgr.GetScheme()}).SetupWithManager(mgr); err != nil {
+		setupLog.Error(err, "unable to create controller", "controller", "K8sInstallerConfig")
 		os.Exit(1)
 	}
 

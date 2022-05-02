@@ -6,10 +6,11 @@ package common
 import (
 	"bytes"
 	"compress/gzip"
-	"github.com/pkg/errors"
 	"io"
 	"os"
 	"path/filepath"
+
+	"github.com/pkg/errors"
 )
 
 // GzipData compresses the data bytes

@@ -8,6 +8,13 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
+const (
+	// K8sInstallerConfigFinalizer allows ReconcileK8sInstallerConfig to clean up secret
+	// resources associated with K8sInstallerConfig before removing it from the
+	// API Server.
+	K8sInstallerConfigFinalizer = "k8sinstallerconfig.infrastructure.cluster.x-k8s.io"
+)
+
 // K8sInstallerConfigSpec defines the desired state of K8sInstallerConfig
 type K8sInstallerConfigSpec struct {
 	// BundleRepo is the OCI registry from which the carvel imgpkg bundle will be downloaded

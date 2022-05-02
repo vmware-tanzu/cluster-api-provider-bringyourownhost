@@ -47,6 +47,7 @@ resources:
 - api:
     crdVersion: v1
     namespaced: true
+  controller: true
   domain: cluster.x-k8s.io
   group: infrastructure
   kind: K8sInstallerConfig
