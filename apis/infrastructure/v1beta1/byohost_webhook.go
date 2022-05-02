@@ -14,15 +14,15 @@ import (
 //+kubebuilder:webhook:path=/validate-infrastructure-cluster-x-k8s-io-v1beta1-byohost,mutating=false,failurePolicy=fail,sideEffects=None,groups=infrastructure.cluster.x-k8s.io,resources=byohosts,verbs=create;update;delete,versions=v1beta1,name=vbyohost.kb.io,admissionReviewVersions={v1,v1beta1}
 
 // +k8s:deepcopy-gen=false
-// ByohHostValidator validates ByoHosts
-type ByohHostValidator struct {
+// ByoHostValidator validates ByoHosts
+type ByoHostValidator struct {
 	//	Client  client.Client
 	decoder *admission.Decoder
 }
 
 // nolint: gocritic
 // Handle handles all the requests for ByoHost resource
-func (v *ByohHostValidator) Handle(ctx context.Context, req admission.Request) admission.Response {
+func (v *ByoHostValidator) Handle(ctx context.Context, req admission.Request) admission.Response {
 	if req.Operation == v1.Delete {
 		byoHost := &ByoHost{}
 		err := v.decoder.DecodeRaw(req.OldObject, byoHost)
@@ -41,7 +41,7 @@ func (v *ByohHostValidator) Handle(ctx context.Context, req admission.Request) a
 }
 
 // InjectDecoder injects the decoder.
-func (v *ByohHostValidator) InjectDecoder(d *admission.Decoder) error {
+func (v *ByoHostValidator) InjectDecoder(d *admission.Decoder) error {
 	v.decoder = d
 	return nil
 }

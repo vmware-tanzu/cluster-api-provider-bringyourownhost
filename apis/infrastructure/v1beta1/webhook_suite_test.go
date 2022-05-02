@@ -100,7 +100,7 @@ var _ = BeforeSuite(func() {
 	Expect(err).NotTo(HaveOccurred())
 	user, err := testEnv.ControlPlane.AddUser(envtest.User{
 		Name:   "test-user",
-		Groups: []string{"system:byoh"},
+		Groups: []string{"byoh:hosts"},
 	}, nil)
 	Expect(err).NotTo(HaveOccurred())
 
@@ -111,7 +111,7 @@ var _ = BeforeSuite(func() {
 	err = (&byohv1beta1.ByoCluster{}).SetupWebhookWithManager(mgr)
 	Expect(err).NotTo(HaveOccurred())
 
-	mgr.GetWebhookServer().Register("/validate-infrastructure-cluster-x-k8s-io-v1beta1-byohost", &webhook.Admission{Handler: &byohv1beta1.ByohHostValidator{}})
+	mgr.GetWebhookServer().Register("/validate-infrastructure-cluster-x-k8s-io-v1beta1-byohost", &webhook.Admission{Handler: &byohv1beta1.ByoHostValidator{}})
 
 	//+kubebuilder:scaffold:webhook
 
