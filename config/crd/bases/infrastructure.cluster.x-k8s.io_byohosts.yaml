@@ -18,7 +18,17 @@ spec:
     singular: byohost
   scope: Namespaced
   versions:
-  - name: v1beta1
+  - additionalPrinterColumns:
+    - jsonPath: .status.hostinfo.osname
+      name: OSName
+      type: string
+    - jsonPath: .status.hostinfo.osimage
+      name: OSImage
+      type: string
+    - jsonPath: .status.hostinfo.architecture
+      name: Arch
+      type: string
+    name: v1beta1
     schema:
       openAPIV3Schema:
         description: ByoHost is the Schema for the byohosts API

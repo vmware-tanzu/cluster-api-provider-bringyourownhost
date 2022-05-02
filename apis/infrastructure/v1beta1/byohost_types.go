@@ -68,6 +68,9 @@ type ByoHostStatus struct {
 //+kubebuilder:object:root=true
 //+kubebuilder:resource:path=byohosts,scope=Namespaced,shortName=byoh
 //+kubebuilder:subresource:status
+//+kubebuilder:printcolumn:name="OSName",type="string",JSONPath=`.status.hostinfo.osname`
+//+kubebuilder:printcolumn:name="OSImage",type="string",JSONPath=`.status.hostinfo.osimage`
+//+kubebuilder:printcolumn:name="Arch",type="string",JSONPath=`.status.hostinfo.architecture`
 
 // ByoHost is the Schema for the byohosts API
 type ByoHost struct {
