@@ -43,10 +43,12 @@ var _ = Describe("ByohostWebhook", func() {
 				Spec: byohv1beta1.ByoHostSpec{},
 			}
 			Expect(k8sClientUncached.Create(ctx, byoHost)).Should(Succeed())
+
 		})
 
 		It("should not reject the request", func() {
-			err := byoHost.ValidateDelete()
+
+			err := k8sClientUncached.Delete(ctx, byoHost)
 			Expect(err).To(BeNil())
 		})
 
@@ -78,12 +80,13 @@ var _ = Describe("ByohostWebhook", func() {
 					APIVersion: byoHost.APIVersion,
 				}
 				Expect(ph.Patch(ctx, byoHost, patch.WithStatusObservedGeneration{})).Should(Succeed())
+
 			})
 
 			It("should reject the request", func() {
-				err := byoHost.ValidateDelete()
+				err := k8sClientUncached.Delete(ctx, byoHost)
 				Expect(err).To(HaveOccurred())
-				Expect(err).To(MatchError("byohost.infrastructure.cluster.x-k8s.io \"" + byoHost.Name + "\" is forbidden: cannot delete ByoHost when MachineRef is assigned"))
+				Expect(err).To(MatchError("admission webhook \"vbyohost.kb.io\" denied the request: cannot delete ByoHost when MachineRef is assigned"))
 			})
 		})
 	})

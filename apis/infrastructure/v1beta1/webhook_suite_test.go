@@ -28,17 +28,19 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/envtest/printer"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
+	"sigs.k8s.io/controller-runtime/pkg/webhook"
 )
 
 // These tests use Ginkgo (BDD-style Go testing framework). Refer to
 // http://onsi.github.io/ginkgo/ to learn more about Ginkgo.
 
 var (
-	cfg       *rest.Config
-	k8sClient client.Client
-	testEnv   *envtest.Environment
-	ctx       context.Context
-	cancel    context.CancelFunc
+	cfg               *rest.Config
+	k8sClient         client.Client
+	testUserK8sClient client.Client
+	testEnv           *envtest.Environment
+	ctx               context.Context
+	cancel            context.CancelFunc
 )
 
 func TestAPIs(t *testing.T) {
@@ -96,12 +98,20 @@ var _ = BeforeSuite(func() {
 		MetricsBindAddress: "0",
 	})
 	Expect(err).NotTo(HaveOccurred())
-
-	err = (&byohv1beta1.ByoHost{}).SetupWebhookWithManager(mgr)
+	user, err := testEnv.ControlPlane.AddUser(envtest.User{
+		Name:   "test-user",
+		Groups: []string{"byoh:hosts"},
+	}, nil)
 	Expect(err).NotTo(HaveOccurred())
+
+	testUserK8sClient, err = client.New(user.Config(), client.Options{Scheme: scheme.Scheme})
+	Expect(err).NotTo(HaveOccurred())
+	Expect(k8sClient).NotTo(BeNil())
 
 	err = (&byohv1beta1.ByoCluster{}).SetupWebhookWithManager(mgr)
 	Expect(err).NotTo(HaveOccurred())
+
+	mgr.GetWebhookServer().Register("/validate-infrastructure-cluster-x-k8s-io-v1beta1-byohost", &webhook.Admission{Handler: &byohv1beta1.ByoHostValidator{}})
 
 	//+kubebuilder:scaffold:webhook
 
