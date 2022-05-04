@@ -4,7 +4,14 @@
 package builder
 
 import (
+	"crypto/rand"
+	"crypto/rsa"
+	"crypto/x509"
+	"crypto/x509/pkix"
+	"encoding/pem"
+
 	infrastructurev1beta1 "github.com/vmware-tanzu/cluster-api-provider-bringyourownhost/apis/infrastructure/v1beta1"
+	certv1 "k8s.io/api/certificates/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	clusterv1 "sigs.k8s.io/cluster-api/api/v1beta1"
@@ -408,4 +415,57 @@ func (n *NamespaceBuilder) Build() *corev1.Namespace {
 	}
 
 	return namespace
+}
+
+// CertificateSigningRequestBuilder hold the variables and objects required to build a certv1.CertificateSigningRequest
+type CertificateSigningRequestBuilder struct {
+	name        string
+	cn          string
+	org         string
+	privKeySize int
+}
+
+// CertificateSigningRequest returns a CertificateSigningRequestBuilder with the given name, cn, org and privKeySize
+func CertificateSigningRequest(name, cn, org string, privKeySize int) *CertificateSigningRequestBuilder {
+	return &CertificateSigningRequestBuilder{
+		name:        name,
+		cn:          cn,
+		org:         org,
+		privKeySize: privKeySize,
+	}
+}
+
+// Build returns a certv1.CertificateSigningRequest with the attributes added to the CertificateSigningRequestBuilder
+func (csrb *CertificateSigningRequestBuilder) Build() (*certv1.CertificateSigningRequest, error) {
+	privateKey, err := rsa.GenerateKey(rand.Reader, csrb.privKeySize)
+	if err != nil {
+		return nil, err
+	}
+	// Generate a new *x509.CertificateRequest template
+	csrTemplate := x509.CertificateRequest{
+		Subject: pkix.Name{
+			Organization: []string{csrb.org},
+			CommonName:   csrb.cn,
+		},
+	}
+
+	// Generate the CSR bytes
+	csrData, err := x509.CreateCertificateRequest(rand.Reader, &csrTemplate, privateKey)
+	if err != nil {
+		return nil, err
+	}
+
+	csr := &certv1.CertificateSigningRequest{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:        csrb.name,
+			Labels:      map[string]string{},
+			Annotations: map[string]string{},
+		},
+		Spec: certv1.CertificateSigningRequestSpec{
+			Request:    pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE REQUEST", Bytes: csrData}),
+			SignerName: certv1.KubeAPIServerClientSignerName,
+			Usages:     []certv1.KeyUsage{certv1.UsageClientAuth},
+		},
+	}
+	return csr, nil
 }

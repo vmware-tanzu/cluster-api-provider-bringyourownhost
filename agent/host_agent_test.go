@@ -12,6 +12,7 @@ import (
 	"os/exec"
 	"runtime"
 	"strings"
+	"time"
 
 	dockertypes "github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/container"
@@ -19,10 +20,12 @@ import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	"github.com/onsi/gomega/gexec"
+	"github.com/vmware-tanzu/cluster-api-provider-bringyourownhost/agent/registration"
 	"github.com/vmware-tanzu/cluster-api-provider-bringyourownhost/agent/version"
 	infrastructurev1beta1 "github.com/vmware-tanzu/cluster-api-provider-bringyourownhost/apis/infrastructure/v1beta1"
 	"github.com/vmware-tanzu/cluster-api-provider-bringyourownhost/test/builder"
 	"github.com/vmware-tanzu/cluster-api-provider-bringyourownhost/test/e2e"
+	certv1 "k8s.io/api/certificates/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
@@ -199,6 +202,28 @@ var _ = Describe("Agent", func() {
 			}).Should(Equal(map[string]string{"site": "apac"}))
 		})
 
+		It("should skip CSR creation in default mode", func() {
+			defer output.Close()
+			f := e2e.WriteDockerLog(output, agentLogFile)
+			defer func() {
+				deferredErr := f.Close()
+				if deferredErr != nil {
+					e2e.Showf("error closing file %s: %v", agentLogFile, deferredErr)
+				}
+			}()
+
+			Consistently(func() (done bool) {
+				_, err := os.Stat(agentLogFile)
+				if err == nil {
+					data, err := os.ReadFile(agentLogFile)
+					if err == nil && !strings.Contains(string(data), "creating host csr") {
+						return true
+					}
+				}
+				return false
+			}, time.Second*2).Should(BeTrue())
+		})
+
 		It("should fetch networkstatus when register the BYOHost with the management cluster", func() {
 			byoHostLookupKey := types.NamespacedName{Name: hostName, Namespace: ns.Name}
 			defaultIP, err := gateway.DiscoverInterface()
@@ -265,6 +290,7 @@ var _ = Describe("Agent", func() {
 				return false
 			}, 10, 1).ShouldNot(BeTrue())
 		})
+
 		Context("when machineref & bootstrap secret is assigned", func() {
 			var (
 				byoMachine *infrastructurev1beta1.ByoMachine
@@ -524,7 +550,15 @@ var _ = Describe("Agent", func() {
 			Expect(err).NotTo(HaveOccurred())
 		})
 
+		JustAfterEach(func() {
+			if CurrentGinkgoTestDescription().Failed {
+				e2e.ShowFileContent(agentLogFile)
+			}
+		})
+
 		AfterEach(func() {
+			// TODO: delete all CSR
+			// Expect(k8sClient.DeleteAllOf(ctx, &certv1.CertificateSigningRequest{}, client.MatchingFields{"metadata.name": fmt.Sprintf(registration.ByohCSRNameFormat, hostName)})).ShouldNot(HaveOccurred())
 			cleanup(runner.Context, byoHostContainer, ns, agentLogFile)
 		})
 
@@ -546,7 +580,7 @@ var _ = Describe("Agent", func() {
 					}
 				}
 				return false
-			}).Should(BeTrue())
+			}, time.Second*2).Should(BeTrue())
 		})
 
 		It("should not register the BYOHost with the management cluster", func() {
@@ -559,6 +593,81 @@ var _ = Describe("Agent", func() {
 				}
 				return createdByoHost
 			}).Should(BeNil())
+		})
+
+		It("should create BYOHost CSR in the management cluster", func() {
+			defer output.Close()
+			f := e2e.WriteDockerLog(output, agentLogFile)
+			defer func() {
+				deferredErr := f.Close()
+				if deferredErr != nil {
+					e2e.Showf("error closing file %s: %v", agentLogFile, deferredErr)
+				}
+			}()
+			byohCSRLookupKey := types.NamespacedName{Name: fmt.Sprintf(registration.ByohCSRNameFormat, hostName)}
+			byohCSR := &certv1.CertificateSigningRequest{}
+
+			Eventually(func() string {
+				err := k8sClient.Get(context.TODO(), byohCSRLookupKey, byohCSR)
+				if err != nil {
+					return err.Error()
+				}
+				return byohCSR.Name
+			}, 10, 1).Should(Equal(fmt.Sprintf(registration.ByohCSRNameFormat, hostName)))
+		})
+
+		It("should receive reconcile request for created CSR", func() {
+			byohCSR, err := builder.CertificateSigningRequest(fmt.Sprintf(registration.ByohCSRNameFormat, hostName), fmt.Sprintf(registration.ByohCSRCNFormat, hostName), "byoh:hosts", 2048).Build()
+			Expect(err).NotTo(HaveOccurred())
+			// TODO: to be moved to AfterEach
+			// nolint: errcheck
+			k8sClient.Delete(ctx, byohCSR)
+			Expect(k8sClient.Create(context.TODO(), byohCSR)).NotTo(HaveOccurred(), "failed to create csr")
+
+			defer output.Close()
+			f := e2e.WriteDockerLog(output, agentLogFile)
+			defer func() {
+				deferredErr := f.Close()
+				if deferredErr != nil {
+					e2e.Showf("error closing file %s: %v", agentLogFile, deferredErr)
+				}
+			}()
+			Eventually(func() (done bool) {
+				_, err := os.Stat(agentLogFile)
+				if err == nil {
+					data, err := os.ReadFile(agentLogFile)
+					if err == nil && strings.Contains(string(data), byohCSR.GetName()) {
+						return true
+					}
+				}
+				return false
+			}, 10, 1).Should(BeTrue())
+		})
+
+		It("should not reconcile CSR resource that are not agent created", func() {
+			externalCSR, err := builder.CertificateSigningRequest("test-csr-name", "test-cn", "test-org", 2048).Build()
+			Expect(err).NotTo(HaveOccurred())
+			Expect(k8sClient.Create(context.TODO(), externalCSR)).NotTo(HaveOccurred(), "failed to create csr")
+
+			defer output.Close()
+
+			f := e2e.WriteDockerLog(output, agentLogFile)
+			defer func() {
+				deferredErr := f.Close()
+				if deferredErr != nil {
+					e2e.Showf("error closing file %s: %v", agentLogFile, deferredErr)
+				}
+			}()
+			Consistently(func() (done bool) {
+				_, err := os.Stat(agentLogFile)
+				if err == nil {
+					data, err := os.ReadFile(agentLogFile)
+					if err == nil && strings.Contains(string(data), externalCSR.GetName()) {
+						return true
+					}
+				}
+				return false
+			}, 10, 1).ShouldNot(BeTrue())
 		})
 
 	})
