@@ -74,11 +74,11 @@ func (hr *HostRegistrar) Register(hostName, namespace string, hostLabels map[str
 	}
 
 	// run it at startup or reboot
-	return hr.UpdateNetwork(ctx, byoHost)
+	return hr.UpdateHost(ctx, byoHost)
 }
 
-// UpdateNetwork updates the network interface status for the host
-func (hr *HostRegistrar) UpdateNetwork(ctx context.Context, byoHost *infrastructurev1beta1.ByoHost) error {
+// UpdateHost updates the network interface and host platform details status for the host
+func (hr *HostRegistrar) UpdateHost(ctx context.Context, byoHost *infrastructurev1beta1.ByoHost) error {
 	klog.Info("Add Network Info")
 	helper, err := patch.NewHelper(byoHost, hr.K8sClient)
 	if err != nil {
@@ -87,7 +87,7 @@ func (hr *HostRegistrar) UpdateNetwork(ctx context.Context, byoHost *infrastruct
 
 	byoHost.Status.Network = hr.GetNetworkStatus()
 
-	klog.Info("Add Host Info")
+	klog.Info("Attach Host Platform details")
 	if byoHost.Status.HostDetails, err = hr.getHostInfo(); err != nil {
 		return err
 	}
