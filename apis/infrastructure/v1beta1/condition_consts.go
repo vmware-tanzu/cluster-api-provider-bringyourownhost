@@ -71,6 +71,10 @@ const (
 
 	// BYOHostsUnavailableReason indicates that no byohosts are available in the capacity pool
 	BYOHostsUnavailableReason = "BYOHostsUnavailable"
+
+	// InstallationSecretNotAvailableReason indicates that the installation secret is not yet
+	// generated for a given BYOMachine
+	InstallationSecretNotAvailableReason = "InstallationSecretNotAvailable"
 )
 
 // Reasons common to all Byo Resources
