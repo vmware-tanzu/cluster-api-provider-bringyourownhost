@@ -9,7 +9,7 @@ import (
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-	"github.com/vmware-tanzu/cluster-api-provider-bringyourownhost/test/utils/csr"
+	"github.com/vmware-tanzu/cluster-api-provider-bringyourownhost/test/builder"
 	certv1 "k8s.io/api/certificates/v1"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
@@ -24,27 +24,27 @@ var _ = Describe("Controllers/ByoadmissionController", func() {
 	)
 
 	It("should return error for non-existent CSR", func() {
-		// Start recoincilation for a non-existing CSR
+		// Call Reconcile method for a non-existing CSR
 		objectKey := types.NamespacedName{Name: defaultByoHostName}
 		_, err = byoAdmissionReconciler.Reconcile(ctx, reconcile.Request{NamespacedName: objectKey})
 		Expect(err).To(BeNil())
 	})
 
-	Context("When a CSR request is made", func() {
+	Context("When a CSR is created", func() {
 		BeforeEach(func() {
 			ctx = context.Background()
 
 			// Create a CSR resource for each test
-			CSR, err = csr.CreateCSRResource(defaultByoHostName, "byoh:hosts")
+			CSR, err = builder.CertificateSigningRequest(defaultByoHostName, "test-cn", "test-org", 2048).Build()
 			Expect(err).NotTo(HaveOccurred())
 		})
 
-		It("should approve the Byoh CSRs", func() {
+		It("should approve the Byoh CSR", func() {
 			// Create a dummy CSR request
 			_, err = clientSetFake.CertificatesV1().CertificateSigningRequests().Create(ctx, CSR, v1.CreateOptions{})
 			Expect(err).ToNot(HaveOccurred())
 
-			// Start recoincilation
+			// Call Reconcile method
 			objectKey := types.NamespacedName{Name: defaultByoHostName}
 			_, err = byoAdmissionReconciler.Reconcile(ctx, reconcile.Request{NamespacedName: objectKey})
 			Expect(err).ShouldNot(HaveOccurred())
@@ -68,7 +68,7 @@ var _ = Describe("Controllers/ByoadmissionController", func() {
 			_, err = clientSetFake.CertificatesV1().CertificateSigningRequests().Create(ctx, CSR, v1.CreateOptions{})
 			Expect(err).ToNot(HaveOccurred())
 
-			// Start recoincilation
+			// Call Reconcile method
 			objectKey := types.NamespacedName{Name: defaultByoHostName}
 			_, err = byoAdmissionReconciler.Reconcile(ctx, reconcile.Request{NamespacedName: objectKey})
 			Expect(err).To(Equal(fmt.Errorf("CertificateSigningRequest %s is already denied", CSR.Name)))
@@ -83,7 +83,7 @@ var _ = Describe("Controllers/ByoadmissionController", func() {
 			_, err = clientSetFake.CertificatesV1().CertificateSigningRequests().Create(ctx, CSR, v1.CreateOptions{})
 			Expect(err).ToNot(HaveOccurred())
 
-			// Start recoincilation
+			// Call Reconcile method
 			objectKey := types.NamespacedName{Name: defaultByoHostName}
 			_, err = byoAdmissionReconciler.Reconcile(ctx, reconcile.Request{NamespacedName: objectKey})
 			Expect(err).To(Equal(fmt.Errorf("CertificateSigningRequest %s is already approved", CSR.Name)))

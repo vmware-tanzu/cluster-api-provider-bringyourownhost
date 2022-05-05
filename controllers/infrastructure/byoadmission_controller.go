@@ -87,10 +87,10 @@ func (r *ByoAdmissionReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		// watch only BYOH created CSRs
 		predicate.Funcs{
 			CreateFunc: func(e event.CreateEvent) bool {
-				return strings.HasPrefix(e.Object.GetName(), "byoh-csr")
+				return strings.HasPrefix(e.Object.GetName(), "byoh-csr-")
 			},
 			UpdateFunc: func(e event.UpdateEvent) bool {
-				return strings.HasPrefix(e.ObjectOld.GetName(), "byoh-csr")
+				return strings.HasPrefix(e.ObjectOld.GetName(), "byoh-csr-")
 			}}).
 		Complete(r)
 }
