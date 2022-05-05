@@ -142,14 +142,14 @@ func (hr *HostRegistrar) GetNetworkStatus() []infrastructurev1beta1.NetworkStatu
 	return Network
 }
 
-// getHostInfo gets the host platform details...
+// getHostInfo gets the host platform details.
 func (hr *HostRegistrar) getHostInfo() (infrastructurev1beta1.HostInfo, error) {
 	hostInfo := infrastructurev1beta1.HostInfo{}
 
 	hostInfo.Architecture = runtime.GOARCH
 	hostInfo.OSName = runtime.GOOS
 
-	if distribution, err := getOperatingSystem(); err != nil {
+	if distribution, err := getOperatingSystem(ioutil.ReadFile); err != nil {
 		return hostInfo, errors.Wrap(err, "failed to get host operating system image")
 	} else {
 		hostInfo.OSImage = distribution
@@ -158,13 +158,13 @@ func (hr *HostRegistrar) getHostInfo() (infrastructurev1beta1.HostInfo, error) {
 }
 
 // getOperatingSystem gets the name of the current operating system image.
-func getOperatingSystem() (string, error) {
+func getOperatingSystem(f func(string) ([]byte, error)) (string, error) {
 	rex := regexp.MustCompile("(PRETTY_NAME)=(.*)")
 
-	bytes, err := ioutil.ReadFile("/etc/os-release")
+	bytes, err := f("/etc/os-release")
 	if err != nil && os.IsNotExist(err) {
 		// /usr/lib/os-release in stateless systems like Clear Linux
-		bytes, err = ioutil.ReadFile("/usr/lib/os-release")
+		bytes, err = f("/usr/lib/os-release")
 	}
 	if err != nil {
 		return "", fmt.Errorf("error opening file : %v", err)
@@ -173,5 +173,5 @@ func getOperatingSystem() (string, error) {
 	if len(line) > 0 {
 		return strings.Trim(line[0][2], "\""), nil
 	}
-	return "Linux", nil
+	return "Unknown", nil
 }
