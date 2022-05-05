@@ -27,6 +27,7 @@ At the minimum,
 ### Raising a PR
 * all PRs should be raised against the main branch of [cluster-api-provider-bringyourownhost](https://github.com/vmware-tanzu/cluster-api-provider-bringyourownhost)
 * all code changes should be accompanied with corresponding unit / integration tests (if for some reason, the code is not unit / integration testable, add enough justification in the PR. Although, this almost should never be the case.)
+* all the commits made in the PR should be squashed into one single commit before the final merge by the PR author themselves such that it would be easier to track the commits in Git history.
 
 ### Contributor License Agreement
 All contributors to this project must have a signed Contributor License
@@ -50,7 +51,7 @@ We encourage code reviews by non-maintainers as well. If you are lacking context
 
 Look for things like
 * Is the code well-designed? Is it consistent with Cluster API contract?
-* Are there ways to write simpler code? If so, please suggest
+* Are there ways to write simpler code? If so, please suggest.
 * Is the code well covered by unit / integration / e2e tests?
 * Does the naming convention (variables / functions / types / methods) make sense?
-* Are there enough comments? Note that comments should explain why rather than what
+* Are there enough comments? Note that comments should explain why rather than what.
