@@ -39,28 +39,29 @@ import (
 // http://onsi.github.io/ginkgo/ to learn more about Ginkgo.
 
 var (
-	testEnv                       *envtest.Environment
-	clientFake                    client.Client
-	clientSetFake                 = fakeclientset.NewSimpleClientset()
-	reconciler                    *controllers.ByoMachineReconciler
-	byoClusterReconciler          *controllers.ByoClusterReconciler
-	byoAdmissionReconciler        *controllers.ByoAdmissionReconciler
-	k8sInstallerConfigReconciler  *controllers.K8sInstallerConfigReconciler
-	recorder                      *record.FakeRecorder
-	byoCluster                    *infrastructurev1beta1.ByoCluster
-	capiCluster                   *clusterv1.Cluster
-	defaultClusterName            = "my-cluster"
-	defaultNodeName               = "my-host"
-	defaultByoHostName            = "my-host"
-	defaultMachineName            = "my-machine"
-	defaultByoMachineName         = "my-byomachine"
-	defaultK8sInstallerConfigName = "my-k8sinstallerconfig"
-	defaultNamespace              = "default"
-	fakeBootstrapSecret           = "fakeBootstrapSecret"
-	k8sManager                    ctrl.Manager
-	cfg                           *rest.Config
-	ctx                           context.Context
-	cancel                        context.CancelFunc
+	testEnv                               *envtest.Environment
+	clientFake                            client.Client
+	clientSetFake                         = fakeclientset.NewSimpleClientset()
+	reconciler                            *controllers.ByoMachineReconciler
+	byoClusterReconciler                  *controllers.ByoClusterReconciler
+	byoAdmissionReconciler                *controllers.ByoAdmissionReconciler
+	k8sInstallerConfigReconciler          *controllers.K8sInstallerConfigReconciler
+	recorder                              *record.FakeRecorder
+	byoCluster                            *infrastructurev1beta1.ByoCluster
+	capiCluster                           *clusterv1.Cluster
+	defaultClusterName                    = "my-cluster"
+	defaultNodeName                       = "my-host"
+	defaultByoHostName                    = "my-host"
+	defaultMachineName                    = "my-machine"
+	defaultByoMachineName                 = "my-byomachine"
+	defaultK8sInstallerConfigName         = "my-k8sinstallerconfig"
+	defaultK8sInstallerConfigTemplateName = "my-installer-template"
+	defaultNamespace                      = "default"
+	fakeBootstrapSecret                   = "fakeBootstrapSecret"
+	k8sManager                            ctrl.Manager
+	cfg                                   *rest.Config
+	ctx                                   context.Context
+	cancel                                context.CancelFunc
 )
 
 func TestAPIs(t *testing.T) {

@@ -12,11 +12,13 @@ import (
 	"strings"
 	"time"
 
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/selection"
 	"k8s.io/client-go/tools/record"
+	"sigs.k8s.io/cluster-api/controllers/external"
 	"sigs.k8s.io/cluster-api/controllers/remote"
 	"sigs.k8s.io/cluster-api/util"
 	"sigs.k8s.io/cluster-api/util/conditions"
@@ -47,6 +49,8 @@ const (
 	ProviderIDSuffixLength = 6
 	// RequeueForbyohost requeue delay for byoh host
 	RequeueForbyohost = 10 * time.Second
+	// RequeueInstallerConfigTime requeue delay for installer config
+	RequeueInstallerConfigTime = 10 * time.Second
 )
 
 // ByoMachineReconciler reconciles a ByoMachine object
@@ -62,6 +66,7 @@ type ByoMachineReconciler struct {
 //+kubebuilder:rbac:groups=infrastructure.cluster.x-k8s.io,resources=byomachines/finalizers,verbs=update
 // +kubebuilder:rbac:groups=infrastructure.cluster.x-k8s.io,resources=byohosts,verbs=get;list;watch
 // +kubebuilder:rbac:groups=infrastructure.cluster.x-k8s.io,resources=byohosts/status,verbs=get;update;patch
+// +kubebuilder:rbac:groups=infrastructure.cluster.x-k8s.io,resources=*,verbs=get;list;watch;create;update;patch;delete
 // +kubebuilder:rbac:groups=cluster.x-k8s.io,resources=clusters;machines,verbs=get;list;watch
 // +kubebuilder:rbac:groups=cluster.x-k8s.io,resources=machines;machines/status,verbs=get;list;watch
 // +kubebuilder:rbac:groups="",resources=events,verbs=get;list;watch;create;update;patch
@@ -240,6 +245,13 @@ func (r *ByoMachineReconciler) reconcileNormal(ctx context.Context, machineScope
 		}
 	}
 
+	if machineScope.ByoMachine.Spec.InstallerRef != nil {
+		if err := r.createInstallerConfig(ctx, machineScope); err != nil {
+			logger.Error(err, "create installer config failed")
+			return ctrl.Result{}, err
+		}
+	}
+
 	if !machineScope.Cluster.Status.InfrastructureReady {
 		logger.Info("Cluster infrastructure is not ready yet")
 		conditions.MarkFalse(machineScope.ByoMachine, infrav1.BYOHostReady, infrav1.WaitingForClusterInfrastructureReason, clusterv1.ConditionSeverityInfo, "")
@@ -264,7 +276,27 @@ func (r *ByoMachineReconciler) reconcileNormal(ctx context.Context, machineScope
 		r.Recorder.Eventf(machineScope.ByoMachine, corev1.EventTypeNormal, "ByoHostAttachSucceeded", "Attached ByoHost %s", machineScope.ByoHost.Name)
 	}
 
+	if machineScope.ByoMachine.Status.HostInfo == (infrav1.HostInfo{}) {
+		machineScope.ByoMachine.Status.HostInfo = machineScope.ByoHost.Status.HostDetails
+	}
+
+	if machineScope.ByoMachine.Spec.InstallerRef != nil && machineScope.ByoHost.Spec.InstallationSecret == nil {
+		res, err := r.setInstallationSecretForByoHost(ctx, machineScope)
+		if err != nil {
+			logger.Error(err, "failed to set installation secret on byohost")
+			return res, err
+		}
+		if res.RequeueAfter > 0 {
+			return res, nil
+		}
+	}
+
 	logger.Info("Updating Node with ProviderID")
+	return r.updateNodeProviderID(ctx, machineScope)
+}
+
+func (r *ByoMachineReconciler) updateNodeProviderID(ctx context.Context, machineScope *byoMachineScope) (ctrl.Result, error) {
+	logger := log.FromContext(ctx).WithValues("cluster", machineScope.Cluster.Name)
 	remoteClient, err := r.getRemoteClient(ctx, machineScope.ByoMachine)
 	if err != nil {
 		logger.Error(err, "failed to get remote client")
@@ -282,7 +314,6 @@ func (r *ByoMachineReconciler) reconcileNormal(ctx context.Context, machineScope
 	machineScope.ByoMachine.Status.Ready = true
 	conditions.MarkTrue(machineScope.ByoMachine, infrav1.BYOHostReady)
 	r.Recorder.Eventf(machineScope.ByoMachine, corev1.EventTypeNormal, "NodeProvisionedSucceeded", "Provisioned Node %s", machineScope.ByoHost.Name)
-
 	return ctrl.Result{}, nil
 }
 
@@ -414,6 +445,48 @@ func (r *ByoMachineReconciler) setPausedConditionForByoHost(ctx context.Context,
 	return helper.Patch(ctx, machineScope.ByoHost)
 }
 
+func (r *ByoMachineReconciler) setInstallationSecretForByoHost(ctx context.Context, machineScope *byoMachineScope) (ctrl.Result, error) {
+	logger := log.FromContext(ctx).WithValues("cluster", machineScope.Cluster.Name)
+	installerConfig, ready, err := r.getInstallerConfigAndStatus(ctx, machineScope)
+	if err != nil {
+		return ctrl.Result{}, err
+	}
+	if !ready {
+		logger.Info("Installer config is not ready, requeuing")
+		return ctrl.Result{RequeueAfter: RequeueInstallerConfigTime}, nil
+	}
+
+	helper, err := patch.NewHelper(machineScope.ByoHost, r.Client)
+	if err != nil {
+		return ctrl.Result{}, err
+	}
+	secret, found, err := unstructured.NestedFieldNoCopy(installerConfig.Object, "status", "installationSecret")
+	if err != nil {
+		return ctrl.Result{}, err
+	}
+	if !found {
+		return ctrl.Result{}, fmt.Errorf("installation secret not set on ready installerconfig %s %s", installerConfig.GetKind(), installerConfig.GetName())
+	}
+	secretRef := &corev1.ObjectReference{}
+	if err = runtime.DefaultUnstructuredConverter.FromUnstructured(secret.(map[string]interface{}), secretRef); err != nil {
+		return ctrl.Result{}, fmt.Errorf("failed to convert unstructured field, %s", err.Error())
+	}
+	machineScope.ByoHost.Spec.InstallationSecret = secretRef
+	return ctrl.Result{}, helper.Patch(ctx, machineScope.ByoHost)
+}
+
+func (r *ByoMachineReconciler) getInstallerConfigAndStatus(ctx context.Context, machineScope *byoMachineScope) (*unstructured.Unstructured, bool, error) {
+	installerConfig, err := r.getInstallerConfig(ctx, machineScope.ByoMachine)
+	if err != nil {
+		return nil, false, err
+	}
+	ready, err := external.IsReady(installerConfig)
+	if err != nil {
+		return installerConfig, false, err
+	}
+	return installerConfig, ready, nil
+}
+
 func (r *ByoMachineReconciler) attachByoHost(ctx context.Context, machineScope *byoMachineScope) (ctrl.Result, error) {
 	logger := log.FromContext(ctx).WithValues("cluster", machineScope.Cluster.Name)
 	var selector labels.Selector
@@ -536,4 +609,64 @@ func (r *ByoMachineReconciler) markHostForCleanup(ctx context.Context, machineSc
 
 	// Issue the patch for byohost
 	return helper.Patch(ctx, machineScope.ByoHost)
+}
+
+func (r *ByoMachineReconciler) getInstallerConfig(ctx context.Context, byoMachine *infrav1.ByoMachine) (*unstructured.Unstructured, error) {
+	installerConfig := &unstructured.Unstructured{}
+	gvk := byoMachine.Spec.InstallerRef.GroupVersionKind()
+	gvk.Kind = strings.Replace(gvk.Kind, "Template", "", -1)
+	installerConfig.SetGroupVersionKind(gvk)
+	installerConfigName := client.ObjectKey{
+		Namespace: byoMachine.Namespace,
+		Name:      byoMachine.Name,
+	}
+	if err := r.Client.Get(ctx, installerConfigName, installerConfig); err != nil {
+		return nil, err
+	}
+	return installerConfig, nil
+}
+
+func (r *ByoMachineReconciler) createInstallerConfig(ctx context.Context, machineScope *byoMachineScope) error {
+	logger := log.FromContext(ctx).WithValues("cluster", machineScope.Cluster.Name)
+	var (
+		installerConfig *unstructured.Unstructured
+		err             error
+	)
+	_, err = r.getInstallerConfig(ctx, machineScope.ByoMachine)
+	if err != nil && apierrors.IsNotFound(err) {
+		template := &unstructured.Unstructured{}
+		template.SetGroupVersionKind(machineScope.ByoMachine.Spec.InstallerRef.GroupVersionKind())
+		installerTemplateName := client.ObjectKey{
+			Namespace: machineScope.ByoMachine.Spec.InstallerRef.Namespace,
+			Name:      machineScope.ByoMachine.Spec.InstallerRef.Name,
+		}
+		if err = r.Client.Get(ctx, installerTemplateName, template); err != nil {
+			logger.Error(err, "failed to get installer config template")
+			return err
+		}
+		installerAnnotations := map[string]string{
+			infrav1.K8sVersionAnnotation: strings.Split(*machineScope.Machine.Spec.Version, "+")[0],
+		}
+		installerConfig, err = external.GenerateTemplate(&external.GenerateTemplateInput{
+			Template:    template,
+			TemplateRef: machineScope.ByoMachine.Spec.InstallerRef,
+			Namespace:   machineScope.ByoMachine.Namespace,
+			Annotations: installerAnnotations,
+			ClusterName: machineScope.Cluster.Name,
+			OwnerRef:    metav1.NewControllerRef(machineScope.ByoMachine, machineScope.ByoMachine.GroupVersionKind()),
+		})
+		if err != nil {
+			return err
+		} else {
+			installerConfig.SetName(machineScope.ByoMachine.Name)
+			if err = r.Client.Create(ctx, installerConfig); err != nil {
+				logger.Error(err, "failed to create installer config")
+				return err
+			}
+		}
+	} else if err != nil {
+		logger.Error(err, "failed to get installer config")
+		return err
+	}
+	return nil
 }

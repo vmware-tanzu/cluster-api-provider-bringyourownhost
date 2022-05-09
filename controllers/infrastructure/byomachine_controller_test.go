@@ -29,15 +29,17 @@ import (
 
 var _ = Describe("Controllers/ByomachineController", func() {
 	var (
-		byoMachineLookupKey types.NamespacedName
-		byoHostLookupKey    types.NamespacedName
-		ctx                 context.Context
-		byoMachine          *infrastructurev1beta1.ByoMachine
-		machine             *clusterv1.Machine
-		node                *corev1.Node
-		k8sClientUncached   client.Client
-		byoHost             *infrastructurev1beta1.ByoHost
-		testClusterVersion  = "v1.22.1_xyz"
+		byoMachineLookupKey        types.NamespacedName
+		byoHostLookupKey           types.NamespacedName
+		ctx                        context.Context
+		byoMachine                 *infrastructurev1beta1.ByoMachine
+		machine                    *clusterv1.Machine
+		node                       *corev1.Node
+		k8sClientUncached          client.Client
+		k8sInstallerConfigTemplate *infrastructurev1beta1.K8sInstallerConfigTemplate
+		k8sInstallerConfig         *infrastructurev1beta1.K8sInstallerConfig
+		byoHost                    *infrastructurev1beta1.ByoHost
+		testClusterVersion         = "v1.22.1_xyz"
 	)
 
 	BeforeEach(func() {
@@ -336,6 +338,33 @@ var _ = Describe("Controllers/ByomachineController", func() {
 
 				})
 
+				It("should set host platform info from byohost to byomachine", func() {
+					ph, err := patch.NewHelper(byoHost, k8sClientUncached)
+					Expect(err).ShouldNot(HaveOccurred())
+					byoHost.Status.HostDetails = infrastructurev1beta1.HostInfo{
+						OSName:       "linux",
+						OSImage:      "Ubuntu 20.04.4 LTS",
+						Architecture: "arm64",
+					}
+					if byoHost.Labels == nil {
+						byoHost.Labels = make(map[string]string)
+					}
+					byoHost.Labels[infrastructurev1beta1.AttachedByoMachineLabel] = byoMachine.Namespace + "." + byoMachine.Name
+					Expect(ph.Patch(ctx, byoHost, patch.WithStatusObservedGeneration{})).Should(Succeed())
+
+					WaitForObjectToBeUpdatedInCache(byoHost, func(object client.Object) bool {
+						return object.(*infrastructurev1beta1.ByoHost).Status.MachineRef != nil
+					})
+
+					_, err = reconciler.Reconcile(ctx, reconcile.Request{NamespacedName: byoMachineLookupKey})
+					Expect(err).ToNot(HaveOccurred())
+					patchedByoMachine := &infrastructurev1beta1.ByoMachine{}
+					err = k8sClientUncached.Get(ctx, byoMachineLookupKey, patchedByoMachine)
+					Expect(err).ToNot(HaveOccurred())
+					Expect(patchedByoMachine.Status.HostInfo).To(Equal(byoHost.Status.HostDetails))
+
+				})
+
 				Context("When ByoMachine is deleted", func() {
 					BeforeEach(func() {
 						ph, err := patch.NewHelper(byoMachine, k8sClientUncached)
@@ -379,6 +408,71 @@ var _ = Describe("Controllers/ByomachineController", func() {
 						Expect(err).To(MatchError(fmt.Sprintf("byomachines.infrastructure.cluster.x-k8s.io %q not found", byoMachineLookupKey.Name)))
 					})
 				})
+
+				Context("When installer config exists", func() {
+					BeforeEach(func() {
+						k8sInstallerConfig = builder.K8sInstallerConfig(defaultNamespace, "").
+							WithName(byoMachine.Name).
+							WithBundleRepo("projects.registry.vmware.com/cluster_api_provider_bringyourownhost").
+							WithBundleType("k8s").
+							Build()
+						Expect(k8sClientUncached.Create(ctx, k8sInstallerConfig)).Should(Succeed())
+						WaitForObjectsToBePopulatedInCache(k8sInstallerConfig)
+
+						ph, err := patch.NewHelper(byoMachine, k8sClientUncached)
+						Expect(err).ShouldNot(HaveOccurred())
+						byoMachine.Spec.InstallerRef = &corev1.ObjectReference{
+							Kind:       "K8sInstallerConfigTemplate",
+							Namespace:  defaultNamespace,
+							Name:       defaultK8sInstallerConfigTemplateName,
+							APIVersion: "infrastructure.cluster.x-k8s.io/v1beta1",
+						}
+						Expect(ph.Patch(ctx, byoMachine, patch.WithStatusObservedGeneration{})).Should(Succeed())
+
+						WaitForObjectToBeUpdatedInCache(byoMachine, func(object client.Object) bool {
+							return object.(*infrastructurev1beta1.ByoMachine).Spec.InstallerRef != nil
+						})
+					})
+
+					It("should requeue the request if installer config is not ready", func() {
+						res, err := reconciler.Reconcile(ctx, reconcile.Request{NamespacedName: byoMachineLookupKey})
+						Expect(err).NotTo(HaveOccurred())
+						Expect(res.RequeueAfter).To(Equal(controllers.RequeueInstallerConfigTime))
+					})
+
+					It("should patch byohost if installer config is ready", func() {
+						ph, err := patch.NewHelper(k8sInstallerConfig, k8sClientUncached)
+						Expect(err).ShouldNot(HaveOccurred())
+						k8sInstallerConfig.Status = infrastructurev1beta1.K8sInstallerConfigStatus{
+							Ready: true,
+							InstallationSecret: &corev1.ObjectReference{
+								Kind:       "Secret",
+								Namespace:  defaultNamespace,
+								Name:       "K8sInstallationSecret",
+								APIVersion: "v1",
+							},
+						}
+						Expect(ph.Patch(ctx, k8sInstallerConfig, patch.WithStatusObservedGeneration{})).Should(Succeed())
+
+						WaitForObjectToBeUpdatedInCache(k8sInstallerConfig, func(object client.Object) bool {
+							return object.(*infrastructurev1beta1.K8sInstallerConfig).Status.Ready == true
+						})
+
+						_, err = reconciler.Reconcile(ctx, reconcile.Request{NamespacedName: byoMachineLookupKey})
+						Expect(err).NotTo(HaveOccurred())
+
+						patchedHost := &infrastructurev1beta1.ByoHost{}
+						err = k8sClientUncached.Get(ctx, byoHostLookupKey, patchedHost)
+						Expect(err).ShouldNot(HaveOccurred())
+
+						Expect(k8sInstallerConfig.Status.InstallationSecret).To(Equal(patchedHost.Spec.InstallationSecret))
+					})
+
+					AfterEach(func() {
+						Expect(k8sClientUncached.Delete(ctx, k8sInstallerConfig)).Should(Succeed())
+					})
+				})
+
 			})
 
 			It("should mark BYOHostReady as False when byomachine is paused", func() {
@@ -683,6 +777,69 @@ var _ = Describe("Controllers/ByomachineController", func() {
 			AfterEach(func() {
 				Expect(k8sClientUncached.Delete(ctx, byoHost1)).Should(Succeed())
 				Expect(k8sClientUncached.Delete(ctx, byoHost2)).Should(Succeed())
+			})
+		})
+
+		Context("When installer config template exists", func() {
+			BeforeEach(func() {
+				k8sInstallerConfigTemplate = builder.K8sInstallerConfigTemplate(defaultNamespace, defaultK8sInstallerConfigTemplateName).
+					WithBundleRepo("projects.registry.vmware.com/cluster_api_provider_bringyourownhost").
+					WithBundleType("k8s").
+					Build()
+				Expect(k8sClientUncached.Create(ctx, k8sInstallerConfigTemplate)).Should(Succeed())
+				WaitForObjectsToBePopulatedInCache(k8sInstallerConfigTemplate)
+			})
+
+			It("should create installer config from the template", func() {
+				ph, err := patch.NewHelper(byoMachine, k8sClientUncached)
+				Expect(err).ShouldNot(HaveOccurred())
+				byoMachine.Spec.InstallerRef = &corev1.ObjectReference{
+					Kind:       "K8sInstallerConfigTemplate",
+					Namespace:  k8sInstallerConfigTemplate.Namespace,
+					Name:       k8sInstallerConfigTemplate.Name,
+					UID:        k8sInstallerConfigTemplate.UID,
+					APIVersion: infrastructurev1beta1.GroupVersion.String(),
+				}
+				Expect(ph.Patch(ctx, byoMachine, patch.WithStatusObservedGeneration{})).Should(Succeed())
+
+				WaitForObjectToBeUpdatedInCache(byoMachine, func(object client.Object) bool {
+					return object.(*infrastructurev1beta1.ByoMachine).Spec.InstallerRef != nil
+				})
+
+				_, err = reconciler.Reconcile(ctx, reconcile.Request{NamespacedName: byoMachineLookupKey})
+				Expect(err).Should(MatchError("no hosts found"))
+
+				createdK8sInstallerConfig := &infrastructurev1beta1.K8sInstallerConfig{}
+				err = k8sClientUncached.Get(ctx, byoMachineLookupKey, createdK8sInstallerConfig)
+				Expect(err).ShouldNot(HaveOccurred())
+
+				Expect(k8sInstallerConfigTemplate.Spec.Template.Spec).To(Equal(createdK8sInstallerConfig.Spec))
+				Expect(createdK8sInstallerConfig.GetAnnotations()[infrastructurev1beta1.K8sVersionAnnotation]).To(Equal(*machine.Spec.Version))
+			})
+		})
+
+		Context("When installer config template resource does not exists", func() {
+			It("should fail create installer config from the template", func() {
+				ph, err := patch.NewHelper(byoMachine, k8sClientUncached)
+				Expect(err).ShouldNot(HaveOccurred())
+				byoMachine.Spec.InstallerRef = &corev1.ObjectReference{
+					Kind:       "K8sInstallerConfigTemplate",
+					Namespace:  defaultNamespace,
+					Name:       defaultK8sInstallerConfigTemplateName,
+					APIVersion: "infrastructure.cluster.x-k8s.io/v1beta1",
+				}
+				Expect(ph.Patch(ctx, byoMachine, patch.WithStatusObservedGeneration{})).Should(Succeed())
+
+				WaitForObjectToBeUpdatedInCache(byoMachine, func(object client.Object) bool {
+					return object.(*infrastructurev1beta1.ByoMachine).Spec.InstallerRef != nil
+				})
+
+				_, err = reconciler.Reconcile(ctx, reconcile.Request{NamespacedName: byoMachineLookupKey})
+				Expect(err).Should(MatchError(fmt.Sprintf("k8sinstallerconfigtemplates.infrastructure.cluster.x-k8s.io \"%s\" not found", defaultK8sInstallerConfigTemplateName)))
+
+				createdK8sInstallerConfig := &infrastructurev1beta1.K8sInstallerConfig{}
+				err = k8sClientUncached.Get(ctx, byoMachineLookupKey, createdK8sInstallerConfig)
+				Expect(err).Should(MatchError(fmt.Sprintf("k8sinstallerconfigs.infrastructure.cluster.x-k8s.io \"%s\" not found", byoMachineLookupKey.Name)))
 			})
 		})
 	})

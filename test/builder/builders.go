@@ -559,17 +559,17 @@ func (b *K8sInstallerConfigBuilder) Build() *infrastructurev1beta1.K8sInstallerC
 
 // K8sInstallerConfigTemplateBuilder holds the variables and objects required to build an infrastructurev1beta1.K8sInstallerConfigTemplate
 type K8sInstallerConfigTemplateBuilder struct {
-	namespace  string
-	name       string
-	bundleType string
-	bundleRepo string
+	namespace     string
+	generatedName string
+	bundleType    string
+	bundleRepo    string
 }
 
-// K8sInstallerConfigTemplate returns a K8sInstallerConfigTemplateBuilder with the given name and namespace
+// K8sInstallerConfigTemplate returns a K8sInstallerConfigTemplateBuilder with the given generated name and namespace
 func K8sInstallerConfigTemplate(namespace, name string) *K8sInstallerConfigTemplateBuilder {
 	return &K8sInstallerConfigTemplateBuilder{
-		namespace: namespace,
-		name:      name,
+		namespace:     namespace,
+		generatedName: name,
 	}
 }
 
@@ -593,7 +593,7 @@ func (b *K8sInstallerConfigTemplateBuilder) Build() *infrastructurev1beta1.K8sIn
 			APIVersion: infrastructurev1beta1.GroupVersion.String(),
 		},
 		ObjectMeta: metav1.ObjectMeta{
-			GenerateName: b.name,
+			GenerateName: b.generatedName,
 			Namespace:    b.namespace,
 		},
 		Spec: infrastructurev1beta1.K8sInstallerConfigTemplateSpec{},
