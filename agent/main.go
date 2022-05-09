@@ -90,6 +90,7 @@ func setupflags() {
 	flag.BoolVar(&skipInstallation, "skip-installation", false, "If you want to skip installation of the kubernetes component binaries")
 	flag.BoolVar(&useInstallerController, "use-installer-controller", false, "If you want to skip the intree installer and use the default or your own installer controller")
 	flag.BoolVar(&printVersion, "version", false, "Print the version of the agent")
+	flag.StringVar(&bootstrapKubeConfig, "bootstrap-kubeconfig", "", "Provide bootstrap kubeconfig for bootstrap token workflow")
 
 	pflag.CommandLine.AddGoFlagSet(flag.CommandLine)
 	hiddenFlags := []string{"log-flush-frequency", "alsologtostderr", "log-backtrace-at", "log-dir", "logtostderr", "stderrthreshold", "vmodule", "azure-container-registry-config",
@@ -135,6 +136,7 @@ var (
 	skipInstallation       bool
 	useInstallerController bool
 	printVersion           bool
+	bootstrapKubeConfig    string
 	k8sInstaller           reconciler.IK8sInstaller
 )
 
