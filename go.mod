@@ -17,13 +17,13 @@ require (
 	github.com/onsi/gomega v1.19.0
 	github.com/pkg/errors v0.9.1
 	github.com/spf13/pflag v1.0.5
-	k8s.io/api v0.23.6
-	k8s.io/apimachinery v0.23.6
+	k8s.io/api v0.24.0
+	k8s.io/apimachinery v0.24.0
 	k8s.io/client-go v0.23.6
 	k8s.io/component-base v0.23.6
 	k8s.io/klog/v2 v2.60.1
 	k8s.io/kubectl v0.23.6
-	k8s.io/utils v0.0.0-20211116205334-6203023598ed
+	k8s.io/utils v0.0.0-20220210201930-3a6ce19ff2f9
 	sigs.k8s.io/cluster-api v1.1.3
 	sigs.k8s.io/cluster-api/test v1.1.3
 	sigs.k8s.io/controller-runtime v0.11.1
@@ -90,6 +90,7 @@ require (
 	github.com/golang/protobuf v1.5.2 // indirect
 	github.com/golang/snappy v0.0.3 // indirect
 	github.com/google/cel-go v0.9.0 // indirect
+	github.com/google/gnostic v0.5.7-v3refs // indirect
 	github.com/google/go-cmp v0.5.6 // indirect
 	github.com/google/go-containerregistry v0.6.0 // indirect
 	github.com/google/go-github/v33 v33.0.0 // indirect
@@ -183,9 +184,9 @@ require (
 	k8s.io/apiserver v0.23.0 // indirect
 	k8s.io/cloud-provider v0.21.0 // indirect
 	k8s.io/cluster-bootstrap v0.23.0 // indirect
-	k8s.io/kube-openapi v0.0.0-20211115234752-e816edb12b65 // indirect
+	k8s.io/kube-openapi v0.0.0-20220328201542-3ee0da9b0b42 // indirect
 	k8s.io/legacy-cloud-providers v0.21.0 // indirect
-	sigs.k8s.io/json v0.0.0-20211020170558-c049b76a60c6 // indirect
+	sigs.k8s.io/json v0.0.0-20211208200746-9f7c6b3444d2 // indirect
 	sigs.k8s.io/kind v0.11.1 // indirect
 	sigs.k8s.io/structured-merge-diff/v4 v4.2.1 // indirect
 )
