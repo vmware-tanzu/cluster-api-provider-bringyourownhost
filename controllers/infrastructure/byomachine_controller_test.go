@@ -34,6 +34,7 @@ var _ = Describe("Controllers/ByomachineController", func() {
 		ctx                 context.Context
 		byoMachine          *infrastructurev1beta1.ByoMachine
 		machine             *clusterv1.Machine
+		node                *corev1.Node
 		k8sClientUncached   client.Client
 		byoHost             *infrastructurev1beta1.ByoHost
 		testClusterVersion  = "v1.22.1_xyz"
@@ -131,7 +132,7 @@ var _ = Describe("Controllers/ByomachineController", func() {
 			})
 
 			It("should not return error when node.Spec.ProviderID is with correct value", func() {
-				node := builder.Node(defaultNamespace, byoHost.Name).
+				node = builder.Node(defaultNamespace, byoHost.Name).
 					WithProviderID(fmt.Sprintf("%s%s/%s", controllers.ProviderIDPrefix, byoHost.Name, util.RandomString(controllers.ProviderIDSuffixLength))).
 					Build()
 				Expect(clientFake.Create(ctx, node)).Should(Succeed())
@@ -140,7 +141,7 @@ var _ = Describe("Controllers/ByomachineController", func() {
 			})
 
 			It("should return error when node.Spec.ProviderID has stale value", func() {
-				node := builder.Node(defaultNamespace, byoHost.Name).
+				node = builder.Node(defaultNamespace, byoHost.Name).
 					WithProviderID(fmt.Sprintf("%sanother-host/%s", controllers.ProviderIDPrefix, util.RandomString(controllers.ProviderIDSuffixLength))).
 					Build()
 				Expect(clientFake.Create(ctx, node)).Should(Succeed())
@@ -213,7 +214,7 @@ var _ = Describe("Controllers/ByomachineController", func() {
 				byoHost = builder.ByoHost(defaultNamespace, "single-available-default-host").Build()
 				Expect(k8sClientUncached.Create(ctx, byoHost)).Should(Succeed())
 
-				node := builder.Node(defaultNamespace, byoHost.Name).Build()
+				node = builder.Node(defaultNamespace, byoHost.Name).Build()
 				Expect(clientFake.Create(ctx, node)).Should(Succeed())
 				WaitForObjectsToBePopulatedInCache(byoHost)
 
@@ -476,6 +477,26 @@ var _ = Describe("Controllers/ByomachineController", func() {
 					Type:     infrastructurev1beta1.BYOHostReady,
 					Status:   corev1.ConditionFalse,
 					Reason:   infrastructurev1beta1.WaitingForBootstrapDataSecretReason,
+					Severity: clusterv1.ConditionSeverityInfo,
+				}))
+			})
+
+			It("should mark BYOHostReady condition as False when the InstallationSecret is not available", func() {
+				// making the node unavailable by deleting it so that the reason persists
+				Expect(clientFake.Delete(ctx, node)).Should(Succeed())
+
+				_, err := reconciler.Reconcile(ctx, reconcile.Request{NamespacedName: byoMachineLookupKey})
+				Expect(err).Should(MatchError(fmt.Sprintf("nodes \"%s\" not found", byoHost.Name)))
+
+				createdByoMachine := &infrastructurev1beta1.ByoMachine{}
+				err = k8sClientUncached.Get(ctx, byoMachineLookupKey, createdByoMachine)
+				Expect(err).ShouldNot(HaveOccurred())
+
+				actualCondition := conditions.Get(createdByoMachine, infrastructurev1beta1.BYOHostReady)
+				Expect(*actualCondition).To(conditions.MatchCondition(clusterv1.Condition{
+					Type:     infrastructurev1beta1.BYOHostReady,
+					Status:   corev1.ConditionFalse,
+					Reason:   infrastructurev1beta1.InstallationSecretNotAvailableReason,
 					Severity: clusterv1.ConditionSeverityInfo,
 				}))
 			})

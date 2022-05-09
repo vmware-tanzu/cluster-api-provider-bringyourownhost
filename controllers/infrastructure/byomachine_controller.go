@@ -259,6 +259,7 @@ func (r *ByoMachineReconciler) reconcileNormal(ctx context.Context, machineScope
 		if res, err := r.attachByoHost(ctx, machineScope); err != nil {
 			return res, err
 		}
+		conditions.MarkFalse(machineScope.ByoMachine, infrav1.BYOHostReady, infrav1.InstallationSecretNotAvailableReason, clusterv1.ConditionSeverityInfo, "")
 		r.Recorder.Eventf(machineScope.ByoHost, corev1.EventTypeNormal, "ByoHostAttachSucceeded", "Attached to ByoMachine %s", machineScope.ByoMachine.Name)
 		r.Recorder.Eventf(machineScope.ByoMachine, corev1.EventTypeNormal, "ByoHostAttachSucceeded", "Attached ByoHost %s", machineScope.ByoHost.Name)
 	}
