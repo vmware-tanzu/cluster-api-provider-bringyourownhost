@@ -34,6 +34,11 @@ import (
 // These tests use Ginkgo (BDD-style Go testing framework). Refer to
 // http://onsi.github.io/ginkgo/ to learn more about Ginkgo.
 
+const (
+	bundleLookupTag        = "v0.1.0_alpha.2"
+	updatedBundleLookupTag = "new_tag"
+)
+
 var (
 	cfg               *rest.Config
 	k8sClient         client.Client
@@ -109,6 +114,9 @@ var _ = BeforeSuite(func() {
 	Expect(k8sClient).NotTo(BeNil())
 
 	err = (&byohv1beta1.ByoCluster{}).SetupWebhookWithManager(mgr)
+	Expect(err).NotTo(HaveOccurred())
+
+	err = (&byohv1beta1.ByoClusterTemplate{}).SetupWebhookWithManager(mgr)
 	Expect(err).NotTo(HaveOccurred())
 
 	mgr.GetWebhookServer().Register("/validate-infrastructure-cluster-x-k8s-io-v1beta1-byohost", &webhook.Admission{Handler: &byohv1beta1.ByoHostValidator{}})
