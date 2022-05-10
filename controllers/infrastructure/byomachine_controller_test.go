@@ -486,7 +486,7 @@ var _ = Describe("Controllers/ByomachineController", func() {
 				Expect(clientFake.Delete(ctx, node)).Should(Succeed())
 
 				_, err := reconciler.Reconcile(ctx, reconcile.Request{NamespacedName: byoMachineLookupKey})
-				Expect(err).Should(MatchError(fmt.Sprintf("nodes \"%s\" not found", byoHost.Name)))
+				Expect(err).Should(MatchError(fmt.Sprintf("nodes %q not found", byoHost.Name)))
 
 				createdByoMachine := &infrastructurev1beta1.ByoMachine{}
 				err = k8sClientUncached.Get(ctx, byoMachineLookupKey, createdByoMachine)

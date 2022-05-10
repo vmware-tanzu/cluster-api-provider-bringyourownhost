@@ -12,7 +12,6 @@ import (
 
 	"github.com/go-logr/logr"
 	pflag "github.com/spf13/pflag"
-	"github.com/vmware-tanzu/cluster-api-provider-bringyourownhost/agent/authenticator"
 	"github.com/vmware-tanzu/cluster-api-provider-bringyourownhost/agent/cloudinit"
 	"github.com/vmware-tanzu/cluster-api-provider-bringyourownhost/agent/installer"
 	"github.com/vmware-tanzu/cluster-api-provider-bringyourownhost/agent/reconciler"
@@ -24,6 +23,9 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/fields"
 	"k8s.io/apimachinery/pkg/runtime"
+	clientset "k8s.io/client-go/kubernetes"
+	"k8s.io/client-go/util/certificate/csr"
+	"k8s.io/client-go/util/keyutil"
 	klog "k8s.io/klog/v2"
 	"k8s.io/klog/v2/klogr"
 	clusterv1 "sigs.k8s.io/cluster-api/api/v1beta1"
@@ -141,11 +143,9 @@ var (
 )
 
 // TODO - fix logging
-// nolint: funlen
 func main() {
 	setupflags()
 	pflag.Parse()
-
 	if printVersion {
 		info := version.Get()
 		fmt.Printf("byoh-hostagent version: %#v\n", info)
@@ -231,25 +231,12 @@ func main() {
 		return
 	}
 
-	// if secure-access is enabled create csr
+	// if secure-access is enabled
 	if feature.Gates.Enabled(feature.SecureAccess) {
-		logger.Info("creating host csr")
-		byohCSR := registration.ByohCSR{K8sClient: k8sClient}
-		// TODO: persist this key across host-agent restarts
-		privKey, err := byohCSR.CreateCSR(hostName)
+		err := generateKubeConfig(logger, hostName, bootstrapKubeConfig)
 		if err != nil {
-			logger.Error(err, "host csr creation failed")
-			return
-		}
-		// register Bootstrap Authenticator
-		bootstrapAuthenticator := &authenticator.BootstrapAuthenticator{
-			Client:     k8sClient,
-			HostName:   hostName,
-			PrivateKey: privKey,
-		}
-		if err = bootstrapAuthenticator.SetupWithManager(context.TODO(), mgr); err != nil {
-			logger.Error(err, "unable to create boostrap authenticator")
-			return
+			logger.Error(err, "kubeconfig creation failed")
+			os.Exit(1)
 		}
 	}
 
@@ -257,4 +244,37 @@ func main() {
 		logger.Error(err, "problem running manager")
 		return
 	}
+}
+
+// generateKubeConfig will create a CertificateSigningRequest for the host
+// its running on and once the CSR is approved it will fetch the Certificate
+// and create a kubeconfig which will be used then by the host reconciler
+func generateKubeConfig(logger logr.Logger, hostName, boostrapKubeConfigPath string) error {
+	logger.Info("creating host csr")
+	bootstrapClientConfig, err := registration.LoadRESTClientConfig(bootstrapKubeConfig)
+	if err != nil {
+		return err
+	}
+	bootstrapClient, err := clientset.NewForConfig(bootstrapClientConfig)
+	if err != nil {
+		return err
+	}
+	byohCSR := registration.ByohCSR{BootstrapClient: bootstrapClient}
+	reqName, reqUID, err := byohCSR.RequestBYOHClientCert(hostName)
+	if err != nil {
+		return err
+	}
+	// wait for certificate to be issued
+	ctx, cancel := context.WithTimeout(context.TODO(), registration.CSRApprovalTimeout)
+	defer cancel()
+	logger.Info("Waiting for client certificate to be issued")
+	certData, err := csr.WaitForCertificate(ctx, bootstrapClient, reqName, reqUID)
+	if err != nil {
+		return err
+	}
+	keyData, err := keyutil.MarshalPrivateKeyToPEM(byohCSR.PrivateKey)
+	if err != nil {
+		return err
+	}
+	return registration.WriteKubeconfigFromBootstrapping(bootstrapClientConfig, "~/.kube/config", string(certData), string(keyData))
 }

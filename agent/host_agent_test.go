@@ -542,7 +542,7 @@ var _ = Describe("Agent", func() {
 
 			runner = setupTestInfra(ctx, hostName, getKubeConfig().Name(), ns)
 			runner.CommandArgs["--feature-gates"] = "SecureAccess=true"
-
+			runner.CommandArgs["--bootstrap-kubeconfig"] = "/mgmt.conf"
 			byoHostContainer, err = runner.SetupByoDockerHost()
 			Expect(err).NotTo(HaveOccurred())
 
@@ -557,8 +557,11 @@ var _ = Describe("Agent", func() {
 		})
 
 		AfterEach(func() {
-			// TODO: delete all CSR
-			// Expect(k8sClient.DeleteAllOf(ctx, &certv1.CertificateSigningRequest{}, client.MatchingFields{"metadata.name": fmt.Sprintf(registration.ByohCSRNameFormat, hostName)})).ShouldNot(HaveOccurred())
+			var list certv1.CertificateSigningRequestList
+			Expect(k8sClient.List(ctx, &list)).ShouldNot(HaveOccurred())
+			for _, csr := range list.Items {
+				Expect(k8sClient.Delete(ctx, &csr)).ShouldNot(HaveOccurred())
+			}
 			cleanup(runner.Context, byoHostContainer, ns, agentLogFile)
 		})
 
@@ -594,7 +597,6 @@ var _ = Describe("Agent", func() {
 				return createdByoHost
 			}).Should(BeNil())
 		})
-
 		It("should create BYOHost CSR in the management cluster", func() {
 			defer output.Close()
 			f := e2e.WriteDockerLog(output, agentLogFile)
@@ -615,15 +617,12 @@ var _ = Describe("Agent", func() {
 				return byohCSR.Name
 			}, 10, 1).Should(Equal(fmt.Sprintf(registration.ByohCSRNameFormat, hostName)))
 		})
-
-		It("should receive reconcile request for created CSR", func() {
+		It("should wait for the certificate to be issued", func() {
 			byohCSR, err := builder.CertificateSigningRequest(fmt.Sprintf(registration.ByohCSRNameFormat, hostName), fmt.Sprintf(registration.ByohCSRCNFormat, hostName), "byoh:hosts", 2048).Build()
 			Expect(err).NotTo(HaveOccurred())
-			// TODO: to be moved to AfterEach
+			// TODO: Check why AfterEach delete is not working
 			// nolint: errcheck
 			k8sClient.Delete(ctx, byohCSR)
-			Expect(k8sClient.Create(context.TODO(), byohCSR)).NotTo(HaveOccurred(), "failed to create csr")
-
 			defer output.Close()
 			f := e2e.WriteDockerLog(output, agentLogFile)
 			defer func() {
@@ -636,40 +635,13 @@ var _ = Describe("Agent", func() {
 				_, err := os.Stat(agentLogFile)
 				if err == nil {
 					data, err := os.ReadFile(agentLogFile)
-					if err == nil && strings.Contains(string(data), byohCSR.GetName()) {
+					if err == nil && strings.Contains(string(data), "\"msg\"=\"Waiting for client certificate to be issued\"") {
 						return true
 					}
 				}
 				return false
-			}, 10, 1).Should(BeTrue())
+			}, time.Second*4).Should(BeTrue())
 		})
-
-		It("should not reconcile CSR resource that are not agent created", func() {
-			externalCSR, err := builder.CertificateSigningRequest("test-csr-name", "test-cn", "test-org", 2048).Build()
-			Expect(err).NotTo(HaveOccurred())
-			Expect(k8sClient.Create(context.TODO(), externalCSR)).NotTo(HaveOccurred(), "failed to create csr")
-
-			defer output.Close()
-
-			f := e2e.WriteDockerLog(output, agentLogFile)
-			defer func() {
-				deferredErr := f.Close()
-				if deferredErr != nil {
-					e2e.Showf("error closing file %s: %v", agentLogFile, deferredErr)
-				}
-			}()
-			Consistently(func() (done bool) {
-				_, err := os.Stat(agentLogFile)
-				if err == nil {
-					data, err := os.ReadFile(agentLogFile)
-					if err == nil && strings.Contains(string(data), externalCSR.GetName()) {
-						return true
-					}
-				}
-				return false
-			}, 10, 1).ShouldNot(BeTrue())
-		})
-
 	})
 
 	Context("When the host agent is executed with --use-installer-controller flag", func() {
