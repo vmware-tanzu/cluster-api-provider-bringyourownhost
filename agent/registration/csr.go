@@ -5,7 +5,6 @@ package registration
 
 import (
 	"crypto/rand"
-	"crypto/rsa"
 	"crypto/x509"
 	"crypto/x509/pkix"
 	"encoding/pem"
@@ -20,33 +19,44 @@ import (
 	clientcmdapi "k8s.io/client-go/tools/clientcmd/api"
 	"k8s.io/client-go/util/cert"
 	"k8s.io/client-go/util/certificate/csr"
+	"k8s.io/client-go/util/keyutil"
 	"k8s.io/klog/v2"
 )
 
 const (
-	KeySize            = 2048
-	ExpirationSeconds  = 86400 * 365
-	ByohCSROrg         = "byoh:hosts"
-	ByohCSRCNFormat    = "byoh:host:%s"
-	ByohCSRNameFormat  = "byoh-csr-%s"
+	KeySize = 2048
+	// ExpirationSeconds defines the expiry time for Certificates
+	// which is currently set to 1 year aligned with kubeadm defaults.
+	ExpirationSeconds = 86400 * 365
+	ByohCSROrg        = "byoh:hosts"
+	ByohCSRCNFormat   = "byoh:host:%s"
+	ByohCSRNameFormat = "byoh-csr-%s"
+	// CSRApprovalTimeout defines the time to wait for certificate to
+	// be issued. Currently set to 1 hour.
 	CSRApprovalTimeout = 3600 * time.Second
+	TmpPrivateKey      = "byoh-client.key.tmp"
 )
 
 type ByohCSR struct {
 	BootstrapClient clientset.Interface
-	PrivateKey      *rsa.PrivateKey
+	PrivateKey      []byte
 }
 
+// RequestBYOHClientCert will generate Private Key and then will create a
+// CertificateSigningRequest in K8s
 func (bcsr *ByohCSR) RequestBYOHClientCert(hostname string) (string, types.UID, error) {
 	if hostname == "" {
 		return "", "", fmt.Errorf("hostname is not valid")
 	}
-	// Generate Private Key
-	privateKey, err := rsa.GenerateKey(rand.Reader, KeySize)
+	keyData, _, err := keyutil.LoadOrGenerateKeyFile(TmpPrivateKey)
 	if err != nil {
 		return "", "", err
 	}
-	bcsr.PrivateKey = privateKey
+	privateKey, err := keyutil.ParsePrivateKeyPEM(keyData)
+	if err != nil {
+		return "", "", fmt.Errorf("invalid private key for certificate request: %v", err)
+	}
+	bcsr.PrivateKey = keyData
 	csrData, err := generateCSR(hostname, privateKey)
 	if err != nil {
 		klog.Errorf("error generating csr %s, err=%v", hostname, err)
@@ -66,7 +76,7 @@ func (bcsr *ByohCSR) RequestBYOHClientCert(hostname string) (string, types.UID, 
 	return reqName, reqUID, nil
 }
 
-func generateCSR(hostname string, privKey *rsa.PrivateKey) ([]byte, error) {
+func generateCSR(hostname string, privKey interface{}) ([]byte, error) {
 	// Generate a new *x509.CertificateRequest template
 	csrTemplate := x509.CertificateRequest{
 		Subject: pkix.Name{
@@ -86,6 +96,9 @@ func generateCSR(hostname string, privKey *rsa.PrivateKey) ([]byte, error) {
 	return pem.EncodeToMemory(csrPemBlock), nil
 }
 
+// LoadRESTClientConfig is to create an instance of *restclient.Config from
+// the boostrap kubeconfig path, this then will be used to create bootstrap
+// k8s client
 func LoadRESTClientConfig(bootstrapKubeconfig string) (*restclient.Config, error) {
 	loader := &clientcmd.ClientConfigLoadingRules{ExplicitPath: bootstrapKubeconfig}
 	loadedConfig, err := loader.Load()
@@ -101,6 +114,8 @@ func LoadRESTClientConfig(bootstrapKubeconfig string) (*restclient.Config, error
 	).ClientConfig()
 }
 
+// WriteKubeconfigFromBootstrapping will write the new kubeconfig fetching
+// some details from bootstrap client config and using key/cert details
 func WriteKubeconfigFromBootstrapping(bootstrapClientConfig *restclient.Config, kubeconfigPath, certData, keyData string) error {
 	// Get the CA data from the bootstrap client config.
 	caFile, caData := bootstrapClientConfig.CAFile, []byte{}

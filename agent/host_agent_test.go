@@ -16,6 +16,7 @@ import (
 
 	dockertypes "github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/container"
+	"github.com/docker/docker/client"
 	"github.com/jackpal/gateway"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -557,9 +558,9 @@ var _ = Describe("Agent", func() {
 		})
 
 		AfterEach(func() {
-			var list certv1.CertificateSigningRequestList
-			Expect(k8sClient.List(ctx, &list)).ShouldNot(HaveOccurred())
-			for _, csr := range list.Items {
+			var csrList certv1.CertificateSigningRequestList
+			Expect(k8sClient.List(ctx, &csrList)).ShouldNot(HaveOccurred())
+			for _, csr := range csrList.Items {
 				Expect(k8sClient.Delete(ctx, &csr)).ShouldNot(HaveOccurred())
 			}
 			cleanup(runner.Context, byoHostContainer, ns, agentLogFile)
@@ -585,7 +586,6 @@ var _ = Describe("Agent", func() {
 				return false
 			}, time.Second*2).Should(BeTrue())
 		})
-
 		It("should not register the BYOHost with the management cluster", func() {
 			byoHostLookupKey := types.NamespacedName{Name: hostName, Namespace: ns.Name}
 			createdByoHost := &infrastructurev1beta1.ByoHost{}
@@ -617,6 +617,48 @@ var _ = Describe("Agent", func() {
 				return byohCSR.Name
 			}, 10, 1).Should(Equal(fmt.Sprintf(registration.ByohCSRNameFormat, hostName)))
 		})
+		It("should persist private key", func() {
+			defer output.Close()
+			fAgent := e2e.WriteDockerLog(output, agentLogFile)
+			defer func() {
+				deferredErr := fAgent.Close()
+				if deferredErr != nil {
+					e2e.Showf("error closing file %s: %v", agentLogFile, deferredErr)
+				}
+			}()
+			// exec in container to check the file
+			cli, err := client.NewClientWithOpts(client.FromEnv, client.WithAPIVersionNegotiation())
+			Expect(err).ShouldNot(HaveOccurred())
+			time.Sleep(4 * time.Second)
+			response, err := cli.ContainerExecCreate(ctx, byoHostContainer.ID, dockertypes.ExecConfig{
+				AttachStdin:  false,
+				AttachStdout: true,
+				AttachStderr: true,
+				Cmd:          []string{"cat", registration.TmpPrivateKey},
+			})
+			Expect(err).ShouldNot(HaveOccurred())
+			result, err := cli.ContainerExecAttach(ctx, response.ID, dockertypes.ExecStartCheck{})
+			Expect(err).ShouldNot(HaveOccurred())
+			defer result.Close()
+			fExec := e2e.WriteDockerLog(result, execLogFile)
+			defer func() {
+				deferredErr := fExec.Close()
+				if deferredErr != nil {
+					e2e.Showf("error closing file %s: %v", execLogFile, deferredErr)
+				}
+			}()
+			Eventually(func() (done bool) {
+				_, err := os.Stat(execLogFile)
+				if err == nil {
+					data, err := os.ReadFile(execLogFile)
+					if err == nil && strings.Contains(string(data), "PRIVATE KEY") {
+						return true
+					}
+				}
+				return false
+			}).Should(BeTrue())
+			Expect(os.Remove(execLogFile)).ShouldNot(HaveOccurred())
+		})
 		It("should wait for the certificate to be issued", func() {
 			byohCSR, err := builder.CertificateSigningRequest(fmt.Sprintf(registration.ByohCSRNameFormat, hostName), fmt.Sprintf(registration.ByohCSRCNFormat, hostName), "byoh:hosts", 2048).Build()
 			Expect(err).NotTo(HaveOccurred())
@@ -641,6 +683,84 @@ var _ = Describe("Agent", func() {
 				}
 				return false
 			}, time.Second*4).Should(BeTrue())
+		})
+		It("should create kubeconfig if the csr is approved", func() {
+			defer output.Close()
+			fAgent := e2e.WriteDockerLog(output, agentLogFile)
+			defer func() {
+				deferredErr := fAgent.Close()
+				if deferredErr != nil {
+					e2e.Showf("error closing file %s: %v", agentLogFile, deferredErr)
+				}
+			}()
+
+			// Approve CSR
+			Eventually(func() (done bool) {
+				byohCSR, err := clientSet.CertificatesV1().CertificateSigningRequests().Get(ctx, fmt.Sprintf(registration.ByohCSRNameFormat, hostName), metav1.GetOptions{})
+				if err != nil {
+					return false
+				}
+				byohCSR.Status.Conditions = append(byohCSR.Status.Conditions, certv1.CertificateSigningRequestCondition{
+					Type:    certv1.CertificateApproved,
+					Reason:  "approved",
+					Message: "approved",
+					Status:  corev1.ConditionTrue,
+				})
+				_, err = clientSet.CertificatesV1().CertificateSigningRequests().UpdateApproval(ctx, fmt.Sprintf(registration.ByohCSRNameFormat, hostName), byohCSR, metav1.UpdateOptions{})
+				return err == nil
+			}, time.Second*4).Should(BeTrue())
+			// Issue Certificate
+			byohCSR, err := clientSet.CertificatesV1().CertificateSigningRequests().Get(ctx, fmt.Sprintf(registration.ByohCSRNameFormat, hostName), metav1.GetOptions{})
+			Expect(err).ShouldNot(HaveOccurred())
+			var FakeCert = `
+-----BEGIN CERTIFICATE-----
+MIIBvzCCAWWgAwIBAgIRAMd7Mz3fPrLm1aFUn02lLHowCgYIKoZIzj0EAwIwIzEh
+MB8GA1UEAwwYazNzLWNsaWVudC1jYUAxNjE2NDMxOTU2MB4XDTIxMDQxOTIxNTMz
+MFoXDTIyMDQxOTIxNTMzMFowMjEVMBMGA1UEChMMc3lzdGVtOm5vZGVzMRkwFwYD
+VQQDExBzeXN0ZW06bm9kZTp0ZXN0MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAE
+Xd9aZm6nftepZpUwof9RSUZqZDgu7dplIiDt8nnhO5Bquy2jn7/AVx20xb0Xz0d2
+XLn3nn5M+lR2p3NlZmqWHaNrMGkwDgYDVR0PAQH/BAQDAgWgMBMGA1UdJQQMMAoG
+CCsGAQUFBwMBMAwGA1UdEwEB/wQCMAAwHwYDVR0jBBgwFoAU/fZa5enijRDB25DF
+NT1/vPUy/hMwEwYDVR0RBAwwCoIIRE5TOnRlc3QwCgYIKoZIzj0EAwIDSAAwRQIg
+b3JL5+Q3zgwFrciwfdgtrKv8MudlA0nu6EDQO7eaJbwCIQDegFyC4tjGPp/5JKqQ
+kovW9X7Ook/tTW0HyX6D6HRciA==
+-----END CERTIFICATE-----
+`
+			byohCSR.Status.Certificate = []byte(FakeCert)
+			_, err = clientSet.CertificatesV1().CertificateSigningRequests().UpdateStatus(ctx, byohCSR, metav1.UpdateOptions{})
+			Expect(err).ShouldNot(HaveOccurred())
+
+			cli, err := client.NewClientWithOpts(client.FromEnv, client.WithAPIVersionNegotiation())
+			Expect(err).ShouldNot(HaveOccurred())
+			time.Sleep(2 * time.Second)
+			response, err := cli.ContainerExecCreate(ctx, byoHostContainer.ID, dockertypes.ExecConfig{
+				AttachStdin:  false,
+				AttachStdout: true,
+				AttachStderr: true,
+				Cmd:          []string{"cat", "~/.byoh/config"},
+			})
+			Expect(err).ShouldNot(HaveOccurred())
+			result, err := cli.ContainerExecAttach(ctx, response.ID, dockertypes.ExecStartCheck{})
+			Expect(err).ShouldNot(HaveOccurred())
+			defer result.Close()
+			fExec := e2e.WriteDockerLog(result, execLogFile)
+			defer func() {
+				deferredErr := fExec.Close()
+				if deferredErr != nil {
+					e2e.Showf("error closing file %s: %v", execLogFile, deferredErr)
+				}
+			}()
+			Eventually(func() (done bool) {
+				_, err := os.Stat(execLogFile)
+				if err == nil {
+					data, err := os.ReadFile(execLogFile)
+					if err == nil && strings.Contains(string(data), "name: default-cluster") {
+						return true
+					}
+				}
+				return false
+			}, time.Second*4).Should(BeTrue())
+			Expect(os.Remove(execLogFile)).ShouldNot(HaveOccurred())
 		})
 	})
 

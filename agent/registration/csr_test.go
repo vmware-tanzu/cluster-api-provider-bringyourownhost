@@ -14,6 +14,7 @@ import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	"github.com/vmware-tanzu/cluster-api-provider-bringyourownhost/agent/registration"
+	"github.com/vmware-tanzu/cluster-api-provider-bringyourownhost/test/builder"
 	certv1 "k8s.io/api/certificates/v1"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
@@ -24,6 +25,15 @@ var _ = Describe("CSR Registration", func() {
 		hostName = "test-host"
 	)
 	Context("When bootstrap kubeconfig is provided", func() {
+
+		AfterEach(func() {
+			csrList, err := clientSetFake.CertificatesV1().CertificateSigningRequests().List(ctx, v1.ListOptions{})
+			Expect(err).ShouldNot(HaveOccurred())
+			for _, csr := range csrList.Items {
+				err = clientSetFake.CertificatesV1().CertificateSigningRequests().Delete(ctx, csr.Name, v1.DeleteOptions{})
+				Expect(err).ShouldNot(HaveOccurred())
+			}
+		})
 		fileDir, err := ioutil.TempDir("", "bootstrap")
 		Expect(err).ShouldNot(HaveOccurred())
 		testDatabootstrapValid := []byte(`
@@ -107,6 +117,8 @@ users:
 			Expect(err).ToNot(HaveOccurred())
 			Expect(csr.Subject.CommonName).To(Equal(fmt.Sprintf(registration.ByohCSRCNFormat, hostName)))
 			Expect(csr.Subject.Organization[0]).To(Equal("byoh:hosts"))
+
+			Expect(os.Remove(registration.TmpPrivateKey)).ShouldNot(HaveOccurred())
 		})
 		It("should write kubeconfig if bootstrap kubeconfig is valid", func() {
 			fileboot, err := ioutil.TempFile(fileDir, "boostrapkubeconfig")
@@ -124,6 +136,20 @@ users:
 			Expect(err).ShouldNot(HaveOccurred())
 			Expect(content).ShouldNot(BeEmpty())
 		})
+		It("should fail creating CSR if the private key got changed", func() {
+			byohCSR, err := builder.CertificateSigningRequest(
+				fmt.Sprintf(registration.ByohCSRNameFormat, hostName),
+				fmt.Sprintf(registration.ByohCSRCNFormat, hostName),
+				"byoh:hosts", 2048).Build()
+			Expect(err).NotTo(HaveOccurred())
+			_, err = clientSetFake.CertificatesV1().CertificateSigningRequests().Create(ctx, byohCSR, v1.CreateOptions{})
+			Expect(err).ShouldNot(HaveOccurred())
+			CSRRegistrar := registration.ByohCSR{BootstrapClient: clientSetFake}
+			_, _, err = CSRRegistrar.RequestBYOHClientCert(hostName)
+			Expect(err).Should(HaveOccurred())
+			Expect(err.Error()).Should(ContainSubstring("retrieved csr is not compatible"))
 
+			Expect(os.Remove(registration.TmpPrivateKey)).ShouldNot(HaveOccurred())
+		})
 	})
 })

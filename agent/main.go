@@ -25,7 +25,6 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	clientset "k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/util/certificate/csr"
-	"k8s.io/client-go/util/keyutil"
 	klog "k8s.io/klog/v2"
 	"k8s.io/klog/v2/klogr"
 	clusterv1 "sigs.k8s.io/cluster-api/api/v1beta1"
@@ -250,7 +249,7 @@ func main() {
 // its running on and once the CSR is approved it will fetch the Certificate
 // and create a kubeconfig which will be used then by the host reconciler
 func generateKubeConfig(logger logr.Logger, hostName, boostrapKubeConfigPath string) error {
-	logger.Info("creating host csr")
+	logger.Info("creating host csr", "name", fmt.Sprintf(registration.ByohCSRNameFormat, hostName))
 	bootstrapClientConfig, err := registration.LoadRESTClientConfig(bootstrapKubeConfig)
 	if err != nil {
 		return err
@@ -272,9 +271,13 @@ func generateKubeConfig(logger logr.Logger, hostName, boostrapKubeConfigPath str
 	if err != nil {
 		return err
 	}
-	keyData, err := keyutil.MarshalPrivateKeyToPEM(byohCSR.PrivateKey)
+	err = registration.WriteKubeconfigFromBootstrapping(bootstrapClientConfig, "~/.byoh/config", string(certData), string(byohCSR.PrivateKey))
 	if err != nil {
 		return err
 	}
-	return registration.WriteKubeconfigFromBootstrapping(bootstrapClientConfig, "~/.kube/config", string(certData), string(keyData))
+	logger.Info("kubeconfig created")
+	if err := os.Remove(registration.TmpPrivateKey); err != nil && !os.IsNotExist(err) {
+		logger.Error(err, "Failed cleaning up private key file")
+	}
+	return nil
 }
