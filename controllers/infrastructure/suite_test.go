@@ -28,6 +28,7 @@ import (
 
 	//+kubebuilder:scaffold:imports
 
+	fakeclientset "k8s.io/client-go/kubernetes/fake"
 	clusterv1 "sigs.k8s.io/cluster-api/api/v1beta1"
 	bootstrapv1 "sigs.k8s.io/cluster-api/bootstrap/kubeadm/api/v1beta1"
 	"sigs.k8s.io/cluster-api/controllers/remote"
@@ -38,24 +39,26 @@ import (
 // http://onsi.github.io/ginkgo/ to learn more about Ginkgo.
 
 var (
-	testEnv               *envtest.Environment
-	clientFake            client.Client
-	reconciler            *controllers.ByoMachineReconciler
-	byoClusterReconciler  *controllers.ByoClusterReconciler
-	recorder              *record.FakeRecorder
-	byoCluster            *infrastructurev1beta1.ByoCluster
-	capiCluster           *clusterv1.Cluster
-	defaultClusterName    = "my-cluster"
-	defaultNodeName       = "my-host"
-	defaultByoHostName    = "my-host"
-	defaultMachineName    = "my-machine"
-	defaultByoMachineName = "my-byomachine"
-	defaultNamespace      = "default"
-	fakeBootstrapSecret   = "fakeBootstrapSecret"
-	k8sManager            ctrl.Manager
-	cfg                   *rest.Config
-	ctx                   context.Context
-	cancel                context.CancelFunc
+	testEnv                *envtest.Environment
+	clientFake             client.Client
+	clientSetFake          = fakeclientset.NewSimpleClientset()
+	reconciler             *controllers.ByoMachineReconciler
+	byoClusterReconciler   *controllers.ByoClusterReconciler
+	byoAdmissionReconciler *controllers.ByoAdmissionReconciler
+	recorder               *record.FakeRecorder
+	byoCluster             *infrastructurev1beta1.ByoCluster
+	capiCluster            *clusterv1.Cluster
+	defaultClusterName     = "my-cluster"
+	defaultNodeName        = "my-host"
+	defaultByoHostName     = "my-host"
+	defaultMachineName     = "my-machine"
+	defaultByoMachineName  = "my-byomachine"
+	defaultNamespace       = "default"
+	fakeBootstrapSecret    = "fakeBootstrapSecret"
+	k8sManager             ctrl.Manager
+	cfg                    *rest.Config
+	ctx                    context.Context
+	cancel                 context.CancelFunc
 )
 
 func TestAPIs(t *testing.T) {
@@ -130,6 +133,12 @@ var _ = BeforeSuite(func() {
 		Client: k8sManager.GetClient(),
 	}
 	err = byoClusterReconciler.SetupWithManager(k8sManager)
+	Expect(err).NotTo(HaveOccurred())
+
+	byoAdmissionReconciler = &controllers.ByoAdmissionReconciler{
+		ClientSet: clientSetFake,
+	}
+	err = byoAdmissionReconciler.SetupWithManager(k8sManager)
 	Expect(err).NotTo(HaveOccurred())
 
 	go func() {
