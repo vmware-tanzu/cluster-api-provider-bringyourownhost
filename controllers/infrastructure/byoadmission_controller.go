@@ -5,7 +5,6 @@ package controllers
 
 import (
 	"context"
-	"fmt"
 	"strings"
 
 	certv1 "k8s.io/api/certificates/v1"
@@ -43,10 +42,16 @@ func (r *ByoAdmissionReconciler) Reconcile(ctx context.Context, req ctrl.Request
 	}
 
 	// Check if the CSR is already approved or denied
-	if checkCSRCondition(csr.Status.Conditions, certv1.CertificateApproved) {
-		return ctrl.Result{}, fmt.Errorf("CertificateSigningRequest %s is already approved", csr.Name)
-	} else if checkCSRCondition(csr.Status.Conditions, certv1.CertificateDenied) {
-		return ctrl.Result{}, fmt.Errorf("CertificateSigningRequest %s is already denied", csr.Name)
+	csrApproved := checkCSRCondition(csr.Status.Conditions, certv1.CertificateApproved)
+	csrDenied := checkCSRCondition(csr.Status.Conditions, certv1.CertificateDenied)
+	if csrApproved || csrDenied {
+		if csrApproved {
+			logger.Info("CertificateSigningRequest is already approved", "CSR", csr.Name)
+		}
+		if csrDenied {
+			logger.Info("CertificateSigningRequest is already denied", "CSR", csr.Name)
+		}
+		return ctrl.Result{}, nil
 	}
 
 	// Update the CSR to the "Approved" condition

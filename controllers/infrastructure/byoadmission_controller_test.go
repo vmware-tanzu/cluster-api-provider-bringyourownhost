@@ -5,7 +5,6 @@ package controllers_test
 
 import (
 	"context"
-	"fmt"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -71,7 +70,7 @@ var _ = Describe("Controllers/ByoadmissionController", func() {
 			// Call Reconcile method
 			objectKey := types.NamespacedName{Name: defaultByoHostName}
 			_, err = byoAdmissionReconciler.Reconcile(ctx, reconcile.Request{NamespacedName: objectKey})
-			Expect(err).To(Equal(fmt.Errorf("CertificateSigningRequest %s is already denied", CSR.Name)))
+			Expect(err).To(BeNil())
 		})
 
 		It("should not approve an already approved CSR", func() {
@@ -86,7 +85,7 @@ var _ = Describe("Controllers/ByoadmissionController", func() {
 			// Call Reconcile method
 			objectKey := types.NamespacedName{Name: defaultByoHostName}
 			_, err = byoAdmissionReconciler.Reconcile(ctx, reconcile.Request{NamespacedName: objectKey})
-			Expect(err).To(Equal(fmt.Errorf("CertificateSigningRequest %s is already approved", CSR.Name)))
+			Expect(err).To(BeNil())
 		})
 
 		AfterEach(func() {
