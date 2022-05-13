@@ -4,93 +4,148 @@
 package registration
 
 import (
-	"context"
 	"crypto/rand"
-	"crypto/rsa"
 	"crypto/x509"
 	"crypto/x509/pkix"
 	"encoding/pem"
 	"fmt"
+	"time"
 
 	certv1 "k8s.io/api/certificates/v1"
-	apierrors "k8s.io/apimachinery/pkg/api/errors"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
+	clientset "k8s.io/client-go/kubernetes"
+	restclient "k8s.io/client-go/rest"
+	"k8s.io/client-go/tools/clientcmd"
+	clientcmdapi "k8s.io/client-go/tools/clientcmd/api"
+	"k8s.io/client-go/util/cert"
+	"k8s.io/client-go/util/certificate/csr"
+	"k8s.io/client-go/util/keyutil"
 	"k8s.io/klog/v2"
-	"k8s.io/utils/pointer"
-	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 const (
-	KeySize           = 2048
+	KeySize = 2048
+	// ExpirationSeconds defines the expiry time for Certificates
+	// which is currently set to 1 year aligned with kubeadm defaults.
 	ExpirationSeconds = 86400 * 365
 	ByohCSROrg        = "byoh:hosts"
 	ByohCSRCNFormat   = "byoh:host:%s"
 	ByohCSRNameFormat = "byoh-csr-%s"
+	// CSRApprovalTimeout defines the time to wait for certificate to
+	// be issued. Currently set to 1 hour.
+	CSRApprovalTimeout = 3600 * time.Second
+	TmpPrivateKey      = "byoh-client.key.tmp"
 )
 
 type ByohCSR struct {
-	K8sClient client.Client
+	BootstrapClient clientset.Interface
+	PrivateKey      []byte
 }
 
-func (bcsr *ByohCSR) CreateCSR(hostname string) (*rsa.PrivateKey, error) {
-	ctx := context.TODO()
-	privKey := &rsa.PrivateKey{}
-	byoCSR := &certv1.CertificateSigningRequest{}
-	err := bcsr.K8sClient.Get(ctx, types.NamespacedName{Name: hostname}, byoCSR)
-	if err != nil {
-		if !apierrors.IsNotFound(err) {
-			klog.Errorf("error getting csr %s, err=%v", hostname, err)
-			return nil, err
-		}
-		privKey, byoCSR, err = bcsr.generateCSR(hostname)
-		if err != nil {
-			klog.Errorf("error generating csr %s, err=%v", hostname, err)
-			return nil, err
-		}
-		err = bcsr.K8sClient.Create(ctx, byoCSR)
-		if err != nil {
-			klog.Errorf("error creating host csr %s, err=%v", hostname, err)
-			return nil, err
-		}
+// RequestBYOHClientCert will generate Private Key and then will create a
+// CertificateSigningRequest in K8s
+func (bcsr *ByohCSR) RequestBYOHClientCert(hostname string) (string, types.UID, error) {
+	if hostname == "" {
+		return "", "", fmt.Errorf("hostname is not valid")
 	}
-	return privKey, nil
+	keyData, _, err := keyutil.LoadOrGenerateKeyFile(TmpPrivateKey)
+	if err != nil {
+		return "", "", err
+	}
+	privateKey, err := keyutil.ParsePrivateKeyPEM(keyData)
+	if err != nil {
+		return "", "", fmt.Errorf("invalid private key for certificate request: %v", err)
+	}
+	bcsr.PrivateKey = keyData
+	csrData, err := generateCSR(hostname, privateKey)
+	if err != nil {
+		klog.Errorf("error generating csr %s, err=%v", hostname, err)
+		return "", "", err
+	}
+	certTimeToExpire := time.Duration(ExpirationSeconds) * time.Second
+	reqName, reqUID, err := csr.RequestCertificate(bcsr.BootstrapClient,
+		csrData,
+		fmt.Sprintf(ByohCSRNameFormat, hostname),
+		certv1.KubeAPIServerClientSignerName,
+		&certTimeToExpire,
+		[]certv1.KeyUsage{certv1.UsageClientAuth},
+		privateKey)
+	if err != nil {
+		return "", "", err
+	}
+	return reqName, reqUID, nil
 }
 
-func (bcsr *ByohCSR) generateCSR(hostname string) (*rsa.PrivateKey, *certv1.CertificateSigningRequest, error) {
-	// Generate Private Key
-	privateKey, err := rsa.GenerateKey(rand.Reader, KeySize)
-	if err != nil {
-		return nil, nil, err
-	}
-
+func generateCSR(hostname string, privKey interface{}) ([]byte, error) {
 	// Generate a new *x509.CertificateRequest template
-	// TODO: validate template
 	csrTemplate := x509.CertificateRequest{
 		Subject: pkix.Name{
 			CommonName:   fmt.Sprintf(ByohCSRCNFormat, hostname),
-			Organization: []string{"byoh:hosts"},
+			Organization: []string{ByohCSROrg},
 		},
+	}
+	// Generate the CSR bytes
+	csrData, err := x509.CreateCertificateRequest(rand.Reader, &csrTemplate, privKey)
+	if err != nil {
+		return nil, err
+	}
+	csrPemBlock := &pem.Block{
+		Type:  cert.CertificateRequestBlockType,
+		Bytes: csrData,
+	}
+	return pem.EncodeToMemory(csrPemBlock), nil
+}
+
+// LoadRESTClientConfig is to create an instance of *restclient.Config from
+// the boostrap kubeconfig path, this then will be used to create bootstrap
+// k8s client
+func LoadRESTClientConfig(bootstrapKubeconfig string) (*restclient.Config, error) {
+	loader := &clientcmd.ClientConfigLoadingRules{ExplicitPath: bootstrapKubeconfig}
+	loadedConfig, err := loader.Load()
+	if err != nil {
+		return nil, err
+	}
+	// Flatten the loaded data to a particular restclient.Config based on the current context.
+	return clientcmd.NewNonInteractiveClientConfig(
+		*loadedConfig,
+		loadedConfig.CurrentContext,
+		&clientcmd.ConfigOverrides{},
+		loader,
+	).ClientConfig()
+}
+
+// WriteKubeconfigFromBootstrapping will write the new kubeconfig fetching
+// some details from bootstrap client config and using key/cert details
+func WriteKubeconfigFromBootstrapping(bootstrapClientConfig *restclient.Config, kubeconfigPath, certData, keyData string) error {
+	// Get the CA data from the bootstrap client config.
+	caFile, caData := bootstrapClientConfig.CAFile, []byte{}
+	if caFile == "" {
+		caData = bootstrapClientConfig.CAData
 	}
 
-	// Generate the CSR bytes
-	csrData, err := x509.CreateCertificateRequest(rand.Reader, &csrTemplate, privateKey)
-	if err != nil {
-		return nil, nil, err
+	// Build resulting kubeconfig.
+	kubeconfigData := clientcmdapi.Config{
+		// Define a cluster stanza based on the bootstrap kubeconfig.
+		Clusters: map[string]*clientcmdapi.Cluster{"default-cluster": {
+			Server:                   bootstrapClientConfig.Host,
+			InsecureSkipTLSVerify:    bootstrapClientConfig.Insecure,
+			CertificateAuthority:     caFile,
+			CertificateAuthorityData: caData,
+		}},
+		// Define auth based on the obtained client cert.
+		AuthInfos: map[string]*clientcmdapi.AuthInfo{"default-auth": {
+			ClientCertificate: certData,
+			ClientKey:         keyData,
+		}},
+		// Define a context that connects the auth info and cluster, and set it as the default
+		Contexts: map[string]*clientcmdapi.Context{"default-context": {
+			Cluster:   "default-cluster",
+			AuthInfo:  "default-auth",
+			Namespace: "default",
+		}},
+		CurrentContext: "default-context",
 	}
-	// Create the CSR object
-	csr := &certv1.CertificateSigningRequest{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:        fmt.Sprintf(ByohCSRNameFormat, hostname),
-			Labels:      map[string]string{},
-			Annotations: map[string]string{},
-		},
-		Spec: certv1.CertificateSigningRequestSpec{
-			Request:           pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE REQUEST", Bytes: csrData}),
-			SignerName:        certv1.KubeAPIServerClientSignerName,
-			Usages:            []certv1.KeyUsage{certv1.UsageClientAuth},
-			ExpirationSeconds: pointer.Int32(ExpirationSeconds),
-		},
-	}
-	return privateKey, csr, nil
+
+	// Marshal to disk
+	return clientcmd.WriteToFile(kubeconfigData, kubeconfigPath)
 }

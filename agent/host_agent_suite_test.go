@@ -24,6 +24,7 @@ import (
 	certv1 "k8s.io/api/certificates/v1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/runtime"
+	clientset "k8s.io/client-go/kubernetes"
 	clusterv1 "sigs.k8s.io/cluster-api/api/v1beta1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/envtest"
@@ -35,9 +36,11 @@ var (
 	pathToHostAgentBinary string
 	kubeconfigFile        *os.File
 	k8sClient             client.Client
+	clientSet             clientset.Interface
 	tmpFilePrefix         = "kubeconfigFile-"
 	defaultByoMachineName = "my-byomachine"
 	agentLogFile          = "/tmp/agent-integration.log"
+	execLogFile           = "/tmp/agent-exec.log"
 	fakeKubeConfig        = "fake-kubeconfig-path"
 	fakeDownloadPath      = "fake-download-path"
 	fakeBootstrapSecret   = "fake-bootstrap-secret"
@@ -96,6 +99,8 @@ var _ = BeforeSuite(func() {
 
 	k8sClient, err = client.New(cfg, client.Options{Scheme: scheme})
 	Expect(err).NotTo(HaveOccurred())
+
+	clientSet = clientset.NewForConfigOrDie(cfg)
 
 	dockerClient, err = dClient.NewClientWithOpts(dClient.FromEnv)
 	Expect(err).NotTo(HaveOccurred())
