@@ -22,10 +22,20 @@ var (
 
 // bundleDownloader for downloading an OCI image.
 type bundleDownloader struct {
-	bundleType   bundleType
+	bundleType   BundleType
 	repoAddr     string
 	downloadPath string
 	logger       logr.Logger
+}
+
+// NewBundleDownloader will return a new bundle downloader instance
+func NewBundleDownloader(bundleType BundleType, repoAddr, downloadPath string, logger logr.Logger) *bundleDownloader {
+	return &bundleDownloader{
+		bundleType:   bundleType,
+		repoAddr:     repoAddr,
+		downloadPath: downloadPath,
+		logger:       logger,
+	}
 }
 
 // Download is a method that downloads the bundle from repoAddr to downloadPath.
@@ -87,7 +97,7 @@ func (bd *bundleDownloader) DownloadFromRepo(
 	if err != nil {
 		return err
 	}
-	bundleAddr := bd.getBundleAddr(normalizedOsVersion, k8sVersion, tag)
+	bundleAddr := bd.GetBundleAddr(normalizedOsVersion, k8sVersion, tag)
 	err = convertError(downloadByTool(bundleAddr, dir))
 	if err != nil {
 		return err
@@ -148,8 +158,8 @@ func (bd *bundleDownloader) getBundlePathWithRepo() string {
 	return filepath.Join(bd.downloadPath, strings.ReplaceAll(bd.repoAddr, "/", "."))
 }
 
-// getBundleAddr returns the exact address to the bundle in the repo.
-func (bd *bundleDownloader) getBundleAddr(normalizedOsVersion, k8sVersion, tag string) string {
+// GetBundleAddr returns the exact address to the bundle in the repo.
+func (bd *bundleDownloader) GetBundleAddr(normalizedOsVersion, k8sVersion, tag string) string {
 	return fmt.Sprintf("%s/%s:%s", bd.repoAddr, GetBundleName(normalizedOsVersion), tag)
 }
 

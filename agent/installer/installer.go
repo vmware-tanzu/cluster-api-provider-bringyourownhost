@@ -33,11 +33,11 @@ const (
 )
 
 // BundleType is used to support various bundles
-type bundleType string
+type BundleType string
 
 const (
 	// BundleTypeK8s represents a vanilla k8s bundle
-	BundleTypeK8s bundleType = "k8s"
+	BundleTypeK8s BundleType = "k8s"
 )
 
 var preRequisitePackages = []string{"socat", "ebtables", "ethtool", "conntrack"}
@@ -49,8 +49,8 @@ type installer struct {
 	logger     logr.Logger
 }
 
-// getSupportedRegistry returns a registry with installers for the supported OS and K8s
-func getSupportedRegistry(ob algo.OutputBuilder) registry {
+// GetSupportedRegistry returns a registry with installers for the supported OS and K8s
+func GetSupportedRegistry(ob algo.OutputBuilder) registry {
 	reg := newRegistry()
 
 	addBundleInstaller := func(osBundle, k8sBundle string, stepProvider algo.K8sStepProvider) {
@@ -116,7 +116,7 @@ func (bd *bundleDownloader) DownloadOrPreview(os, k8s, tag string) error {
 // New returns an installer that downloads bundles for the current OS from OCI repository with
 // address bundleRepo and stores them under downloadPath. Download path is created,
 // if it does not exist.
-func New(downloadPath string, bundleType bundleType, logger logr.Logger) (*installer, error) {
+func New(downloadPath string, bundleType BundleType, logger logr.Logger) (*installer, error) {
 	if downloadPath == "" {
 		return nil, fmt.Errorf("empty download path")
 	}
@@ -139,17 +139,17 @@ func New(downloadPath string, bundleType bundleType, logger logr.Logger) (*insta
 // newUnchecked returns an installer bypassing os detection and checks of downloadPath.
 // If it is empty, returned installer will run in preview mode, i.e.
 // executes everything except the actual commands.
-func newUnchecked(currentOs string, bundleType bundleType, downloadPath string, logger logr.Logger, outputBuilder algo.OutputBuilder) (*installer, error) {
-	bd := bundleDownloader{repoAddr: "", bundleType: bundleType, downloadPath: downloadPath, logger: logger}
+func newUnchecked(currentOs string, bundleType BundleType, downloadPath string, logger logr.Logger, outputBuilder algo.OutputBuilder) (*installer, error) {
+	bd := NewBundleDownloader(bundleType, "", downloadPath, logger)
 
-	reg := getSupportedRegistry(outputBuilder)
+	reg := GetSupportedRegistry(outputBuilder)
 	if len(reg.ListK8s(currentOs)) == 0 {
 		return nil, ErrOsK8sNotSupported
 	}
 
 	return &installer{
 		algoRegistry:     reg,
-		bundleDownloader: bd,
+		bundleDownloader: *bd,
 		detectedOs:       currentOs,
 		logger:           logger}, nil
 }
@@ -228,7 +228,7 @@ func ListSupportedK8s(os string) []string {
 // getSupportedRegistryDescription returns a description registry of supported OS and k8s.
 // It that can only be queried for OS and k8s but cannot be used for install/uninstall.
 func getSupportedRegistryDescription() registry {
-	return getSupportedRegistry(nil)
+	return GetSupportedRegistry(nil)
 }
 
 // PreviewChanges describes the changes to install and uninstall K8s on OS without actually applying them.
@@ -236,7 +236,7 @@ func getSupportedRegistryDescription() registry {
 // Can be invoked on a non-supported OS
 func PreviewChanges(os, k8sVer string) (install, uninstall string, err error) {
 	stepPreviewer := stringPrinter{msgFmt: "# %s"}
-	reg := getSupportedRegistry(&stepPreviewer)
+	reg := GetSupportedRegistry(&stepPreviewer)
 	installer, _ := reg.GetInstaller(os, k8sVer)
 
 	if installer == nil {

@@ -469,3 +469,140 @@ func (csrb *CertificateSigningRequestBuilder) Build() (*certv1.CertificateSignin
 	}
 	return csr, nil
 }
+
+// K8sInstallerConfigBuilder holds the variables and objects required to build an infrastructurev1beta1.K8sInstallerConfig
+type K8sInstallerConfigBuilder struct {
+	namespace     string
+	name          string
+	generatedName string
+	clusterLabel  string
+	byomachine    *infrastructurev1beta1.ByoMachine
+	bundleType    string
+	bundleRepo    string
+}
+
+// K8sInstallerConfig returns a K8sInstallerConfigBuilder with the given generated name and namespace
+func K8sInstallerConfig(namespace, generatedName string) *K8sInstallerConfigBuilder {
+	return &K8sInstallerConfigBuilder{
+		namespace:     namespace,
+		generatedName: generatedName,
+	}
+}
+
+// WithName adds the name to K8sInstallerConfigBuilder
+func (b *K8sInstallerConfigBuilder) WithName(name string) *K8sInstallerConfigBuilder {
+	b.name = name
+	return b
+}
+
+// WithClusterLabel adds the passed cluster label to the K8sInstallerConfigBuilder
+func (b *K8sInstallerConfigBuilder) WithClusterLabel(clusterName string) *K8sInstallerConfigBuilder {
+	b.clusterLabel = clusterName
+	return b
+}
+
+// WithOwnerByoMachine adds the passed Owner ByoMachine to the K8sInstallerConfigBuilder
+func (b *K8sInstallerConfigBuilder) WithOwnerByoMachine(byomachine *infrastructurev1beta1.ByoMachine) *K8sInstallerConfigBuilder {
+	b.byomachine = byomachine
+	return b
+}
+
+// WithBundleRepo adds the passed bundleRepo to the K8sInstallerConfigBuilder
+func (b *K8sInstallerConfigBuilder) WithBundleRepo(bundleRepo string) *K8sInstallerConfigBuilder {
+	b.bundleRepo = bundleRepo
+	return b
+}
+
+// WithBundleType adds the passed bundleType to the K8sInstallerConfigBuilder
+func (b *K8sInstallerConfigBuilder) WithBundleType(bundleType string) *K8sInstallerConfigBuilder {
+	b.bundleType = bundleType
+	return b
+}
+
+// Build returns a K8sInstallerConfig with the attributes added to the K8sInstallerConfigBuilder
+func (b *K8sInstallerConfigBuilder) Build() *infrastructurev1beta1.K8sInstallerConfig {
+	k8sinstallerconfig := &infrastructurev1beta1.K8sInstallerConfig{
+		TypeMeta: metav1.TypeMeta{
+			Kind:       "K8sInstallerConfig",
+			APIVersion: infrastructurev1beta1.GroupVersion.String(),
+		},
+		ObjectMeta: metav1.ObjectMeta{
+			Name:         b.name,
+			GenerateName: b.generatedName,
+			Namespace:    b.namespace,
+		},
+		Spec: infrastructurev1beta1.K8sInstallerConfigSpec{},
+	}
+	if b.byomachine != nil {
+		k8sinstallerconfig.ObjectMeta.OwnerReferences = []metav1.OwnerReference{
+			{
+				Kind:       "ByoMachine",
+				Name:       b.byomachine.Name,
+				APIVersion: infrastructurev1beta1.GroupVersion.String(),
+				UID:        b.byomachine.UID,
+			},
+		}
+	}
+	if b.clusterLabel != "" {
+		k8sinstallerconfig.ObjectMeta.Labels = map[string]string{
+			clusterv1.ClusterLabelName: b.clusterLabel,
+		}
+	}
+	if b.bundleRepo != "" {
+		k8sinstallerconfig.Spec.BundleRepo = b.bundleRepo
+	}
+	if b.bundleType != "" {
+		k8sinstallerconfig.Spec.BundleType = b.bundleType
+	}
+	return k8sinstallerconfig
+}
+
+// K8sInstallerConfigTemplateBuilder holds the variables and objects required to build an infrastructurev1beta1.K8sInstallerConfigTemplate
+type K8sInstallerConfigTemplateBuilder struct {
+	namespace  string
+	name       string
+	bundleType string
+	bundleRepo string
+}
+
+// K8sInstallerConfigTemplate returns a K8sInstallerConfigTemplateBuilder with the given name and namespace
+func K8sInstallerConfigTemplate(namespace, name string) *K8sInstallerConfigTemplateBuilder {
+	return &K8sInstallerConfigTemplateBuilder{
+		namespace: namespace,
+		name:      name,
+	}
+}
+
+// WithBundleRepo adds the passed bundleRepo to the K8sInstallerConfigTemplateBuilder
+func (b *K8sInstallerConfigTemplateBuilder) WithBundleRepo(bundleRepo string) *K8sInstallerConfigTemplateBuilder {
+	b.bundleRepo = bundleRepo
+	return b
+}
+
+// WithBundleType adds the passed bundleType to the K8sInstallerConfigTemplateBuilder
+func (b *K8sInstallerConfigTemplateBuilder) WithBundleType(bundleType string) *K8sInstallerConfigTemplateBuilder {
+	b.bundleType = bundleType
+	return b
+}
+
+// Build returns a K8sInstallerConfigTemplate with the attributes added to the K8sInstallerConfigTemplateBuilder
+func (b *K8sInstallerConfigTemplateBuilder) Build() *infrastructurev1beta1.K8sInstallerConfigTemplate {
+	k8sinstallerconfigtemplate := &infrastructurev1beta1.K8sInstallerConfigTemplate{
+		TypeMeta: metav1.TypeMeta{
+			Kind:       "K8sInstallerConfigTemplate",
+			APIVersion: infrastructurev1beta1.GroupVersion.String(),
+		},
+		ObjectMeta: metav1.ObjectMeta{
+			GenerateName: b.name,
+			Namespace:    b.namespace,
+		},
+		Spec: infrastructurev1beta1.K8sInstallerConfigTemplateSpec{},
+	}
+	if b.bundleRepo != "" {
+		k8sinstallerconfigtemplate.Spec.Template.Spec.BundleRepo = b.bundleRepo
+	}
+	if b.bundleType != "" {
+		k8sinstallerconfigtemplate.Spec.Template.Spec.BundleType = b.bundleType
+	}
+	return k8sinstallerconfigtemplate
+}
