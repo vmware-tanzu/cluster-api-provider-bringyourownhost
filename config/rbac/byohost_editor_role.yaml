@@ -22,3 +22,5 @@ rules:
   - byohosts/status
   verbs:
   - get
+  - patch
+  - update
