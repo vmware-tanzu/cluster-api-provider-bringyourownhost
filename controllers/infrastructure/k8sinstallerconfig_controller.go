@@ -16,7 +16,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
-	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/utils/pointer"
 	clusterv1 "sigs.k8s.io/cluster-api/api/v1beta1"
 	"sigs.k8s.io/cluster-api/util"
@@ -71,40 +70,18 @@ func (r *K8sInstallerConfigReconciler) Reconcile(ctx context.Context, req ctrl.R
 		return ctrl.Result{}, err
 	}
 
-	// Fetch the ByoMachine
-	byoMachine, err := GetOwnerByoMachine(ctx, r.Client, &config.ObjectMeta)
-	if err != nil {
-		logger.Error(err, "failed to get Owner ByoMachine")
-		return ctrl.Result{}, err
-	}
-
-	if byoMachine == nil {
-		logger.Info("Waiting for ByoMachine Controller to set OwnerRef on InstallerConfig")
-		return ctrl.Result{}, nil
-	}
-	logger.Info("byoMachine found")
-
-	// Fetch the Cluster
-	cluster, err := util.GetClusterFromMetadata(ctx, r.Client, byoMachine.ObjectMeta)
-	if err != nil {
-		logger.Error(err, "ByoMachine owner Machine is missing cluster label or cluster does not exist")
-		return ctrl.Result{}, err
-	}
-
-	logger = logger.WithValues("cluster", cluster.Name)
-
-	if annotations.IsPaused(cluster, config) {
-		logger.Info("Reconciliation is paused for this object")
-		return ctrl.Result{}, nil
-	}
-
 	// Create the K8sInstallerConfig scope
 	scope := &k8sInstallerConfigScope{
-		Client:     r.Client,
-		Logger:     logger,
-		Cluster:    cluster,
-		ByoMachine: byoMachine,
-		Config:     config,
+		Client: r.Client,
+		Logger: logger.WithValues("k8sinstallerconfig", config.Name),
+		Config: config,
+	}
+
+	// Fetch the ByoMachine
+	byoMachine, err := GetOwnerByoMachine(ctx, r.Client, &config.ObjectMeta)
+	if err != nil && !apierrors.IsNotFound(err) {
+		logger.Error(err, "failed to get Owner ByoMachine")
+		return ctrl.Result{}, err
 	}
 
 	helper, err := patch.NewHelper(config, r.Client)
@@ -127,6 +104,29 @@ func (r *K8sInstallerConfigReconciler) Reconcile(ctx context.Context, req ctrl.R
 	// Handle deleted K8sInstallerConfig
 	if !config.ObjectMeta.DeletionTimestamp.IsZero() {
 		return r.reconcileDelete(ctx, scope)
+	}
+
+	if byoMachine == nil {
+		logger.Info("Waiting for ByoMachine Controller to set OwnerRef on InstallerConfig")
+		return ctrl.Result{}, nil
+	}
+	scope.ByoMachine = byoMachine
+	logger = logger.WithValues("byoMachine", byoMachine.Name, "namespace", byoMachine.Namespace)
+	logger.Info("byoMachine found")
+
+	// Fetch the Cluster
+	cluster, err := util.GetClusterFromMetadata(ctx, r.Client, byoMachine.ObjectMeta)
+	if err != nil {
+		logger.Error(err, "ByoMachine owner Machine is missing cluster label or cluster does not exist")
+		return ctrl.Result{}, err
+	}
+	logger = logger.WithValues("cluster", cluster.Name)
+	scope.Cluster = cluster
+	scope.Logger = logger
+
+	if annotations.IsPaused(cluster, config) {
+		logger.Info("Reconciliation is paused for this object")
+		return ctrl.Result{}, nil
 	}
 
 	switch {
@@ -258,28 +258,6 @@ func (r *K8sInstallerConfigReconciler) ByoMachineToK8sInstallerConfigMapFunc(o c
 func (r *K8sInstallerConfigReconciler) reconcileDelete(ctx context.Context, scope *k8sInstallerConfigScope) (reconcile.Result, error) {
 	logger := scope.Logger
 	logger.Info("Deleting K8sInstallerConfig")
-
-	secretRef := scope.Config.Status.InstallationSecret
-	if secretRef != nil {
-		// fetching the secret from reference
-		obj := &corev1.Secret{}
-		err := r.Client.Get(ctx, types.NamespacedName{Name: secretRef.Name, Namespace: secretRef.Namespace}, obj)
-		if err != nil && !apierrors.IsNotFound(err) {
-			return reconcile.Result{}, errors.Wrapf(err, "failed to get %s %q for K8sInstallerConfig %q in namespace %q",
-				secretRef.GroupVersionKind(), secretRef.Name, scope.Config.Name, scope.Config.Namespace)
-		}
-
-		if obj != nil && obj.Name != "" {
-			// deleting the referred secret
-			logger.Info("Deleting secret", "secret", secretRef.Name)
-			if err := r.Client.Delete(ctx, obj); err != nil && !apierrors.IsNotFound(err) {
-				return ctrl.Result{}, errors.Wrapf(err,
-					"failed to delete %s %q for K8sInstallerConfig %q in namespace %q",
-					obj.GroupVersionKind(), obj.GetName(), scope.Config.Name, scope.Config.Namespace)
-			}
-		}
-	}
-
 	controllerutil.RemoveFinalizer(scope.Config, infrav1.K8sInstallerConfigFinalizer)
 	return reconcile.Result{}, nil
 }
