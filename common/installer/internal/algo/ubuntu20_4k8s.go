@@ -83,17 +83,18 @@ if ! command -v imgpkg >>/dev/null; then
 	chmod +x /usr/local/bin/imgpkg
 fi
 
-if [ ! -d $BUNDLE_PATH ]; then
-	echo "downloading bundle"
-	imgpkg pull -r -i $BUNDLE_ADDR -o $BUNDLE_PATH
-fi
+echo "downloading bundle"
+mkdir -p $BUNDLE_PATH
+imgpkg pull -r -i $BUNDLE_ADDR -o $BUNDLE_PATH
 
 
 ## disable swap
 swapoff -a && sed -ri '/\sswap\s/s/^#?/#/' /etc/fstab
 
 ## disable firewall
-ufw disable
+if command -v ufw >>/dev/null; then
+	ufw disable
+fi
 
 ## load kernal modules
 modprobe overlay && modprobe br_netfilter
@@ -123,7 +124,9 @@ BUNDLE_PATH=$BUNDLE_DOWNLOAD_PATH/$BUNDLE_ADDR
 swapon -a && sed -ri '/\sswap\s/s/^#?//' /etc/fstab
 
 ## enable firewall
-ufw enable
+if command -v ufw >>/dev/null; then
+	ufw enable
+fi
 
 ## remove kernal modules
 modprobe -r overlay && modprobe -r br_netfilter

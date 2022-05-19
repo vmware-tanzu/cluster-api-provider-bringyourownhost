@@ -17,10 +17,20 @@ type K8sInstaller interface {
 	Uninstall() string
 }
 
+// archOldNameMap keeps the mapping of architecture new name to old name mapping
+var archOldNameMap = map[string]string{
+	"amd64": "x86-64",
+}
+
 // NewInstaller will return a new installer
 func NewInstaller(ctx context.Context, osDist, arch, k8sVersion string, downloader BundleDownloader) (K8sInstaller, error) {
+	bundleArchName := arch
+	// replacing the arch name to old name to match with the bundle name
+	if _, exists := archOldNameMap[arch]; exists {
+		bundleArchName = archOldNameMap[arch]
+	}
 	// normalizing os image name and adding arch
-	osArch := strings.ReplaceAll(osDist, " ", "_") + "_" + arch
+	osArch := strings.ReplaceAll(osDist, " ", "_") + "_" + bundleArchName
 
 	reg := installer.GetSupportedRegistry(nil)
 	if len(reg.ListK8s(osArch)) == 0 {
