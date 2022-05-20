@@ -35,6 +35,7 @@ var _ = Describe("Controllers/K8sInstallerConfigController", func() {
 		k8sinstallerConfigTemplate  *infrav1.K8sInstallerConfigTemplate
 		machine                     *clusterv1.Machine
 		k8sClientUncached           client.Client
+		byoMachineLookupKey         types.NamespacedName
 		k8sInstallerConfigLookupKey types.NamespacedName
 		installerSecretLookupKey    types.NamespacedName
 		testClusterVersion          = "v1.22.1_xyz"
@@ -78,6 +79,7 @@ var _ = Describe("Controllers/K8sInstallerConfigController", func() {
 
 		WaitForObjectsToBePopulatedInCache(machine, byoMachine, k8sinstallerConfig, k8sinstallerConfigTemplate)
 
+		byoMachineLookupKey = types.NamespacedName{Name: byoMachine.Name, Namespace: byoMachine.Namespace}
 		k8sInstallerConfigLookupKey = types.NamespacedName{Name: k8sinstallerConfig.Name, Namespace: k8sinstallerConfig.Namespace}
 		installerSecretLookupKey = types.NamespacedName{Name: k8sinstallerConfig.Name, Namespace: k8sinstallerConfig.Namespace}
 	})
@@ -382,39 +384,6 @@ var _ = Describe("Controllers/K8sInstallerConfigController", func() {
 				})
 			})
 
-			It("should ignore error if k8sInstallerConfig created secret not found and k8sInstallerConfig config should be deleted", func() {
-				createdSecret := &corev1.Secret{}
-				Expect(k8sClientUncached.Get(ctx, installerSecretLookupKey, createdSecret)).ToNot(HaveOccurred())
-
-				deletedConfig := &infrav1.K8sInstallerConfig{}
-				Expect(k8sClientUncached.Get(ctx, k8sInstallerConfigLookupKey, deletedConfig)).Should(Not(HaveOccurred()))
-
-				Expect(k8sClientUncached.Delete(ctx, createdSecret)).Should(Succeed())
-
-				_, err := k8sInstallerConfigReconciler.Reconcile(ctx, reconcile.Request{
-					NamespacedName: types.NamespacedName{
-						Name:      k8sinstallerConfig.Name,
-						Namespace: k8sinstallerConfig.Namespace}})
-				Expect(err).NotTo(HaveOccurred())
-
-				err = k8sClientUncached.Get(ctx, k8sInstallerConfigLookupKey, deletedConfig)
-				Expect(err).To(MatchError(fmt.Sprintf("k8sinstallerconfigs.infrastructure.cluster.x-k8s.io %q not found", k8sInstallerConfigLookupKey.Name)))
-			})
-
-			It("should delete the k8sInstallerConfig created secret", func() {
-				createdSecret := &corev1.Secret{}
-				Expect(k8sClientUncached.Get(ctx, installerSecretLookupKey, createdSecret)).ToNot(HaveOccurred())
-
-				_, err := k8sInstallerConfigReconciler.Reconcile(ctx, reconcile.Request{
-					NamespacedName: types.NamespacedName{
-						Name:      k8sinstallerConfig.Name,
-						Namespace: k8sinstallerConfig.Namespace}})
-				Expect(err).NotTo(HaveOccurred())
-
-				err = k8sClientUncached.Get(ctx, k8sInstallerConfigLookupKey, createdSecret)
-				Expect(err).To(MatchError(fmt.Sprintf("secrets %q not found", createdSecret.Name)))
-			})
-
 			It("should delete the k8sInstallerConfig object", func() {
 				deletedConfig := &infrav1.K8sInstallerConfig{}
 				// assert K8sInstallerConfig Exists before reconcile
@@ -428,6 +397,37 @@ var _ = Describe("Controllers/K8sInstallerConfigController", func() {
 				// assert K8sInstallerConfig does not exists
 				err = k8sClientUncached.Get(ctx, k8sInstallerConfigLookupKey, deletedConfig)
 				Expect(err).To(MatchError(fmt.Sprintf("k8sinstallerconfigs.infrastructure.cluster.x-k8s.io %q not found", k8sInstallerConfigLookupKey.Name)))
+			})
+
+			Context("When owner ByoMachine not found", func() {
+				BeforeEach(func() {
+					ph, err := patch.NewHelper(byoMachine, k8sClientUncached)
+					Expect(err).ShouldNot(HaveOccurred())
+					controllerutil.AddFinalizer(byoMachine, infrav1.MachineFinalizer)
+					Expect(ph.Patch(ctx, byoMachine, patch.WithStatusObservedGeneration{})).Should(Succeed())
+
+					Expect(k8sClientUncached.Delete(ctx, byoMachine)).Should(Succeed())
+					WaitForObjectToBeUpdatedInCache(byoMachine, func(object client.Object) bool {
+						return !object.(*infrav1.ByoMachine).ObjectMeta.DeletionTimestamp.IsZero()
+					})
+					_, err = reconciler.Reconcile(ctx, reconcile.Request{NamespacedName: byoMachineLookupKey})
+					Expect(err).ToNot(HaveOccurred())
+				})
+
+				It("should delete the k8sInstallerConfig object", func() {
+					deletedConfig := &infrav1.K8sInstallerConfig{}
+					// assert K8sInstallerConfig Exists before reconcile
+					Expect(k8sClientUncached.Get(ctx, k8sInstallerConfigLookupKey, deletedConfig)).Should(Not(HaveOccurred()))
+					_, err := k8sInstallerConfigReconciler.Reconcile(ctx, reconcile.Request{
+						NamespacedName: types.NamespacedName{
+							Name:      k8sinstallerConfig.Name,
+							Namespace: k8sinstallerConfig.Namespace}})
+					Expect(err).NotTo(HaveOccurred())
+
+					// assert K8sInstallerConfig does not exists
+					err = k8sClientUncached.Get(ctx, k8sInstallerConfigLookupKey, deletedConfig)
+					Expect(err).To(MatchError(fmt.Sprintf("k8sinstallerconfigs.infrastructure.cluster.x-k8s.io %q not found", k8sInstallerConfigLookupKey.Name)))
+				})
 			})
 		})
 	})
