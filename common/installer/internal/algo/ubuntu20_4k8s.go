@@ -83,9 +83,17 @@ if ! command -v imgpkg >>/dev/null; then
 	chmod +x /usr/local/bin/imgpkg
 fi
 
+<<<<<<< HEAD
 echo "downloading bundle"
 mkdir -p $BUNDLE_PATH
 imgpkg pull -r -i $BUNDLE_ADDR -o $BUNDLE_PATH
+=======
+if [ ! -d $BUNDLE_PATH ]; then
+	echo "downloading bundle"
+	mkdir -p $BUNDLE_PATH
+	imgpkg pull -r -i $BUNDLE_ADDR -o $BUNDLE_PATH
+fi
+>>>>>>> host agent changes added
 
 
 ## disable swap

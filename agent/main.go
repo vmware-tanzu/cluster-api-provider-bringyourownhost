@@ -231,6 +231,7 @@ func main() {
 		K8sInstaller:           k8sInstaller,
 		SkipK8sInstallation:    skipInstallation,
 		UseInstallerController: useInstallerController,
+		DownloadPath:			downloadpath,
 	}
 	if err = hostReconciler.SetupWithManager(context.TODO(), mgr); err != nil {
 		logger.Error(err, "unable to create controller")

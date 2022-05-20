@@ -4,9 +4,12 @@
 package reconciler
 
 import (
+	"bytes"
 	"context"
 	"fmt"
+	"html/template"
 	"os"
+	"os/exec"
 
 	"github.com/pkg/errors"
 	"github.com/vmware-tanzu/cluster-api-provider-bringyourownhost/agent/cloudinit"
@@ -45,6 +48,7 @@ type HostReconciler struct {
 	K8sInstaller           IK8sInstaller
 	SkipK8sInstallation    bool
 	UseInstallerController bool
+	DownloadPath           string
 }
 
 const (
@@ -98,6 +102,28 @@ func (r *HostReconciler) reconcileNormal(ctx context.Context, byoHost *infrastru
 		logger.Info("Machine ref not yet set")
 		conditions.MarkFalse(byoHost, infrastructurev1beta1.K8sNodeBootstrapSucceeded, infrastructurev1beta1.WaitingForMachineRefReason, clusterv1.ConditionSeverityInfo, "")
 		return ctrl.Result{}, nil
+	}
+
+	if r.UseInstallerController {
+		if byoHost.Spec.InstallationSecret == nil {
+			logger.Info("InstallationSecret not ready")
+			conditions.MarkFalse(byoHost, infrastructurev1beta1.K8sNodeBootstrapSucceeded, infrastructurev1beta1.K8sInstallationSecretUnavailableReason, clusterv1.ConditionSeverityInfo, "")
+			return ctrl.Result{}, nil
+		}
+		installScript, _, err := r.getInstallationScript(ctx, byoHost.Spec.InstallationSecret.Name, byoHost.Spec.InstallationSecret.Namespace)
+		if err != nil {
+			logger.Error(err, "error getting Installation script")
+			return ctrl.Result{}, err
+		}
+		installScript, err = r.parseInstallationScript(ctx, installScript)
+		if err != nil {
+			return ctrl.Result{}, err
+		}
+		err = r.executeScript(ctx, installScript)
+		if err != nil {
+			logger.Error(err, "error execting installation script")
+			return ctrl.Result{}, err
+		}
 	}
 
 	if byoHost.Spec.BootstrapSecret == nil {
@@ -171,6 +197,42 @@ func (r *HostReconciler) getBootstrapScript(ctx context.Context, dataSecretName,
 	return bootstrapSecret, nil
 }
 
+func (r *HostReconciler) getInstallationScript(ctx context.Context, dataSecretName, namespace string) (string, string, error) {
+	secret := &corev1.Secret{}
+	err := r.Client.Get(ctx, types.NamespacedName{Name: dataSecretName, Namespace: namespace}, secret)
+	if err != nil {
+		return "", "", err
+	}
+
+	installScript := string(secret.Data["install"])
+	uninstallScript := string(secret.Data["uninstall"])
+	return installScript, uninstallScript, nil
+}
+
+func (r *HostReconciler) executeScript(ctx context.Context, script string) error {
+	cmd := exec.CommandContext(ctx, "/bin/bash", "-c", script)
+	cmd.Stderr = os.Stderr
+	cmd.Stdout = os.Stdout
+	if err := cmd.Run(); err != nil {
+		return err
+	}
+	return nil
+}
+
+func (r *HostReconciler) parseInstallationScript(ctx context.Context, script string) (string, error) {
+	parser, err := template.New("parser").Parse(script)
+	if err != nil {
+		return "", fmt.Errorf("unable to parse install script")
+	}
+	var tpl bytes.Buffer
+	if err = parser.Execute(&tpl, map[string]string{
+		"BundleDownloadPath": r.DownloadPath,
+	}); err != nil {
+		return "", fmt.Errorf("unable to apply install parsed template to the data object")
+	}
+	return tpl.String(), nil
+}
+
 // SetupWithManager sets up the controller with the manager
 func (r *HostReconciler) SetupWithManager(ctx context.Context, mgr manager.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
@@ -215,6 +277,22 @@ func (r *HostReconciler) hostCleanUp(ctx context.Context, byoHost *infrastructur
 		}
 		if r.SkipK8sInstallation {
 			logger.Info("Skipping uninstallation of k8s components")
+		} else if r.UseInstallerController {
+			_, uninstallScript, err := r.getInstallationScript(ctx, byoHost.Spec.InstallationSecret.Name, byoHost.Spec.InstallationSecret.Namespace)
+			if err != nil {
+				logger.Error(err, "error getting Uninstallation script")
+				return err
+			}
+			uninstallScript, err = r.parseInstallationScript(ctx, uninstallScript)
+			if err != nil {
+				logger.Error(err, "error parsing Uninstallation script")
+				return err
+			}
+			err = r.executeScript(ctx, uninstallScript)
+			if err != nil {
+				logger.Error(err, "error execting Uninstallation script")
+				return err
+			}
 		} else {
 			err = r.uninstallk8sComponents(ctx, byoHost)
 			if err != nil {
