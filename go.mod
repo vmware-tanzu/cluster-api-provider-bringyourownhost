@@ -7,7 +7,7 @@ replace sigs.k8s.io/cluster-api => sigs.k8s.io/cluster-api v1.1.3
 require (
 	github.com/cppforlife/go-cli-ui v0.0.0-20200716203538-1e47f820817f
 	github.com/docker/cli v20.10.15+incompatible
-	github.com/docker/docker v20.10.14+incompatible
+	github.com/docker/docker v20.10.16+incompatible
 	github.com/go-logr/logr v1.2.0
 	github.com/jackpal/gateway v1.0.7
 	github.com/k14s/imgpkg v0.21.0
@@ -174,7 +174,6 @@ require (
 	gomodules.xyz/jsonpatch/v2 v2.2.0 // indirect
 	google.golang.org/appengine v1.6.7 // indirect
 	google.golang.org/genproto v0.0.0-20220107163113-42d7afdf6368 // indirect
-	google.golang.org/grpc v1.42.0 // indirect
 	google.golang.org/protobuf v1.27.1 // indirect
 	gopkg.in/inf.v0 v0.9.1 // indirect
 	gopkg.in/ini.v1 v1.66.2 // indirect
