@@ -549,6 +549,12 @@ var _ = Describe("Agent", func() {
 
 			output, _, err = runner.ExecByoDockerHost(byoHostContainer)
 			Expect(err).NotTo(HaveOccurred())
+			// Clean for any CSR present
+			var csrList certv1.CertificateSigningRequestList
+			Expect(k8sClient.List(ctx, &csrList)).ShouldNot(HaveOccurred())
+			for _, csr := range csrList.Items {
+				Expect(k8sClient.Delete(ctx, &csr)).ShouldNot(HaveOccurred())
+			}
 		})
 
 		JustAfterEach(func() {
@@ -558,11 +564,6 @@ var _ = Describe("Agent", func() {
 		})
 
 		AfterEach(func() {
-			var csrList certv1.CertificateSigningRequestList
-			Expect(k8sClient.List(ctx, &csrList)).ShouldNot(HaveOccurred())
-			for _, csr := range csrList.Items {
-				Expect(k8sClient.Delete(ctx, &csr)).ShouldNot(HaveOccurred())
-			}
 			cleanup(runner.Context, byoHostContainer, ns, agentLogFile)
 		})
 
@@ -660,11 +661,6 @@ var _ = Describe("Agent", func() {
 			Expect(os.Remove(execLogFile)).ShouldNot(HaveOccurred())
 		})
 		It("should wait for the certificate to be issued", func() {
-			byohCSR, err := builder.CertificateSigningRequest(fmt.Sprintf(registration.ByohCSRNameFormat, hostName), fmt.Sprintf(registration.ByohCSRCNFormat, hostName), "byoh:hosts", 2048).Build()
-			Expect(err).NotTo(HaveOccurred())
-			// TODO: Check why AfterEach delete is not working
-			// nolint: errcheck
-			k8sClient.Delete(ctx, byohCSR)
 			defer output.Close()
 			f := e2e.WriteDockerLog(output, agentLogFile)
 			defer func() {
