@@ -191,9 +191,9 @@ var _ = Describe("Controllers/K8sInstallerConfigController", func() {
 			ph, err := patch.NewHelper(byoMachine, k8sClientUncached)
 			Expect(err).ShouldNot(HaveOccurred())
 			byoMachine.Status.HostInfo = infrav1.HostInfo{
-				Architecture: "x86-64",
+				Architecture: "amd64",
 				OSName:       "linux",
-				OSImage:      "Ubuntu 20.04.1",
+				OSImage:      "Ubuntu 20.04.1 LTS",
 			}
 			conditions.Set(byoMachine, &clusterv1.Condition{
 				Type:   infrav1.BYOHostReady,
@@ -201,7 +201,7 @@ var _ = Describe("Controllers/K8sInstallerConfigController", func() {
 			})
 			Expect(ph.Patch(ctx, byoMachine, patch.WithStatusObservedGeneration{})).Should(Succeed())
 			WaitForObjectToBeUpdatedInCache(byoMachine, func(object client.Object) bool {
-				return object.(*infrav1.ByoMachine).Status.HostInfo.Architecture == "x86-64"
+				return object.(*infrav1.ByoMachine).Status.HostInfo.Architecture == "amd64"
 			})
 		})
 
