@@ -67,7 +67,7 @@ func (s *Ubuntu20_04Installer) Uninstall() string {
 // contains the installation and uninstallation steps for the supported os and k8s
 var (
 	DoUbuntu20_4K8s1_22 = `
-set -euo pipefail
+set -euox pipefail
 
 BUNDLE_DOWNLOAD_PATH={{.BundleDownloadPath}}
 BUNDLE_ADDR={{.BundleAddrs}}
@@ -77,8 +77,19 @@ BUNDLE_PATH=$BUNDLE_DOWNLOAD_PATH/$BUNDLE_ADDR
 
 
 if ! command -v imgpkg >>/dev/null; then
-	echo "installing imgpkg"
-	wget -nv -O- github.com/vmware-tanzu/carvel-imgpkg/releases/download/$IMGPKG_VERSION/imgpkg-linux-$ARCH > /tmp/imgpkg
+	echo "installing imgpkg"	
+	
+	if command -v wget >>/dev/null; then
+		dl_bin="wget -nv -O-"
+	elif command -v curl >>/dev/null; then
+		dl_bin="curl -s -L"
+	else
+		echo "installing curl"
+		apt-get install -y curl
+		dl_bin="curl -s -L"
+	fi
+	
+	$dl_bin github.com/vmware-tanzu/carvel-imgpkg/releases/download/$IMGPKG_VERSION/imgpkg-linux-$ARCH > /tmp/imgpkg
 	mv /tmp/imgpkg /usr/local/bin/imgpkg
 	chmod +x /usr/local/bin/imgpkg
 fi
@@ -114,7 +125,7 @@ tar -C / -xvf "$BUNDLE_PATH/containerd.tar"
 systemctl daemon-reload && systemctl enable containerd && systemctl start containerd`
 
 	UndoUbuntu20_4K8s1_22 = `
-set -euo pipefail
+set -euox pipefail
 
 BUNDLE_DOWNLOAD_PATH={{.BundleDownloadPath}}
 BUNDLE_ADDR={{.BundleAddrs}}
