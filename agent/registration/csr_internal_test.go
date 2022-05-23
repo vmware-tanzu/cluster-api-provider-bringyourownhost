@@ -6,6 +6,8 @@ package registration
 import (
 	"crypto/rand"
 	"crypto/rsa"
+	"io/ioutil"
+	"os"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -27,6 +29,46 @@ var _ = Describe("Registration", func() {
 			certData, err := generateCSR(hostName, privateKeyData)
 			Expect(err).Should(Not(HaveOccurred()))
 			Expect(certData).ToNot(BeNil())
+		})
+		It("should write kubeconfig if bootstrap kubeconfig is valid", func() {
+			testDatabootstrapValid := []byte(`
+apiVersion: v1
+kind: Config
+clusters:
+- cluster:
+    certificate-authority-data: VGVzdA==
+    server: https://cluster-a.com
+  name: cluster-a
+contexts:
+- context:
+    cluster: cluster-a
+    namespace: ns-a
+    user: user-a
+  name: context-a
+current-context: context-a
+users:
+- name: user-a
+  user:
+    token: mytoken-a
+`)
+			fileDir, err := ioutil.TempDir("", "bootstrap")
+			Expect(err).ShouldNot(HaveOccurred())
+			fileboot, err := ioutil.TempFile(fileDir, "boostrapkubeconfig")
+			Expect(err).ShouldNot(HaveOccurred())
+			filekubeconfig, err := ioutil.TempFile(fileDir, "kubeconfig")
+			Expect(err).ShouldNot(HaveOccurred())
+			err = os.WriteFile(fileboot.Name(), testDatabootstrapValid, os.FileMode(0755))
+			Expect(err).ShouldNot(HaveOccurred())
+			restConfig, err := LoadRESTClientConfig(fileboot.Name())
+			Expect(err).ShouldNot(HaveOccurred())
+			err = writeKubeconfigFromBootstrapping(restConfig, filekubeconfig.Name(), "cert-data", "key-data")
+			Expect(err).ShouldNot(HaveOccurred())
+			Expect(filekubeconfig.Name()).To(BeARegularFile())
+			content, err := os.ReadFile(filekubeconfig.Name())
+			Expect(err).ShouldNot(HaveOccurred())
+			Expect(content).ShouldNot(BeEmpty())
+			err = os.RemoveAll(fileDir)
+			Expect(err).ToNot(HaveOccurred())
 		})
 	})
 })

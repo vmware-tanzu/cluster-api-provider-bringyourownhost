@@ -23,8 +23,6 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/fields"
 	"k8s.io/apimachinery/pkg/runtime"
-	clientset "k8s.io/client-go/kubernetes"
-	"k8s.io/client-go/util/certificate/csr"
 	klog "k8s.io/klog/v2"
 	"k8s.io/klog/v2/klogr"
 	clusterv1 "sigs.k8s.io/cluster-api/api/v1beta1"
@@ -104,8 +102,8 @@ func setupflags() {
 
 func handleHostRegistration(k8sClient client.Client, hostName string, logger logr.Logger) (err error) {
 	registration.LocalHostRegistrar = &registration.HostRegistrar{K8sClient: k8sClient}
-	if feature.Gates.Enabled(feature.SecureAccess) {
-		logger.Info("secure access enabled, waiting for host to be registered by ByoAdmission Controller")
+	if bootstrapKubeConfig != "" {
+		logger.Info("bootstrap kubeconfig is provided, waiting for host to be registered by ByoHost Controller")
 	} else {
 		err := registration.LocalHostRegistrar.Register(hostName, namespace, labels)
 		return err
@@ -124,7 +122,6 @@ func setupTemplateParser() *cloudinit.TemplateParser {
 			},
 		}
 	}
-
 	return templateParser
 }
 
@@ -158,24 +155,36 @@ func main() {
 
 	logger := klogr.New()
 	ctrl.SetLogger(logger)
-	config, err := ctrl.GetConfig()
-	if err != nil {
-		logger.Error(err, "error getting kubeconfig")
-		return
-	}
-
-	k8sClient, err := client.New(config, client.Options{Scheme: scheme})
-	if err != nil {
-		logger.Error(err, "error creating a new k8s client")
-		return
-	}
-
 	hostName, err := os.Hostname()
 	if err != nil {
 		logger.Error(err, "could not determine hostname")
 		return
 	}
 
+	// Enable bootstrap flow if --bootstrap-kubeconfig is provided
+	if bootstrapKubeConfig != "" {
+		if err = handleBootstrapFlow(logger, hostName); err != nil {
+			logger.Error(err, "bootstrap flow failed")
+			os.Exit(1)
+		}
+	}
+	// Handle kubeconfig flag
+	// first look in the byoh path for the kubeconfig
+	config, err := registration.LoadRESTClientConfig(registration.ConfigPath)
+	if err != nil {
+		logger.Error(err, "client config load failed")
+		// get the passed kubeconfig
+		config, err = ctrl.GetConfig()
+		if err != nil {
+			logger.Error(err, "error getting kubeconfig")
+			return
+		}
+	}
+	k8sClient, err := client.New(config, client.Options{Scheme: scheme})
+	if err != nil {
+		logger.Error(err, "k8s client creation failed")
+		os.Exit(1)
+	}
 	err = handleHostRegistration(k8sClient, hostName, logger)
 	if err != nil {
 		logger.Error(err, "error registering host %s registration in namespace %s", hostName, namespace)
@@ -213,7 +222,6 @@ func main() {
 			logger.Error(err, "failed to instantiate installer")
 		}
 	}
-
 	hostReconciler := &reconciler.HostReconciler{
 		Client:                 k8sClient,
 		CmdRunner:              cloudinit.CmdRunner{},
@@ -224,60 +232,29 @@ func main() {
 		SkipK8sInstallation:    skipInstallation,
 		UseInstallerController: useInstallerController,
 	}
-
 	if err = hostReconciler.SetupWithManager(context.TODO(), mgr); err != nil {
 		logger.Error(err, "unable to create controller")
 		return
 	}
-
-	// if secure-access is enabled
-	if feature.Gates.Enabled(feature.SecureAccess) {
-		err := generateKubeConfig(logger, hostName, bootstrapKubeConfig)
-		if err != nil {
-			logger.Error(err, "kubeconfig creation failed")
-			os.Exit(1)
-		}
-	}
-
 	if err := mgr.Start(ctrl.SetupSignalHandler()); err != nil {
 		logger.Error(err, "problem running manager")
 		return
 	}
 }
 
-// generateKubeConfig will create a CertificateSigningRequest for the host
-// its running on and once the CSR is approved it will fetch the Certificate
-// and create a kubeconfig which will be used then by the host reconciler
-func generateKubeConfig(logger logr.Logger, hostName, boostrapKubeConfigPath string) error {
-	logger.Info("creating host csr", "name", fmt.Sprintf(registration.ByohCSRNameFormat, hostName))
+func handleBootstrapFlow(logger logr.Logger, hostName string) error {
+	logger.Info("initiated bootstrap kubeconfig flow")
 	bootstrapClientConfig, err := registration.LoadRESTClientConfig(bootstrapKubeConfig)
 	if err != nil {
-		return err
+		return fmt.Errorf("client config load failed: %v", err)
 	}
-	bootstrapClient, err := clientset.NewForConfig(bootstrapClientConfig)
+	byohCSR, err := registration.NewByohCSR(bootstrapClientConfig, logger)
 	if err != nil {
-		return err
+		return fmt.Errorf("ByohCSR intialization failed: %v", err)
 	}
-	byohCSR := registration.ByohCSR{BootstrapClient: bootstrapClient}
-	reqName, reqUID, err := byohCSR.RequestBYOHClientCert(hostName)
+	err = byohCSR.BootstrapKubeconfig(hostName)
 	if err != nil {
-		return err
-	}
-	// wait for certificate to be issued
-	ctx, cancel := context.WithTimeout(context.TODO(), registration.CSRApprovalTimeout)
-	defer cancel()
-	logger.Info("Waiting for client certificate to be issued")
-	certData, err := csr.WaitForCertificate(ctx, bootstrapClient, reqName, reqUID)
-	if err != nil {
-		return err
-	}
-	err = registration.WriteKubeconfigFromBootstrapping(bootstrapClientConfig, "~/.byoh/config", string(certData), string(byohCSR.PrivateKey))
-	if err != nil {
-		return err
-	}
-	logger.Info("kubeconfig created")
-	if err := os.Remove(registration.TmpPrivateKey); err != nil && !os.IsNotExist(err) {
-		logger.Error(err, "Failed cleaning up private key file")
+		return fmt.Errorf("kubeconfig generation failed: %v", err)
 	}
 	return nil
 }

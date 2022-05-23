@@ -4,13 +4,16 @@
 package registration
 
 import (
+	"context"
 	"crypto/rand"
 	"crypto/x509"
 	"crypto/x509/pkix"
 	"encoding/pem"
 	"fmt"
+	"os"
 	"time"
 
+	"github.com/go-logr/logr"
 	certv1 "k8s.io/api/certificates/v1"
 	"k8s.io/apimachinery/pkg/types"
 	clientset "k8s.io/client-go/kubernetes"
@@ -20,7 +23,6 @@ import (
 	"k8s.io/client-go/util/cert"
 	"k8s.io/client-go/util/certificate/csr"
 	"k8s.io/client-go/util/keyutil"
-	"k8s.io/klog/v2"
 )
 
 const (
@@ -31,15 +33,61 @@ const (
 	ByohCSROrg        = "byoh:hosts"
 	ByohCSRCNFormat   = "byoh:host:%s"
 	ByohCSRNameFormat = "byoh-csr-%s"
+	TmpPrivateKey     = "byoh-client.key.tmp"
+)
+
+var (
+	ConfigPath = "~/.byoh/config"
 	// CSRApprovalTimeout defines the time to wait for certificate to
 	// be issued. Currently set to 1 hour.
 	CSRApprovalTimeout = 3600 * time.Second
-	TmpPrivateKey      = "byoh-client.key.tmp"
 )
 
 type ByohCSR struct {
-	BootstrapClient clientset.Interface
-	PrivateKey      []byte
+	bootstrapClientConfig *restclient.Config
+	bootstrapClient       clientset.Interface
+	PrivateKey            []byte
+	logger                logr.Logger
+}
+
+// NewByohCSR returns a ByohCSR instance
+func NewByohCSR(bootstrapClientConfig *restclient.Config, logger logr.Logger) (*ByohCSR, error) {
+	bootstrapClient, err := clientset.NewForConfig(bootstrapClientConfig)
+	if err != nil {
+		return nil, err
+	}
+	return &ByohCSR{
+		bootstrapClientConfig: bootstrapClientConfig,
+		bootstrapClient:       bootstrapClient,
+		logger:                logger,
+	}, nil
+}
+
+// BootstrapKubeconfig will create a CertificateSigningRequest for the host
+// its running on and once the CSR is approved it will fetch the Certificate
+// and create a kubeconfig which will be used then by the host reconciler
+func (bcsr *ByohCSR) BootstrapKubeconfig(hostName string) error {
+	reqName, reqUID, err := bcsr.RequestBYOHClientCert(hostName)
+	if err != nil {
+		return err
+	}
+	// wait for certificate to be issued
+	ctx, cancel := context.WithTimeout(context.TODO(), CSRApprovalTimeout)
+	defer cancel()
+	bcsr.logger.Info("waiting for client certificate to be issued")
+	certData, err := csr.WaitForCertificate(ctx, bcsr.bootstrapClient, reqName, reqUID)
+	if err != nil {
+		return err
+	}
+	err = writeKubeconfigFromBootstrapping(bcsr.bootstrapClientConfig, ConfigPath, string(certData), string(bcsr.PrivateKey))
+	if err != nil {
+		return err
+	}
+	bcsr.logger.Info("kubeconfig created")
+	if err := os.Remove(TmpPrivateKey); err != nil && !os.IsNotExist(err) {
+		bcsr.logger.Error(err, "Failed cleaning up private key file")
+	}
+	return nil
 }
 
 // RequestBYOHClientCert will generate Private Key and then will create a
@@ -59,11 +107,10 @@ func (bcsr *ByohCSR) RequestBYOHClientCert(hostname string) (string, types.UID, 
 	bcsr.PrivateKey = keyData
 	csrData, err := generateCSR(hostname, privateKey)
 	if err != nil {
-		klog.Errorf("error generating csr %s, err=%v", hostname, err)
-		return "", "", err
+		return "", "", fmt.Errorf("error generating csr %s, err=%v", hostname, err)
 	}
 	certTimeToExpire := time.Duration(ExpirationSeconds) * time.Second
-	reqName, reqUID, err := csr.RequestCertificate(bcsr.BootstrapClient,
+	reqName, reqUID, err := csr.RequestCertificate(bcsr.bootstrapClient,
 		csrData,
 		fmt.Sprintf(ByohCSRNameFormat, hostname),
 		certv1.KubeAPIServerClientSignerName,
@@ -99,8 +146,8 @@ func generateCSR(hostname string, privKey interface{}) ([]byte, error) {
 // LoadRESTClientConfig is to create an instance of *restclient.Config from
 // the boostrap kubeconfig path, this then will be used to create bootstrap
 // k8s client
-func LoadRESTClientConfig(bootstrapKubeconfig string) (*restclient.Config, error) {
-	loader := &clientcmd.ClientConfigLoadingRules{ExplicitPath: bootstrapKubeconfig}
+func LoadRESTClientConfig(kubeconfigPath string) (*restclient.Config, error) {
+	loader := &clientcmd.ClientConfigLoadingRules{ExplicitPath: kubeconfigPath}
 	loadedConfig, err := loader.Load()
 	if err != nil {
 		return nil, err
@@ -114,9 +161,9 @@ func LoadRESTClientConfig(bootstrapKubeconfig string) (*restclient.Config, error
 	).ClientConfig()
 }
 
-// WriteKubeconfigFromBootstrapping will write the new kubeconfig fetching
+// writeKubeconfigFromBootstrapping will write the new kubeconfig fetching
 // some details from bootstrap client config and using key/cert details
-func WriteKubeconfigFromBootstrapping(bootstrapClientConfig *restclient.Config, kubeconfigPath, certData, keyData string) error {
+func writeKubeconfigFromBootstrapping(bootstrapClientConfig *restclient.Config, kubeconfigPath, certData, keyData string) error {
 	// Get the CA data from the bootstrap client config.
 	caFile, caData := bootstrapClientConfig.CAFile, []byte{}
 	if caFile == "" {
