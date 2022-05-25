@@ -205,7 +205,7 @@ var _ = Describe("Agent", func() {
 			}).Should(Equal(map[string]string{"site": "apac"}))
 		})
 
-		It("should skip bootstrap flow in default mode", func() {
+		It("should skip bootstrap kubeconfig flow in default mode", func() {
 			defer output.Close()
 			f := e2e.WriteDockerLog(output, agentLogFile)
 			defer func() {
@@ -568,7 +568,7 @@ var _ = Describe("Agent", func() {
 			cleanup(runner.Context, byoHostContainer, ns, agentLogFile)
 		})
 
-		It("should enable the bootstrap flow", func() {
+		It("should enable the bootstrap kubeconfig flow", func() {
 			defer output.Close()
 			f := e2e.WriteDockerLog(output, agentLogFile)
 			defer func() {
@@ -832,21 +832,13 @@ var _ = Describe("Agent Unit Tests", func() {
 			Expect(os.Remove(bootstrapKubeConf.Name())).ShouldNot(HaveOccurred())
 		})
 		It("should return if bootstrap kubeconfig is not valid", func() {
-			testbootstrapKubeconfigInvalid := []byte(`
-apiVersion: v1
-kind: Config
-clusters:
-- cluster:
-    certificate-authority: ca.crt
-    server: https://cluster-a.com
-  name: cluster-a
-`)
+			testbootstrapKubeconfigInvalid := []byte(`abc`)
 
 			_, err = bootstrapKubeConf.Write(testbootstrapKubeconfigInvalid)
 			Expect(err).NotTo(HaveOccurred())
 			err = handleBootstrapFlow(klogr.New(), "test-host")
 			Expect(err).Should(HaveOccurred())
-			Expect(err.Error()).Should(ContainSubstring("client config load failed: invalid configuration"))
+			Expect(err.Error()).Should(ContainSubstring("client config load failed"))
 		})
 		It("should return if hostName is not valid", func() {
 			testbootstrapKubeconfigValid := []byte(`
