@@ -674,7 +674,7 @@ runCmd:
 				})
 
 				It("should set K8sComponentsInstallationSucceeded to false if uninstall succeeds", func() {
-					uninstallScript = `echo "uninstall success"`
+					uninstallScript = `echo "uninstall success script"`
 					byoHost.Spec.UninstallationScript = &uninstallScript
 					Expect(patchHelper.Patch(ctx, byoHost, patch.WithStatusObservedGeneration{})).NotTo(HaveOccurred())
 
@@ -698,7 +698,7 @@ runCmd:
 				})
 
 				It("It should reset byoHost.Spec.InstallationSecret if uninstall succeeds", func() {
-					uninstallScript = `echo "uninstall success"`
+					uninstallScript = `echo "uninstall success installation secret"`
 					byoHost.Spec.UninstallationScript = &uninstallScript
 					Expect(patchHelper.Patch(ctx, byoHost, patch.WithStatusObservedGeneration{})).NotTo(HaveOccurred())
 					result, reconcilerErr := hostReconciler.Reconcile(ctx, controllerruntime.Request{
@@ -714,7 +714,7 @@ runCmd:
 				})
 
 				It("It should reset byoHost.Spec.UninstallationScript if uninstall succeeds", func() {
-					uninstallScript = `echo "uninstall success"`
+					uninstallScript = `echo "uninstall script"`
 					byoHost.Spec.UninstallationScript = &uninstallScript
 					Expect(patchHelper.Patch(ctx, byoHost, patch.WithStatusObservedGeneration{})).NotTo(HaveOccurred())
 

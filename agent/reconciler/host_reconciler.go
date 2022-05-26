@@ -106,27 +106,8 @@ func (r *HostReconciler) reconcileNormal(ctx context.Context, byoHost *infrastru
 	}
 
 	if r.UseInstallerController && !conditions.IsTrue(byoHost, infrastructurev1beta1.K8sComponentsInstallationSucceeded) {
-		if byoHost.Spec.InstallationSecret == nil {
-			logger.Info("InstallationSecret not ready")
-			conditions.MarkFalse(byoHost, infrastructurev1beta1.K8sComponentsInstallationSucceeded, infrastructurev1beta1.K8sInstallationSecretUnavailableReason, clusterv1.ConditionSeverityInfo, "")
-			return ctrl.Result{}, nil
-		}
-		installScript, uninstallScript, err := r.getInstallationScript(ctx, byoHost.Spec.InstallationSecret.Name, byoHost.Spec.InstallationSecret.Namespace)
+		_, err := r.installerController(ctx, byoHost)
 		if err != nil {
-			logger.Error(err, "error getting installation script")
-			r.Recorder.Eventf(byoHost, corev1.EventTypeWarning, "ReadInstallationSecretFailed", "installation secret %s not found", byoHost.Spec.InstallationSecret.Name)
-			return ctrl.Result{}, err
-		}
-		byoHost.Spec.UninstallationScript = &uninstallScript
-		installScript, err = r.parseInstallationScript(ctx, installScript)
-		if err != nil {
-			return ctrl.Result{}, err
-		}
-		logger.Info("executing install script")
-		err = r.executeScript(ctx, installScript)
-		if err != nil {
-			logger.Error(err, "error execting installation script")
-			r.Recorder.Event(byoHost, corev1.EventTypeWarning, "InstallScriptExecutionFailed", "install script execution failed")
 			return ctrl.Result{}, err
 		}
 		r.Recorder.Event(byoHost, corev1.EventTypeNormal, "InstallScriptExecutionSucceeded", "install script executed")
@@ -183,6 +164,34 @@ func (r *HostReconciler) reconcileNormal(ctx context.Context, byoHost *infrastru
 	return ctrl.Result{}, nil
 }
 
+func (r *HostReconciler) installerController(ctx context.Context, byoHost *infrastructurev1beta1.ByoHost) (ctrl.Result, error) {
+	logger := ctrl.LoggerFrom(ctx)
+	if byoHost.Spec.InstallationSecret == nil {
+		logger.Info("InstallationSecret not ready")
+		conditions.MarkFalse(byoHost, infrastructurev1beta1.K8sComponentsInstallationSucceeded, infrastructurev1beta1.K8sInstallationSecretUnavailableReason, clusterv1.ConditionSeverityInfo, "")
+		return ctrl.Result{}, nil
+	}
+	installScript, uninstallScript, err := r.getInstallationScript(ctx, byoHost.Spec.InstallationSecret.Name, byoHost.Spec.InstallationSecret.Namespace)
+	if err != nil {
+		logger.Error(err, "error getting installation script")
+		r.Recorder.Eventf(byoHost, corev1.EventTypeWarning, "ReadInstallationSecretFailed", "installation secret %s not found", byoHost.Spec.InstallationSecret.Name)
+		return ctrl.Result{}, err
+	}
+	byoHost.Spec.UninstallationScript = &uninstallScript
+	installScript, err = r.parseInstallationScript(ctx, installScript)
+	if err != nil {
+		return ctrl.Result{}, err
+	}
+	logger.Info("executing install script")
+	err = r.executeScript(ctx, installScript)
+	if err != nil {
+		logger.Error(err, "error execting installation script")
+		r.Recorder.Event(byoHost, corev1.EventTypeWarning, "InstallScriptExecutionFailed", "install script execution failed")
+		return ctrl.Result{}, err
+	}
+	return ctrl.Result{}, nil
+}
+
 func (r *HostReconciler) reconcileDelete(ctx context.Context, byoHost *infrastructurev1beta1.ByoHost) (ctrl.Result, error) {
 	return ctrl.Result{}, nil
 }
@@ -198,9 +207,9 @@ func (r *HostReconciler) getBootstrapScript(ctx context.Context, dataSecretName,
 	return bootstrapSecret, nil
 }
 
-func (r *HostReconciler) getInstallationScript(ctx context.Context, dataSecretName, namespace string) (string, string, error) {
+func (r *HostReconciler) getInstallationScript(ctx context.Context, dataSecretName, namespace string) (install, uninstall string, err error) {
 	secret := &corev1.Secret{}
-	err := r.Client.Get(ctx, types.NamespacedName{Name: dataSecretName, Namespace: namespace}, secret)
+	err = r.Client.Get(ctx, types.NamespacedName{Name: dataSecretName, Namespace: namespace}, secret)
 	if err != nil {
 		return "", "", err
 	}
