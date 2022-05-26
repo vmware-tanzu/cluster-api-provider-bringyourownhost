@@ -131,30 +131,30 @@ BUNDLE_DOWNLOAD_PATH={{.BundleDownloadPath}}
 BUNDLE_ADDR={{.BundleAddrs}}
 BUNDLE_PATH=$BUNDLE_DOWNLOAD_PATH/$BUNDLE_ADDR
 
-## enable swap
-swapon -a && sed -ri '/\sswap\s/s/^#?//' /etc/fstab
+## disabling containerd service
+systemctl stop containerd && systemctl disable containerd && systemctl daemon-reload
+
+## removing containerd configurations and cni plugins
+rm -rf /opt/cni/ && rm -rf /opt/containerd/ &&  tar tf "$BUNDLE_PATH/containerd.tar" | xargs -n 1 echo '/' | sed 's/ //g'  | grep -e '[^/]$' | xargs rm -f
+
+## removing deb packages
+for pkg in kubeadm kubelet kubectl kubernetes-cni cri-tools; do
+	dpkg --purge $pkg
+done
+
+## removing os configuration
+tar tf "$BUNDLE_PATH/conf.tar" | xargs -n 1 echo '/' | sed 's/ //g' | grep -e "[^/]$" | xargs rm -f
+
+## remove kernal modules
+modprobe -rq overlay && modprobe -r br_netfilter
 
 ## enable firewall
 if command -v ufw >>/dev/null; then
 	ufw enable
 fi
 
-## remove kernal modules
-modprobe -r overlay && modprobe -r br_netfilter
-
-## removing os configuration
-tar tf "$BUNDLE_PATH/conf.tar" | xargs -n 1 echo '/' | sed 's/ //g' | xargs rm -f
-
-## removing deb packages
-for pkg in cri-tools kubernetes-cni kubectl kubeadm kubelet; do
-	dpkg --purge $pkg
-done
-
-## removing containerd configurations and cni plugins
-rm -rf /opt/cni/ && rm -rf /opt/containerd/ &&  tar tf "$BUNDLE_PATH/containerd.tar" | xargs -n 1 echo '/' | sed 's/ //g'  | grep -e '[^/]$' | xargs rm -f
-
-## disabling containerd service
-systemctl stop containerd && systemctl disable containerd && systemctl daemon-reload
+## enable swap
+swapon -a && sed -ri '/\sswap\s/s/^#?//' /etc/fstab
 
 rm -rf $BUNDLE_PATH`
 )

@@ -98,6 +98,7 @@ func (r *HostReconciler) Reconcile(ctx context.Context, req ctrl.Request) (_ ctr
 
 func (r *HostReconciler) reconcileNormal(ctx context.Context, byoHost *infrastructurev1beta1.ByoHost) (ctrl.Result, error) {
 	logger := ctrl.LoggerFrom(ctx)
+	logger.Info("reconcile normal")
 	if byoHost.Status.MachineRef == nil {
 		logger.Info("Machine ref not yet set")
 		conditions.MarkFalse(byoHost, infrastructurev1beta1.K8sNodeBootstrapSucceeded, infrastructurev1beta1.WaitingForMachineRefReason, clusterv1.ConditionSeverityInfo, "")
@@ -110,15 +111,17 @@ func (r *HostReconciler) reconcileNormal(ctx context.Context, byoHost *infrastru
 			conditions.MarkFalse(byoHost, infrastructurev1beta1.K8sComponentsInstallationSucceeded, infrastructurev1beta1.K8sInstallationSecretUnavailableReason, clusterv1.ConditionSeverityInfo, "")
 			return ctrl.Result{}, nil
 		}
-		installScript, _, err := r.getInstallationScript(ctx, byoHost.Spec.InstallationSecret.Name, byoHost.Spec.InstallationSecret.Namespace)
+		installScript, uninstallScript, err := r.getInstallationScript(ctx, byoHost.Spec.InstallationSecret.Name, byoHost.Spec.InstallationSecret.Namespace)
 		if err != nil {
-			logger.Error(err, "error getting Installation script")
+			logger.Error(err, "error getting installation script")
 			return ctrl.Result{}, err
 		}
+		byoHost.Spec.UninstallationScript = &uninstallScript
 		installScript, err = r.parseInstallationScript(ctx, installScript)
 		if err != nil {
 			return ctrl.Result{}, err
 		}
+		logger.Info("executing install script")
 		err = r.executeScript(ctx, installScript)
 		if err != nil {
 			logger.Error(err, "error execting installation script")
@@ -143,13 +146,7 @@ func (r *HostReconciler) reconcileNormal(ctx context.Context, byoHost *infrastru
 
 		if r.SkipK8sInstallation {
 			logger.Info("Skipping installation of k8s components")
-		} else if r.UseInstallerController {
-			if byoHost.Spec.InstallationSecret == nil {
-				logger.Info("K8sInstallationSecret not ready")
-				conditions.MarkFalse(byoHost, infrastructurev1beta1.K8sNodeBootstrapSucceeded, infrastructurev1beta1.K8sInstallationSecretUnavailableReason, clusterv1.ConditionSeverityInfo, "")
-				return ctrl.Result{}, nil
-			}
-		} else {
+		} else if !r.UseInstallerController {
 			err = r.installK8sComponents(ctx, byoHost)
 			if err != nil {
 				logger.Error(err, "error in installing k8s components")
@@ -277,11 +274,11 @@ func (r *HostReconciler) hostCleanUp(ctx context.Context, byoHost *infrastructur
 			return err
 		}
 		if r.UseInstallerController {
-			_, uninstallScript, err := r.getInstallationScript(ctx, byoHost.Spec.InstallationSecret.Name, byoHost.Spec.InstallationSecret.Namespace)
-			if err != nil {
-				logger.Error(err, "error getting Uninstallation script")
-				return err
+			if byoHost.Spec.UninstallationScript == nil {
+				return fmt.Errorf("UninstallationScript not found in Byohost %s", byoHost.Name)
 			}
+			logger.Info("Executing Uninstall script")
+			uninstallScript := *byoHost.Spec.UninstallationScript
 			uninstallScript, err = r.parseInstallationScript(ctx, uninstallScript)
 			if err != nil {
 				logger.Error(err, "error parsing Uninstallation script")
@@ -316,7 +313,7 @@ func (r *HostReconciler) hostCleanUp(ctx context.Context, byoHost *infrastructur
 	}
 
 	byoHost.Spec.InstallationSecret = nil
-
+	byoHost.Spec.UninstallationScript = nil
 	r.removeAnnotations(ctx, byoHost)
 	conditions.MarkFalse(byoHost, infrastructurev1beta1.K8sNodeBootstrapSucceeded, infrastructurev1beta1.K8sNodeAbsentReason, clusterv1.ConditionSeverityInfo, "")
 	return nil

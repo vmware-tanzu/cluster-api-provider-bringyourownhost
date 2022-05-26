@@ -28,14 +28,16 @@ import (
 var _ = Describe("Byohost Agent Tests", func() {
 
 	var (
-		ctx              = context.TODO()
-		ns               = "default"
-		hostName         = "test-host"
-		byoHost          *infrastructurev1beta1.ByoHost
-		byoMachine       *infrastructurev1beta1.ByoMachine
-		byoHostLookupKey types.NamespacedName
-		bootstrapSecret  *corev1.Secret
-		recorder         *record.FakeRecorder
+		ctx                = context.TODO()
+		ns                 = "default"
+		hostName           = "test-host"
+		byoHost            *infrastructurev1beta1.ByoHost
+		byoMachine         *infrastructurev1beta1.ByoMachine
+		byoHostLookupKey   types.NamespacedName
+		bootstrapSecret    *corev1.Secret
+		installationSecret *corev1.Secret
+		recorder           *record.FakeRecorder
+		uninstallScript    string
 	)
 
 	BeforeEach(func() {
@@ -151,6 +153,226 @@ var _ = Describe("Byohost Agent Tests", func() {
 				}))
 			})
 
+			Context("When use-installer-controller is set", func() {
+				BeforeEach(func() {
+					hostReconciler.UseInstallerController = true
+				})
+
+				It("should set the Reason to InstallationSecretUnavailableReason", func() {
+					result, reconcilerErr := hostReconciler.Reconcile(ctx, controllerruntime.Request{
+						NamespacedName: byoHostLookupKey,
+					})
+					Expect(result).To(Equal(controllerruntime.Result{}))
+					Expect(reconcilerErr).ToNot(HaveOccurred())
+
+					updatedByoHost := &infrastructurev1beta1.ByoHost{}
+					err := k8sClient.Get(ctx, byoHostLookupKey, updatedByoHost)
+					Expect(err).ToNot(HaveOccurred())
+
+					byoHostRegistrationSucceeded := conditions.Get(updatedByoHost, infrastructurev1beta1.K8sComponentsInstallationSucceeded)
+					Expect(*byoHostRegistrationSucceeded).To(conditions.MatchCondition(clusterv1.Condition{
+						Type:     infrastructurev1beta1.K8sComponentsInstallationSucceeded,
+						Status:   corev1.ConditionFalse,
+						Reason:   infrastructurev1beta1.K8sInstallationSecretUnavailableReason,
+						Severity: clusterv1.ConditionSeverityInfo,
+					}))
+				})
+
+				It("should return an error if we fail to load the installation secret", func() {
+					byoHost.Spec.InstallationSecret = &corev1.ObjectReference{
+						Kind:      "Secret",
+						Namespace: "non-existent",
+						Name:      "non-existent",
+					}
+					Expect(patchHelper.Patch(ctx, byoHost, patch.WithStatusObservedGeneration{})).NotTo(HaveOccurred())
+
+					result, reconcilerErr := hostReconciler.Reconcile(ctx, controllerruntime.Request{
+						NamespacedName: byoHostLookupKey,
+					})
+					Expect(result).To(Equal(controllerruntime.Result{}))
+					Expect(reconcilerErr).To(MatchError("secrets \"non-existent\" not found"))
+				})
+
+				Context("When installation secret is ready", func() {
+					BeforeEach(func() {
+						installScript := `echo "install"`
+						uninstallScript = `echo "uninstall"`
+
+						installationSecret = builder.Secret(ns, "test-secret").
+							WithKeyData("install", installScript).
+							WithKeyData("uninstall", uninstallScript).
+							Build()
+						Expect(k8sClient.Create(ctx, installationSecret)).NotTo(HaveOccurred())
+
+						byoHost.Spec.InstallationSecret = &corev1.ObjectReference{
+							Kind:      "Secret",
+							Namespace: installationSecret.Namespace,
+							Name:      installationSecret.Name,
+						}
+
+						byoHost.Annotations = map[string]string{
+							infrastructurev1beta1.K8sVersionAnnotation:               "1.22",
+							infrastructurev1beta1.BundleLookupTagAnnotation:          "byoh-bundle-tag",
+							infrastructurev1beta1.BundleLookupBaseRegistryAnnotation: "projects.blah.com",
+						}
+
+						Expect(patchHelper.Patch(ctx, byoHost, patch.WithStatusObservedGeneration{})).NotTo(HaveOccurred())
+					})
+
+					It("should return error if install script execution failed ", func() {
+						invalidInstallationSecret := builder.Secret(ns, "invalid-test-secret").
+							WithKeyData("install", "test").
+							Build()
+						Expect(k8sClient.Create(ctx, invalidInstallationSecret)).NotTo(HaveOccurred())
+						byoHost.Spec.InstallationSecret = &corev1.ObjectReference{
+							Kind:      "Secret",
+							Namespace: invalidInstallationSecret.Namespace,
+							Name:      invalidInstallationSecret.Name,
+						}
+						Expect(patchHelper.Patch(ctx, byoHost, patch.WithStatusObservedGeneration{})).NotTo(HaveOccurred())
+
+						result, reconcilerErr := hostReconciler.Reconcile(ctx, controllerruntime.Request{
+							NamespacedName: byoHostLookupKey,
+						})
+						Expect(result).To(Equal(controllerruntime.Result{}))
+						Expect(reconcilerErr).To(HaveOccurred())
+					})
+
+					It("should set uninstall script in byohost spec", func() {
+						result, reconcilerErr := hostReconciler.Reconcile(ctx, controllerruntime.Request{
+							NamespacedName: byoHostLookupKey,
+						})
+						Expect(result).To(Equal(controllerruntime.Result{}))
+						Expect(reconcilerErr).NotTo(HaveOccurred())
+
+						updatedByoHost := &infrastructurev1beta1.ByoHost{}
+						err := k8sClient.Get(ctx, byoHostLookupKey, updatedByoHost)
+						Expect(err).ToNot(HaveOccurred())
+						Expect(updatedByoHost.Spec.UninstallationScript).NotTo(BeNil())
+						Expect(*updatedByoHost.Spec.UninstallationScript).To(Equal(uninstallScript))
+					})
+
+					It("should set K8sComponentsInstallationSucceeded to true if Install suceeds", func() {
+						result, reconcilerErr := hostReconciler.Reconcile(ctx, controllerruntime.Request{
+							NamespacedName: byoHostLookupKey,
+						})
+						Expect(result).To(Equal(controllerruntime.Result{}))
+						Expect(reconcilerErr).ToNot(HaveOccurred())
+
+						updatedByoHost := &infrastructurev1beta1.ByoHost{}
+						err := k8sClient.Get(ctx, byoHostLookupKey, updatedByoHost)
+						Expect(err).ToNot(HaveOccurred())
+
+						K8sComponentsInstallationSucceeded := conditions.Get(updatedByoHost, infrastructurev1beta1.K8sComponentsInstallationSucceeded)
+						Expect(*K8sComponentsInstallationSucceeded).To(conditions.MatchCondition(clusterv1.Condition{
+							Type:   infrastructurev1beta1.K8sComponentsInstallationSucceeded,
+							Status: corev1.ConditionTrue,
+						}))
+					})
+
+					Context("When bootstrap secret is ready", func() {
+						BeforeEach(func() {
+							secretData := `write_files:
+- path: fake/path
+  content: blah
+runCmd:
+- echo 'some run command'`
+
+							bootstrapSecret = builder.Secret(ns, "test-secret-2").
+								WithData(secretData).
+								Build()
+							Expect(k8sClient.Create(ctx, bootstrapSecret)).NotTo(HaveOccurred())
+
+							byoHost.Spec.BootstrapSecret = &corev1.ObjectReference{
+								Kind:      "Secret",
+								Namespace: bootstrapSecret.Namespace,
+								Name:      bootstrapSecret.Name,
+							}
+
+							byoHost.Annotations = map[string]string{
+								infrastructurev1beta1.K8sVersionAnnotation:               "1.22",
+								infrastructurev1beta1.BundleLookupTagAnnotation:          "byoh-bundle-tag",
+								infrastructurev1beta1.BundleLookupBaseRegistryAnnotation: "projects.blah.com",
+							}
+
+							Expect(patchHelper.Patch(ctx, byoHost, patch.WithStatusObservedGeneration{})).NotTo(HaveOccurred())
+						})
+
+						It("should set K8sNodeBootstrapSucceeded to false with Reason CloudInitExecutionFailedReason if the bootstrap execution fails", func() {
+							fakeCommandRunner.RunCmdReturns(errors.New("I failed"))
+
+							result, reconcilerErr := hostReconciler.Reconcile(ctx, controllerruntime.Request{
+								NamespacedName: byoHostLookupKey,
+							})
+
+							Expect(result).To(Equal(controllerruntime.Result{}))
+							Expect(reconcilerErr).To(HaveOccurred())
+
+							updatedByoHost := &infrastructurev1beta1.ByoHost{}
+							err := k8sClient.Get(ctx, byoHostLookupKey, updatedByoHost)
+							Expect(err).ToNot(HaveOccurred())
+
+							k8sNodeBootstrapSucceeded := conditions.Get(updatedByoHost, infrastructurev1beta1.K8sNodeBootstrapSucceeded)
+							Expect(*k8sNodeBootstrapSucceeded).To(conditions.MatchCondition(clusterv1.Condition{
+								Type:     infrastructurev1beta1.K8sNodeBootstrapSucceeded,
+								Status:   corev1.ConditionFalse,
+								Reason:   infrastructurev1beta1.CloudInitExecutionFailedReason,
+								Severity: clusterv1.ConditionSeverityError,
+							}))
+
+							// assert events
+							events := eventutils.CollectEvents(recorder.Events)
+							Expect(events).Should(ConsistOf([]string{
+								"Warning BootstrapK8sNodeFailed k8s Node Bootstrap failed",
+								// TODO: improve test to remove this event
+								"Warning ResetK8sNodeFailed k8s Node Reset failed",
+							}))
+						})
+
+						It("should set K8sNodeBootstrapSucceeded to True if the boostrap execution succeeds", func() {
+							hostReconciler.K8sInstaller = fakeInstaller
+							result, reconcilerErr := hostReconciler.Reconcile(ctx, controllerruntime.Request{
+								NamespacedName: byoHostLookupKey,
+							})
+							Expect(result).To(Equal(controllerruntime.Result{}))
+							Expect(reconcilerErr).ToNot(HaveOccurred())
+
+							Expect(fakeCommandRunner.RunCmdCallCount()).To(Equal(1))
+							Expect(fakeFileWriter.WriteToFileCallCount()).To(Equal(1))
+
+							updatedByoHost := &infrastructurev1beta1.ByoHost{}
+							err := k8sClient.Get(ctx, byoHostLookupKey, updatedByoHost)
+							Expect(err).ToNot(HaveOccurred())
+
+							k8sNodeBootstrapSucceeded := conditions.Get(updatedByoHost, infrastructurev1beta1.K8sNodeBootstrapSucceeded)
+							Expect(*k8sNodeBootstrapSucceeded).To(conditions.MatchCondition(clusterv1.Condition{
+								Type:   infrastructurev1beta1.K8sNodeBootstrapSucceeded,
+								Status: corev1.ConditionTrue,
+							}))
+
+							// assert events
+							events := eventutils.CollectEvents(recorder.Events)
+							Expect(events).Should(ConsistOf([]string{
+								"Normal BootstrapK8sNodeSucceeded k8s Node Bootstraped",
+							}))
+						})
+
+						AfterEach(func() {
+							Expect(k8sClient.Delete(ctx, bootstrapSecret)).NotTo(HaveOccurred())
+							hostReconciler.SkipK8sInstallation = false
+						})
+					})
+
+					AfterEach(func() {
+						Expect(k8sClient.Delete(ctx, installationSecret)).NotTo(HaveOccurred())
+					})
+				})
+
+				AfterEach(func() {
+					hostReconciler.UseInstallerController = false
+				})
+			})
+
 			Context("When bootstrap secret is ready", func() {
 				BeforeEach(func() {
 					secretData := `write_files:
@@ -177,36 +399,6 @@ runCmd:
 					}
 
 					Expect(patchHelper.Patch(ctx, byoHost, patch.WithStatusObservedGeneration{})).NotTo(HaveOccurred())
-				})
-
-				Context("When use-installer-controller is set", func() {
-					BeforeEach(func() {
-						hostReconciler.UseInstallerController = true
-					})
-
-					It("should set the Reason to InstallationSecretUnavailableReason", func() {
-						result, reconcilerErr := hostReconciler.Reconcile(ctx, controllerruntime.Request{
-							NamespacedName: byoHostLookupKey,
-						})
-						Expect(result).To(Equal(controllerruntime.Result{}))
-						Expect(reconcilerErr).ToNot(HaveOccurred())
-
-						updatedByoHost := &infrastructurev1beta1.ByoHost{}
-						err := k8sClient.Get(ctx, byoHostLookupKey, updatedByoHost)
-						Expect(err).ToNot(HaveOccurred())
-
-						byoHostRegistrationSucceeded := conditions.Get(updatedByoHost, infrastructurev1beta1.K8sNodeBootstrapSucceeded)
-						Expect(*byoHostRegistrationSucceeded).To(conditions.MatchCondition(clusterv1.Condition{
-							Type:     infrastructurev1beta1.K8sNodeBootstrapSucceeded,
-							Status:   corev1.ConditionFalse,
-							Reason:   infrastructurev1beta1.K8sInstallationSecretUnavailableReason,
-							Severity: clusterv1.ConditionSeverityInfo,
-						}))
-					})
-
-					AfterEach(func() {
-						hostReconciler.UseInstallerController = false
-					})
 				})
 
 				It("should set K8sComponentsInstallationSucceeded to false with Reason K8sComponentsInstallationFailedReason if Install fails", func() {
@@ -423,6 +615,63 @@ runCmd:
 				Expect(events).Should(ConsistOf([]string{
 					"Normal ResetK8sNodeSucceeded k8s Node Reset completed",
 				}))
+			})
+
+			Context("When use-installer-controller is set", func() {
+				BeforeEach(func() {
+					hostReconciler.UseInstallerController = true
+				})
+
+				It("should return an error if we fail to load the uninstallation script", func() {
+					byoHost.Spec.UninstallationScript = nil
+					Expect(patchHelper.Patch(ctx, byoHost, patch.WithStatusObservedGeneration{})).NotTo(HaveOccurred())
+
+					result, reconcilerErr := hostReconciler.Reconcile(ctx, controllerruntime.Request{
+						NamespacedName: byoHostLookupKey,
+					})
+					Expect(result).To(Equal(controllerruntime.Result{}))
+					Expect(reconcilerErr).To(MatchError("UninstallationScript not found in Byohost " + byoHost.Name))
+				})
+
+				It("should return error if uninstall script execution failed ", func() {
+					uninstallScript = `testcommand`
+					byoHost.Spec.UninstallationScript = &uninstallScript
+					Expect(patchHelper.Patch(ctx, byoHost, patch.WithStatusObservedGeneration{})).NotTo(HaveOccurred())
+
+					result, reconcilerErr := hostReconciler.Reconcile(ctx, controllerruntime.Request{
+						NamespacedName: byoHostLookupKey,
+					})
+					Expect(result).To(Equal(controllerruntime.Result{}))
+					Expect(reconcilerErr).To(HaveOccurred())
+				})
+
+				FIt("should set K8sComponentsInstallationSucceeded to false if uninstall suceeds", func() {
+					uninstallScript = `echo "uninstall success"`
+					byoHost.Spec.UninstallationScript = &uninstallScript
+					Expect(patchHelper.Patch(ctx, byoHost, patch.WithStatusObservedGeneration{})).NotTo(HaveOccurred())
+
+					result, reconcilerErr := hostReconciler.Reconcile(ctx, controllerruntime.Request{
+						NamespacedName: byoHostLookupKey,
+					})
+					Expect(result).To(Equal(controllerruntime.Result{}))
+					Expect(reconcilerErr).ToNot(HaveOccurred())
+
+					updatedByoHost := &infrastructurev1beta1.ByoHost{}
+					err := k8sClient.Get(ctx, byoHostLookupKey, updatedByoHost)
+					Expect(err).ToNot(HaveOccurred())
+
+					K8sNodeBootstrapSucceeded := conditions.Get(updatedByoHost, infrastructurev1beta1.K8sNodeBootstrapSucceeded)
+					Expect(*K8sNodeBootstrapSucceeded).To(conditions.MatchCondition(clusterv1.Condition{
+						Type:     infrastructurev1beta1.K8sNodeBootstrapSucceeded,
+						Status:   corev1.ConditionFalse,
+						Reason:   infrastructurev1beta1.K8sNodeAbsentReason,
+						Severity: clusterv1.ConditionSeverityInfo,
+					}))
+				})
+
+				AfterEach(func() {
+					hostReconciler.UseInstallerController = false
+				})
 			})
 
 			It("should skip uninstallation if skip-installation flag is set", func() {
