@@ -13,7 +13,7 @@ import (
 	certv1 "k8s.io/api/certificates/v1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/runtime"
-	fakeclientset "k8s.io/client-go/kubernetes/fake"
+	clientset "k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/envtest"
@@ -25,10 +25,10 @@ func TestRegistration(t *testing.T) {
 }
 
 var (
-	cfg           *rest.Config
-	k8sClient     client.Client
-	clientSetFake = fakeclientset.NewSimpleClientset()
-	testEnv       *envtest.Environment
+	cfg          *rest.Config
+	k8sClient    client.Client
+	k8sClientSet *clientset.Clientset
+	testEnv      *envtest.Environment
 )
 
 var _ = BeforeSuite(func() {
@@ -57,6 +57,8 @@ var _ = BeforeSuite(func() {
 	Expect(err).ToNot(HaveOccurred())
 	Expect(k8sClient).ToNot(BeNil())
 
+	k8sClientSet = clientset.NewForConfigOrDie(cfg)
+	Expect(k8sClientSet).ToNot(BeNil())
 })
 
 var _ = AfterSuite(func() {
