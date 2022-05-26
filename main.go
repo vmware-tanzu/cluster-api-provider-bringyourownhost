@@ -62,6 +62,11 @@ func setFlags() {
 	flag.Parse()
 }
 
+// TODO:
+// main() will have lots of 'if', '&&' and '||' which will
+// increase its cyclometric complexity. Ignoring it for now.
+
+//gocyclo:ignore
 func main() {
 	setFlags()
 	ctrl.SetLogger(klogr.New())
@@ -125,18 +130,20 @@ func main() {
 		setupLog.Error(err, "unable to create controller", "controller", "ByoCluster")
 		os.Exit(1)
 	}
-	if err = (&byohcontrollers.ByoAdmissionReconciler{
-		ClientSet: clientset.NewForConfigOrDie(ctrl.GetConfigOrDie()),
-	}).SetupWithManager(mgr); err != nil {
-		setupLog.Error(err, "unable to create controller", "controller", "ByoAdmission")
-		os.Exit(1)
-	}
 
+	// Set 'MANUAL_CSR_APPROVAL=true' to disable ByoAdmission controller. Now CSRs should be approved manually.
+	if os.Getenv("MANUAL_CSR_APPROVAL") != "true" {
+		if err = (&byohcontrollers.ByoAdmissionReconciler{
+			ClientSet: clientset.NewForConfigOrDie(ctrl.GetConfigOrDie()),
+		}).SetupWithManager(mgr); err != nil {
+			setupLog.Error(err, "unable to create controller", "controller", "ByoAdmission")
+			os.Exit(1)
+		}
+	}
 	if err = (&infrastructurev1beta1.ByoCluster{}).SetupWebhookWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create webhook", "webhook", "ByoCluster")
 		os.Exit(1)
 	}
-
 	if err = (&byohcontrollers.K8sInstallerConfigReconciler{Client: mgr.GetClient(), Scheme: mgr.GetScheme()}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "K8sInstallerConfig")
 		os.Exit(1)
