@@ -191,6 +191,12 @@ var _ = Describe("Byohost Agent Tests", func() {
 					})
 					Expect(result).To(Equal(controllerruntime.Result{}))
 					Expect(reconcilerErr).To(MatchError("secrets \"non-existent\" not found"))
+
+					// assert events
+					events := eventutils.CollectEvents(recorder.Events)
+					Expect(events).Should(ConsistOf([]string{
+						fmt.Sprintf("Warning ReadInstallationSecretFailed installation secret %s not found", byoHost.Spec.InstallationSecret.Name),
+					}))
 				})
 
 				Context("When installation secret is ready", func() {
@@ -219,7 +225,7 @@ var _ = Describe("Byohost Agent Tests", func() {
 						Expect(patchHelper.Patch(ctx, byoHost, patch.WithStatusObservedGeneration{})).NotTo(HaveOccurred())
 					})
 
-					It("should return error if install script execution failed ", func() {
+					It("should return error if install script execution failed", func() {
 						invalidInstallationSecret := builder.Secret(ns, "invalid-test-secret").
 							WithKeyData("install", "test").
 							Build()
@@ -236,6 +242,13 @@ var _ = Describe("Byohost Agent Tests", func() {
 						})
 						Expect(result).To(Equal(controllerruntime.Result{}))
 						Expect(reconcilerErr).To(HaveOccurred())
+
+						// assert events
+						events := eventutils.CollectEvents(recorder.Events)
+						Expect(events).Should(ConsistOf([]string{
+							"Warning InstallScriptExecutionFailed install script execution failed",
+						}))
+
 					})
 
 					It("should set uninstall script in byohost spec", func() {
@@ -252,7 +265,7 @@ var _ = Describe("Byohost Agent Tests", func() {
 						Expect(*updatedByoHost.Spec.UninstallationScript).To(Equal(uninstallScript))
 					})
 
-					It("should set K8sComponentsInstallationSucceeded to true if Install suceeds", func() {
+					It("should set K8sComponentsInstallationSucceeded to true if Install succeeds", func() {
 						result, reconcilerErr := hostReconciler.Reconcile(ctx, controllerruntime.Request{
 							NamespacedName: byoHostLookupKey,
 						})
@@ -267,6 +280,12 @@ var _ = Describe("Byohost Agent Tests", func() {
 						Expect(*K8sComponentsInstallationSucceeded).To(conditions.MatchCondition(clusterv1.Condition{
 							Type:   infrastructurev1beta1.K8sComponentsInstallationSucceeded,
 							Status: corev1.ConditionTrue,
+						}))
+
+						// assert events
+						events := eventutils.CollectEvents(recorder.Events)
+						Expect(events).Should(ConsistOf([]string{
+							"Normal InstallScriptExecutionSucceeded install script executed",
 						}))
 					})
 
@@ -323,6 +342,7 @@ runCmd:
 							// assert events
 							events := eventutils.CollectEvents(recorder.Events)
 							Expect(events).Should(ConsistOf([]string{
+								"Normal InstallScriptExecutionSucceeded install script executed",
 								"Warning BootstrapK8sNodeFailed k8s Node Bootstrap failed",
 								// TODO: improve test to remove this event
 								"Warning ResetK8sNodeFailed k8s Node Reset failed",
@@ -353,6 +373,7 @@ runCmd:
 							// assert events
 							events := eventutils.CollectEvents(recorder.Events)
 							Expect(events).Should(ConsistOf([]string{
+								"Normal InstallScriptExecutionSucceeded install script executed",
 								"Normal BootstrapK8sNodeSucceeded k8s Node Bootstraped",
 							}))
 						})
@@ -379,7 +400,7 @@ runCmd:
 - path: fake/path
   content: blah
 runCmd:
-- echo 'some run command'`
+- echo 'run some command'`
 
 					bootstrapSecret = builder.Secret(ns, "test-secret").
 						WithData(secretData).
@@ -643,9 +664,16 @@ runCmd:
 					})
 					Expect(result).To(Equal(controllerruntime.Result{}))
 					Expect(reconcilerErr).To(HaveOccurred())
+
+					// assert events
+					events := eventutils.CollectEvents(recorder.Events)
+					Expect(events).Should(ConsistOf([]string{
+						"Normal ResetK8sNodeSucceeded k8s Node Reset completed",
+						"Warning UninstallScriptExecutionFailed uninstall script execution failed",
+					}))
 				})
 
-				FIt("should set K8sComponentsInstallationSucceeded to false if uninstall suceeds", func() {
+				It("should set K8sComponentsInstallationSucceeded to false if uninstall succeeds", func() {
 					uninstallScript = `echo "uninstall success"`
 					byoHost.Spec.UninstallationScript = &uninstallScript
 					Expect(patchHelper.Patch(ctx, byoHost, patch.WithStatusObservedGeneration{})).NotTo(HaveOccurred())
@@ -667,6 +695,40 @@ runCmd:
 						Reason:   infrastructurev1beta1.K8sNodeAbsentReason,
 						Severity: clusterv1.ConditionSeverityInfo,
 					}))
+				})
+
+				It("It should reset byoHost.Spec.InstallationSecret if uninstall succeeds", func() {
+					uninstallScript = `echo "uninstall success"`
+					byoHost.Spec.UninstallationScript = &uninstallScript
+					Expect(patchHelper.Patch(ctx, byoHost, patch.WithStatusObservedGeneration{})).NotTo(HaveOccurred())
+					result, reconcilerErr := hostReconciler.Reconcile(ctx, controllerruntime.Request{
+						NamespacedName: byoHostLookupKey,
+					})
+					Expect(result).To(Equal(controllerruntime.Result{}))
+					Expect(reconcilerErr).ToNot(HaveOccurred())
+
+					updatedByoHost := &infrastructurev1beta1.ByoHost{}
+					err := k8sClient.Get(ctx, byoHostLookupKey, updatedByoHost)
+					Expect(err).ToNot(HaveOccurred())
+					Expect(updatedByoHost.Spec.InstallationSecret).To(BeNil())
+				})
+
+				It("It should reset byoHost.Spec.UninstallationScript if uninstall succeeds", func() {
+					uninstallScript = `echo "uninstall success"`
+					byoHost.Spec.UninstallationScript = &uninstallScript
+					Expect(patchHelper.Patch(ctx, byoHost, patch.WithStatusObservedGeneration{})).NotTo(HaveOccurred())
+
+					result, reconcilerErr := hostReconciler.Reconcile(ctx, controllerruntime.Request{
+						NamespacedName: byoHostLookupKey,
+					})
+					Expect(result).To(Equal(controllerruntime.Result{}))
+					Expect(reconcilerErr).ToNot(HaveOccurred())
+
+					updatedByoHost := &infrastructurev1beta1.ByoHost{}
+					err := k8sClient.Get(ctx, byoHostLookupKey, updatedByoHost)
+					Expect(err).ToNot(HaveOccurred())
+					Expect(updatedByoHost.Spec.UninstallationScript).To(BeNil())
+
 				})
 
 				AfterEach(func() {

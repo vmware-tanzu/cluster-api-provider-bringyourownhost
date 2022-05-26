@@ -114,6 +114,7 @@ func (r *HostReconciler) reconcileNormal(ctx context.Context, byoHost *infrastru
 		installScript, uninstallScript, err := r.getInstallationScript(ctx, byoHost.Spec.InstallationSecret.Name, byoHost.Spec.InstallationSecret.Namespace)
 		if err != nil {
 			logger.Error(err, "error getting installation script")
+			r.Recorder.Eventf(byoHost, corev1.EventTypeWarning, "ReadInstallationSecretFailed", "installation secret %s not found", byoHost.Spec.InstallationSecret.Name)
 			return ctrl.Result{}, err
 		}
 		byoHost.Spec.UninstallationScript = &uninstallScript
@@ -125,8 +126,10 @@ func (r *HostReconciler) reconcileNormal(ctx context.Context, byoHost *infrastru
 		err = r.executeScript(ctx, installScript)
 		if err != nil {
 			logger.Error(err, "error execting installation script")
+			r.Recorder.Event(byoHost, corev1.EventTypeWarning, "InstallScriptExecutionFailed", "install script execution failed")
 			return ctrl.Result{}, err
 		}
+		r.Recorder.Event(byoHost, corev1.EventTypeNormal, "InstallScriptExecutionSucceeded", "install script executed")
 		conditions.MarkTrue(byoHost, infrastructurev1beta1.K8sComponentsInstallationSucceeded)
 	}
 
@@ -287,6 +290,7 @@ func (r *HostReconciler) hostCleanUp(ctx context.Context, byoHost *infrastructur
 			err = r.executeScript(ctx, uninstallScript)
 			if err != nil {
 				logger.Error(err, "error execting Uninstallation script")
+				r.Recorder.Event(byoHost, corev1.EventTypeWarning, "UninstallScriptExecutionFailed", "uninstall script execution failed")
 				return err
 			}
 		} else if r.SkipK8sInstallation {
