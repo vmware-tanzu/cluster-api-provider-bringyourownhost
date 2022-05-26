@@ -106,6 +106,11 @@ func (r *HostReconciler) reconcileNormal(ctx context.Context, byoHost *infrastru
 	}
 
 	if r.UseInstallerController && !conditions.IsTrue(byoHost, infrastructurev1beta1.K8sComponentsInstallationSucceeded) {
+		if byoHost.Spec.InstallationSecret == nil {
+			logger.Info("InstallationSecret not ready")
+			conditions.MarkFalse(byoHost, infrastructurev1beta1.K8sComponentsInstallationSucceeded, infrastructurev1beta1.K8sInstallationSecretUnavailableReason, clusterv1.ConditionSeverityInfo, "")
+			return ctrl.Result{}, nil
+		}
 		_, err := r.installerController(ctx, byoHost)
 		if err != nil {
 			return ctrl.Result{}, err
@@ -166,11 +171,6 @@ func (r *HostReconciler) reconcileNormal(ctx context.Context, byoHost *infrastru
 
 func (r *HostReconciler) installerController(ctx context.Context, byoHost *infrastructurev1beta1.ByoHost) (ctrl.Result, error) {
 	logger := ctrl.LoggerFrom(ctx)
-	if byoHost.Spec.InstallationSecret == nil {
-		logger.Info("InstallationSecret not ready")
-		conditions.MarkFalse(byoHost, infrastructurev1beta1.K8sComponentsInstallationSucceeded, infrastructurev1beta1.K8sInstallationSecretUnavailableReason, clusterv1.ConditionSeverityInfo, "")
-		return ctrl.Result{}, nil
-	}
 	installScript, uninstallScript, err := r.getInstallationScript(ctx, byoHost.Spec.InstallationSecret.Name, byoHost.Spec.InstallationSecret.Namespace)
 	if err != nil {
 		logger.Error(err, "error getting installation script")
