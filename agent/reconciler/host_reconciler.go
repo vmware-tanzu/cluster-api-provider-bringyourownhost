@@ -98,6 +98,7 @@ func (r *HostReconciler) Reconcile(ctx context.Context, req ctrl.Request) (_ ctr
 
 func (r *HostReconciler) reconcileNormal(ctx context.Context, byoHost *infrastructurev1beta1.ByoHost) (ctrl.Result, error) {
 	logger := ctrl.LoggerFrom(ctx)
+        logger = logger.WithValues("ByoHost", byoHost.Name)
 	logger.Info("reconcile normal")
 	if byoHost.Status.MachineRef == nil {
 		logger.Info("Machine ref not yet set")
