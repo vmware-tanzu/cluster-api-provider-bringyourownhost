@@ -230,7 +230,7 @@ func (r *HostReconciler) executeScript(ctx context.Context, script string) error
 	return nil
 }
 
-func (r *HostReconciler) parseInstallationScript(ctx context.Context, script string) (string, error) {
+func (r *HostReconciler) parseScript(ctx context.Context, script string) (string, error) {
 	parser, err := template.New("parser").Parse(script)
 	if err != nil {
 		return "", fmt.Errorf("unable to parse install script")
