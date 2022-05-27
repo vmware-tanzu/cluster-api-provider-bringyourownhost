@@ -195,7 +195,7 @@ var _ = Describe("Byohost Agent Tests", func() {
 					// assert events
 					events := eventutils.CollectEvents(recorder.Events)
 					Expect(events).Should(ConsistOf([]string{
-						fmt.Sprintf("Warning ReadInstallationSecretFailed installation secret %s not found", byoHost.Spec.InstallationSecret.Name),
+						fmt.Sprintf("Warning ReadInstallationSecretFailed install and uninstall script %s not found", byoHost.Spec.InstallationSecret.Name),
 					}))
 				})
 

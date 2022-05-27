@@ -7,9 +7,9 @@ import (
 	"bytes"
 	"context"
 	"fmt"
-	"html/template"
 	"os"
 	"os/exec"
+	"text/template"
 
 	"github.com/pkg/errors"
 	"github.com/vmware-tanzu/cluster-api-provider-bringyourownhost/agent/cloudinit"
@@ -98,7 +98,7 @@ func (r *HostReconciler) Reconcile(ctx context.Context, req ctrl.Request) (_ ctr
 
 func (r *HostReconciler) reconcileNormal(ctx context.Context, byoHost *infrastructurev1beta1.ByoHost) (ctrl.Result, error) {
 	logger := ctrl.LoggerFrom(ctx)
-        logger = logger.WithValues("ByoHost", byoHost.Name)
+	logger = logger.WithValues("ByoHost", byoHost.Name)
 	logger.Info("reconcile normal")
 	if byoHost.Status.MachineRef == nil {
 		logger.Info("Machine ref not yet set")
@@ -112,7 +112,7 @@ func (r *HostReconciler) reconcileNormal(ctx context.Context, byoHost *infrastru
 			conditions.MarkFalse(byoHost, infrastructurev1beta1.K8sComponentsInstallationSucceeded, infrastructurev1beta1.K8sInstallationSecretUnavailableReason, clusterv1.ConditionSeverityInfo, "")
 			return ctrl.Result{}, nil
 		}
-		_, err := r.installerController(ctx, byoHost)
+		err := r.executeInstallerController(ctx, byoHost)
 		if err != nil {
 			return ctrl.Result{}, err
 		}
@@ -170,27 +170,31 @@ func (r *HostReconciler) reconcileNormal(ctx context.Context, byoHost *infrastru
 	return ctrl.Result{}, nil
 }
 
-func (r *HostReconciler) installerController(ctx context.Context, byoHost *infrastructurev1beta1.ByoHost) (ctrl.Result, error) {
+func (r *HostReconciler) executeInstallerController(ctx context.Context, byoHost *infrastructurev1beta1.ByoHost) error {
 	logger := ctrl.LoggerFrom(ctx)
-	installScript, uninstallScript, err := r.getInstallationScript(ctx, byoHost.Spec.InstallationSecret.Name, byoHost.Spec.InstallationSecret.Namespace)
+	secret := &corev1.Secret{}
+	err := r.Client.Get(ctx, types.NamespacedName{Name: byoHost.Spec.InstallationSecret.Name, Namespace: byoHost.Spec.InstallationSecret.Namespace}, secret)
 	if err != nil {
-		logger.Error(err, "error getting installation script")
-		r.Recorder.Eventf(byoHost, corev1.EventTypeWarning, "ReadInstallationSecretFailed", "installation secret %s not found", byoHost.Spec.InstallationSecret.Name)
-		return ctrl.Result{}, err
+		logger.Error(err, "error getting install and uninstall script")
+		r.Recorder.Eventf(byoHost, corev1.EventTypeWarning, "ReadInstallationSecretFailed", "install and uninstall script %s not found", byoHost.Spec.InstallationSecret.Name)
+		return err
 	}
+	installScript := string(secret.Data["install"])
+	uninstallScript := string(secret.Data["uninstall"])
+
 	byoHost.Spec.UninstallationScript = &uninstallScript
-	installScript, err = r.parseInstallationScript(ctx, installScript)
+	installScript, err = r.parseScript(ctx, installScript)
 	if err != nil {
-		return ctrl.Result{}, err
+		return err
 	}
 	logger.Info("executing install script")
 	err = r.executeScript(ctx, installScript)
 	if err != nil {
 		logger.Error(err, "error execting installation script")
 		r.Recorder.Event(byoHost, corev1.EventTypeWarning, "InstallScriptExecutionFailed", "install script execution failed")
-		return ctrl.Result{}, err
+		return err
 	}
-	return ctrl.Result{}, nil
+	return nil
 }
 
 func (r *HostReconciler) reconcileDelete(ctx context.Context, byoHost *infrastructurev1beta1.ByoHost) (ctrl.Result, error) {
@@ -206,18 +210,6 @@ func (r *HostReconciler) getBootstrapScript(ctx context.Context, dataSecretName,
 
 	bootstrapSecret := string(secret.Data["value"])
 	return bootstrapSecret, nil
-}
-
-func (r *HostReconciler) getInstallationScript(ctx context.Context, dataSecretName, namespace string) (install, uninstall string, err error) {
-	secret := &corev1.Secret{}
-	err = r.Client.Get(ctx, types.NamespacedName{Name: dataSecretName, Namespace: namespace}, secret)
-	if err != nil {
-		return "", "", err
-	}
-
-	installScript := string(secret.Data["install"])
-	uninstallScript := string(secret.Data["uninstall"])
-	return installScript, uninstallScript, nil
 }
 
 func (r *HostReconciler) executeScript(ctx context.Context, script string) error {
@@ -286,13 +278,15 @@ func (r *HostReconciler) hostCleanUp(ctx context.Context, byoHost *infrastructur
 		if err != nil {
 			return err
 		}
-		if r.UseInstallerController {
+		if r.SkipK8sInstallation {
+			logger.Info("Skipping uninstallation of k8s components")
+		} else if r.UseInstallerController {
 			if byoHost.Spec.UninstallationScript == nil {
 				return fmt.Errorf("UninstallationScript not found in Byohost %s", byoHost.Name)
 			}
 			logger.Info("Executing Uninstall script")
 			uninstallScript := *byoHost.Spec.UninstallationScript
-			uninstallScript, err = r.parseInstallationScript(ctx, uninstallScript)
+			uninstallScript, err = r.parseScript(ctx, uninstallScript)
 			if err != nil {
 				logger.Error(err, "error parsing Uninstallation script")
 				return err
@@ -303,8 +297,6 @@ func (r *HostReconciler) hostCleanUp(ctx context.Context, byoHost *infrastructur
 				r.Recorder.Event(byoHost, corev1.EventTypeWarning, "UninstallScriptExecutionFailed", "uninstall script execution failed")
 				return err
 			}
-		} else if r.SkipK8sInstallation {
-			logger.Info("Skipping uninstallation of k8s components")
 		} else {
 			err = r.uninstallk8sComponents(ctx, byoHost)
 			if err != nil {
