@@ -10,6 +10,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"os"
+	"path/filepath"
 	"time"
 
 	"github.com/go-logr/logr"
@@ -91,7 +92,7 @@ kovW9X7Ook/tTW0HyX6D6HRciA==
 				err = k8sClientSet.CertificatesV1().CertificateSigningRequests().Delete(ctx, csr.Name, metav1.DeleteOptions{})
 				Expect(err).ShouldNot(HaveOccurred())
 			}
-			registration.ConfigPath = "/tmp/config"
+			registration.ConfigPath = "config"
 			fileDir, err = ioutil.TempDir("", "bootstrap")
 			Expect(err).ShouldNot(HaveOccurred())
 
@@ -236,6 +237,33 @@ kovW9X7Ook/tTW0HyX6D6HRciA==
 			err = CSRRegistrar.BootstrapKubeconfig(hostName)
 			Expect(err).ShouldNot(HaveOccurred())
 			Expect(registration.ConfigPath).To(BeARegularFile())
+			Expect(os.Remove(registration.ConfigPath)).ShouldNot(HaveOccurred())
+		})
+	})
+	Context("When GetBYOHConfigPath is called", func() {
+		homePath := os.Getenv("HOME")
+		BeforeEach(func() {
+			registration.ConfigPath = ""
+		})
+		AfterEach(func() {
+			os.Setenv("HOME", homePath)
+		})
+		It("should return ConfigPath if set", func() {
+			registration.ConfigPath = "/tmp/config"
+			actualPath := registration.GetBYOHConfigPath()
+			Expect(actualPath).To(Equal(registration.ConfigPath))
+		})
+		It("should return default path if homedir is not set", func() {
+			os.Setenv("HOME", "")
+			actualPath := registration.GetBYOHConfigPath()
+			Expect(actualPath).To(Equal(".byoh/config"))
+		})
+		It("should return path under user home dir if ConfigPath is not set", func() {
+			homeDir, err := os.UserHomeDir()
+			Expect(err).ShouldNot(HaveOccurred())
+			expectedPath := filepath.Join(homeDir, registration.DefaultConfigPath)
+			actualPath := registration.GetBYOHConfigPath()
+			Expect(actualPath).To(Equal(expectedPath))
 		})
 	})
 })

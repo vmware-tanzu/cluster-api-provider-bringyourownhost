@@ -12,3 +12,4 @@ rules:
   - create
   - get
   - watch
+  - list
