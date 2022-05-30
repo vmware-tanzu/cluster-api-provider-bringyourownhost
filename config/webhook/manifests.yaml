@@ -26,7 +26,27 @@ webhooks:
     resources:
     - byoclusters
   sideEffects: None
-
+- admissionReviewVersions:
+  - v1
+  clientConfig:
+    service:
+      name: webhook-service
+      namespace: system
+      path: /mutate-infrastructure-cluster-x-k8s-io-v1beta1-byoclustertemplate
+  failurePolicy: Fail
+  matchPolicy: Equivalent
+  name: mbyoclustertemplate.kb.io
+  rules:
+  - apiGroups:
+    - infrastructure.cluster.x-k8s.io
+    apiVersions:
+    - v1beta1
+    operations:
+    - CREATE
+    - UPDATE
+    resources:
+    - byoclustertemplates
+  sideEffects: None
 ---
 apiVersion: admissionregistration.k8s.io/v1
 kind: ValidatingWebhookConfiguration
@@ -53,6 +73,27 @@ webhooks:
     - UPDATE
     resources:
     - byoclusters
+  sideEffects: None
+- admissionReviewVersions:
+  - v1
+  clientConfig:
+    service:
+      name: webhook-service
+      namespace: system
+      path: /validate-infrastructure-cluster-x-k8s-io-v1beta1-byoclustertemplate
+  failurePolicy: Fail
+  matchPolicy: Equivalent
+  name: vbyoclustertemplate.kb.io
+  rules:
+  - apiGroups:
+    - infrastructure.cluster.x-k8s.io
+    apiVersions:
+    - v1beta1
+    operations:
+    - CREATE
+    - UPDATE
+    resources:
+    - byoclustertemplates
   sideEffects: None
 - admissionReviewVersions:
   - v1

@@ -45,11 +45,11 @@ var _ = Describe("ByoclusterWebhook", func() {
 		It("should reject the request when BundleLookupTag is empty", func() {
 			err := k8sClientUncached.Create(ctx, byoCluster)
 			Expect(err).To(HaveOccurred())
-			Expect(err).To(MatchError("admission webhook \"vbyocluster.kb.io\" denied the request: ByoCluster.infrastructure.cluster.x-k8s.io \"" + byoCluster.Name + "\" is invalid: <nil>: Internal error: cannot create ByoCluster without Spec.BundleLookupTag"))
+			Expect(err).To(MatchError("admission webhook \"vbyocluster.kb.io\" denied the request: ByoCluster.infrastructure.cluster.x-k8s.io \"" + byoCluster.Name + "\" is invalid: <nil>: Internal error: cannot create/update ByoCluster with empty Spec.BundleLookupTag"))
 		})
 
 		It("should success when BundleLookupTag is not empty", func() {
-			byoCluster.Spec.BundleLookupTag = "v0.1.0_alpha.2"
+			byoCluster.Spec.BundleLookupTag = bundleLookupTag
 			err := k8sClientUncached.Create(ctx, byoCluster)
 			Expect(err).NotTo(HaveOccurred())
 		})
@@ -78,7 +78,7 @@ var _ = Describe("ByoclusterWebhook", func() {
 					Namespace: "default",
 				},
 				Spec: byohv1beta1.ByoClusterSpec{
-					BundleLookupTag: "v0.1.0_alpha.2",
+					BundleLookupTag: bundleLookupTag,
 				},
 			}
 
@@ -93,20 +93,18 @@ var _ = Describe("ByoclusterWebhook", func() {
 			byoCluster.Spec.BundleLookupTag = ""
 			err := k8sClientUncached.Update(ctx, byoCluster)
 			Expect(err).To(HaveOccurred())
-			Expect(err).To(MatchError("admission webhook \"vbyocluster.kb.io\" denied the request: ByoCluster.infrastructure.cluster.x-k8s.io \"" + byoCluster.Name + "\" is invalid: <nil>: Internal error: cannot update ByoCluster with empty Spec.BundleLookupTag"))
+			Expect(err).To(MatchError("admission webhook \"vbyocluster.kb.io\" denied the request: ByoCluster.infrastructure.cluster.x-k8s.io \"" + byoCluster.Name + "\" is invalid: <nil>: Internal error: cannot create/update ByoCluster with empty Spec.BundleLookupTag"))
 		})
 
 		It("should update the cluster with new BundleLookupTag value", func() {
-			newBundleLookupTag := "new_tag"
-
-			byoCluster.Spec.BundleLookupTag = newBundleLookupTag
+			byoCluster.Spec.BundleLookupTag = updatedBundleLookupTag
 			err := k8sClientUncached.Update(ctx, byoCluster)
 			Expect(err).NotTo(HaveOccurred())
 
 			updatedByoCluster := &byohv1beta1.ByoCluster{}
-			byoCLusterLookupKey := types.NamespacedName{Name: byoCluster.Name, Namespace: byoCluster.Namespace}
-			Expect(k8sClientUncached.Get(ctx, byoCLusterLookupKey, updatedByoCluster)).Should(Not(HaveOccurred()))
-			Expect(updatedByoCluster.Spec.BundleLookupTag).To(Equal(newBundleLookupTag))
+			byoClusterLookupKey := types.NamespacedName{Name: byoCluster.Name, Namespace: byoCluster.Namespace}
+			Expect(k8sClientUncached.Get(ctx, byoClusterLookupKey, updatedByoCluster)).Should(Not(HaveOccurred()))
+			Expect(updatedByoCluster.Spec.BundleLookupTag).To(Equal(updatedBundleLookupTag))
 		})
 	})
 })
