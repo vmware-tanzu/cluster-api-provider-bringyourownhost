@@ -61,7 +61,7 @@ users:
 			Expect(err).ShouldNot(HaveOccurred())
 			restConfig, err := LoadRESTClientConfig(fileboot.Name())
 			Expect(err).ShouldNot(HaveOccurred())
-			err = writeKubeconfigFromBootstrapping(restConfig, filekubeconfig.Name(), "cert-data", "key-data")
+			err = writeKubeconfigFromBootstrapping(restConfig, filekubeconfig.Name(), []byte("cert-data"), []byte("key-data"))
 			Expect(err).ShouldNot(HaveOccurred())
 			Expect(filekubeconfig.Name()).To(BeARegularFile())
 			content, err := os.ReadFile(filekubeconfig.Name())

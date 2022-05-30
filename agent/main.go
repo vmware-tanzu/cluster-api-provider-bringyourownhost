@@ -170,7 +170,7 @@ func main() {
 	}
 	// Handle kubeconfig flag
 	// first look in the byoh path for the kubeconfig
-	config, err := registration.LoadRESTClientConfig(registration.ConfigPath)
+	config, err := registration.LoadRESTClientConfig(registration.GetBYOHConfigPath())
 	if err != nil {
 		logger.Error(err, "client config load failed")
 		// get the passed kubeconfig
