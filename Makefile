@@ -137,7 +137,7 @@ test-e2e: take-user-input docker-build prepare-byoh-docker-host-image $(GINKGO) 
 cluster-templates: kustomize cluster-templates-v1beta1
 
 cluster-templates-e2e: kustomize
-	$(KUSTOMIZE) build $(BYOH_TEMPLATES)/v1beta1/templates/e2e --load_restrictor none > $(BYOH_TEMPLATES)/v1beta1/templates/e2e/cluster-template.yaml
+	$(KUSTOMIZE) build $(BYOH_TEMPLATES)/v1beta1/templates/e2e --load-restrictor LoadRestrictionsNone > $(BYOH_TEMPLATES)/v1beta1/templates/e2e/cluster-template.yaml
 
 define WARNING
 #####################################################################################################
@@ -166,8 +166,8 @@ take-user-input:
 	
 
 cluster-templates-v1beta1: kustomize ## Generate cluster templates for v1beta1
-	$(KUSTOMIZE) build $(BYOH_TEMPLATES)/v1beta1/templates/vm --load_restrictor none > $(BYOH_TEMPLATES)/v1beta1/templates/vm/cluster-template.yaml
-	$(KUSTOMIZE) build $(BYOH_TEMPLATES)/v1beta1/templates/docker --load_restrictor none > $(BYOH_TEMPLATES)/v1beta1/templates/docker/cluster-template.yaml
+	$(KUSTOMIZE) build $(BYOH_TEMPLATES)/v1beta1/templates/vm --load-restrictor LoadRestrictionsNone > $(BYOH_TEMPLATES)/v1beta1/templates/vm/cluster-template.yaml
+	$(KUSTOMIZE) build $(BYOH_TEMPLATES)/v1beta1/templates/docker --load-restrictor LoadRestrictionsNone > $(BYOH_TEMPLATES)/v1beta1/templates/docker/cluster-template.yaml
 
 $(GINKGO): # Build ginkgo from tools folder.
 	cd $(TOOLS_DIR) && go build -tags=tools -o $(BIN_DIR)/ginkgo github.com/onsi/ginkgo/ginkgo
@@ -197,7 +197,7 @@ controller-gen: ## Download controller-gen locally if necessary.
 
 KUSTOMIZE = $(shell pwd)/bin/kustomize
 kustomize: ## Download kustomize locally if necessary.
-	$(call go-get-tool,$(KUSTOMIZE),sigs.k8s.io/kustomize/kustomize/v3@v3.9.1)
+	$(call go-get-tool,$(KUSTOMIZE),sigs.k8s.io/kustomize/kustomize/v4@v4.5.2)
 
 host-agent-binaries: ## Builds the binaries for the host-agent
 	RELEASE_BINARY=./byoh-hostagent GOOS=linux GOARCH=amd64 GOLDFLAGS="$(LDFLAGS) $(STATIC)" \
@@ -249,7 +249,7 @@ TMP_DIR=$$(mktemp -d) ;\
 cd $$TMP_DIR ;\
 go mod init tmp ;\
 echo "Downloading $(2)" ;\
-GOBIN=$(PROJECT_DIR)/bin go get $(2) ;\
+GOBIN=$(PROJECT_DIR)/bin go install $(2) ;\
 rm -rf $$TMP_DIR ;\
 }
 endef
