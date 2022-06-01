@@ -4,12 +4,10 @@
 package reconciler
 
 import (
-	"bytes"
 	"context"
 	"fmt"
 	"os"
 	"os/exec"
-	"text/template"
 
 	"github.com/pkg/errors"
 	"github.com/vmware-tanzu/cluster-api-provider-bringyourownhost/agent/cloudinit"
@@ -49,6 +47,11 @@ type HostReconciler struct {
 	SkipK8sInstallation    bool
 	UseInstallerController bool
 	DownloadPath           string
+}
+
+// BundleDownloadPath contains location of bundle download path.
+type BundleDownloadPath struct {
+	BundleDownloadPath string
 }
 
 const (
@@ -190,7 +193,7 @@ func (r *HostReconciler) executeInstallerController(ctx context.Context, byoHost
 	logger.Info("executing install script")
 	err = r.executeScript(ctx, installScript)
 	if err != nil {
-		logger.Error(err, "error execting installation script")
+		logger.Error(err, "error executing installation script")
 		r.Recorder.Event(byoHost, corev1.EventTypeWarning, "InstallScriptExecutionFailed", "install script execution failed")
 		return err
 	}
@@ -223,17 +226,15 @@ func (r *HostReconciler) executeScript(ctx context.Context, script string) error
 }
 
 func (r *HostReconciler) parseScript(ctx context.Context, script string) (string, error) {
-	parser, err := template.New("parser").Parse(script)
+	data, err := cloudinit.TemplateParser{
+		Template: map[string]string{
+			"BundleDownloadPath": r.DownloadPath,
+		},
+	}.ParseTemplate(script)
 	if err != nil {
-		return "", fmt.Errorf("unable to parse install script")
-	}
-	var tpl bytes.Buffer
-	if err = parser.Execute(&tpl, map[string]string{
-		"BundleDownloadPath": r.DownloadPath,
-	}); err != nil {
 		return "", fmt.Errorf("unable to apply install parsed template to the data object")
 	}
-	return tpl.String(), nil
+	return data, nil
 }
 
 // SetupWithManager sets up the controller with the manager
