@@ -49,11 +49,6 @@ type HostReconciler struct {
 	DownloadPath           string
 }
 
-// BundleDownloadPath contains location of bundle download path.
-type BundleDownloadPath struct {
-	BundleDownloadPath string
-}
-
 const (
 	bootstrapSentinelFile = "/run/cluster-api/bootstrap-success.complete"
 	// KubeadmResetCommand is the command to run to force reset/remove nodes' local file system of the files created by kubeadm
