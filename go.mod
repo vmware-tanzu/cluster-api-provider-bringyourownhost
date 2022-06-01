@@ -17,12 +17,12 @@ require (
 	github.com/onsi/gomega v1.19.0
 	github.com/pkg/errors v0.9.1
 	github.com/spf13/pflag v1.0.5
-	k8s.io/api v0.24.0
-	k8s.io/apimachinery v0.24.0
-	k8s.io/client-go v0.24.0
-	k8s.io/component-base v0.24.0
+	k8s.io/api v0.24.1
+	k8s.io/apimachinery v0.24.1
+	k8s.io/client-go v0.24.1
+	k8s.io/component-base v0.24.1
 	k8s.io/klog/v2 v2.60.1
-	k8s.io/kubectl v0.24.0
+	k8s.io/kubectl v0.24.1
 	k8s.io/utils v0.0.0-20220210201930-3a6ce19ff2f9
 	sigs.k8s.io/cluster-api v1.1.3
 	sigs.k8s.io/cluster-api/test v1.1.3
@@ -103,7 +103,7 @@ require (
 	github.com/huandu/xstrings v1.3.2 // indirect
 	github.com/imdario/mergo v0.3.12 // indirect
 	github.com/inconshreveable/mousetrap v1.0.0 // indirect
-	github.com/insomniacslk/dhcp v0.0.0-20211214070828-5297eed8f489 // indirect
+	github.com/insomniacslk/dhcp v0.0.0-20220504074936-1ca156eafb9f // indirect
 	github.com/jmespath/go-jmespath v0.4.0 // indirect
 	github.com/josharian/intern v1.0.0 // indirect
 	github.com/jpillora/backoff v1.0.0 // indirect
@@ -149,7 +149,7 @@ require (
 	github.com/stoewer/go-strcase v1.2.0 // indirect
 	github.com/subosito/gotenv v1.2.0 // indirect
 	github.com/theupdateframework/notary v0.7.0 // indirect
-	github.com/u-root/uio v0.0.0-20210528114334-82958018845c // indirect
+	github.com/u-root/uio v0.0.0-20220204230159-dac05f7d2cb4 // indirect
 	github.com/valyala/fastjson v1.6.3 // indirect
 	github.com/vdemeester/k8s-pkg-credentialprovider v1.21.0-1 // indirect
 	github.com/vishvananda/netlink v1.1.1-0.20210330154013-f5de75959ad5 // indirect
@@ -165,7 +165,7 @@ require (
 	golang.org/x/net v0.0.0-20220225172249-27dd8689420f // indirect
 	golang.org/x/oauth2 v0.0.0-20211104180415-d3ed0bb246c8 // indirect
 	golang.org/x/sync v0.0.0-20210220032951-036812b2e83c // indirect
-	golang.org/x/sys v0.0.0-20220315194320-039c03cc5b86 // indirect
+	golang.org/x/sys v0.0.0-20220520151302-bc2c85ada10a // indirect
 	golang.org/x/term v0.0.0-20210927222741-03fcf44c2211 // indirect
 	golang.org/x/text v0.3.7 // indirect
 	golang.org/x/time v0.0.0-20220210224613-90d013bbcef8 // indirect

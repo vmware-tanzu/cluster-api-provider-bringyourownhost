@@ -11,6 +11,7 @@ import (
 	"encoding/pem"
 	"fmt"
 	"os"
+	"path/filepath"
 	"time"
 
 	"github.com/go-logr/logr"
@@ -34,10 +35,11 @@ const (
 	ByohCSRCNFormat   = "byoh:host:%s"
 	ByohCSRNameFormat = "byoh-csr-%s"
 	TmpPrivateKey     = "byoh-client.key.tmp"
+	DefaultConfigPath = ".byoh/config"
 )
 
 var (
-	ConfigPath = "~/.byoh/config"
+	ConfigPath string
 	// CSRApprovalTimeout defines the time to wait for certificate to
 	// be issued. Currently set to 1 hour.
 	CSRApprovalTimeout = 3600 * time.Second
@@ -47,6 +49,7 @@ type ByohCSR struct {
 	bootstrapClientConfig *restclient.Config
 	bootstrapClient       clientset.Interface
 	PrivateKey            []byte
+	configPath            string
 	logger                logr.Logger
 }
 
@@ -59,6 +62,7 @@ func NewByohCSR(bootstrapClientConfig *restclient.Config, logger logr.Logger) (*
 	return &ByohCSR{
 		bootstrapClientConfig: bootstrapClientConfig,
 		bootstrapClient:       bootstrapClient,
+		configPath:            GetBYOHConfigPath(),
 		logger:                logger,
 	}, nil
 }
@@ -71,6 +75,7 @@ func (bcsr *ByohCSR) BootstrapKubeconfig(hostName string) error {
 	if err != nil {
 		return err
 	}
+	bcsr.logger.Info("CSR request created")
 	// wait for certificate to be issued
 	ctx, cancel := context.WithTimeout(context.TODO(), CSRApprovalTimeout)
 	defer cancel()
@@ -79,11 +84,11 @@ func (bcsr *ByohCSR) BootstrapKubeconfig(hostName string) error {
 	if err != nil {
 		return err
 	}
-	err = writeKubeconfigFromBootstrapping(bcsr.bootstrapClientConfig, ConfigPath, string(certData), string(bcsr.PrivateKey))
+	err = writeKubeconfigFromBootstrapping(bcsr.bootstrapClientConfig, bcsr.configPath, certData, bcsr.PrivateKey)
 	if err != nil {
 		return err
 	}
-	bcsr.logger.Info("kubeconfig created")
+	bcsr.logger.Info("kubeconfig created", "path", bcsr.configPath)
 	if err := os.Remove(TmpPrivateKey); err != nil && !os.IsNotExist(err) {
 		bcsr.logger.Error(err, "Failed cleaning up private key file")
 	}
@@ -163,7 +168,7 @@ func LoadRESTClientConfig(kubeconfigPath string) (*restclient.Config, error) {
 
 // writeKubeconfigFromBootstrapping will write the new kubeconfig fetching
 // some details from bootstrap client config and using key/cert details
-func writeKubeconfigFromBootstrapping(bootstrapClientConfig *restclient.Config, kubeconfigPath, certData, keyData string) error {
+func writeKubeconfigFromBootstrapping(bootstrapClientConfig *restclient.Config, kubeconfigPath string, certData, keyData []byte) error {
 	// Get the CA data from the bootstrap client config.
 	caFile, caData := bootstrapClientConfig.CAFile, []byte{}
 	if caFile == "" {
@@ -181,8 +186,8 @@ func writeKubeconfigFromBootstrapping(bootstrapClientConfig *restclient.Config, 
 		}},
 		// Define auth based on the obtained client cert.
 		AuthInfos: map[string]*clientcmdapi.AuthInfo{"default-auth": {
-			ClientCertificate: certData,
-			ClientKey:         keyData,
+			ClientCertificateData: certData,
+			ClientKeyData:         keyData,
 		}},
 		// Define a context that connects the auth info and cluster, and set it as the default
 		Contexts: map[string]*clientcmdapi.Context{"default-context": {
@@ -195,4 +200,16 @@ func writeKubeconfigFromBootstrapping(bootstrapClientConfig *restclient.Config, 
 
 	// Marshal to disk
 	return clientcmd.WriteToFile(kubeconfigData, kubeconfigPath)
+}
+
+// GetBYOHConfigPath set the directory for BYOH kubeconfig
+func GetBYOHConfigPath() string {
+	if ConfigPath != "" {
+		return ConfigPath
+	}
+	homeDir, err := os.UserHomeDir()
+	if err != nil {
+		return DefaultConfigPath
+	}
+	return filepath.Join(homeDir, DefaultConfigPath)
 }

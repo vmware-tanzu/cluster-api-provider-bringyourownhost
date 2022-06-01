@@ -40,10 +40,8 @@ var _ webhook.Validator = &ByoCluster{}
 // ValidateCreate implements webhook.Validator so a webhook will be registered for the type
 func (byoCluster *ByoCluster) ValidateCreate() error {
 	byoclusterlog.Info("validate create", "name", byoCluster.Name)
-	if byoCluster.Spec.BundleLookupTag == "" {
-		return apierrors.NewInvalid(byoCluster.GroupVersionKind().GroupKind(), byoCluster.Name, field.ErrorList{
-			field.InternalError(nil, errors.New("cannot create ByoCluster without Spec.BundleLookupTag")),
-		})
+	if errList := validateByoClusterSpec(byoCluster.Spec); errList != nil {
+		return apierrors.NewInvalid(byoCluster.GroupVersionKind().GroupKind(), byoCluster.Name, errList)
 	}
 
 	return nil
@@ -52,10 +50,8 @@ func (byoCluster *ByoCluster) ValidateCreate() error {
 // ValidateUpdate implements webhook.Validator so a webhook will be registered for the type
 func (byoCluster *ByoCluster) ValidateUpdate(old runtime.Object) error {
 	byoclusterlog.Info("validate update", "name", byoCluster.Name)
-	if byoCluster.Spec.BundleLookupTag == "" {
-		return apierrors.NewInvalid(byoCluster.GroupVersionKind().GroupKind(), byoCluster.Name, field.ErrorList{
-			field.InternalError(nil, errors.New("cannot update ByoCluster with empty Spec.BundleLookupTag")),
-		})
+	if errList := validateByoClusterSpec(byoCluster.Spec); errList != nil {
+		return apierrors.NewInvalid(byoCluster.GroupVersionKind().GroupKind(), byoCluster.Name, errList)
 	}
 	return nil
 }
@@ -63,5 +59,14 @@ func (byoCluster *ByoCluster) ValidateUpdate(old runtime.Object) error {
 // ValidateDelete implements webhook.Validator so a webhook will be registered for the type
 func (byoCluster *ByoCluster) ValidateDelete() error {
 	// TODO(user): fill in your validation logic upon object deletion.
+	return nil
+}
+
+func validateByoClusterSpec(spec ByoClusterSpec) field.ErrorList {
+	if spec.BundleLookupTag == "" {
+		return field.ErrorList{
+			field.InternalError(nil, errors.New("cannot create/update ByoCluster with empty Spec.BundleLookupTag")),
+		}
+	}
 	return nil
 }

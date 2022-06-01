@@ -734,7 +734,7 @@ kovW9X7Ook/tTW0HyX6D6HRciA==
 				AttachStdin:  false,
 				AttachStdout: true,
 				AttachStderr: true,
-				Cmd:          []string{"cat", "~/.byoh/config"},
+				Cmd:          []string{"cat", "/root/.byoh/config"},
 			})
 			Expect(err).ShouldNot(HaveOccurred())
 			result, err := cli.ContainerExecAttach(ctx, response.ID, dockertypes.ExecStartCheck{})
@@ -751,7 +751,7 @@ kovW9X7Ook/tTW0HyX6D6HRciA==
 				_, err := os.Stat(execLogFile)
 				if err == nil {
 					data, err := os.ReadFile(execLogFile)
-					if err == nil && strings.Contains(string(data), "name: default-cluster") {
+					if err == nil && strings.Contains(string(data), "name: default-cluster") && strings.Contains(string(data), "client-certificate-data:") {
 						return true
 					}
 				}
