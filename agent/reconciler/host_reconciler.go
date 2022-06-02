@@ -104,20 +104,6 @@ func (r *HostReconciler) reconcileNormal(ctx context.Context, byoHost *infrastru
 		return ctrl.Result{}, nil
 	}
 
-	if r.UseInstallerController && !conditions.IsTrue(byoHost, infrastructurev1beta1.K8sComponentsInstallationSucceeded) {
-		if byoHost.Spec.InstallationSecret == nil {
-			logger.Info("InstallationSecret not ready")
-			conditions.MarkFalse(byoHost, infrastructurev1beta1.K8sComponentsInstallationSucceeded, infrastructurev1beta1.K8sInstallationSecretUnavailableReason, clusterv1.ConditionSeverityInfo, "")
-			return ctrl.Result{}, nil
-		}
-		err := r.executeInstallerController(ctx, byoHost)
-		if err != nil {
-			return ctrl.Result{}, err
-		}
-		r.Recorder.Event(byoHost, corev1.EventTypeNormal, "InstallScriptExecutionSucceeded", "install script executed")
-		conditions.MarkTrue(byoHost, infrastructurev1beta1.K8sComponentsInstallationSucceeded)
-	}
-
 	if byoHost.Spec.BootstrapSecret == nil {
 		logger.Info("BootstrapDataSecret not ready")
 		conditions.MarkFalse(byoHost, infrastructurev1beta1.K8sNodeBootstrapSucceeded, infrastructurev1beta1.BootstrapDataSecretUnavailableReason, clusterv1.ConditionSeverityInfo, "")
@@ -134,7 +120,19 @@ func (r *HostReconciler) reconcileNormal(ctx context.Context, byoHost *infrastru
 
 		if r.SkipK8sInstallation {
 			logger.Info("Skipping installation of k8s components")
-		} else if !r.UseInstallerController {
+		} else if r.UseInstallerController {
+			if byoHost.Spec.InstallationSecret == nil {
+				logger.Info("InstallationSecret not ready")
+				conditions.MarkFalse(byoHost, infrastructurev1beta1.K8sComponentsInstallationSucceeded, infrastructurev1beta1.K8sInstallationSecretUnavailableReason, clusterv1.ConditionSeverityInfo, "")
+				return ctrl.Result{}, nil
+			}
+			err := r.executeInstallerController(ctx, byoHost)
+			if err != nil {
+				return ctrl.Result{}, err
+			}
+			r.Recorder.Event(byoHost, corev1.EventTypeNormal, "InstallScriptExecutionSucceeded", "install script executed")
+			conditions.MarkTrue(byoHost, infrastructurev1beta1.K8sComponentsInstallationSucceeded)
+		} else {
 			err = r.installK8sComponents(ctx, byoHost)
 			if err != nil {
 				logger.Error(err, "error in installing k8s components")
