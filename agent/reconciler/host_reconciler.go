@@ -120,7 +120,7 @@ func (r *HostReconciler) reconcileNormal(ctx context.Context, byoHost *infrastru
 
 		if r.SkipK8sInstallation {
 			logger.Info("Skipping installation of k8s components")
-		} else if r.UseInstallerController {
+		} else if r.UseInstallerController && !conditions.IsTrue(byoHost, infrastructurev1beta1.K8sComponentsInstallationSucceeded) {
 			if byoHost.Spec.InstallationSecret == nil {
 				logger.Info("InstallationSecret not ready")
 				conditions.MarkFalse(byoHost, infrastructurev1beta1.K8sComponentsInstallationSucceeded, infrastructurev1beta1.K8sInstallationSecretUnavailableReason, clusterv1.ConditionSeverityInfo, "")
