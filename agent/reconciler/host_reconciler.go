@@ -126,7 +126,7 @@ func (r *HostReconciler) reconcileNormal(ctx context.Context, byoHost *infrastru
 				conditions.MarkFalse(byoHost, infrastructurev1beta1.K8sComponentsInstallationSucceeded, infrastructurev1beta1.K8sInstallationSecretUnavailableReason, clusterv1.ConditionSeverityInfo, "")
 				return ctrl.Result{}, nil
 			}
-			err := r.executeInstallerController(ctx, byoHost)
+			err = r.executeInstallerController(ctx, byoHost)
 			if err != nil {
 				return ctrl.Result{}, err
 			}
