@@ -120,18 +120,22 @@ func (r *HostReconciler) reconcileNormal(ctx context.Context, byoHost *infrastru
 
 		if r.SkipK8sInstallation {
 			logger.Info("Skipping installation of k8s components")
-		} else if r.UseInstallerController && !conditions.IsTrue(byoHost, infrastructurev1beta1.K8sComponentsInstallationSucceeded) {
-			if byoHost.Spec.InstallationSecret == nil {
-				logger.Info("InstallationSecret not ready")
-				conditions.MarkFalse(byoHost, infrastructurev1beta1.K8sComponentsInstallationSucceeded, infrastructurev1beta1.K8sInstallationSecretUnavailableReason, clusterv1.ConditionSeverityInfo, "")
-				return ctrl.Result{}, nil
+		} else if r.UseInstallerController {
+			if !conditions.IsTrue(byoHost, infrastructurev1beta1.K8sComponentsInstallationSucceeded) {
+				if byoHost.Spec.InstallationSecret == nil {
+					logger.Info("InstallationSecret not ready")
+					conditions.MarkFalse(byoHost, infrastructurev1beta1.K8sComponentsInstallationSucceeded, infrastructurev1beta1.K8sInstallationSecretUnavailableReason, clusterv1.ConditionSeverityInfo, "")
+					return ctrl.Result{}, nil
+				}
+				err = r.executeInstallerController(ctx, byoHost)
+				if err != nil {
+					return ctrl.Result{}, err
+				}
+				r.Recorder.Event(byoHost, corev1.EventTypeNormal, "InstallScriptExecutionSucceeded", "install script executed")
+				conditions.MarkTrue(byoHost, infrastructurev1beta1.K8sComponentsInstallationSucceeded)
+			} else {
+				logger.Info("install script already executed")
 			}
-			err = r.executeInstallerController(ctx, byoHost)
-			if err != nil {
-				return ctrl.Result{}, err
-			}
-			r.Recorder.Event(byoHost, corev1.EventTypeNormal, "InstallScriptExecutionSucceeded", "install script executed")
-			conditions.MarkTrue(byoHost, infrastructurev1beta1.K8sComponentsInstallationSucceeded)
 		} else {
 			err = r.installK8sComponents(ctx, byoHost)
 			if err != nil {
@@ -188,6 +192,7 @@ func (r *HostReconciler) executeInstallerController(ctx context.Context, byoHost
 	if err != nil {
 		logger.Error(err, "error executing installation script")
 		r.Recorder.Event(byoHost, corev1.EventTypeWarning, "InstallScriptExecutionFailed", "install script execution failed")
+		conditions.MarkFalse(byoHost, infrastructurev1beta1.K8sComponentsInstallationSucceeded, infrastructurev1beta1.K8sComponentsInstallationFailedReason, clusterv1.ConditionSeverityInfo, "")
 		return err
 	}
 	return nil
