@@ -138,6 +138,7 @@ cluster-templates: kustomize cluster-templates-v1beta1
 
 cluster-templates-e2e: kustomize
 	$(KUSTOMIZE) build $(BYOH_TEMPLATES)/v1beta1/templates/e2e --load-restrictor LoadRestrictionsNone > $(BYOH_TEMPLATES)/v1beta1/templates/e2e/cluster-template.yaml
+	$(KUSTOMIZE) build $(BYOH_TEMPLATES)/v1beta1/templates/e2e/installer --load-restrictor LoadRestrictionsNone > $(BYOH_TEMPLATES)/v1beta1/templates/e2e/installer/cluster-template.yaml
 
 define WARNING
 #####################################################################################################
