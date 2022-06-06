@@ -380,6 +380,7 @@ runCmd:
 						})
 
 						It("should return error if install script execution failed", func() {
+							fakeCommandRunner.RunCmdReturns(errors.New("failed to execute install script"))
 							invalidInstallationSecret := builder.Secret(ns, "invalid-test-secret").
 								WithKeyData("install", "test").
 								Build()
@@ -444,38 +445,6 @@ runCmd:
 							}))
 						})
 
-						It("should set K8sNodeBootstrapSucceeded to false with Reason CloudInitExecutionFailedReason if the bootstrap execution fails", func() {
-							fakeCommandRunner.RunCmdReturns(errors.New("I failed"))
-
-							result, reconcilerErr := hostReconciler.Reconcile(ctx, controllerruntime.Request{
-								NamespacedName: byoHostLookupKey,
-							})
-
-							Expect(result).To(Equal(controllerruntime.Result{}))
-							Expect(reconcilerErr).To(HaveOccurred())
-
-							updatedByoHost := &infrastructurev1beta1.ByoHost{}
-							err := k8sClient.Get(ctx, byoHostLookupKey, updatedByoHost)
-							Expect(err).ToNot(HaveOccurred())
-
-							k8sNodeBootstrapSucceeded := conditions.Get(updatedByoHost, infrastructurev1beta1.K8sNodeBootstrapSucceeded)
-							Expect(*k8sNodeBootstrapSucceeded).To(conditions.MatchCondition(clusterv1.Condition{
-								Type:     infrastructurev1beta1.K8sNodeBootstrapSucceeded,
-								Status:   corev1.ConditionFalse,
-								Reason:   infrastructurev1beta1.CloudInitExecutionFailedReason,
-								Severity: clusterv1.ConditionSeverityError,
-							}))
-
-							// assert events
-							events := eventutils.CollectEvents(recorder.Events)
-							Expect(events).Should(ConsistOf([]string{
-								"Normal InstallScriptExecutionSucceeded install script executed",
-								"Warning BootstrapK8sNodeFailed k8s Node Bootstrap failed",
-								// TODO: improve test to remove this event
-								"Warning ResetK8sNodeFailed k8s Node Reset failed",
-							}))
-						})
-
 						It("should set K8sNodeBootstrapSucceeded to True if the boostrap execution succeeds", func() {
 							hostReconciler.K8sInstaller = fakeInstaller
 							result, reconcilerErr := hostReconciler.Reconcile(ctx, controllerruntime.Request{
@@ -484,7 +453,7 @@ runCmd:
 							Expect(result).To(Equal(controllerruntime.Result{}))
 							Expect(reconcilerErr).ToNot(HaveOccurred())
 
-							Expect(fakeCommandRunner.RunCmdCallCount()).To(Equal(1))
+							Expect(fakeCommandRunner.RunCmdCallCount()).To(Equal(2))
 							Expect(fakeFileWriter.WriteToFileCallCount()).To(Equal(1))
 
 							updatedByoHost := &infrastructurev1beta1.ByoHost{}
@@ -577,7 +546,8 @@ runCmd:
 
 				// assert kubeadm reset is called
 				Expect(fakeCommandRunner.RunCmdCallCount()).To(Equal(1))
-				Expect(fakeCommandRunner.RunCmdArgsForCall(0)).To(Equal(reconciler.KubeadmResetCommand))
+				_, resetCommand := fakeCommandRunner.RunCmdArgsForCall(0)
+				Expect(resetCommand).To(Equal(reconciler.KubeadmResetCommand))
 				updatedByoHost := &infrastructurev1beta1.ByoHost{}
 				err := k8sClient.Get(ctx, byoHostLookupKey, updatedByoHost)
 				Expect(err).ToNot(HaveOccurred())
@@ -622,6 +592,7 @@ runCmd:
 				})
 
 				It("should return error if uninstall script execution failed ", func() {
+					fakeCommandRunner.RunCmdReturnsOnCall(1, errors.New("failed to execute uninstall script"))
 					uninstallScript = `testcommand`
 					byoHost.Spec.UninstallationScript = &uninstallScript
 					Expect(patchHelper.Patch(ctx, byoHost, patch.WithStatusObservedGeneration{})).NotTo(HaveOccurred())

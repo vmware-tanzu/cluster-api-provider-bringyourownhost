@@ -7,7 +7,6 @@ import (
 	"context"
 	"fmt"
 	"os"
-	"os/exec"
 
 	"github.com/pkg/errors"
 	"github.com/vmware-tanzu/cluster-api-provider-bringyourownhost/agent/cloudinit"
@@ -188,7 +187,7 @@ func (r *HostReconciler) executeInstallerController(ctx context.Context, byoHost
 		return err
 	}
 	logger.Info("executing install script")
-	err = r.executeScript(ctx, installScript)
+	err = r.CmdRunner.RunCmd(ctx, installScript)
 	if err != nil {
 		logger.Error(err, "error executing installation script")
 		r.Recorder.Event(byoHost, corev1.EventTypeWarning, "InstallScriptExecutionFailed", "install script execution failed")
@@ -211,16 +210,6 @@ func (r *HostReconciler) getBootstrapScript(ctx context.Context, dataSecretName,
 
 	bootstrapSecret := string(secret.Data["value"])
 	return bootstrapSecret, nil
-}
-
-func (r *HostReconciler) executeScript(ctx context.Context, script string) error {
-	cmd := exec.CommandContext(ctx, "/bin/bash", "-c", script)
-	cmd.Stderr = os.Stderr
-	cmd.Stdout = os.Stdout
-	if err := cmd.Run(); err != nil {
-		return err
-	}
-	return nil
 }
 
 func (r *HostReconciler) parseScript(ctx context.Context, script string) (string, error) {
@@ -290,7 +279,7 @@ func (r *HostReconciler) hostCleanUp(ctx context.Context, byoHost *infrastructur
 				logger.Error(err, "error parsing Uninstallation script")
 				return err
 			}
-			err = r.executeScript(ctx, uninstallScript)
+			err = r.CmdRunner.RunCmd(ctx, uninstallScript)
 			if err != nil {
 				logger.Error(err, "error execting Uninstallation script")
 				r.Recorder.Event(byoHost, corev1.EventTypeWarning, "UninstallScriptExecutionFailed", "uninstall script execution failed")
@@ -328,7 +317,7 @@ func (r *HostReconciler) resetNode(ctx context.Context, byoHost *infrastructurev
 	logger := ctrl.LoggerFrom(ctx)
 	logger.Info("Running kubeadm reset")
 
-	err := r.CmdRunner.RunCmd(KubeadmResetCommand)
+	err := r.CmdRunner.RunCmd(ctx, KubeadmResetCommand)
 	if err != nil {
 		r.Recorder.Event(byoHost, corev1.EventTypeWarning, "ResetK8sNodeFailed", "k8s Node Reset failed")
 		return errors.Wrapf(err, "failed to exec kubeadm reset")

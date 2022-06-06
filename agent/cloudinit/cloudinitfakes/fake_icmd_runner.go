@@ -2,16 +2,18 @@
 package cloudinitfakes
 
 import (
+	"context"
 	"sync"
 
 	"github.com/vmware-tanzu/cluster-api-provider-bringyourownhost/agent/cloudinit"
 )
 
 type FakeICmdRunner struct {
-	RunCmdStub        func(string) error
+	RunCmdStub        func(context.Context, string) error
 	runCmdMutex       sync.RWMutex
 	runCmdArgsForCall []struct {
-		arg1 string
+		arg1 context.Context
+		arg2 string
 	}
 	runCmdReturns struct {
 		result1 error
@@ -23,18 +25,19 @@ type FakeICmdRunner struct {
 	invocationsMutex sync.RWMutex
 }
 
-func (fake *FakeICmdRunner) RunCmd(arg1 string) error {
+func (fake *FakeICmdRunner) RunCmd(arg1 context.Context, arg2 string) error {
 	fake.runCmdMutex.Lock()
 	ret, specificReturn := fake.runCmdReturnsOnCall[len(fake.runCmdArgsForCall)]
 	fake.runCmdArgsForCall = append(fake.runCmdArgsForCall, struct {
-		arg1 string
-	}{arg1})
+		arg1 context.Context
+		arg2 string
+	}{arg1, arg2})
 	stub := fake.RunCmdStub
 	fakeReturns := fake.runCmdReturns
-	fake.recordInvocation("RunCmd", []interface{}{arg1})
+	fake.recordInvocation("RunCmd", []interface{}{arg1, arg2})
 	fake.runCmdMutex.Unlock()
 	if stub != nil {
-		return stub(arg1)
+		return stub(arg1, arg2)
 	}
 	if specificReturn {
 		return ret.result1
@@ -48,17 +51,17 @@ func (fake *FakeICmdRunner) RunCmdCallCount() int {
 	return len(fake.runCmdArgsForCall)
 }
 
-func (fake *FakeICmdRunner) RunCmdCalls(stub func(string) error) {
+func (fake *FakeICmdRunner) RunCmdCalls(stub func(context.Context, string) error) {
 	fake.runCmdMutex.Lock()
 	defer fake.runCmdMutex.Unlock()
 	fake.RunCmdStub = stub
 }
 
-func (fake *FakeICmdRunner) RunCmdArgsForCall(i int) string {
+func (fake *FakeICmdRunner) RunCmdArgsForCall(i int) (context.Context, string) {
 	fake.runCmdMutex.RLock()
 	defer fake.runCmdMutex.RUnlock()
 	argsForCall := fake.runCmdArgsForCall[i]
-	return argsForCall.arg1
+	return argsForCall.arg1, argsForCall.arg2
 }
 
 func (fake *FakeICmdRunner) RunCmdReturns(result1 error) {

@@ -135,7 +135,7 @@ runCmd:
 			Expect(err).NotTo(HaveOccurred())
 
 			Expect(fakeCmdExecutor.RunCmdCallCount()).To(Equal(1))
-			cmd := fakeCmdExecutor.RunCmdArgsForCall(0)
+			_, cmd := fakeCmdExecutor.RunCmdArgsForCall(0)
 			Expect(cmd).To(Equal("echo 'some run command'"))
 		})
 

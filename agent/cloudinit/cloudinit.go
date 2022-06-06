@@ -4,6 +4,7 @@
 package cloudinit
 
 import (
+	"context"
 	"encoding/base64"
 	"fmt"
 	"path/filepath"
@@ -71,7 +72,7 @@ func (se ScriptExecutor) Execute(bootstrapScript string) error {
 	}
 
 	for _, cmd := range cloudInitData.CommandsToExecute {
-		err := se.RunCmdExecutor.RunCmd(cmd)
+		err := se.RunCmdExecutor.RunCmd(context.TODO(), cmd)
 		if err != nil {
 			return errors.Wrap(err, fmt.Sprintf("Error running the command %s", cmd))
 		}
