@@ -151,9 +151,8 @@ func setupTestInfra(ctx context.Context, hostname, kubeconfig string, namespace 
 		ByoHostName:           hostname,
 		Port:                  testEnv.ControlPlane.APIServer.Port,
 		CommandArgs: map[string]string{
-			"--kubeconfig": "/mgmt.conf",
-			"--namespace":  namespace.Name,
-			"-v":           "1",
+			"--namespace": namespace.Name,
+			"-v":          "1",
 		},
 		KubeconfigFile: kubeconfig,
 	}

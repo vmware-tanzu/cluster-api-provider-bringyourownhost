@@ -74,9 +74,8 @@ var _ = Describe("When testing MachineDeployment scale out/in", func() {
 				NetworkInterface:      "kind",
 				bootstrapClusterProxy: bootstrapClusterProxy,
 				CommandArgs: map[string]string{
-					"--kubeconfig": "/mgmt.conf",
-					"--namespace":  namespace.Name,
-					"--v":          "1",
+					"--namespace": namespace.Name,
+					"--v":         "1",
 				},
 			}
 			byohost, err := runner.SetupByoDockerHost()

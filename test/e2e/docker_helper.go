@@ -175,9 +175,11 @@ func (r *ByoHostRunner) createDockerContainer() (container.ContainerCreateCreate
 
 func (r *ByoHostRunner) copyKubeconfig(config cpConfig, listopt types.ContainerListOptions) error {
 	var kubeconfig []byte
+	var containers []types.Container
+	var err error
 	if r.NetworkInterface == "host" {
 		listopt.Filters.Add("name", r.ByoHostName)
-		containers, err := r.DockerClient.ContainerList(r.Context, listopt)
+		containers, err = r.DockerClient.ContainerList(r.Context, listopt)
 		Expect(err).NotTo(HaveOccurred())
 		Expect(len(containers)).To(Equal(1))
 
@@ -188,7 +190,7 @@ func (r *ByoHostRunner) copyKubeconfig(config cpConfig, listopt types.ContainerL
 		kubeconfig = re.ReplaceAll(kubeconfig, []byte("server: https://127.0.0.1:"+r.Port))
 	} else {
 		listopt.Filters.Add("name", r.clusterConName+"-control-plane")
-		containers, err := r.DockerClient.ContainerList(r.Context, listopt)
+		containers, err = r.DockerClient.ContainerList(r.Context, listopt)
 		Expect(err).NotTo(HaveOccurred())
 		Expect(len(containers)).To(Equal(1))
 
@@ -204,8 +206,18 @@ func (r *ByoHostRunner) copyKubeconfig(config cpConfig, listopt types.ContainerL
 	Expect(os.WriteFile(tempKubeconfigPath, kubeconfig, 0644)).NotTo(HaveOccurred()) // nolint: gosec,gomnd
 
 	config.sourcePath = tempKubeconfigPath
-	config.destPath = r.CommandArgs["--kubeconfig"]
-	err := copyToContainer(r.Context, r.DockerClient, config)
+	config.destPath = "/root/.byoh/config"
+	// create the directory to place the kubeconfig
+	execCommand, err := r.DockerClient.ContainerExecCreate(r.Context, containers[0].ID, types.ExecConfig{
+		AttachStdin:  false,
+		AttachStdout: true,
+		AttachStderr: true,
+		Cmd:          []string{"mkdir", "/root/.byoh"},
+	})
+	Expect(err).ShouldNot(HaveOccurred())
+	err = r.DockerClient.ContainerExecStart(r.Context, execCommand.ID, types.ExecStartCheck{})
+	Expect(err).ShouldNot(HaveOccurred())
+	err = copyToContainer(r.Context, r.DockerClient, config)
 	return err
 }
 

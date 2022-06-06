@@ -72,9 +72,8 @@ var _ = Describe("When BYOH joins existing cluster [PR-Blocking]", func() {
 			NetworkInterface:      "kind",
 			bootstrapClusterProxy: bootstrapClusterProxy,
 			CommandArgs: map[string]string{
-				"--kubeconfig": "/mgmt.conf",
-				"--namespace":  namespace.Name,
-				"--v":          "1",
+				"--namespace": namespace.Name,
+				"--v":         "1",
 			},
 		}
 
