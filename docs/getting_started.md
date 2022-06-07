@@ -62,6 +62,13 @@ cd cluster-api-provider-bringyourownhost
 make prepare-byoh-docker-host-image
 ```
 
+If you are using dev environment, you could use below target that creates docker image with all k8s components installed.
+
+```shell
+cd cluster-api-provider-bringyourownhost
+make prepare-byoh-docker-host-image-dev
+```
+
 Once the image is ready, lets start 2 docker containers for our deployment. One for the control plane, and one for the worker. (you could of course run more)
 
 ```shell
@@ -126,7 +133,9 @@ docker cp ~/.kube/management-cluster.conf host$i:/management-cluster.conf
 done
 ```
 
-Start the host agent on each of the hosts and keep it running. Use the `--skip-installation` flag as we already have k8s components included in the docker image. This flag will skip k8s installation attempt on the host.
+Start the host agent on each of the hosts and keep it running. 
+
+>**IMPORTANT NOTE**: Use the `--skip-installation` flag if using target `make prepare-byoh-docker-host-image-dev` as we already have k8s components included in this docker image. This flag will skip k8s installation attempt on the host. The `--skip-installation` flag should not be used with target `make prepare-byoh-docker-host-image` as it's docker image doesn't come with k8s components installed.
 
 ```shell
 export HOST_NAME=host1
