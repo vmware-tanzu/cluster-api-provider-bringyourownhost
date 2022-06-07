@@ -41,7 +41,6 @@ var (
 	defaultByoMachineName = "my-byomachine"
 	agentLogFile          = "/tmp/agent-integration.log"
 	execLogFile           = "/tmp/agent-exec.log"
-	fakeKubeConfig        = "fake-kubeconfig-path"
 	fakeDownloadPath      = "fake-download-path"
 	fakeBootstrapSecret   = "fake-bootstrap-secret"
 	testEnv               *envtest.Environment

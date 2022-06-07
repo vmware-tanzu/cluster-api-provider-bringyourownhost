@@ -175,11 +175,9 @@ func (r *ByoHostRunner) createDockerContainer() (container.ContainerCreateCreate
 
 func (r *ByoHostRunner) copyKubeconfig(config cpConfig, listopt types.ContainerListOptions) error {
 	var kubeconfig []byte
-	var containers []types.Container
-	var err error
 	if r.NetworkInterface == "host" {
 		listopt.Filters.Add("name", r.ByoHostName)
-		containers, err = r.DockerClient.ContainerList(r.Context, listopt)
+		containers, err := r.DockerClient.ContainerList(r.Context, listopt)
 		Expect(err).NotTo(HaveOccurred())
 		Expect(len(containers)).To(Equal(1))
 
@@ -190,7 +188,7 @@ func (r *ByoHostRunner) copyKubeconfig(config cpConfig, listopt types.ContainerL
 		kubeconfig = re.ReplaceAll(kubeconfig, []byte("server: https://127.0.0.1:"+r.Port))
 	} else {
 		listopt.Filters.Add("name", r.clusterConName+"-control-plane")
-		containers, err = r.DockerClient.ContainerList(r.Context, listopt)
+		containers, err := r.DockerClient.ContainerList(r.Context, listopt)
 		Expect(err).NotTo(HaveOccurred())
 		Expect(len(containers)).To(Equal(1))
 
@@ -204,15 +202,33 @@ func (r *ByoHostRunner) copyKubeconfig(config cpConfig, listopt types.ContainerL
 		kubeconfig = re.ReplaceAll(kubeconfig, []byte("server: https://"+profile.NetworkSettings.Networks[r.NetworkInterface].IPAddress+":6443"))
 	}
 	Expect(os.WriteFile(tempKubeconfigPath, kubeconfig, 0644)).NotTo(HaveOccurred()) // nolint: gosec,gomnd
-
+	listopt.Filters.Add("name", r.ByoHostName)
+	containers, err := r.DockerClient.ContainerList(r.Context, listopt)
+	Expect(err).NotTo(HaveOccurred())
 	config.sourcePath = tempKubeconfigPath
-	config.destPath = "/root/.byoh/config"
-	// create the directory to place the kubeconfig
+	// get the $HOME env variable to set the destination path for kubeconfig
 	execCommand, err := r.DockerClient.ContainerExecCreate(r.Context, containers[0].ID, types.ExecConfig{
 		AttachStdin:  false,
 		AttachStdout: true,
 		AttachStderr: true,
-		Cmd:          []string{"mkdir", "/root/.byoh"},
+		Cmd:          []string{"sh", "-c", "echo ${HOME}"},
+	})
+	Expect(err).ShouldNot(HaveOccurred())
+	resp, err := r.DockerClient.ContainerExecAttach(r.Context, execCommand.ID, types.ExecStartCheck{})
+	Expect(err).ShouldNot(HaveOccurred())
+	defer resp.Close()
+	homeDir, err := resp.Reader.ReadString('\n')
+	Expect(err).ShouldNot(HaveOccurred())
+	homeDir = strings.TrimSuffix(homeDir, "\n")
+	// SplitAfterN used to remove the unwanted special characters in the homeDir
+	config.destPath = strings.SplitAfterN(strings.TrimSpace(homeDir)+"/.byoh/config", "/", 2)[1] // nolint: gomnd
+
+	// create the directory to place the kubeconfig
+	execCommand, err = r.DockerClient.ContainerExecCreate(r.Context, containers[0].ID, types.ExecConfig{
+		AttachStdin:  false,
+		AttachStdout: true,
+		AttachStderr: true,
+		Cmd:          []string{"sh", "-c", "mkdir ${HOME}/.byoh"},
 	})
 	Expect(err).ShouldNot(HaveOccurred())
 	err = r.DockerClient.ContainerExecStart(r.Context, execCommand.ID, types.ExecStartCheck{})
