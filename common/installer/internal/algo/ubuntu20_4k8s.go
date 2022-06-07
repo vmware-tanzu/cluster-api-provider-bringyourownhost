@@ -114,7 +114,7 @@ modprobe overlay && modprobe br_netfilter
 tar -C / -xvf "$BUNDLE_PATH/conf.tar" && sysctl --system 
 
 ## installing deb packages
-for pkg in cri-tools kubernetes-cni kubectl kubeadm kubelet; do
+for pkg in cri-tools kubernetes-cni kubectl kubelet kubeadm; do
 	dpkg --install "$BUNDLE_PATH/$pkg.deb" && apt-mark hold $pkg
 done
 
