@@ -168,8 +168,7 @@ func main() {
 			os.Exit(1)
 		}
 	}
-	// Handle kubeconfig flag
-	// first look in the byoh path for the kubeconfig
+	// Handle kubeconfig flag first look in the byoh path for the kubeconfig
 	config, err := registration.LoadRESTClientConfig(registration.GetBYOHConfigPath())
 	if err != nil {
 		logger.Error(err, "client config load failed")
@@ -231,6 +230,7 @@ func main() {
 		K8sInstaller:           k8sInstaller,
 		SkipK8sInstallation:    skipInstallation,
 		UseInstallerController: useInstallerController,
+		DownloadPath:           downloadpath,
 	}
 	if err = hostReconciler.SetupWithManager(context.TODO(), mgr); err != nil {
 		logger.Error(err, "unable to create controller")

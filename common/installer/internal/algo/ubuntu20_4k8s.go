@@ -67,7 +67,7 @@ func (s *Ubuntu20_04Installer) Uninstall() string {
 // contains the installation and uninstallation steps for the supported os and k8s
 var (
 	DoUbuntu20_4K8s1_22 = `
-set -euo pipefail
+set -euox pipefail
 
 BUNDLE_DOWNLOAD_PATH={{.BundleDownloadPath}}
 BUNDLE_ADDR={{.BundleAddrs}}
@@ -77,8 +77,19 @@ BUNDLE_PATH=$BUNDLE_DOWNLOAD_PATH/$BUNDLE_ADDR
 
 
 if ! command -v imgpkg >>/dev/null; then
-	echo "installing imgpkg"
-	wget -nv -O- github.com/vmware-tanzu/carvel-imgpkg/releases/download/$IMGPKG_VERSION/imgpkg-linux-$ARCH > /tmp/imgpkg
+	echo "installing imgpkg"	
+	
+	if command -v wget >>/dev/null; then
+		dl_bin="wget -nv -O-"
+	elif command -v curl >>/dev/null; then
+		dl_bin="curl -s -L"
+	else
+		echo "installing curl"
+		apt-get install -y curl
+		dl_bin="curl -s -L"
+	fi
+	
+	$dl_bin github.com/vmware-tanzu/carvel-imgpkg/releases/download/$IMGPKG_VERSION/imgpkg-linux-$ARCH > /tmp/imgpkg
 	mv /tmp/imgpkg /usr/local/bin/imgpkg
 	chmod +x /usr/local/bin/imgpkg
 fi
@@ -114,36 +125,36 @@ tar -C / -xvf "$BUNDLE_PATH/containerd.tar"
 systemctl daemon-reload && systemctl enable containerd && systemctl start containerd`
 
 	UndoUbuntu20_4K8s1_22 = `
-set -euo pipefail
+set -euox pipefail
 
 BUNDLE_DOWNLOAD_PATH={{.BundleDownloadPath}}
 BUNDLE_ADDR={{.BundleAddrs}}
 BUNDLE_PATH=$BUNDLE_DOWNLOAD_PATH/$BUNDLE_ADDR
 
-## enable swap
-swapon -a && sed -ri '/\sswap\s/s/^#?//' /etc/fstab
+## disabling containerd service
+systemctl stop containerd && systemctl disable containerd && systemctl daemon-reload
+
+## removing containerd configurations and cni plugins
+rm -rf /opt/cni/ && rm -rf /opt/containerd/ &&  tar tf "$BUNDLE_PATH/containerd.tar" | xargs -n 1 echo '/' | sed 's/ //g'  | grep -e '[^/]$' | xargs rm -f
+
+## removing deb packages
+for pkg in kubeadm kubelet kubectl kubernetes-cni cri-tools; do
+	dpkg --purge $pkg
+done
+
+## removing os configuration
+tar tf "$BUNDLE_PATH/conf.tar" | xargs -n 1 echo '/' | sed 's/ //g' | grep -e "[^/]$" | xargs rm -f
+
+## remove kernal modules
+modprobe -rq overlay && modprobe -r br_netfilter
 
 ## enable firewall
 if command -v ufw >>/dev/null; then
 	ufw enable
 fi
 
-## remove kernal modules
-modprobe -r overlay && modprobe -r br_netfilter
-
-## removing os configuration
-tar tf "$BUNDLE_PATH/conf.tar" | xargs -n 1 echo '/' | sed 's/ //g' | xargs rm -f
-
-## removing deb packages
-for pkg in cri-tools kubernetes-cni kubectl kubeadm kubelet; do
-	dpkg --purge $pkg
-done
-
-## removing containerd configurations and cni plugins
-rm -rf /opt/cni/ && rm -rf /opt/containerd/ &&  tar tf "$BUNDLE_PATH/containerd.tar" | xargs -n 1 echo '/' | sed 's/ //g'  | grep -e '[^/]$' | xargs rm -f
-
-## disabling containerd service
-systemctl stop containerd && systemctl disable containerd && systemctl daemon-reload
+## enable swap
+swapon -a && sed -ri '/\sswap\s/s/^#?//' /etc/fstab
 
 rm -rf $BUNDLE_PATH`
 )

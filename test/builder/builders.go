@@ -338,6 +338,15 @@ func (s *SecretBuilder) WithData(value string) *SecretBuilder {
 	return s
 }
 
+// WithKeyData adds the passed key and data to  the SecretBuilder
+func (s *SecretBuilder) WithKeyData(key, data string) *SecretBuilder {
+	if s.data == nil {
+		s.data = make(map[string][]byte)
+	}
+	s.data[key] = []byte(data)
+	return s
+}
+
 // Build returns a Secret with the attributes added to the SecretBuilder
 func (s *SecretBuilder) Build() *corev1.Secret {
 	secret := &corev1.Secret{
