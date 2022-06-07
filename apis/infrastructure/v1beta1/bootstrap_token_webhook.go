@@ -11,7 +11,6 @@ import (
 	"strings"
 
 	corev1 "k8s.io/api/core/v1"
-	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
 )
 
@@ -19,9 +18,14 @@ import (
 
 // bootstrapTokenValidator validates Pods
 type BootstrapTokenValidator struct {
-	Client  client.Client
 	decoder *admission.Decoder
 }
+
+// nolint: gosec
+const (
+	bootstrapTokenIDFormat     = "[a-z0-9]{6}"
+	bootstrapTokenSecretFormat = "[a-z0-9]{16}"
+)
 
 // BootstrapTokenValidator admits a secret if it is of a specific format and namespace.
 func (v *BootstrapTokenValidator) Handle(ctx context.Context, req admission.Request) admission.Response {
@@ -41,16 +45,14 @@ func (v *BootstrapTokenValidator) Handle(ctx context.Context, req admission.Requ
 		return admission.Denied(fmt.Sprintf("boostrap token secrets can only be created in kube-system namespace and not %s", secret.Namespace))
 	}
 
-	bootstrapTokenIDFormat := "[a-z0-9]{6}"
-	r, _ := regexp.Compile(bootstrapTokenIDFormat)
+	r := regexp.MustCompile(bootstrapTokenIDFormat)
 	bootstrapTokenIDFormatMatch := r.MatchString(string(secret.Data["token-id"]))
 
-	bootstrapTokenSecretFormat := "[a-z0-9]{16}"
-	r, _ = regexp.Compile(bootstrapTokenSecretFormat)
+	r = regexp.MustCompile(bootstrapTokenSecretFormat)
 	bootstrapTokenSecretFormatMatch := r.MatchString(string(secret.Data["token-secret"]))
 
 	if !bootstrapTokenIDFormatMatch || !bootstrapTokenSecretFormatMatch {
-		return admission.Denied(fmt.Sprintf("incorrect format for token-id and token-secret"))
+		return admission.Denied("incorrect format for token-id and token-secret")
 	}
 
 	return admission.Allowed("")
