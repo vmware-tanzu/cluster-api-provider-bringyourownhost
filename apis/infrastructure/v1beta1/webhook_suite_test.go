@@ -34,11 +34,6 @@ import (
 // These tests use Ginkgo (BDD-style Go testing framework). Refer to
 // http://onsi.github.io/ginkgo/ to learn more about Ginkgo.
 
-const (
-	bundleLookupTag        = "v0.1.0_alpha.2"
-	updatedBundleLookupTag = "new_tag"
-)
-
 var (
 	cfg               *rest.Config
 	k8sClient         client.Client
@@ -112,9 +107,6 @@ var _ = BeforeSuite(func() {
 	testUserK8sClient, err = client.New(user.Config(), client.Options{Scheme: scheme.Scheme})
 	Expect(err).NotTo(HaveOccurred())
 	Expect(k8sClient).NotTo(BeNil())
-
-	err = (&byohv1beta1.ByoCluster{}).SetupWebhookWithManager(mgr)
-	Expect(err).NotTo(HaveOccurred())
 
 	err = (&byohv1beta1.ByoClusterTemplate{}).SetupWebhookWithManager(mgr)
 	Expect(err).NotTo(HaveOccurred())

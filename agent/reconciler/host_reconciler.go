@@ -31,8 +31,8 @@ import (
 
 //counterfeiter:generate . IK8sInstaller
 type IK8sInstaller interface {
-	Install(string, string, string) error
-	Uninstall(string, string, string) error
+	Install(string, string) error
+	Uninstall(string, string) error
 }
 
 // HostReconciler encapsulates the data/logic needed to reconcile a ByoHost
@@ -342,9 +342,8 @@ func (r *HostReconciler) installK8sComponents(ctx context.Context, byoHost *infr
 
 	bundleRegistry := byoHost.GetAnnotations()[infrastructurev1beta1.BundleLookupBaseRegistryAnnotation]
 	k8sVersion := byoHost.GetAnnotations()[infrastructurev1beta1.K8sVersionAnnotation]
-	byohBundleTag := byoHost.GetAnnotations()[infrastructurev1beta1.BundleLookupTagAnnotation]
 
-	err := r.K8sInstaller.Install(bundleRegistry, k8sVersion, byohBundleTag)
+	err := r.K8sInstaller.Install(bundleRegistry, k8sVersion)
 	if err != nil {
 		return err
 	}
@@ -357,8 +356,7 @@ func (r *HostReconciler) installK8sComponents(ctx context.Context, byoHost *infr
 func (r *HostReconciler) uninstallk8sComponents(ctx context.Context, byoHost *infrastructurev1beta1.ByoHost) error {
 	bundleRegistry := byoHost.GetAnnotations()[infrastructurev1beta1.BundleLookupBaseRegistryAnnotation]
 	k8sVersion := byoHost.GetAnnotations()[infrastructurev1beta1.K8sVersionAnnotation]
-	byohBundleTag := byoHost.GetAnnotations()[infrastructurev1beta1.BundleLookupTagAnnotation]
-	err := r.K8sInstaller.Uninstall(bundleRegistry, k8sVersion, byohBundleTag)
+	err := r.K8sInstaller.Uninstall(bundleRegistry, k8sVersion)
 	if err != nil {
 		return err
 	}
@@ -418,7 +416,4 @@ func (r *HostReconciler) removeAnnotations(ctx context.Context, byoHost *infrast
 
 	// Remove the bundle registry annotation
 	delete(byoHost.Annotations, infrastructurev1beta1.BundleLookupBaseRegistryAnnotation)
-
-	// Remove the bundle tag annotation
-	delete(byoHost.Annotations, infrastructurev1beta1.BundleLookupTagAnnotation)
 }

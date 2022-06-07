@@ -174,7 +174,6 @@ runCmd:
 
 					byoHost.Annotations = map[string]string{
 						infrastructurev1beta1.K8sVersionAnnotation:               "1.22",
-						infrastructurev1beta1.BundleLookupTagAnnotation:          "byoh-bundle-tag",
 						infrastructurev1beta1.BundleLookupBaseRegistryAnnotation: "projects.blah.com",
 					}
 
@@ -372,7 +371,6 @@ runCmd:
 
 							byoHost.Annotations = map[string]string{
 								infrastructurev1beta1.K8sVersionAnnotation:               "1.22",
-								infrastructurev1beta1.BundleLookupTagAnnotation:          "byoh-bundle-tag",
 								infrastructurev1beta1.BundleLookupBaseRegistryAnnotation: "projects.blah.com",
 							}
 
@@ -511,7 +509,6 @@ runCmd:
 					infrastructurev1beta1.HostCleanupAnnotation:              "",
 					infrastructurev1beta1.BundleLookupBaseRegistryAnnotation: "projects.blah.com",
 					infrastructurev1beta1.K8sVersionAnnotation:               "1.22",
-					infrastructurev1beta1.BundleLookupTagAnnotation:          "byoh-bundle-tag",
 				}
 				conditions.MarkTrue(byoHost, infrastructurev1beta1.K8sNodeBootstrapSucceeded)
 				conditions.MarkTrue(byoHost, infrastructurev1beta1.K8sComponentsInstallationSucceeded)
@@ -558,7 +555,6 @@ runCmd:
 				Expect(updatedByoHost.Annotations).NotTo(HaveKey(infrastructurev1beta1.EndPointIPAnnotation))
 				Expect(updatedByoHost.Annotations).NotTo(HaveKey(infrastructurev1beta1.K8sVersionAnnotation))
 				Expect(updatedByoHost.Annotations).NotTo(HaveKey(infrastructurev1beta1.BundleLookupBaseRegistryAnnotation))
-				Expect(updatedByoHost.Annotations).NotTo(HaveKey(infrastructurev1beta1.BundleLookupTagAnnotation))
 
 				k8sNodeBootstrapSucceeded := conditions.Get(updatedByoHost, infrastructurev1beta1.K8sNodeBootstrapSucceeded)
 				Expect(*k8sNodeBootstrapSucceeded).To(conditions.MatchCondition(clusterv1.Condition{

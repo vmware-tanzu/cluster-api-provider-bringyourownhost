@@ -10,7 +10,7 @@ import (
 
 // BundleDownloader represent a bundle downloader interface
 type BundleDownloader interface {
-	GetBundleAddr(normalizedOsVersion, k8sVersion, tag string) string
+	GetBundleAddr(normalizedOsVersion, k8sVersion string) string
 }
 
 // DefaultBundleDownloader implement the downloader interface

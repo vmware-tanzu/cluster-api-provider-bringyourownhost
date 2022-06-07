@@ -4,15 +4,10 @@
 package v1beta1
 
 import (
-	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
 	ctrl "sigs.k8s.io/controller-runtime"
-	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/webhook"
 )
-
-// log is for logging in this package.
-var byoclustertemplatelog = logf.Log.WithName("byoclustertemplate-resource")
 
 func (byoClusterTemplate *ByoClusterTemplate) SetupWebhookWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewWebhookManagedBy(mgr).
@@ -35,20 +30,11 @@ var _ webhook.Validator = &ByoClusterTemplate{}
 
 // ValidateCreate implements webhook.Validator so a webhook will be registered for the type
 func (byoClusterTemplate *ByoClusterTemplate) ValidateCreate() error {
-	byoclustertemplatelog.Info("validate create", "name", byoClusterTemplate.Name)
-	if errList := validateByoClusterSpec(byoClusterTemplate.Spec.Template.Spec); errList != nil {
-		return apierrors.NewInvalid(byoClusterTemplate.GroupVersionKind().GroupKind(), byoClusterTemplate.Name, errList)
-	}
-
 	return nil
 }
 
 // ValidateUpdate implements webhook.Validator so a webhook will be registered for the type
 func (byoClusterTemplate *ByoClusterTemplate) ValidateUpdate(oldRaw runtime.Object) error {
-	byoclustertemplatelog.Info("validate update", "name", byoClusterTemplate.Name)
-	if errList := validateByoClusterSpec(byoClusterTemplate.Spec.Template.Spec); errList != nil {
-		return apierrors.NewInvalid(byoClusterTemplate.GroupVersionKind().GroupKind(), byoClusterTemplate.Name, errList)
-	}
 	return nil
 }
 

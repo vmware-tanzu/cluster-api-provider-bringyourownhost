@@ -25,9 +25,6 @@ type ByoClusterSpec struct {
 	// if not set, the default will be set to https://projects.registry.vmware.com/cluster_api_provider_bringyourownhost
 	// +optional
 	BundleLookupBaseRegistry string `json:"bundleLookupBaseRegistry,omitempty"`
-
-	// BundleLookupTag is the tag of the BYOH bundle to be used
-	BundleLookupTag string `json:"bundleLookupTag,omitempty"`
 }
 
 // ByoClusterStatus defines the observed state of ByoCluster

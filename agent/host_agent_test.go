@@ -320,7 +320,6 @@ var _ = Describe("Agent", func() {
 				byoHost.Annotations = map[string]string{}
 				byoHost.Annotations[infrastructurev1beta1.K8sVersionAnnotation] = K8sVersion
 				byoHost.Annotations[infrastructurev1beta1.BundleLookupBaseRegistryAnnotation] = bundleLookupBaseRegistry
-				byoHost.Annotations[infrastructurev1beta1.BundleLookupTagAnnotation] = BundleLookupTag
 
 				fakeBootstrapSecret := builder.Secret(ns.Name, fakeBootstrapSecret).Build()
 				err := k8sClient.Create(ctx, fakeBootstrapSecret)

@@ -95,7 +95,7 @@ func GetSupportedRegistry(ob algo.OutputBuilder) registry {
 	return reg
 }
 
-func (bd *bundleDownloader) getBundlePathDirOrPreview(k8s, tag string) string {
+func (bd *bundleDownloader) getBundlePathDirOrPreview(k8s string) string {
 	if bd == nil || bd.downloadPath == "" {
 		return ""
 	}
@@ -104,13 +104,13 @@ func (bd *bundleDownloader) getBundlePathDirOrPreview(k8s, tag string) string {
 }
 
 // DownloadOrPreview downloads the bundle if bundleDownloader is configured with a download path else runs in preview mode without downloading
-func (bd *bundleDownloader) DownloadOrPreview(os, k8s, tag string) error {
+func (bd *bundleDownloader) DownloadOrPreview(os, k8s string) error {
 	if bd == nil || bd.downloadPath == "" {
 		bd.logger.Info("Running in preview mode, skip bundle download")
 		return nil
 	}
 
-	return bd.Download(os, k8s, tag)
+	return bd.Download(os, k8s)
 }
 
 // New returns an installer that downloads bundles for the current OS from OCI repository with
@@ -160,9 +160,9 @@ func (i *installer) setBundleRepo(bundleRepo string) {
 }
 
 // Install installs the specified k8s version on the current OS
-func (i *installer) Install(bundleRepo, k8sVer, tag string) error {
+func (i *installer) Install(bundleRepo, k8sVer string) error {
 	i.setBundleRepo(bundleRepo)
-	algoInst, err := i.getAlgoInstallerWithBundle(k8sVer, tag)
+	algoInst, err := i.getAlgoInstallerWithBundle(k8sVer)
 	if err != nil {
 		return err
 	}
@@ -175,9 +175,9 @@ func (i *installer) Install(bundleRepo, k8sVer, tag string) error {
 }
 
 // Uninstall uninstalls the specified k8s version on the current OS
-func (i *installer) Uninstall(bundleRepo, k8sVer, tag string) error {
+func (i *installer) Uninstall(bundleRepo, k8sVer string) error {
 	i.setBundleRepo(bundleRepo)
-	algoInst, err := i.getAlgoInstallerWithBundle(k8sVer, tag)
+	algoInst, err := i.getAlgoInstallerWithBundle(k8sVer)
 	if err != nil {
 		return err
 	}
@@ -190,7 +190,7 @@ func (i *installer) Uninstall(bundleRepo, k8sVer, tag string) error {
 }
 
 // getAlgoInstallerWithBundle returns an algo.Installer instance and downloads its bundle
-func (i *installer) getAlgoInstallerWithBundle(k8sVer, tag string) (osk8sInstaller, error) {
+func (i *installer) getAlgoInstallerWithBundle(k8sVer string) (osk8sInstaller, error) {
 	// This OS supports at least 1 k8s version. See New.
 
 	algoInst, osBundle := i.algoRegistry.GetInstaller(i.detectedOs, k8sVer)
@@ -202,9 +202,9 @@ func (i *installer) getAlgoInstallerWithBundle(k8sVer, tag string) (osk8sInstall
 	// copy installer from registry and set BundlePath including tag
 	// empty means preview mode
 	algoInstCopy := *algoInst.(*algo.BaseK8sInstaller)
-	algoInstCopy.BundlePath = i.bundleDownloader.getBundlePathDirOrPreview(k8sVer, tag)
+	algoInstCopy.BundlePath = i.bundleDownloader.getBundlePathDirOrPreview(k8sVer)
 
-	bdErr := i.bundleDownloader.DownloadOrPreview(osBundle, k8sVer, tag)
+	bdErr := i.bundleDownloader.DownloadOrPreview(osBundle, k8sVer)
 	if bdErr != nil {
 		return nil, bdErr
 	}

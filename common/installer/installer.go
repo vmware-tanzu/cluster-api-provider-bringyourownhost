@@ -37,7 +37,7 @@ func NewInstaller(ctx context.Context, osDist, arch, k8sVersion string, download
 		return nil, installer.ErrOsK8sNotSupported
 	}
 	_, osbundle := reg.GetInstaller(osArch, k8sVersion)
-	addrs := downloader.GetBundleAddr(osbundle, k8sVersion, k8sVersion)
+	addrs := downloader.GetBundleAddr(osbundle, k8sVersion)
 
 	return algo.NewUbuntu20_04Installer(ctx, arch, addrs)
 }
