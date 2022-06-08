@@ -45,7 +45,7 @@ func (u *Ubuntu20_4K8s1_22) osWideCfgUpdateStep(bki *BaseK8sInstaller) Step {
 		confAbsolutePath)
 
 	undoCmd := fmt.Sprintf(
-		"tar tf '%s' | xargs -n 1 echo '/' | sed 's/ //g' | xargs rm -f",
+		"tar tf '%s' | xargs -n 1 echo '/' | sed 's/ //g' | while IFS= read -r file; do   [ -d \"$file\" ] || printf '%%s\n' \"$file\"; done | xargs rm",
 		confAbsolutePath)
 
 	return &ShellStep{
