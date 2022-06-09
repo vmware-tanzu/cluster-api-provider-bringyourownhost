@@ -76,8 +76,9 @@ var _ = Describe("When BYO Host rejoins the capacity pool", func() {
 			NetworkInterface:      "kind",
 			bootstrapClusterProxy: bootstrapClusterProxy,
 			CommandArgs: map[string]string{
-				"--namespace": namespace.Name,
-				"--v":         "1",
+				"--bootstrap-kubeconfig": "/bootstrap.conf",
+				"--namespace":            namespace.Name,
+				"--v":                    "1",
 			},
 		}
 
