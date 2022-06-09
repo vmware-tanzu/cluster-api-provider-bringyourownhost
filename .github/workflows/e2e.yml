@@ -27,3 +27,8 @@ jobs:
 
     - name: Run PR-Blocking e2e tests
       run: yes | GINKGO_FOCUS="\[PR-Blocking\]" make test-e2e
+
+    - name: Run Installer e2e tests
+      run: |
+        sed -i 's/e2e\/cluster-template.yaml/e2e\/installer\/cluster-template.yaml/' test/e2e/config/provider.yaml
+        yes | GINKGO_FOCUS="\[Installer\]" make test-e2e
