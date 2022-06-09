@@ -140,10 +140,6 @@ func main() {
 			os.Exit(1)
 		}
 	}
-	if err = (&infrastructurev1beta1.ByoCluster{}).SetupWebhookWithManager(mgr); err != nil {
-		setupLog.Error(err, "unable to create webhook", "webhook", "ByoCluster")
-		os.Exit(1)
-	}
 	if err = (&byohcontrollers.K8sInstallerConfigReconciler{Client: mgr.GetClient(), Scheme: mgr.GetScheme()}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "K8sInstallerConfig")
 		os.Exit(1)

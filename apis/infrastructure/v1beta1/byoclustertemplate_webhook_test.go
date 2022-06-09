@@ -42,14 +42,7 @@ var _ = Describe("ByoClusterTemplateWebhook", func() {
 			}
 		})
 
-		It("should reject the request when BundleLookupTag is empty", func() {
-			err := k8sClientUncached.Create(ctx, byoClusterTemplate)
-			Expect(err).To(HaveOccurred())
-			Expect(err).To(MatchError("admission webhook \"vbyoclustertemplate.kb.io\" denied the request: ByoClusterTemplate.infrastructure.cluster.x-k8s.io \"" + byoClusterTemplate.Name + "\" is invalid: <nil>: Internal error: cannot create/update ByoCluster with empty Spec.BundleLookupTag"))
-		})
-
 		It("should succeed when BundleLookupTag is not empty", func() {
-			byoClusterTemplate.Spec.Template.Spec.BundleLookupTag = bundleLookupTag
 			err := k8sClientUncached.Create(ctx, byoClusterTemplate)
 			Expect(err).NotTo(HaveOccurred())
 		})
@@ -79,9 +72,7 @@ var _ = Describe("ByoClusterTemplateWebhook", func() {
 				},
 				Spec: byohv1beta1.ByoClusterTemplateSpec{
 					Template: byohv1beta1.ByoClusterTemplateResource{
-						Spec: byohv1beta1.ByoClusterSpec{
-							BundleLookupTag: bundleLookupTag,
-						},
+						Spec: byohv1beta1.ByoClusterSpec{},
 					},
 				},
 			}
@@ -93,22 +84,13 @@ var _ = Describe("ByoClusterTemplateWebhook", func() {
 			Expect(k8sClientUncached.Delete(ctx, byoClusterTemplate)).Should(Succeed())
 		})
 
-		It("should reject the request when BundleLookupTag is empty", func() {
-			byoClusterTemplate.Spec.Template.Spec.BundleLookupTag = ""
-			err := k8sClientUncached.Update(ctx, byoClusterTemplate)
-			Expect(err).To(HaveOccurred())
-			Expect(err).To(MatchError("admission webhook \"vbyoclustertemplate.kb.io\" denied the request: ByoClusterTemplate.infrastructure.cluster.x-k8s.io \"" + byoClusterTemplate.Name + "\" is invalid: <nil>: Internal error: cannot create/update ByoCluster with empty Spec.BundleLookupTag"))
-		})
-
 		It("should update the cluster with new BundleLookupTag value", func() {
-			byoClusterTemplate.Spec.Template.Spec.BundleLookupTag = updatedBundleLookupTag
 			err := k8sClientUncached.Update(ctx, byoClusterTemplate)
 			Expect(err).NotTo(HaveOccurred())
 
 			updatedByoClusterTemplate := &byohv1beta1.ByoClusterTemplate{}
 			byoClusterLookupKey := types.NamespacedName{Name: byoClusterTemplate.Name, Namespace: byoClusterTemplate.Namespace}
 			Expect(k8sClientUncached.Get(ctx, byoClusterLookupKey, updatedByoClusterTemplate)).Should(Not(HaveOccurred()))
-			Expect(updatedByoClusterTemplate.Spec.Template.Spec.BundleLookupTag).To(Equal(updatedBundleLookupTag))
 		})
 	})
 })

@@ -50,7 +50,6 @@ var (
 
 const (
 	bundleLookupBaseRegistry = "projects.registry.vmware.com/cluster_api_provider_bringyourownhost"
-	BundleLookupTag          = "v1.22.3"
 	K8sVersion               = "v1.22.3"
 )
 

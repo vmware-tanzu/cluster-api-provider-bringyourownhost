@@ -12,7 +12,6 @@ import (
 )
 
 var _ = Describe("Byohost Installer Tests", func() {
-	const testTag = "test-tag"
 
 	Context("When installer is created for unsupported OS", func() {
 		It("Should return error", func() {
@@ -37,22 +36,22 @@ var _ = Describe("Byohost Installer Tests", func() {
 			for _, os := range osList {
 				i := NewPreviewInstaller(os, nil)
 
-				err := i.Install("", "unsupported-k8s", testTag)
+				err := i.Install("", "unsupported-k8s")
 				Expect(err).Should(HaveOccurred())
 
-				err = i.Uninstall("", "unsupported-k8s", testTag)
+				err = i.Uninstall("", "unsupported-k8s")
 				Expect(err).Should(HaveOccurred())
 
-				err = i.Install("", unsupportedMinorVer, testTag)
+				err = i.Install("", unsupportedMinorVer)
 				Expect(err).Should(HaveOccurred())
 
-				err = i.Uninstall("", unsupportedMinorVer, testTag)
+				err = i.Uninstall("", unsupportedMinorVer)
 				Expect(err).Should(HaveOccurred())
 
-				err = i.Install("", unsupportedMajorVer, testTag)
+				err = i.Install("", unsupportedMajorVer)
 				Expect(err).Should(HaveOccurred())
 
-				err = i.Uninstall("", unsupportedMajorVer, testTag)
+				err = i.Uninstall("", unsupportedMajorVer)
 				Expect(err).Should(HaveOccurred())
 			}
 		})
@@ -65,7 +64,7 @@ var _ = Describe("Byohost Installer Tests", func() {
 					{
 						ob := algo.OutputBuilderCounter{}
 						i := NewPreviewInstaller(os, &ob)
-						err := i.Install("", k8s, testTag)
+						err := i.Install("", k8s)
 						Expect(err).ShouldNot(HaveOccurred())
 						Expect(ob.LogCalledCnt).Should(Equal(22))
 					}
@@ -73,7 +72,7 @@ var _ = Describe("Byohost Installer Tests", func() {
 					{
 						ob := algo.OutputBuilderCounter{}
 						i := NewPreviewInstaller(os, &ob)
-						err := i.Uninstall("", k8s, testTag)
+						err := i.Uninstall("", k8s)
 						Expect(err).ShouldNot(HaveOccurred())
 						Expect(ob.LogCalledCnt).Should(Equal(22))
 					}

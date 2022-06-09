@@ -8,12 +8,11 @@ import (
 )
 
 type FakeIK8sInstaller struct {
-	InstallStub        func(string, string, string) error
+	InstallStub        func(string, string) error
 	installMutex       sync.RWMutex
 	installArgsForCall []struct {
 		arg1 string
 		arg2 string
-		arg3 string
 	}
 	installReturns struct {
 		result1 error
@@ -21,12 +20,11 @@ type FakeIK8sInstaller struct {
 	installReturnsOnCall map[int]struct {
 		result1 error
 	}
-	UninstallStub        func(string, string, string) error
+	UninstallStub        func(string, string) error
 	uninstallMutex       sync.RWMutex
 	uninstallArgsForCall []struct {
 		arg1 string
 		arg2 string
-		arg3 string
 	}
 	uninstallReturns struct {
 		result1 error
@@ -38,20 +36,19 @@ type FakeIK8sInstaller struct {
 	invocationsMutex sync.RWMutex
 }
 
-func (fake *FakeIK8sInstaller) Install(arg1 string, arg2 string, arg3 string) error {
+func (fake *FakeIK8sInstaller) Install(arg1 string, arg2 string) error {
 	fake.installMutex.Lock()
 	ret, specificReturn := fake.installReturnsOnCall[len(fake.installArgsForCall)]
 	fake.installArgsForCall = append(fake.installArgsForCall, struct {
 		arg1 string
 		arg2 string
-		arg3 string
-	}{arg1, arg2, arg3})
+	}{arg1, arg2})
 	stub := fake.InstallStub
 	fakeReturns := fake.installReturns
-	fake.recordInvocation("Install", []interface{}{arg1, arg2, arg3})
+	fake.recordInvocation("Install", []interface{}{arg1, arg2})
 	fake.installMutex.Unlock()
 	if stub != nil {
-		return stub(arg1, arg2, arg3)
+		return stub(arg1, arg2)
 	}
 	if specificReturn {
 		return ret.result1
@@ -65,17 +62,17 @@ func (fake *FakeIK8sInstaller) InstallCallCount() int {
 	return len(fake.installArgsForCall)
 }
 
-func (fake *FakeIK8sInstaller) InstallCalls(stub func(string, string, string) error) {
+func (fake *FakeIK8sInstaller) InstallCalls(stub func(string, string) error) {
 	fake.installMutex.Lock()
 	defer fake.installMutex.Unlock()
 	fake.InstallStub = stub
 }
 
-func (fake *FakeIK8sInstaller) InstallArgsForCall(i int) (string, string, string) {
+func (fake *FakeIK8sInstaller) InstallArgsForCall(i int) (string, string) {
 	fake.installMutex.RLock()
 	defer fake.installMutex.RUnlock()
 	argsForCall := fake.installArgsForCall[i]
-	return argsForCall.arg1, argsForCall.arg2, argsForCall.arg3
+	return argsForCall.arg1, argsForCall.arg2
 }
 
 func (fake *FakeIK8sInstaller) InstallReturns(result1 error) {
@@ -101,20 +98,19 @@ func (fake *FakeIK8sInstaller) InstallReturnsOnCall(i int, result1 error) {
 	}{result1}
 }
 
-func (fake *FakeIK8sInstaller) Uninstall(arg1 string, arg2 string, arg3 string) error {
+func (fake *FakeIK8sInstaller) Uninstall(arg1 string, arg2 string) error {
 	fake.uninstallMutex.Lock()
 	ret, specificReturn := fake.uninstallReturnsOnCall[len(fake.uninstallArgsForCall)]
 	fake.uninstallArgsForCall = append(fake.uninstallArgsForCall, struct {
 		arg1 string
 		arg2 string
-		arg3 string
-	}{arg1, arg2, arg3})
+	}{arg1, arg2})
 	stub := fake.UninstallStub
 	fakeReturns := fake.uninstallReturns
-	fake.recordInvocation("Uninstall", []interface{}{arg1, arg2, arg3})
+	fake.recordInvocation("Uninstall", []interface{}{arg1, arg2})
 	fake.uninstallMutex.Unlock()
 	if stub != nil {
-		return stub(arg1, arg2, arg3)
+		return stub(arg1, arg2)
 	}
 	if specificReturn {
 		return ret.result1
@@ -128,17 +124,17 @@ func (fake *FakeIK8sInstaller) UninstallCallCount() int {
 	return len(fake.uninstallArgsForCall)
 }
 
-func (fake *FakeIK8sInstaller) UninstallCalls(stub func(string, string, string) error) {
+func (fake *FakeIK8sInstaller) UninstallCalls(stub func(string, string) error) {
 	fake.uninstallMutex.Lock()
 	defer fake.uninstallMutex.Unlock()
 	fake.UninstallStub = stub
 }
 
-func (fake *FakeIK8sInstaller) UninstallArgsForCall(i int) (string, string, string) {
+func (fake *FakeIK8sInstaller) UninstallArgsForCall(i int) (string, string) {
 	fake.uninstallMutex.RLock()
 	defer fake.uninstallMutex.RUnlock()
 	argsForCall := fake.uninstallArgsForCall[i]
-	return argsForCall.arg1, argsForCall.arg2, argsForCall.arg3
+	return argsForCall.arg1, argsForCall.arg2
 }
 
 func (fake *FakeIK8sInstaller) UninstallReturns(result1 error) {

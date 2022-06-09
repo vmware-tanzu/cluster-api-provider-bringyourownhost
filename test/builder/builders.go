@@ -200,9 +200,6 @@ func (c *ByoClusterBuilder) Build() *infrastructurev1beta1.ByoCluster {
 	if c.bundleRegistry != "" {
 		cluster.Spec.BundleLookupBaseRegistry = c.bundleRegistry
 	}
-	if c.bundleTag != "" {
-		cluster.Spec.BundleLookupTag = c.bundleTag
-	}
 
 	return cluster
 }
