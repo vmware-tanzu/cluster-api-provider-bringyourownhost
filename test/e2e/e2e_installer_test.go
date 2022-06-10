@@ -72,7 +72,7 @@ var _ = Describe("When BYOH joins existing cluster [Installer]", func() {
 			NetworkInterface:      "kind",
 			bootstrapClusterProxy: bootstrapClusterProxy,
 			CommandArgs: map[string]string{
-				"--kubeconfig":               "/mgmt.conf",
+				"--bootstrap-kubeconfig":     "/bootstrap.conf",
 				"--namespace":                namespace.Name,
 				"--v":                        "1",
 				"--use-installer-controller": "true",

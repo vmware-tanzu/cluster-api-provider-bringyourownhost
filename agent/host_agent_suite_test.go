@@ -41,7 +41,6 @@ var (
 	defaultByoMachineName = "my-byomachine"
 	agentLogFile          = "/tmp/agent-integration.log"
 	execLogFile           = "/tmp/agent-exec.log"
-	fakeKubeConfig        = "fake-kubeconfig-path"
 	fakeDownloadPath      = "fake-download-path"
 	fakeBootstrapSecret   = "fake-bootstrap-secret"
 	testEnv               *envtest.Environment
@@ -151,9 +150,8 @@ func setupTestInfra(ctx context.Context, hostname, kubeconfig string, namespace 
 		ByoHostName:           hostname,
 		Port:                  testEnv.ControlPlane.APIServer.Port,
 		CommandArgs: map[string]string{
-			"--kubeconfig": "/mgmt.conf",
-			"--namespace":  namespace.Name,
-			"-v":           "1",
+			"--namespace": namespace.Name,
+			"-v":          "1",
 		},
 		KubeconfigFile: kubeconfig,
 	}

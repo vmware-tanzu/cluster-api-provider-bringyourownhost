@@ -93,22 +93,11 @@ func setupflags() {
 
 	pflag.CommandLine.AddGoFlagSet(flag.CommandLine)
 	hiddenFlags := []string{"log-flush-frequency", "alsologtostderr", "log-backtrace-at", "log-dir", "logtostderr", "stderrthreshold", "vmodule", "azure-container-registry-config",
-		"log_backtrace_at", "log_dir", "log_file", "log_file_max_size", "add_dir_header", "skip_headers", "skip_log_headers", "one_output"}
+		"log_backtrace_at", "log_dir", "log_file", "log_file_max_size", "add_dir_header", "skip_headers", "skip_log_headers", "one_output", "kubeconfig"}
 	for _, hiddenFlag := range hiddenFlags {
 		_ = pflag.CommandLine.MarkHidden(hiddenFlag)
 	}
 	feature.MutableGates.AddFlag(pflag.CommandLine)
-}
-
-func handleHostRegistration(k8sClient client.Client, hostName string, logger logr.Logger) (err error) {
-	registration.LocalHostRegistrar = &registration.HostRegistrar{K8sClient: k8sClient}
-	if bootstrapKubeConfig != "" {
-		logger.Info("bootstrap kubeconfig is provided, waiting for host to be registered by ByoHost Controller")
-	} else {
-		err := registration.LocalHostRegistrar.Register(hostName, namespace, labels)
-		return err
-	}
-	return nil
 }
 
 func setupTemplateParser() *cloudinit.TemplateParser {
@@ -168,23 +157,19 @@ func main() {
 			os.Exit(1)
 		}
 	}
-	// Handle kubeconfig flag first look in the byoh path for the kubeconfig
+	// Handle restart flow
 	config, err := registration.LoadRESTClientConfig(registration.GetBYOHConfigPath())
 	if err != nil {
 		logger.Error(err, "client config load failed")
-		// get the passed kubeconfig
-		config, err = ctrl.GetConfig()
-		if err != nil {
-			logger.Error(err, "error getting kubeconfig")
-			return
-		}
+		os.Exit(1)
 	}
 	k8sClient, err := client.New(config, client.Options{Scheme: scheme})
 	if err != nil {
 		logger.Error(err, "k8s client creation failed")
 		os.Exit(1)
 	}
-	err = handleHostRegistration(k8sClient, hostName, logger)
+	registration.LocalHostRegistrar = &registration.HostRegistrar{K8sClient: k8sClient}
+	err = registration.LocalHostRegistrar.Register(hostName, namespace, labels)
 	if err != nil {
 		logger.Error(err, "error registering host %s registration in namespace %s", hostName, namespace)
 		return

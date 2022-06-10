@@ -106,32 +106,6 @@ var _ = Describe("Agent", func() {
 				return false
 			}).Should(BeFalse())
 		})
-
-		It("should return an error when invalid kubeconfig is passed in", func() {
-
-			runner.CommandArgs["--kubeconfig"] = fakeKubeConfig
-			output, _, err := runner.ExecByoDockerHost(byoHostContainer)
-			Expect(err).NotTo(HaveOccurred())
-			defer output.Close()
-
-			f := e2e.WriteDockerLog(output, agentLogFile)
-			defer func() {
-				deferredErr := f.Close()
-				if deferredErr != nil {
-					e2e.Showf("error closing file %s: %v", agentLogFile, deferredErr)
-				}
-			}()
-			Eventually(func() (done bool) {
-				_, err := os.Stat(agentLogFile)
-				if err == nil {
-					data, err := os.ReadFile(agentLogFile)
-					if err == nil && strings.Contains(string(data), "\"msg\"=\"error getting kubeconfig\"") {
-						return true
-					}
-				}
-				return false
-			}).Should(BeTrue())
-		})
 	})
 
 	Context("When the host agent is able to connect to API Server", func() {
@@ -543,7 +517,7 @@ var _ = Describe("Agent", func() {
 			Expect(err).NotTo(HaveOccurred())
 
 			runner = setupTestInfra(ctx, hostName, getKubeConfig().Name(), ns)
-			runner.CommandArgs["--bootstrap-kubeconfig"] = "/mgmt.conf"
+			runner.CommandArgs["--bootstrap-kubeconfig"] = "/root/.byoh/config"
 			byoHostContainer, err = runner.SetupByoDockerHost()
 			Expect(err).NotTo(HaveOccurred())
 

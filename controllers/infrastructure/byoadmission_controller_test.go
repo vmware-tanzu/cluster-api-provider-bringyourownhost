@@ -10,6 +10,7 @@ import (
 	. "github.com/onsi/gomega"
 	"github.com/vmware-tanzu/cluster-api-provider-bringyourownhost/test/builder"
 	certv1 "k8s.io/api/certificates/v1"
+	corev1 "k8s.io/api/core/v1"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
@@ -55,6 +56,7 @@ var _ = Describe("Controllers/ByoadmissionController", func() {
 			Expect(updateByohCSR.Status.Conditions).Should(ContainElement(certv1.CertificateSigningRequestCondition{
 				Type:   certv1.CertificateApproved,
 				Reason: "Approved by ByoAdmission Controller",
+				Status: corev1.ConditionTrue,
 			}))
 		})
 
