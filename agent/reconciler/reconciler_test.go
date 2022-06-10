@@ -622,9 +622,9 @@ runCmd:
 					err := k8sClient.Get(ctx, byoHostLookupKey, updatedByoHost)
 					Expect(err).ToNot(HaveOccurred())
 
-					K8sNodeBootstrapSucceeded := conditions.Get(updatedByoHost, infrastructurev1beta1.K8sNodeBootstrapSucceeded)
-					Expect(*K8sNodeBootstrapSucceeded).To(conditions.MatchCondition(clusterv1.Condition{
-						Type:     infrastructurev1beta1.K8sNodeBootstrapSucceeded,
+					K8sComponentsInstallationSucceeded := conditions.Get(updatedByoHost, infrastructurev1beta1.K8sComponentsInstallationSucceeded)
+					Expect(*K8sComponentsInstallationSucceeded).To(conditions.MatchCondition(clusterv1.Condition{
+						Type:     infrastructurev1beta1.K8sComponentsInstallationSucceeded,
 						Status:   corev1.ConditionFalse,
 						Reason:   infrastructurev1beta1.K8sNodeAbsentReason,
 						Severity: clusterv1.ConditionSeverityInfo,

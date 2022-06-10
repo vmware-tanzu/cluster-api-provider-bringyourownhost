@@ -285,6 +285,8 @@ func (r *HostReconciler) hostCleanUp(ctx context.Context, byoHost *infrastructur
 				r.Recorder.Event(byoHost, corev1.EventTypeWarning, "UninstallScriptExecutionFailed", "uninstall script execution failed")
 				return err
 			}
+			conditions.MarkFalse(byoHost, infrastructurev1beta1.K8sComponentsInstallationSucceeded, infrastructurev1beta1.K8sNodeAbsentReason, clusterv1.ConditionSeverityInfo, "")
+			logger.Info("host removed from the cluster and the uninstall is executed successfully")
 		} else {
 			err = r.uninstallk8sComponents(ctx, byoHost)
 			if err != nil {
