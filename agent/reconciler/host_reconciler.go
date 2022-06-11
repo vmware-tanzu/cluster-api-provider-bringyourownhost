@@ -29,23 +29,15 @@ import (
 
 //go:generate go run github.com/maxbrunsfeld/counterfeiter/v6 -generate
 
-//counterfeiter:generate . IK8sInstaller
-type IK8sInstaller interface {
-	Install(string, string) error
-	Uninstall(string, string) error
-}
-
 // HostReconciler encapsulates the data/logic needed to reconcile a ByoHost
 type HostReconciler struct {
-	Client                 client.Client
-	CmdRunner              cloudinit.ICmdRunner
-	FileWriter             cloudinit.IFileWriter
-	TemplateParser         cloudinit.ITemplateParser
-	Recorder               record.EventRecorder
-	K8sInstaller           IK8sInstaller
-	SkipK8sInstallation    bool
-	UseInstallerController bool
-	DownloadPath           string
+	Client              client.Client
+	CmdRunner           cloudinit.ICmdRunner
+	FileWriter          cloudinit.IFileWriter
+	TemplateParser      cloudinit.ITemplateParser
+	Recorder            record.EventRecorder
+	SkipK8sInstallation bool
+	DownloadPath        string
 }
 
 const (
@@ -119,7 +111,7 @@ func (r *HostReconciler) reconcileNormal(ctx context.Context, byoHost *infrastru
 
 		if r.SkipK8sInstallation {
 			logger.Info("Skipping installation of k8s components")
-		} else if r.UseInstallerController {
+		} else {
 			if !conditions.IsTrue(byoHost, infrastructurev1beta1.K8sComponentsInstallationSucceeded) {
 				if byoHost.Spec.InstallationSecret == nil {
 					logger.Info("InstallationSecret not ready")
@@ -134,14 +126,6 @@ func (r *HostReconciler) reconcileNormal(ctx context.Context, byoHost *infrastru
 				conditions.MarkTrue(byoHost, infrastructurev1beta1.K8sComponentsInstallationSucceeded)
 			} else {
 				logger.Info("install script already executed")
-			}
-		} else {
-			err = r.installK8sComponents(ctx, byoHost)
-			if err != nil {
-				logger.Error(err, "error in installing k8s components")
-				r.Recorder.Event(byoHost, corev1.EventTypeWarning, "InstallK8sComponentFailed", "k8s component installation failed")
-				conditions.MarkFalse(byoHost, infrastructurev1beta1.K8sComponentsInstallationSucceeded, infrastructurev1beta1.K8sComponentsInstallationFailedReason, clusterv1.ConditionSeverityInfo, "")
-				return ctrl.Result{}, err
 			}
 		}
 
@@ -268,7 +252,7 @@ func (r *HostReconciler) hostCleanUp(ctx context.Context, byoHost *infrastructur
 		}
 		if r.SkipK8sInstallation {
 			logger.Info("Skipping uninstallation of k8s components")
-		} else if r.UseInstallerController {
+		} else {
 			if byoHost.Spec.UninstallationScript == nil {
 				return fmt.Errorf("UninstallationScript not found in Byohost %s", byoHost.Name)
 			}
@@ -285,14 +269,9 @@ func (r *HostReconciler) hostCleanUp(ctx context.Context, byoHost *infrastructur
 				r.Recorder.Event(byoHost, corev1.EventTypeWarning, "UninstallScriptExecutionFailed", "uninstall script execution failed")
 				return err
 			}
-			conditions.MarkFalse(byoHost, infrastructurev1beta1.K8sComponentsInstallationSucceeded, infrastructurev1beta1.K8sNodeAbsentReason, clusterv1.ConditionSeverityInfo, "")
-			logger.Info("host removed from the cluster and the uninstall is executed successfully")
-		} else {
-			err = r.uninstallk8sComponents(ctx, byoHost)
-			if err != nil {
-				return err
-			}
 		}
+		conditions.MarkFalse(byoHost, infrastructurev1beta1.K8sComponentsInstallationSucceeded, infrastructurev1beta1.K8sNodeAbsentReason, clusterv1.ConditionSeverityInfo, "")
+		logger.Info("host removed from the cluster and the uninstall is executed successfully")
 	} else {
 		logger.Info("Skipping k8s node reset and k8s component uninstallation")
 	}
@@ -336,33 +315,6 @@ func (r *HostReconciler) bootstrapK8sNode(ctx context.Context, bootstrapScript s
 		WriteFilesExecutor:    r.FileWriter,
 		RunCmdExecutor:        r.CmdRunner,
 		ParseTemplateExecutor: r.TemplateParser}.Execute(bootstrapScript)
-}
-
-func (r *HostReconciler) installK8sComponents(ctx context.Context, byoHost *infrastructurev1beta1.ByoHost) error {
-	logger := ctrl.LoggerFrom(ctx)
-	logger.Info("Installing K8s")
-
-	bundleRegistry := byoHost.GetAnnotations()[infrastructurev1beta1.BundleLookupBaseRegistryAnnotation]
-	k8sVersion := byoHost.GetAnnotations()[infrastructurev1beta1.K8sVersionAnnotation]
-
-	err := r.K8sInstaller.Install(bundleRegistry, k8sVersion)
-	if err != nil {
-		return err
-	}
-
-	r.Recorder.Event(byoHost, corev1.EventTypeNormal, "k8sComponentInstalled", "Successfully Installed K8s components")
-	conditions.MarkTrue(byoHost, infrastructurev1beta1.K8sComponentsInstallationSucceeded)
-	return nil
-}
-
-func (r *HostReconciler) uninstallk8sComponents(ctx context.Context, byoHost *infrastructurev1beta1.ByoHost) error {
-	bundleRegistry := byoHost.GetAnnotations()[infrastructurev1beta1.BundleLookupBaseRegistryAnnotation]
-	k8sVersion := byoHost.GetAnnotations()[infrastructurev1beta1.K8sVersionAnnotation]
-	err := r.K8sInstaller.Uninstall(bundleRegistry, k8sVersion)
-	if err != nil {
-		return err
-	}
-	return nil
 }
 
 func (r *HostReconciler) removeSentinelFile(ctx context.Context, byoHost *infrastructurev1beta1.ByoHost) error {

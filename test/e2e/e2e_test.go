@@ -36,6 +36,8 @@ var _ = Describe("When BYOH joins existing cluster [PR-Blocking]", func() {
 		byohostContainerIDs []string
 		agentLogFile1       = "/tmp/host-agent1.log"
 		agentLogFile2       = "/tmp/host-agent2.log"
+		byoHostName1        = "byohost1"
+		byoHostName2        = "byohost2"
 	)
 
 	BeforeEach(func() {
@@ -57,8 +59,6 @@ var _ = Describe("When BYOH joins existing cluster [PR-Blocking]", func() {
 
 	It("Should create a workload cluster with single BYOH host", func() {
 		clusterName = fmt.Sprintf("%s-%s", specName, util.RandomString(6))
-		byoHostName1 := "byohost1"
-		byoHostName2 := "byohost2"
 
 		dockerClient, err = client.NewClientWithOpts(client.FromEnv)
 		Expect(err).NotTo(HaveOccurred())

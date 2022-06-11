@@ -3,8 +3,6 @@ package reconcilerfakes
 
 import (
 	"sync"
-
-	"github.com/vmware-tanzu/cluster-api-provider-bringyourownhost/agent/reconciler"
 )
 
 type FakeIK8sInstaller struct {
@@ -185,5 +183,3 @@ func (fake *FakeIK8sInstaller) recordInvocation(key string, args []interface{}) 
 	}
 	fake.invocations[key] = append(fake.invocations[key], args)
 }
-
-var _ reconciler.IK8sInstaller = new(FakeIK8sInstaller)
