@@ -42,19 +42,23 @@ rules:
   - certificates.k8s.io
   resources:
   - certificatesigningrequests
-  - certificatesigningrequests/approval
   verbs:
   - create
-  - update
   - get
   - list
   - watch
 - apiGroups:
   - certificates.k8s.io
   resources:
-  - signers
+  - certificatesigningrequests/approval
+  verbs:
+  - update
+- apiGroups:
+  - certificates.k8s.io
   resourceNames:
-  - "kubernetes.io/kube-apiserver-client"  
+  - kubernetes.io/kube-apiserver-client
+  resources:
+  - signers
   verbs:
   - approve
 - apiGroups:
