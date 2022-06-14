@@ -32,7 +32,6 @@ var _ = Describe("Byohost Installer Tests", func() {
 			Expect(osFilters).To(HaveLen(0))
 			Expect(osBundles).To(HaveLen(0))
 			Expect(r.ListK8s("x")).To(HaveLen(0))
-			Expect(r.GetInstaller("a", "b")).To(BeNil())
 		})
 		It("Should allow working with installers", func() {
 			Expect(func() { r.AddBundleInstaller("ubuntu", "v1.22.*", dummy122) }).NotTo(Panic())
@@ -42,8 +41,7 @@ var _ = Describe("Byohost Installer Tests", func() {
 			r.AddOsFilter("rhel.*", "rhel")
 			r.AddK8sFilter("v1.22.*")
 
-			inst, osBundle := r.GetInstaller("ubuntu-1", "v1.22.1")
-			Expect(inst).To(Equal(dummy122))
+			osBundle := r.ResolveOsToOsBundle("ubuntu-1")
 			Expect(osBundle).To(Equal("ubuntu"))
 
 			osFilters, osBundles := r.ListOS()
@@ -58,7 +56,7 @@ var _ = Describe("Byohost Installer Tests", func() {
 			Expect(r.ListK8s("rhel")).To(ContainElement("v1.22.*"))
 			Expect(r.ListK8s("rhel")).To(HaveLen(1))
 
-			Expect(r.GetInstaller("photon", "v1.22.1")).To(BeNil())
+			Expect(r.ResolveOsToOsBundle("photon")).To(Equal(""))
 			osFilters, osBundles = r.ListOS()
 			Expect(osFilters).To(ContainElements("rhel.*", "ubuntu.*"))
 			Expect(osFilters).To(HaveLen(2))
@@ -72,8 +70,7 @@ var _ = Describe("Byohost Installer Tests", func() {
 			r.AddOsFilter("ubuntu.*", "UBUNTU")
 			r.AddK8sFilter("v1.22.*")
 
-			inst, osBundle := r.GetInstaller("ubuntu-1", "v1.22.1")
-			Expect(inst).To(Equal(dummy122))
+			osBundle := r.ResolveOsToOsBundle("ubuntu-1")
 			Expect(osBundle).To(Equal("UBUNTU"))
 
 			// ListOS should return only bundle OS
@@ -107,12 +104,10 @@ var _ = Describe("Byohost Installer Tests", func() {
 			// AddK8sFilter("v1.93.*")
 			// AddK8sFilter("v1.94.*")
 
-			inst, osBundle := r.GetInstaller("ubuntu", "v1.93.2")
-			Expect(inst).To(BeNil())
+			osBundle := r.ResolveOsToOsBundle("ubuntu")
 			Expect(osBundle).To(Equal(""))
 
-			inst, osBundle = r.GetInstaller("rhel", "v1.94.3")
-			Expect(inst).To(BeNil())
+			osBundle = r.ResolveOsToOsBundle("rhel")
 			Expect(osBundle).To(Equal(""))
 		})
 	})

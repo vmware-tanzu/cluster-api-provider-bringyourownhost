@@ -5,7 +5,6 @@ package installer
 
 import (
 	"github.com/go-logr/logr"
-	"github.com/vmware-tanzu/cluster-api-provider-bringyourownhost/agent/installer"
 )
 
 // BundleDownloader represent a bundle downloader interface
@@ -15,5 +14,5 @@ type BundleDownloader interface {
 
 // DefaultBundleDownloader implement the downloader interface
 func DefaultBundleDownloader(bundleType, repoAddr, downloadPath string, logger logr.Logger) BundleDownloader {
-	return installer.NewBundleDownloader(installer.BundleType(bundleType), repoAddr, downloadPath, logger)
+	return NewBundleDownloader(BundleType(bundleType), repoAddr, downloadPath, logger)
 }
