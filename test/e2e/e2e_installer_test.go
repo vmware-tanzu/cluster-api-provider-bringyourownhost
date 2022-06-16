@@ -81,6 +81,7 @@ var _ = Describe("When BYOH joins existing cluster [Installer]", func() {
 
 		var output types.HijackedResponse
 		runner.ByoHostName = byoHostName1
+		runner.BootstrapKubeconfigData = generateBootstrapKubeconfig(runner.Context, bootstrapClusterProxy, clusterConName)
 		byohost, err := runner.SetupByoDockerHost()
 		Expect(err).NotTo(HaveOccurred())
 		output, byohostContainerID, err := runner.ExecByoDockerHost(byohost)
@@ -96,6 +97,7 @@ var _ = Describe("When BYOH joins existing cluster [Installer]", func() {
 		}()
 
 		runner.ByoHostName = byoHostName2
+		runner.BootstrapKubeconfigData = generateBootstrapKubeconfig(runner.Context, bootstrapClusterProxy, clusterConName)
 		byohost, err = runner.SetupByoDockerHost()
 		Expect(err).NotTo(HaveOccurred())
 		output, byohostContainerID, err = runner.ExecByoDockerHost(byohost)

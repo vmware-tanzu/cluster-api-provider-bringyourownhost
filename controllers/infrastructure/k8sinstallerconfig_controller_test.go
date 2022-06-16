@@ -29,7 +29,6 @@ import (
 
 var _ = Describe("Controllers/K8sInstallerConfigController", func() {
 	var (
-		ctx                         context.Context
 		byoMachine                  *infrav1.ByoMachine
 		k8sinstallerConfig          *infrav1.K8sInstallerConfig
 		k8sinstallerConfigTemplate  *infrav1.K8sInstallerConfigTemplate

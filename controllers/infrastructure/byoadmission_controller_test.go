@@ -18,7 +18,6 @@ import (
 
 var _ = Describe("Controllers/ByoadmissionController", func() {
 	var (
-		ctx context.Context
 		err error
 		CSR *certv1.CertificateSigningRequest
 	)

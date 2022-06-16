@@ -66,7 +66,7 @@ func setFlags() {
 // main() will have lots of 'if', '&&' and '||' which will
 // increase its cyclometric complexity. Ignoring it for now.
 
-//gocyclo:ignore
+// nolint: funlen
 func main() {
 	setFlags()
 	ctrl.SetLogger(klogr.New())
@@ -91,6 +91,7 @@ func main() {
 		setupLog.Error(err, "unable to create cluster cache tracker")
 		os.Exit(1)
 	}
+
 	if err = (&remote.ClusterCacheReconciler{
 		Client:  mgr.GetClient(),
 		Log:     ctrl.Log.WithName("remote").WithName("ClusterCacheReconciler"),
@@ -147,6 +148,13 @@ func main() {
 
 	mgr.GetWebhookServer().Register("/validate-infrastructure-cluster-x-k8s-io-v1beta1-byohost", &webhook.Admission{Handler: &infrastructurev1beta1.ByoHostValidator{}})
 
+	if err = (&byohcontrollers.BootstrapKubeconfigReconciler{
+		Client: mgr.GetClient(),
+		Scheme: mgr.GetScheme(),
+	}).SetupWithManager(mgr); err != nil {
+		setupLog.Error(err, "unable to create controller", "controller", "BootstrapKubeconfig")
+		os.Exit(1)
+	}
 	//+kubebuilder:scaffold:builder
 
 	if err := mgr.AddHealthzCheck("healthz", healthz.Ping); err != nil {

@@ -23,7 +23,6 @@ import (
 var _ = Describe("Controllers/ByoclusterController", func() {
 
 	var (
-		ctx               context.Context
 		k8sClientUncached client.Client
 		byoCluster        *infrastructurev1beta1.ByoCluster
 		cluster           *clusterv1.Cluster

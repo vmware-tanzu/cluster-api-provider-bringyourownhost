@@ -10,7 +10,6 @@ import (
 	"path/filepath"
 	"regexp"
 	"strings"
-	"time"
 
 	"github.com/docker/cli/cli/command"
 	"github.com/docker/docker/api/types"
@@ -22,7 +21,7 @@ import (
 	"github.com/docker/docker/pkg/system"
 	. "github.com/onsi/gomega" // nolint: stylecheck
 	"github.com/pkg/errors"
-	"github.com/vmware-tanzu/cluster-api-provider-bringyourownhost/test/utils/bootstraptoken"
+	"k8s.io/client-go/tools/clientcmd"
 	"sigs.k8s.io/cluster-api/test/framework"
 )
 
@@ -30,7 +29,6 @@ const (
 	kindImage           = "byoh/node:e2e"
 	tempKubeconfigPath  = "/tmp/mgmt.conf"
 	bootstrapKubeconfig = "/tmp/boostrap-kubeconfig"
-	ttl                 = time.Minute * 30
 )
 
 type cpConfig struct {
@@ -43,17 +41,18 @@ type cpConfig struct {
 
 // ByoHostRunner runs bring-you-own-host cluster in docker
 type ByoHostRunner struct {
-	Context               context.Context
-	clusterConName        string
-	ByoHostName           string
-	PathToHostAgentBinary string
-	Namespace             string
-	DockerClient          *client.Client
-	NetworkInterface      string
-	bootstrapClusterProxy framework.ClusterProxy
-	CommandArgs           map[string]string
-	Port                  string
-	KubeconfigFile        string
+	Context                 context.Context
+	clusterConName          string
+	ByoHostName             string
+	PathToHostAgentBinary   string
+	Namespace               string
+	DockerClient            *client.Client
+	NetworkInterface        string
+	bootstrapClusterProxy   framework.ClusterProxy
+	CommandArgs             map[string]string
+	Port                    string
+	KubeconfigFile          string
+	BootstrapKubeconfigData string
 }
 
 func resolveLocalPath(localPath string) (absPath string, err error) {
@@ -227,16 +226,19 @@ func (r *ByoHostRunner) copyKubeconfig(config cpConfig, listopt types.ContainerL
 		Expect(len(containers)).To(Equal(1))
 		profile, err := r.DockerClient.ContainerInspect(r.Context, containers[0].ID)
 		Expect(err).NotTo(HaveOccurred())
-		kubeconfig, err = os.ReadFile(r.bootstrapClusterProxy.GetKubeconfigPath())
-		Expect(err).NotTo(HaveOccurred())
+
+		kubeconfig := []byte(r.BootstrapKubeconfigData)
+
 		re := regexp.MustCompile("server:.*")
 		kubeconfig = re.ReplaceAll(kubeconfig, []byte("server: https://"+profile.NetworkSettings.Networks[r.NetworkInterface].IPAddress+":6443"))
 		config.destPath = r.CommandArgs["--bootstrap-kubeconfig"]
-		Expect(os.WriteFile(tempKubeconfigPath, kubeconfig, 0644)).NotTo(HaveOccurred()) // nolint: gosec,gomnd
 
-		// Create Bootstrap kubeconfig
-		err = bootstraptoken.CreateBootstrapKubeConfig(tempKubeconfigPath, bootstrapKubeconfig, ttl)
+		bootstrapKubeconfigFileData, err := clientcmd.Load(kubeconfig)
+		Expect(err).NotTo(HaveOccurred())
+
+		err = clientcmd.WriteToFile(*bootstrapKubeconfigFileData, bootstrapKubeconfig)
 		Expect(err).ShouldNot(HaveOccurred())
+
 		config.sourcePath = bootstrapKubeconfig
 	}
 	err := copyToContainer(r.Context, r.DockerClient, config)
