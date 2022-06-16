@@ -45,7 +45,7 @@ var _ = Describe("Byohost Installer Tests", func() {
 		if err != nil {
 			log.Fatal(err)
 		}
-		bd = &bundleDownloader{BundleTypeK8s, repoAddr, downloadPath, logr.Discard()}
+		bd = NewBundleDownloader("k8s", repoAddr, downloadPath, logr.Discard())
 		mi = &mockImgpkg{}
 	})
 	AfterEach(func() {

@@ -27,8 +27,6 @@ import (
 	infrastructurev1beta1 "github.com/vmware-tanzu/cluster-api-provider-bringyourownhost/apis/infrastructure/v1beta1"
 )
 
-//go:generate go run github.com/maxbrunsfeld/counterfeiter/v6 -generate
-
 // HostReconciler encapsulates the data/logic needed to reconcile a ByoHost
 type HostReconciler struct {
 	Client              client.Client
@@ -111,22 +109,20 @@ func (r *HostReconciler) reconcileNormal(ctx context.Context, byoHost *infrastru
 
 		if r.SkipK8sInstallation {
 			logger.Info("Skipping installation of k8s components")
-		} else {
-			if !conditions.IsTrue(byoHost, infrastructurev1beta1.K8sComponentsInstallationSucceeded) {
-				if byoHost.Spec.InstallationSecret == nil {
-					logger.Info("InstallationSecret not ready")
-					conditions.MarkFalse(byoHost, infrastructurev1beta1.K8sComponentsInstallationSucceeded, infrastructurev1beta1.K8sInstallationSecretUnavailableReason, clusterv1.ConditionSeverityInfo, "")
-					return ctrl.Result{}, nil
-				}
-				err = r.executeInstallerController(ctx, byoHost)
-				if err != nil {
-					return ctrl.Result{}, err
-				}
-				r.Recorder.Event(byoHost, corev1.EventTypeNormal, "InstallScriptExecutionSucceeded", "install script executed")
-				conditions.MarkTrue(byoHost, infrastructurev1beta1.K8sComponentsInstallationSucceeded)
-			} else {
-				logger.Info("install script already executed")
+		} else if !conditions.IsTrue(byoHost, infrastructurev1beta1.K8sComponentsInstallationSucceeded) {
+			if byoHost.Spec.InstallationSecret == nil {
+				logger.Info("InstallationSecret not ready")
+				conditions.MarkFalse(byoHost, infrastructurev1beta1.K8sComponentsInstallationSucceeded, infrastructurev1beta1.K8sInstallationSecretUnavailableReason, clusterv1.ConditionSeverityInfo, "")
+				return ctrl.Result{}, nil
 			}
+			err = r.executeInstallerController(ctx, byoHost)
+			if err != nil {
+				return ctrl.Result{}, err
+			}
+			r.Recorder.Event(byoHost, corev1.EventTypeNormal, "InstallScriptExecutionSucceeded", "install script executed")
+			conditions.MarkTrue(byoHost, infrastructurev1beta1.K8sComponentsInstallationSucceeded)
+		} else {
+			logger.Info("install script already executed")
 		}
 
 		err = r.cleank8sdirectories(ctx)

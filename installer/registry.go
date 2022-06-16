@@ -38,7 +38,9 @@ func newRegistry() registry {
 }
 
 // AddBundleInstaller adds a bundle installer to the registry
-func (r *registry) AddBundleInstaller(os, k8sVer string, installer osk8sInstaller) {
+func (r *registry) AddBundleInstaller(os, k8sVer string) {
+	var empty interface{}
+
 	if _, ok := r.osk8sInstallerMap[os]; !ok {
 		r.osk8sInstallerMap[os] = make(k8sInstallerMap)
 	}
@@ -47,7 +49,7 @@ func (r *registry) AddBundleInstaller(os, k8sVer string, installer osk8sInstalle
 		panic(fmt.Sprintf("%v %v already exists", os, k8sVer))
 	}
 
-	r.osk8sInstallerMap[os][k8sVer] = installer
+	r.osk8sInstallerMap[os][k8sVer] = empty
 }
 
 // AddOsFilter adds an OS filter to the filtered bundle list of registry
@@ -108,16 +110,14 @@ func (r *registry) ResolveOsToOsBundle(os string) string {
 func GetSupportedRegistry() registry {
 	reg := newRegistry()
 
-	var empty interface{}
-
 	{
 		// Ubuntu
 
 		// BYOH Bundle Repository. Associate bundle with installer
 		linuxDistro := "Ubuntu_20.04.1_x86-64"
-		reg.AddBundleInstaller(linuxDistro, "v1.21.*", empty)
-		reg.AddBundleInstaller(linuxDistro, "v1.22.*", empty)
-		reg.AddBundleInstaller(linuxDistro, "v1.23.*", empty)
+		reg.AddBundleInstaller(linuxDistro, "v1.21.*")
+		reg.AddBundleInstaller(linuxDistro, "v1.22.*")
+		reg.AddBundleInstaller(linuxDistro, "v1.23.*")
 
 		/*
 		 * PLACEHOLDER - ADD MORE K8S VERSIONS HERE

@@ -1,7 +1,6 @@
 // Copyright 2021 VMware, Inc. All Rights Reserved.
 // SPDX-License-Identifier: Apache-2.0
 
-// nolint: testpackage
 package installer
 
 import (
@@ -11,14 +10,6 @@ import (
 
 var _ = Describe("Byohost Installer Tests", func() {
 	Context("When registry is created", func() {
-		type dummyinstaller int
-
-		const (
-			dummy122  = dummyinstaller(1221)
-			dummy1122 = dummyinstaller(1122)
-			dummy124  = dummyinstaller(1243)
-		)
-
 		var (
 			r registry
 		)
@@ -34,8 +25,8 @@ var _ = Describe("Byohost Installer Tests", func() {
 			Expect(r.ListK8s("x")).To(HaveLen(0))
 		})
 		It("Should allow working with installers", func() {
-			Expect(func() { r.AddBundleInstaller("ubuntu", "v1.22.*", dummy122) }).NotTo(Panic())
-			Expect(func() { r.AddBundleInstaller("rhel", "v1.22.*", dummy124) }).NotTo(Panic())
+			Expect(func() { r.AddBundleInstaller("ubuntu", "v1.22.*") }).NotTo(Panic())
+			Expect(func() { r.AddBundleInstaller("rhel", "v1.22.*") }).NotTo(Panic())
 
 			r.AddOsFilter("ubuntu.*", "ubuntu")
 			r.AddOsFilter("rhel.*", "rhel")
@@ -66,7 +57,7 @@ var _ = Describe("Byohost Installer Tests", func() {
 		})
 		It("Should decouple host os from bundle os", func() {
 			// Bundle OS does not match filter OS
-			r.AddBundleInstaller("UBUNTU", "v1.22.*", dummy122)
+			r.AddBundleInstaller("UBUNTU", "v1.22.*")
 			r.AddOsFilter("ubuntu.*", "UBUNTU")
 			r.AddK8sFilter("v1.22.*")
 
@@ -93,12 +84,12 @@ var _ = Describe("Byohost Installer Tests", func() {
 			 * Adding a mapping to already existing os and k8s is clearly a typo and bug.
 			 * Make it obvious
 			 */
-			Expect(func() { r.AddBundleInstaller("ubuntu", "v1.22.*", dummy122) }).NotTo(Panic())
-			Expect(func() { r.AddBundleInstaller("ubuntu", "v1.22.*", dummy1122) }).To(Panic())
+			Expect(func() { r.AddBundleInstaller("ubuntu", "v1.22.*") }).NotTo(Panic())
+			Expect(func() { r.AddBundleInstaller("ubuntu", "v1.22.*") }).To(Panic())
 		})
 		It("Should not find unsupported K8s versions", func() {
-			Expect(func() { r.AddBundleInstaller("ubuntu", "v1.22.*", dummy122) }).NotTo(Panic())
-			Expect(func() { r.AddBundleInstaller("rhel", "v1.22.*", dummy122) }).NotTo(Panic())
+			Expect(func() { r.AddBundleInstaller("ubuntu", "v1.22.*") }).NotTo(Panic())
+			Expect(func() { r.AddBundleInstaller("rhel", "v1.22.*") }).NotTo(Panic())
 
 			// Intentionally skip adding the following filters for unsuported K8s:
 			// AddK8sFilter("v1.93.*")
@@ -109,6 +100,23 @@ var _ = Describe("Byohost Installer Tests", func() {
 
 			osBundle = r.ResolveOsToOsBundle("rhel")
 			Expect(osBundle).To(Equal(""))
+		})
+	})
+
+	Context("When supported registry is fetched", func() {
+
+		r := GetSupportedRegistry()
+
+		It("Should match with the supported os and k8s versions", func() {
+			osFilters, osBundles := r.ListOS()
+			Expect(osFilters).To(ContainElements("Ubuntu_20.04.*_x86-64"))
+			Expect(osFilters).To(HaveLen(1))
+			Expect(osBundles).To(ContainElements("Ubuntu_20.04.1_x86-64"))
+			Expect(osBundles).To(HaveLen(1))
+
+			osBundleResult := r.ListK8s("Ubuntu_20.04.1_x86-64")
+			Expect(osBundleResult).To(ContainElements("v1.21.*", "v1.22.*", "v1.23.*"))
+			Expect(osBundleResult).To(HaveLen(3))
 		})
 	})
 })

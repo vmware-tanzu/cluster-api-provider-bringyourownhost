@@ -70,28 +70,6 @@ var _ = Describe("Controllers/ByomachineController", func() {
 			Build()
 		Expect(k8sClientUncached.Create(ctx, k8sInstallerConfigTemplate)).Should(Succeed())
 		WaitForObjectsToBePopulatedInCache(k8sInstallerConfigTemplate)
-
-		// k8sInstallerConfig = builder.K8sInstallerConfig(defaultNamespace, "").
-		// 	WithName(byoMachine.Name).
-		// 	WithBundleRepo("projects.registry.vmware.com/cluster_api_provider_bringyourownhost").
-		// 	WithBundleType("k8s").
-		// 	Build()
-		// Expect(k8sClientUncached.Create(ctx, k8sInstallerConfig)).Should(Succeed())
-		// WaitForObjectsToBePopulatedInCache(k8sInstallerConfig)
-
-		// ph, err := patch.NewHelper(byoMachine, k8sClientUncached)
-		// Expect(err).ShouldNot(HaveOccurred())
-		// byoMachine.Spec.InstallerRef = &corev1.ObjectReference{
-		// 	Kind:       "K8sInstallerConfigTemplate",
-		// 	Namespace:  defaultNamespace,
-		// 	Name:       defaultK8sInstallerConfigTemplateName,
-		// 	APIVersion: "infrastructure.cluster.x-k8s.io/v1beta1",
-		// }
-		// Expect(ph.Patch(ctx, byoMachine, patch.WithStatusObservedGeneration{})).Should(Succeed())
-
-		// WaitForObjectToBeUpdatedInCache(byoMachine, func(object client.Object) bool {
-		// 	return object.(*infrastructurev1beta1.ByoMachine).Spec.InstallerRef != nil
-		// })
 	})
 
 	AfterEach(func() {
@@ -840,7 +818,6 @@ var _ = Describe("Controllers/ByomachineController", func() {
 			BeforeEach(func() {
 				// delete k8sinstallerconfigtemplate resource
 				Expect(k8sClientUncached.Delete(ctx, k8sInstallerConfigTemplate)).Should(Succeed())
-				WaitForObjectsToBePopulatedInCache(k8sInstallerConfigTemplate)
 
 				ph, err := patch.NewHelper(byoMachine, k8sClientUncached)
 				Expect(err).ShouldNot(HaveOccurred())
@@ -854,7 +831,7 @@ var _ = Describe("Controllers/ByomachineController", func() {
 				WaitForObjectToBeUpdatedInCache(byoMachine, func(object client.Object) bool {
 					return object.(*infrastructurev1beta1.ByoMachine).Spec.InstallerRef != nil
 				})
-			}, 20)
+			})
 
 			It("should fail create installer config from the template", func() {
 				_, err := reconciler.Reconcile(ctx, reconcile.Request{NamespacedName: byoMachineLookupKey})

@@ -10,6 +10,7 @@ import (
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+	infrastructurev1beta1 "github.com/vmware-tanzu/cluster-api-provider-bringyourownhost/apis/infrastructure/v1beta1"
 	certv1 "k8s.io/api/certificates/v1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -46,6 +47,9 @@ var _ = BeforeSuite(func() {
 	Expect(cfg).ToNot(BeNil())
 
 	scheme := runtime.NewScheme()
+
+	err = infrastructurev1beta1.AddToScheme(scheme)
+	Expect(err).NotTo(HaveOccurred())
 
 	err = corev1.AddToScheme(scheme)
 	Expect(err).NotTo(HaveOccurred())

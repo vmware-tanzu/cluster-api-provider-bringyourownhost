@@ -97,4 +97,38 @@ var _ = Describe("FileWriter", func() {
 		Expect(string(buffer)).To(Equal(fileOriginContent + file.Content))
 
 	})
+
+	It("should return error with invalid owner format", func() {
+		file := cloudinit.Files{
+			Path:        path.Join(workDir, "file1.txt"),
+			Encoding:    "",
+			Owner:       "root",
+			Permissions: "",
+			Content:     "some-content",
+			Append:      false,
+		}
+
+		err := cloudinit.FileWriter{}.MkdirIfNotExists(workDir)
+		Expect(err).NotTo(HaveOccurred())
+
+		err = cloudinit.FileWriter{}.WriteToFile(&file)
+		Expect(err).To(MatchError("invalid owner format 'root'"))
+	})
+
+	It("should return error with unknown owner", func() {
+		file := cloudinit.Files{
+			Path:        path.Join(workDir, "file1.txt"),
+			Encoding:    "",
+			Owner:       "some:random",
+			Permissions: "",
+			Content:     "some-content",
+			Append:      false,
+		}
+
+		err := cloudinit.FileWriter{}.MkdirIfNotExists(workDir)
+		Expect(err).NotTo(HaveOccurred())
+
+		err = cloudinit.FileWriter{}.WriteToFile(&file)
+		Expect(err).To(MatchError("Error Lookup user some: user: unknown user some"))
+	})
 })

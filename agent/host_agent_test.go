@@ -268,7 +268,7 @@ var _ = Describe("Agent", func() {
 			}, 10, 1).ShouldNot(BeTrue())
 		})
 
-		Context("when machineref, bootstrap & installationSecret secret is assigned", func() {
+		Context("when machineref, bootstrap & installation secret is assigned", func() {
 			var (
 				byoMachine *infrastructurev1beta1.ByoMachine
 				namespace  types.NamespacedName

@@ -21,6 +21,7 @@ import (
 	clusterv1 "sigs.k8s.io/cluster-api/api/v1beta1"
 	"sigs.k8s.io/cluster-api/util/conditions"
 	"sigs.k8s.io/cluster-api/util/patch"
+
 	controllerruntime "sigs.k8s.io/controller-runtime"
 )
 
@@ -370,6 +371,28 @@ runCmd:
 						Expect(events).Should(ConsistOf([]string{
 							"Warning InstallScriptExecutionFailed install script execution failed",
 						}))
+					})
+
+					It("should return error if installation secrent does not exists", func() {
+						fakeCommandRunner.RunCmdReturns(errors.New("failed to execute install script"))
+						byoHost.Spec.InstallationSecret = &corev1.ObjectReference{
+							Kind:      "Secret",
+							Namespace: "non-existent",
+							Name:      "non-existent",
+						}
+						Expect(patchHelper.Patch(ctx, byoHost, patch.WithStatusObservedGeneration{})).NotTo(HaveOccurred())
+
+						result, reconcilerErr := hostReconciler.Reconcile(ctx, controllerruntime.Request{
+							NamespacedName: byoHostLookupKey,
+						})
+						Expect(result).To(Equal(controllerruntime.Result{}))
+						Expect(reconcilerErr).To(HaveOccurred())
+
+						// assert events
+						events := eventutils.CollectEvents(recorder.Events)
+						Expect(events).Should(ConsistOf([]string{
+							"Warning ReadInstallationSecretFailed install and uninstall script non-existent not found",
+						}))
 
 					})
 
@@ -413,7 +436,6 @@ runCmd:
 					})
 
 					It("should set K8sNodeBootstrapSucceeded to True if the boostrap execution succeeds", func() {
-
 						result, reconcilerErr := hostReconciler.Reconcile(ctx, controllerruntime.Request{
 							NamespacedName: byoHostLookupKey,
 						})
@@ -440,7 +462,6 @@ runCmd:
 							"Normal BootstrapK8sNodeSucceeded k8s Node Bootstraped",
 						}))
 					})
-
 					AfterEach(func() {
 						Expect(k8sClient.Delete(ctx, installationSecret)).NotTo(HaveOccurred())
 					})
@@ -669,6 +690,27 @@ runCmd:
 				Expect(events).Should(ConsistOf([]string{
 					"Warning ResetK8sNodeFailed k8s Node Reset failed",
 				}))
+			})
+		})
+
+		Context("When the ByoHost has deletion timestamp set", func() {
+			BeforeEach(func() {
+				byoHost.SetFinalizers([]string{"test"})
+				Expect(patchHelper.Patch(ctx, byoHost, patch.WithStatusObservedGeneration{})).NotTo(HaveOccurred())
+				Expect(k8sClient.Delete(context.TODO(), byoHost)).NotTo(HaveOccurred())
+			})
+			It("should trigger reconcile delete", func() {
+				result, reconcilerErr := hostReconciler.Reconcile(ctx, controllerruntime.Request{
+					NamespacedName: byoHostLookupKey,
+				})
+				Expect(result).To(Equal(controllerruntime.Result{}))
+				Expect(reconcilerErr).ToNot(HaveOccurred())
+
+			})
+
+			AfterEach(func() {
+				byoHost.SetFinalizers([]string{})
+				Expect(patchHelper.Patch(ctx, byoHost, patch.WithStatusObservedGeneration{})).NotTo(HaveOccurred())
 			})
 		})
 

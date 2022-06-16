@@ -50,7 +50,7 @@ var archOldNameMap = map[string]string{
 }
 
 // NewInstaller will return a new installer
-func NewInstaller(ctx context.Context, osDist, arch, k8sVersion string, downloader BundleDownloader) (K8sInstaller, error) {
+func NewInstaller(ctx context.Context, osDist, arch, k8sVersion string, downloader *bundleDownloader) (K8sInstaller, error) {
 	bundleArchName := arch
 	// replacing the arch name to old name to match with the bundle name
 	if _, exists := archOldNameMap[arch]; exists {

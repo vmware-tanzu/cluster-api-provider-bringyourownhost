@@ -10,7 +10,7 @@ import (
 	. "github.com/onsi/gomega"
 )
 
-func TestCloudinit(t *testing.T) {
+func TestInstaller(t *testing.T) {
 	RegisterFailHandler(Fail)
 	RunSpecs(t, "Installer Suite")
 }
