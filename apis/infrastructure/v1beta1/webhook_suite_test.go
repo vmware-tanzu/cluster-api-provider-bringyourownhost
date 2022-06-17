@@ -91,7 +91,10 @@ var _ = BeforeSuite(func() {
 	Expect(err).NotTo(HaveOccurred())
 	Expect(k8sClient).NotTo(BeNil())
 
-	// apply Custom RBAC
+	// Apply Custom RBAC
+	// This is required as in the envtest there is no default API
+	// to include RBAC. We are using a helper func parseK8sYaml to manually
+	// achieve this.
 	rbacDir := filepath.Join("..", "..", "..", "config", "rbac")
 	files, err := os.ReadDir(rbacDir)
 	Expect(err).ShouldNot(HaveOccurred())
