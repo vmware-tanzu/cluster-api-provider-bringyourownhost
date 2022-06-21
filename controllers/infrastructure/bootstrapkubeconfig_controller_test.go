@@ -83,7 +83,7 @@ var _ = Describe("Controllers/BoottrapKubeconfigController", func() {
 			Expect(err).ToNot(HaveOccurred())
 
 			kubeconfigData := createdBootstrapKubeconfig.Status.BootstrapKubeconfigData
-			Expect(kubeconfigData).ShouldNot(BeEmpty())
+			Expect(kubeconfigData).ShouldNot(BeNil())
 
 			bootstrapKubeconfigFileData, err := clientcmd.Load([]byte(*kubeconfigData))
 			Expect(err).NotTo(HaveOccurred())

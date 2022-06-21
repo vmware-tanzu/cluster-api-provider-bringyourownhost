@@ -295,12 +295,12 @@ func generateBootstrapKubeconfig(ctx context.Context, clusterProxy framework.Clu
 		Namespace: bootstrapKubeconfigCRD.Namespace,
 	}
 	createdBootstrapKubeconfig := &infraproviderv1.BootstrapKubeconfig{}
-	Eventually(func() string {
+	Eventually(func() *string {
 		err := clusterProxy.GetClient().Get(ctx, bootstrapKubeconfigLookupKey, createdBootstrapKubeconfig)
 		if err != nil {
-			return ""
+			return nil
 		}
-		return *createdBootstrapKubeconfig.Status.BootstrapKubeconfigData
+		return createdBootstrapKubeconfig.Status.BootstrapKubeconfigData
 	}).ShouldNot(BeNil())
 
 	return *createdBootstrapKubeconfig.Status.BootstrapKubeconfigData
