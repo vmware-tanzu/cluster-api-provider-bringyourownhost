@@ -299,8 +299,8 @@ func generateBootstrapKubeconfig(ctx context.Context, clusterProxy framework.Clu
 		if err != nil {
 			return ""
 		}
-		return createdBootstrapKubeconfig.Status.BootstrapKubeconfigData
-	}).ShouldNot(BeEmpty())
+		return *createdBootstrapKubeconfig.Status.BootstrapKubeconfigData
+	}).ShouldNot(BeNil())
 
-	return createdBootstrapKubeconfig.Status.BootstrapKubeconfigData
+	return *createdBootstrapKubeconfig.Status.BootstrapKubeconfigData
 }

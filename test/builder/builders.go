@@ -659,7 +659,7 @@ func (b *BootstrapKubeconfigBuilder) Build() *infrastructurev1beta1.BootstrapKub
 			Namespace:    b.namespace,
 		},
 		Spec: infrastructurev1beta1.BootstrapKubeconfigSpec{
-			Server:                   b.server,
+			APIServer:                b.server,
 			InsecureSkipTLSVerify:    b.skipTLSVerify,
 			CertificateAuthorityData: b.caData,
 		},

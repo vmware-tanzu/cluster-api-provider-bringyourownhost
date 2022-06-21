@@ -29,8 +29,8 @@ const (
 
 // BootstrapKubeconfigSpec defines the desired state of BootstrapKubeconfig
 type BootstrapKubeconfigSpec struct {
-	// Server is the address of the kubernetes cluster (https://hostname:port).
-	Server string `json:"server"`
+	// APIServer is the address of the kubernetes cluster (https://hostname:port).
+	APIServer string `json:"apiserver"`
 
 	// InsecureSkipTLSVerify skips the validity check for the server's certificate. This will make your HTTPS connections insecure.
 	// +optional
@@ -46,7 +46,7 @@ type BootstrapKubeconfigStatus struct {
 	// BootstrapKubeconfigData is an optional reference to a bootstrap kubeconfig info
 	// for starting the host registration process
 	// +optional
-	BootstrapKubeconfigData string `json:"bootstrapKubeconfigData,omitempty"`
+	BootstrapKubeconfigData *string `json:"bootstrapKubeconfigData,omitempty"`
 }
 
 //+kubebuilder:object:root=true

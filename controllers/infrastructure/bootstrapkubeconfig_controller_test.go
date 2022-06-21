@@ -49,7 +49,7 @@ var _ = Describe("Controllers/BoottrapKubeconfigController", func() {
 				TypeMeta:   metav1.TypeMeta{Kind: "BootstrapKubeconfig", APIVersion: infrav1.GroupVersion.String()},
 				ObjectMeta: metav1.ObjectMeta{GenerateName: "bootstrap-kubeconfig", Namespace: "default"},
 				Spec: infrav1.BootstrapKubeconfigSpec{
-					Server:                   testServer,
+					APIServer:                testServer,
 					InsecureSkipTLSVerify:    false,
 					CertificateAuthorityData: b64.StdEncoding.EncodeToString([]byte(testCAData)),
 				},
@@ -64,7 +64,7 @@ var _ = Describe("Controllers/BoottrapKubeconfigController", func() {
 		It("should return empty result if BootstrapKubeconfigData is already present", func() {
 			helper, err := patch.NewHelper(bootstrapKubeConfig, k8sClientUncached)
 			Expect(err).NotTo(HaveOccurred())
-			bootstrapKubeConfig.Status.BootstrapKubeconfigData = existingBootstrapKubeconfigData
+			bootstrapKubeConfig.Status.BootstrapKubeconfigData = &existingBootstrapKubeconfigData
 			Expect(helper.Patch(ctx, bootstrapKubeConfig)).NotTo(HaveOccurred())
 
 			res, err := bootstrapKubeconfigReconciler.Reconcile(ctx, reconcile.Request{
@@ -85,7 +85,7 @@ var _ = Describe("Controllers/BoottrapKubeconfigController", func() {
 			kubeconfigData := createdBootstrapKubeconfig.Status.BootstrapKubeconfigData
 			Expect(kubeconfigData).ShouldNot(BeEmpty())
 
-			bootstrapKubeconfigFileData, err := clientcmd.Load([]byte(kubeconfigData))
+			bootstrapKubeconfigFileData, err := clientcmd.Load([]byte(*kubeconfigData))
 			Expect(err).NotTo(HaveOccurred())
 
 			// assert Server and CertificateAuthorityData are the same as that we have passed

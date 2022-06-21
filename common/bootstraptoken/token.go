@@ -15,22 +15,20 @@ import (
 	bootstraputil "k8s.io/cluster-bootstrap/token/util"
 )
 
-// GetTokenIDSecretFromBootstrapTokenStr splits the token string and returns the tokenID and tokenSecret parts
-func GetTokenIDSecretFromBootstrapTokenStr(tokenStr string) (tokenID, tokenSecret string, err error) {
+// GetTokenIDSecretFromBootstrapToken splits the token string and returns the tokenID and tokenSecret parts
+func GetTokenIDSecretFromBootstrapToken(tokenStr string) (tokenID, tokenSecret string, err error) {
 	substrs := bootstraputil.BootstrapTokenRegexp.FindStringSubmatch(tokenStr)
 	if len(substrs) != 3 { // nolint: gomnd
 		return "", "", fmt.Errorf("the bootstrap token %q was not of the form %q", tokenStr, bootstrapapi.BootstrapTokenPattern)
 	}
-	tokenID = substrs[1]
-	tokenSecret = substrs[2]
 
-	return tokenID, tokenSecret, nil
+	return substrs[1], substrs[2], nil
 }
 
 // GenerateSecretFromBootstrapTokenStr builds the secret object from the token string
 // It also adds default description and auth groups that can be used by the bootstrap-kubeconfig
-func GenerateSecretFromBootstrapTokenStr(tokenStr string, ttl time.Duration) (*v1.Secret, error) {
-	tokenID, tokenSecret, err := GetTokenIDSecretFromBootstrapTokenStr(tokenStr)
+func GenerateSecretFromBootstrapToken(tokenStr string, ttl time.Duration) (*v1.Secret, error) {
+	tokenID, tokenSecret, err := GetTokenIDSecretFromBootstrapToken(tokenStr)
 	if err != nil {
 		return nil, err
 	}
@@ -58,7 +56,7 @@ func GenerateSecretFromBootstrapTokenStr(tokenStr string, ttl time.Duration) (*v
 // GenerateBootstrapKubeconfigFromBootstrapToken creates a bootstrap kubeconfig object from the bootstrap token generated
 // It also adds default cluster, context and auth info
 func GenerateBootstrapKubeconfigFromBootstrapToken(tokenStr string, bootstrapKubeconfig *infrastructurev1beta1.BootstrapKubeconfig) (*clientcmdapi.Config, error) {
-	tokenID, tokenSecret, err := GetTokenIDSecretFromBootstrapTokenStr(tokenStr)
+	tokenID, tokenSecret, err := GetTokenIDSecretFromBootstrapToken(tokenStr)
 	if err != nil {
 		return nil, err
 	}
@@ -67,8 +65,8 @@ func GenerateBootstrapKubeconfigFromBootstrapToken(tokenStr string, bootstrapKub
 	kubeconfigData := clientcmdapi.Config{
 		// Define a cluster stanza based on the bootstrap kubeconfig.
 		Clusters: map[string]*clientcmdapi.Cluster{infrastructurev1beta1.DefaultClusterName: {
-			Server: bootstrapKubeconfig.Spec.Server,
-			//	InsecureSkipTLSVerify:    clientConfig.Insecure,
+			Server:                   bootstrapKubeconfig.Spec.APIServer,
+			InsecureSkipTLSVerify:    bootstrapKubeconfig.Spec.InsecureSkipTLSVerify,
 			CertificateAuthorityData: []byte(bootstrapKubeconfig.Spec.CertificateAuthorityData),
 		}},
 		// Define auth based on the obtained client cert.

@@ -27,6 +27,7 @@ type BootstrapKubeconfigReconciler struct {
 }
 
 const (
+	// ttl is the time to live for the generated bootstrap token
 	ttl = time.Minute * 30
 )
 
@@ -52,7 +53,7 @@ func (r *BootstrapKubeconfigReconciler) Reconcile(ctx context.Context, req ctrl.
 
 	// There already is bootstrap-kubeconfig data associated with this object
 	// Do not create secrets again
-	if bootstrapKubeconfig.Status.BootstrapKubeconfigData != "" {
+	if bootstrapKubeconfig.Status.BootstrapKubeconfigData != nil {
 		return ctrl.Result{}, nil
 	}
 
@@ -61,7 +62,7 @@ func (r *BootstrapKubeconfigReconciler) Reconcile(ctx context.Context, req ctrl.
 		return ctrl.Result{}, err
 	}
 
-	bootstrapKubeconfigSecret, err := bootstraptoken.GenerateSecretFromBootstrapTokenStr(tokenStr, ttl)
+	bootstrapKubeconfigSecret, err := bootstraptoken.GenerateSecretFromBootstrapToken(tokenStr, ttl)
 	if err != nil {
 		return ctrl.Result{}, err
 	}
@@ -94,7 +95,8 @@ func (r *BootstrapKubeconfigReconciler) Reconcile(ctx context.Context, req ctrl.
 		return ctrl.Result{}, err
 	}
 
-	bootstrapKubeconfig.Status.BootstrapKubeconfigData = string(runtimeEncodedBootstrapKubeConfig)
+	bootstrapKuubeconfigDataStr := string(runtimeEncodedBootstrapKubeConfig)
+	bootstrapKubeconfig.Status.BootstrapKubeconfigData = &bootstrapKuubeconfigDataStr
 
 	return ctrl.Result{}, helper.Patch(ctx, bootstrapKubeconfig)
 }
