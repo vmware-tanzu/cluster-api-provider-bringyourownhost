@@ -282,9 +282,10 @@ func generateBootstrapKubeconfig(ctx context.Context, clusterProxy framework.Clu
 
 	server := config.Clusters[name].Server
 	caData := b64.StdEncoding.EncodeToString(config.Clusters[name].CertificateAuthorityData)
+	skipTLS := config.Clusters[name].InsecureSkipTLSVerify
 	bootstrapKubeconfigCRD := builder.BootstrapKubeconfig("default", "test-config").
 		WithServer(server).
-		WithSkipTLSVerify(true).
+		WithSkipTLSVerify(skipTLS).
 		WithCAData(caData).
 		Build()
 	Expect(clusterProxy.GetClient().Create(context.TODO(), bootstrapKubeconfigCRD)).NotTo(HaveOccurred(), "failed to create test BootstrapKubeconfig CRD")
