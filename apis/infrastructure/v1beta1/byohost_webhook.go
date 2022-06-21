@@ -5,7 +5,9 @@ package v1beta1
 
 import (
 	"context"
+	"fmt"
 	"net/http"
+	"strings"
 
 	v1 "k8s.io/api/admission/v1"
 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
@@ -20,23 +22,55 @@ type ByoHostValidator struct {
 	decoder *admission.Decoder
 }
 
+// To allow byoh manager service account to patch ByoHost CR
+const managerServiceAccount = "system:serviceaccount:byoh-system:byoh-controller-manager"
+
 // nolint: gocritic
 // Handle handles all the requests for ByoHost resource
 func (v *ByoHostValidator) Handle(ctx context.Context, req admission.Request) admission.Response {
-	if req.Operation == v1.Delete {
-		byoHost := &ByoHost{}
-		err := v.decoder.DecodeRaw(req.OldObject, byoHost)
-		if err != nil {
-			return admission.Errored(http.StatusBadRequest, err)
-		}
+	var response admission.Response
 
-		if byoHost.Status.MachineRef != nil {
-			return admission.Denied("cannot delete ByoHost when MachineRef is assigned")
-		}
+	switch req.Operation {
+	case v1.Create, v1.Update:
+		response = v.handleCreateUpdate(&req)
+	case v1.Delete:
+		response = v.handleDelete(&req)
+	default:
+		response = admission.Allowed("")
 	}
+	return response
+}
 
-	// TODO: verify if req.UserInfo.Username has rbac permission to update the byohost
+func (v *ByoHostValidator) handleCreateUpdate(req *admission.Request) admission.Response {
+	byoHost := &ByoHost{}
+	err := v.decoder.Decode(*req, byoHost)
+	if err != nil {
+		return admission.Errored(http.StatusBadRequest, err)
+	}
+	userName := req.UserInfo.Username
+	// allow manager service account to patch ByoHost
+	if userName == managerServiceAccount && req.Operation == v1.Update {
+		return admission.Allowed("")
+	}
+	substrs := strings.Split(userName, ":")
+	if len(substrs) < 2 { // nolint: gomnd
+		return admission.Denied(fmt.Sprintf("%s is not a valid agent username", userName))
+	}
+	if !strings.Contains(byoHost.Name, substrs[2]) {
+		return admission.Denied(fmt.Sprintf("%s cannot create/update resource %s", userName, byoHost.Name))
+	}
+	return admission.Allowed("")
+}
 
+func (v *ByoHostValidator) handleDelete(req *admission.Request) admission.Response {
+	byoHost := &ByoHost{}
+	err := v.decoder.DecodeRaw(req.OldObject, byoHost)
+	if err != nil {
+		return admission.Errored(http.StatusBadRequest, err)
+	}
+	if byoHost.Status.MachineRef != nil {
+		return admission.Denied("cannot delete ByoHost when MachineRef is assigned")
+	}
 	return admission.Allowed("")
 }
 
