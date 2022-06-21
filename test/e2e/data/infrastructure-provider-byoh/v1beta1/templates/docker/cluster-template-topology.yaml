@@ -3,8 +3,8 @@ kind: Cluster
 metadata:
   labels:
     cluster.x-k8s.io/cluster-name: ${CLUSTER_NAME}
-    cni: ${CLUSTER_NAME}-crs-0
     crs: "true"
+    cni: ${CLUSTER_NAME}-crs-0
   name: ${CLUSTER_NAME}
   namespace: ${NAMESPACE}
 spec:

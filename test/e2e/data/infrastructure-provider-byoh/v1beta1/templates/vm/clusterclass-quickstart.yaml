@@ -1,37 +1,43 @@
 apiVersion: cluster.x-k8s.io/v1beta1
 kind: ClusterClass
 metadata:
-  name: ${CLUSTER_CLASS_NAME}
+  name: quickstart
+  namespace: ${NAMESPACE}
 spec:
   controlPlane:
     ref:
       apiVersion: controlplane.cluster.x-k8s.io/v1beta1
       kind: KubeadmControlPlaneTemplate
-      name: ${CLUSTER_CLASS_NAME}-control-plane
+      name: quickstart-control-plane
+      namespace: ${NAMESPACE}
     machineInfrastructure:
       ref:
         kind: ByoMachineTemplate
         apiVersion: infrastructure.cluster.x-k8s.io/v1beta1
-        name: ${CLUSTER_CLASS_NAME}-control-plane-machine
+        name: quickstart-control-plane-machine
+        namespace: ${NAMESPACE}
   infrastructure:
     ref:
       apiVersion: infrastructure.cluster.x-k8s.io/v1beta1
       kind: ByoClusterTemplate
-      name: ${CLUSTER_CLASS_NAME}-cluster
+      name: quickstart-cluster
+      namespace: ${NAMESPACE}
   workers:
     machineDeployments:
-      - class: ${CLUSTER_CLASS_NAME}-worker
+      - class: quickstart-worker
         template:
           bootstrap:
             ref:
               apiVersion: bootstrap.cluster.x-k8s.io/v1beta1
               kind: KubeadmConfigTemplate
-              name: ${CLUSTER_CLASS_NAME}-worker-bootstrap-template
+              name: quickstart-worker-bootstrap-template
+              namespace: ${NAMESPACE}
           infrastructure:
             ref:
               apiVersion: infrastructure.cluster.x-k8s.io/v1beta1
               kind: ByoMachineTemplate
-              name: ${CLUSTER_CLASS_NAME}-worker-machinetemplate
+              name: quickstart-worker-machinetemplate
+              namespace: ${NAMESPACE}
   variables:
     - name: bundleLookupBaseRegistry
       required: true
@@ -95,7 +101,8 @@ spec:
 apiVersion: infrastructure.cluster.x-k8s.io/v1beta1
 kind: ByoClusterTemplate
 metadata:
-  name: ${CLUSTER_CLASS_NAME}-cluster
+  name: quickstart-cluster
+  namespace: ${NAMESPACE}
 spec:
   template:
     spec: {}
@@ -103,8 +110,8 @@ spec:
 apiVersion: infrastructure.cluster.x-k8s.io/v1beta1
 kind: ByoMachineTemplate
 metadata:
-  name: ${CLUSTER_CLASS_NAME}-worker-machinetemplate
-  namespace: default
+  name: quickstart-worker-machinetemplate
+  namespace: ${NAMESPACE}
 spec:
   template:
     spec: {}
@@ -112,7 +119,8 @@ spec:
 apiVersion: infrastructure.cluster.x-k8s.io/v1beta1
 kind: ByoMachineTemplate
 metadata:
-  name: ${CLUSTER_CLASS_NAME}-control-plane-machine
+  name: quickstart-control-plane-machine
+  namespace: ${NAMESPACE}
 spec:
   template:
     spec: {}
@@ -120,7 +128,8 @@ spec:
 kind: KubeadmControlPlaneTemplate
 apiVersion: controlplane.cluster.x-k8s.io/v1beta1
 metadata:
-  name: ${CLUSTER_CLASS_NAME}-control-plane
+  name: quickstart-control-plane
+  namespace: ${NAMESPACE}
 spec:
   template:
     spec:
@@ -145,9 +154,6 @@ spec:
             - Swap
             - DirAvailable--etc-kubernetes-manifests
             - FileAvailable--etc-kubernetes-kubelet.conf
-            kubeletExtraArgs:
-              cgroup-driver: cgroupfs
-              eviction-hard: nodefs.available<0%,nodefs.inodesFree<0%,imagefs.available<0%
         joinConfiguration:
           nodeRegistration:
             criSocket: /var/run/containerd/containerd.sock
@@ -155,40 +161,12 @@ spec:
             - Swap
             - DirAvailable--etc-kubernetes-manifests
             - FileAvailable--etc-kubernetes-kubelet.conf
-            kubeletExtraArgs:
-              cgroup-driver: cgroupfs
-              eviction-hard: nodefs.available<0%,nodefs.inodesFree<0%,imagefs.available<0%
 ---
 apiVersion: bootstrap.cluster.x-k8s.io/v1beta1
 kind: KubeadmConfigTemplate
 metadata:
-  name: ${CLUSTER_CLASS_NAME}-worker-bootstrap-template
-  namespace: default
+  name: quickstart-worker-bootstrap-template
+  namespace: ${NAMESPACE}
 spec:
   template:
-    spec:
-      joinConfiguration:
-        nodeRegistration:
-          kubeletExtraArgs:
-            cgroup-driver: cgroupfs
-            eviction-hard: nodefs.available<0%,nodefs.inodesFree<0%,imagefs.available<0%
----
-apiVersion: v1
-binaryData: null
-data: ${CNI_RESOURCES}
-kind: ConfigMap
-metadata:
-  name: cni-${CLUSTER_NAME}-crs-0
----
-apiVersion: addons.cluster.x-k8s.io/v1beta1
-kind: ClusterResourceSet
-metadata:
-  name: ${CLUSTER_NAME}-crs-0
-spec:
-  clusterSelector:
-    matchLabels:
-      cni: ${CLUSTER_NAME}-crs-0
-  resources:
-    - kind: ConfigMap
-      name: cni-${CLUSTER_NAME}-crs-0
-  strategy: ApplyOnce
+    spec: {}

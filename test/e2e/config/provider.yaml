@@ -75,6 +75,8 @@ providers:
         files:
           # Add a cluster template
           - sourcePath: "../data/infrastructure-provider-byoh/v1beta1/templates/e2e/cluster-template.yaml"
+          - sourcePath: "../data/infrastructure-provider-byoh/v1beta1/templates/e2e/topology/cluster-template-cc.yaml"
+          - sourcePath: "../data/infrastructure-provider-byoh/v1beta1/templates/e2e/topology/clusterclass-quickstart.yaml"
           - sourcePath: "../../../metadata.yaml"
 variables:
   # default variables for the e2e test; those values could be overridden via env variables, thus
@@ -93,21 +95,22 @@ variables:
   EXP_MACHINE_POOL: "true"
   KUBETEST_CONFIGURATION: "./data/kubetest/conformance.yaml"
   NODE_DRAIN_TIMEOUT: "60s"
+  CLUSTER_TOPOLOGY: "true"
   # NOTE: INIT_WITH_BINARY is used only by the clusterctl upgrade test to initialize the management cluster to be upgraded
   INIT_WITH_BINARY: "https://github.com/kubernetes-sigs/cluster-api/releases/download/v1.1.3/clusterctl-{OS}-{ARCH}"
   BUNDLE_LOOKUP_TAG: "v1.23.5"
   CONTROL_PLANE_ENDPOINT_IP: ""
 
 intervals:
-  default/wait-controllers: ["3m", "10s"]
-  default/wait-cluster: ["5m", "10s"]
-  default/wait-control-plane: ["10m", "10s"]
-  default/wait-worker-nodes: ["10m", "10s"]
-  default/wait-machine-pool-nodes: ["5m", "10s"]
-  default/wait-delete-cluster: ["15m", "10s"]
-  default/wait-machine-upgrade: ["20m", "10s"]
-  default/wait-machine-pool-upgrade: ["5m", "10s"]
-  default/wait-nodes-ready: ["10m", "10s"]
-  default/wait-machine-remediation: ["5m", "10s"]
-  node-drain/wait-deployment-available: ["3m", "10s"]
-  node-drain/wait-control-plane: ["15m", "10s"]
+  default/wait-controllers: ["23m", "10s"]
+  default/wait-cluster: ["25m", "10s"]
+  default/wait-control-plane: ["30m", "10s"]
+  default/wait-worker-nodes: ["30m", "10s"]
+  default/wait-machine-pool-nodes: ["25m", "10s"]
+  default/wait-delete-cluster: ["35m", "10s"]
+  default/wait-machine-upgrade: ["30m", "10s"]
+  default/wait-machine-pool-upgrade: ["35m", "10s"]
+  default/wait-nodes-ready: ["30m", "10s"]
+  default/wait-machine-remediation: ["35m", "10s"]
+  node-drain/wait-deployment-available: ["33m", "10s"]
+  node-drain/wait-control-plane: ["35m", "10s"]
