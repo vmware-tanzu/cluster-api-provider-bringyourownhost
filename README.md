@@ -80,6 +80,10 @@ Check out the [developer guide](./docs/local_dev.md) for launching a BYOH cluste
 
 More about development and contributing practices can be found in [`CONTRIBUTING.md`](./CONTRIBUTING.md).
 
+## Implement Custom Installer controller
+An installer controller is responsible to provide the installation and uninstallation scripts for k8s dependencies, prerequisites and components on each `BYOHost`.  
+If someone wants to implement their own installer controller then they need to follow the contract defined in [installer](./docs/installer.md) doc.
+
 ------
 
 ## Compatibility with Cluster API
