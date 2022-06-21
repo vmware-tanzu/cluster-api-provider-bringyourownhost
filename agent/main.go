@@ -5,6 +5,7 @@ package main
 
 import (
 	"context"
+	"errors"
 	"flag"
 	"fmt"
 	"os"
@@ -149,15 +150,16 @@ func main() {
 		logger.Error(err, "could not determine hostname")
 		return
 	}
-
+	_, err = os.Stat(registration.GetBYOHConfigPath())
 	// Enable bootstrap flow if --bootstrap-kubeconfig is provided
-	if bootstrapKubeConfig != "" {
+	// and config doesn't already exists in ~/.byoh/
+	if bootstrapKubeConfig != "" && errors.Is(err, os.ErrNotExist) {
 		if err = handleBootstrapFlow(logger, hostName); err != nil {
 			logger.Error(err, "bootstrap flow failed")
 			os.Exit(1)
 		}
 	}
-	// Handle restart flow
+	// Handle restart flow or if the ~/.byoh/config already exists
 	config, err := registration.LoadRESTClientConfig(registration.GetBYOHConfigPath())
 	if err != nil {
 		logger.Error(err, "client config load failed")
