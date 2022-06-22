@@ -13,7 +13,7 @@ spec:
         - 192.168.0.0/16
     serviceDomain: cluster.local
   topology:
-    class: quickstart
+    class: quickstart-docker
     version: ${KUBERNETES_VERSION}
     controlPlane:
       metadata: {}
@@ -77,7 +77,7 @@ spec:
           status: {}
     workers:
       machineDeployments:
-        - class: quickstart-worker
+        - class: quickstart-docker-worker
           metadata: {}
           name: md-0
           replicas: ${WORKER_MACHINE_COUNT}

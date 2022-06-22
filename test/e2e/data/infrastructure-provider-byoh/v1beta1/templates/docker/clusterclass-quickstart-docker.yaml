@@ -2,37 +2,37 @@
 apiVersion: cluster.x-k8s.io/v1beta1
 kind: ClusterClass
 metadata:
-  name: quickstart
+  name: quickstart-docker
 spec:
   controlPlane:
     ref:
       apiVersion: controlplane.cluster.x-k8s.io/v1beta1
       kind: KubeadmControlPlaneTemplate
-      name: quickstart-control-plane
+      name: quickstart-docker-control-plane
     machineInfrastructure:
       ref:
         kind: ByoMachineTemplate
         apiVersion: infrastructure.cluster.x-k8s.io/v1beta1
-        name: quickstart-control-plane-machine
+        name: quickstart-docker-control-plane-machine
   infrastructure:
     ref:
       apiVersion: infrastructure.cluster.x-k8s.io/v1beta1
       kind: ByoClusterTemplate
-      name: quickstart-cluster
+      name: quickstart-docker-cluster
   workers:
     machineDeployments:
-      - class: quickstart-worker
+      - class: quickstart-docker-worker
         template:
           bootstrap:
             ref:
               apiVersion: bootstrap.cluster.x-k8s.io/v1beta1
               kind: KubeadmConfigTemplate
-              name: quickstart-worker-bootstrap-template
+              name: quickstart-docker-worker-bootstrap-template
           infrastructure:
             ref:
               apiVersion: infrastructure.cluster.x-k8s.io/v1beta1
               kind: ByoMachineTemplate
-              name: quickstart-worker-machinetemplate
+              name: quickstart-docker-worker-machinetemplate
   variables:
     - name: bundleLookupBaseRegistry
       required: true
@@ -98,7 +98,7 @@ apiVersion: controlplane.cluster.x-k8s.io/v1beta1
 metadata:
   labels:
     nodepool: pool0
-  name: quickstart-control-plane
+  name: quickstart-docker-control-plane
 spec:
   template:
     spec:
@@ -140,20 +140,20 @@ spec:
 apiVersion: infrastructure.cluster.x-k8s.io/v1beta1
 kind: ByoMachineTemplate
 metadata:
-  name: quickstart-control-plane-machine
+  name: quickstart-docker-control-plane-machine
 spec:
   template:
     spec:
       installerRef:
         apiVersion: infrastructure.cluster.x-k8s.io/v1beta1
         kind: K8sInstallerConfigTemplate
-        name: quickstart-control-plane-machine
+        name: quickstart-docker-control-plane-machine
         namespace: ${NAMESPACE}
 ---
 apiVersion: infrastructure.cluster.x-k8s.io/v1beta1
 kind: K8sInstallerConfigTemplate
 metadata:
-  name: quickstart-control-plane-machine
+  name: quickstart-docker-control-plane-machine
 spec:
   template:
     spec:
@@ -163,7 +163,7 @@ spec:
 apiVersion: infrastructure.cluster.x-k8s.io/v1beta1
 kind: ByoClusterTemplate
 metadata:
-  name: quickstart-cluster
+  name: quickstart-docker-cluster
 spec:
   template:
     spec: {}
@@ -172,7 +172,7 @@ spec:
 apiVersion: infrastructure.cluster.x-k8s.io/v1beta1
 kind: ByoMachineTemplate
 metadata:
-  name: quickstart-worker-machinetemplate
+  name: quickstart-docker-worker-machinetemplate
 spec:
   template:
     spec:
@@ -195,7 +195,7 @@ spec:
 apiVersion: bootstrap.cluster.x-k8s.io/v1beta1
 kind: KubeadmConfigTemplate
 metadata:
-  name: quickstart-worker-bootstrap-template
+  name: quickstart-docker-worker-bootstrap-template
 spec:
   template:
     spec:
