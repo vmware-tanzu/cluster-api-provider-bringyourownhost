@@ -80,10 +80,12 @@ variables:
   # default variables for the e2e test; those values could be overridden via env variables, thus
   # allowing the same e2e config file to be re-used in different prow jobs e.g. each one with a K8s version permutation
   KUBERNETES_VERSION: "v1.23.5"
-  ETCD_VERSION_UPGRADE_TO: "3.4.9-0"
-  COREDNS_VERSION_UPGRADE_TO: "1.7.0"
-  KUBERNETES_VERSION_UPGRADE_TO: "v1.22.0"
-  KUBERNETES_VERSION_UPGRADE_FROM: "v1.18.2"
+#  ETCD_VERSION_UPGRADE_TO: "3.4.9-0"
+  ETCD_VERSION_UPGRADE_TO: "3.5.1-0"
+#  COREDNS_VERSION_UPGRADE_TO: "1.7.0"
+  COREDNS_VERSION_UPGRADE_TO: "v1.8.6"
+  KUBERNETES_VERSION_UPGRADE_TO: "v1.23.5"
+  KUBERNETES_VERSION_UPGRADE_FROM: "v1.23.4"
   DOCKER_SERVICE_DOMAIN: "cluster.local"
   IP_FAMILY: "IPv4"
   DOCKER_SERVICE_CIDRS: "10.128.0.0/12"

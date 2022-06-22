@@ -16,8 +16,8 @@ jobs:
     - name: Checkout code
       uses: actions/checkout@v2
 
-    - name: golangci-lint
-      uses: golangci/golangci-lint-action@v2
-      with:
-        version: v1.42.0
-        skip-go-installation: true
+#    - name: golangci-lint
+#      uses: golangci/golangci-lint-action@v2
+#      with:
+#        version: v1.42.0
+#        skip-go-installation: true
