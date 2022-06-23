@@ -612,3 +612,58 @@ func (b *K8sInstallerConfigTemplateBuilder) Build() *infrastructurev1beta1.K8sIn
 	}
 	return k8sinstallerconfigtemplate
 }
+
+// K8sInstallerConfigTemplateBuilder holds the variables and objects required to build an infrastructurev1beta1.K8sInstallerConfigTemplate
+type BootstrapKubeconfigBuilder struct {
+	namespace     string
+	name          string
+	server        string
+	skipTLSVerify bool
+	caData        string
+}
+
+func BootstrapKubeconfig(namespace, name string) *BootstrapKubeconfigBuilder {
+	return &BootstrapKubeconfigBuilder{
+		namespace: namespace,
+		name:      name,
+	}
+}
+
+// WithServer adds the passed server to the BootstrapKubeconfigBuilder
+func (b *BootstrapKubeconfigBuilder) WithServer(server string) *BootstrapKubeconfigBuilder {
+	b.server = server
+	return b
+}
+
+// WithSkipTLSVerify adds the passed skip flag value to the BootstrapKubeconfigBuilder
+func (b *BootstrapKubeconfigBuilder) WithSkipTLSVerify(skip bool) *BootstrapKubeconfigBuilder {
+	b.skipTLSVerify = skip
+	return b
+}
+
+// WithCAData adds the passed CA Data to the BootstrapKubeconfigBuilder
+func (b *BootstrapKubeconfigBuilder) WithCAData(caData string) *BootstrapKubeconfigBuilder {
+	b.caData = caData
+	return b
+}
+
+// Build returns a BootstrapKubeconfig with the attributes added to the BootstrapKubeconfigBuilder
+func (b *BootstrapKubeconfigBuilder) Build() *infrastructurev1beta1.BootstrapKubeconfig {
+	bootstrapKubeconfig := &infrastructurev1beta1.BootstrapKubeconfig{
+		TypeMeta: metav1.TypeMeta{
+			Kind:       "BootstrapKubeconfig",
+			APIVersion: infrastructurev1beta1.GroupVersion.String(),
+		},
+		ObjectMeta: metav1.ObjectMeta{
+			GenerateName: b.name,
+			Namespace:    b.namespace,
+		},
+		Spec: infrastructurev1beta1.BootstrapKubeconfigSpec{
+			APIServer:                b.server,
+			InsecureSkipTLSVerify:    b.skipTLSVerify,
+			CertificateAuthorityData: b.caData,
+		},
+		Status: infrastructurev1beta1.BootstrapKubeconfigStatus{},
+	}
+	return bootstrapKubeconfig
+}

@@ -61,4 +61,13 @@ resources:
   kind: K8sInstallerConfigTemplate
   path: github.com/vmware-tanzu/cluster-api-provider-bringyourownhost/apis/infrastructure/v1beta1
   version: v1beta1
+- api:
+    crdVersion: v1
+    namespaced: true
+  controller: true
+  domain: cluster.x-k8s.io
+  group: infrastructure
+  kind: BootstrapKubeconfig
+  path: github.com/vmware-tanzu/cluster-api-provider-bringyourownhost/apis/infrastructure/v1beta1
+  version: v1beta1
 version: "3"

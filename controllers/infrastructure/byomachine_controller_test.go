@@ -31,7 +31,6 @@ var _ = Describe("Controllers/ByomachineController", func() {
 	var (
 		byoMachineLookupKey        types.NamespacedName
 		byoHostLookupKey           types.NamespacedName
-		ctx                        context.Context
 		byoMachine                 *infrastructurev1beta1.ByoMachine
 		machine                    *clusterv1.Machine
 		node                       *corev1.Node
@@ -834,11 +833,11 @@ var _ = Describe("Controllers/ByomachineController", func() {
 				})
 
 				_, err = reconciler.Reconcile(ctx, reconcile.Request{NamespacedName: byoMachineLookupKey})
-				Expect(err).Should(MatchError(fmt.Sprintf("k8sinstallerconfigtemplates.infrastructure.cluster.x-k8s.io \"%s\" not found", defaultK8sInstallerConfigTemplateName)))
+				Expect(err).Should(MatchError(fmt.Sprintf("k8sinstallerconfigtemplates.infrastructure.cluster.x-k8s.io %q not found", defaultK8sInstallerConfigTemplateName)))
 
 				createdK8sInstallerConfig := &infrastructurev1beta1.K8sInstallerConfig{}
 				err = k8sClientUncached.Get(ctx, byoMachineLookupKey, createdK8sInstallerConfig)
-				Expect(err).Should(MatchError(fmt.Sprintf("k8sinstallerconfigs.infrastructure.cluster.x-k8s.io \"%s\" not found", byoMachineLookupKey.Name)))
+				Expect(err).Should(MatchError(fmt.Sprintf("k8sinstallerconfigs.infrastructure.cluster.x-k8s.io %q not found", byoMachineLookupKey.Name)))
 			})
 		})
 	})

@@ -79,6 +79,7 @@ var _ = Describe("When testing MachineDeployment scale out/in", func() {
 					"--v":                    "1",
 				},
 			}
+			runner.BootstrapKubeconfigData = generateBootstrapKubeconfig(runner.Context, bootstrapClusterProxy, clusterConName)
 			byohost, err := runner.SetupByoDockerHost()
 			Expect(err).NotTo(HaveOccurred())
 			output, byohostContainerID, err := runner.ExecByoDockerHost(byohost)

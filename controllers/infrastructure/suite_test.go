@@ -46,6 +46,7 @@ var (
 	byoClusterReconciler                  *controllers.ByoClusterReconciler
 	byoAdmissionReconciler                *controllers.ByoAdmissionReconciler
 	k8sInstallerConfigReconciler          *controllers.K8sInstallerConfigReconciler
+	bootstrapKubeconfigReconciler         *controllers.BootstrapKubeconfigReconciler
 	recorder                              *record.FakeRecorder
 	byoCluster                            *infrastructurev1beta1.ByoCluster
 	capiCluster                           *clusterv1.Cluster
@@ -148,6 +149,12 @@ var _ = BeforeSuite(func() {
 		Client: k8sManager.GetClient(),
 	}
 	err = k8sInstallerConfigReconciler.SetupWithManager(k8sManager)
+	Expect(err).NotTo(HaveOccurred())
+
+	bootstrapKubeconfigReconciler = &controllers.BootstrapKubeconfigReconciler{
+		Client: k8sManager.GetClient(),
+	}
+	err = bootstrapKubeconfigReconciler.SetupWithManager(k8sManager)
 	Expect(err).NotTo(HaveOccurred())
 
 	go func() {

@@ -6,6 +6,7 @@ package e2e
 
 import (
 	"context"
+	b64 "encoding/base64"
 	"flag"
 	"fmt"
 	"os"
@@ -17,9 +18,12 @@ import (
 	. "github.com/onsi/gomega"
 	"github.com/onsi/gomega/gexec"
 	infraproviderv1 "github.com/vmware-tanzu/cluster-api-provider-bringyourownhost/apis/infrastructure/v1beta1"
+	"github.com/vmware-tanzu/cluster-api-provider-bringyourownhost/test/builder"
 	certv1 "k8s.io/api/certificates/v1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/client-go/tools/clientcmd"
 	clusterv1 "sigs.k8s.io/cluster-api/api/v1beta1"
 	"sigs.k8s.io/cluster-api/test/framework"
 	"sigs.k8s.io/cluster-api/test/framework/bootstrap"
@@ -270,4 +274,34 @@ func dumpSpecResourcesAndCleanup(ctx context.Context, specName string, clusterPr
 
 func Byf(format string, a ...interface{}) {
 	By(fmt.Sprintf(format, a...))
+}
+
+func generateBootstrapKubeconfig(ctx context.Context, clusterProxy framework.ClusterProxy, name string) string {
+	config, _ := clientcmd.LoadFromFile(clusterProxy.GetKubeconfigPath())
+	name = "kind-" + name
+
+	server := config.Clusters[name].Server
+	caData := b64.StdEncoding.EncodeToString(config.Clusters[name].CertificateAuthorityData)
+	skipTLS := config.Clusters[name].InsecureSkipTLSVerify
+	bootstrapKubeconfigCRD := builder.BootstrapKubeconfig("default", "test-config").
+		WithServer(server).
+		WithSkipTLSVerify(skipTLS).
+		WithCAData(caData).
+		Build()
+	Expect(clusterProxy.GetClient().Create(context.TODO(), bootstrapKubeconfigCRD)).NotTo(HaveOccurred(), "failed to create test BootstrapKubeconfig CRD")
+
+	bootstrapKubeconfigLookupKey := types.NamespacedName{
+		Name:      bootstrapKubeconfigCRD.Name,
+		Namespace: bootstrapKubeconfigCRD.Namespace,
+	}
+	createdBootstrapKubeconfig := &infraproviderv1.BootstrapKubeconfig{}
+	Eventually(func() *string {
+		err := clusterProxy.GetClient().Get(ctx, bootstrapKubeconfigLookupKey, createdBootstrapKubeconfig)
+		if err != nil {
+			return nil
+		}
+		return createdBootstrapKubeconfig.Status.BootstrapKubeconfigData
+	}).ShouldNot(BeNil())
+
+	return *createdBootstrapKubeconfig.Status.BootstrapKubeconfigData
 }

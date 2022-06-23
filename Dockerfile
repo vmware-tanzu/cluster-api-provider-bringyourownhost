@@ -14,7 +14,7 @@ RUN go mod download
 COPY main.go main.go
 COPY apis/ apis/
 COPY controllers/ controllers/
-COPY common/installer common/installer
+COPY common/ common/
 COPY agent/installer agent/installer
 
 # Build
