@@ -110,7 +110,7 @@ If you are trying this on your own hosts, then for each host
 2. Copy the management cluster `kubeconfig` file as `management-cluster.conf`
 3. Start the agent 
 ```shell
-./byoh-hostagent-linux-amd64 -kubeconfig management-cluster.conf > byoh-agent.log 2>&1 &
+./byoh-hostagent-linux-amd64 --kubeconfig management-cluster.conf > byoh-agent.log 2>&1 &
 ```
 
 ---
