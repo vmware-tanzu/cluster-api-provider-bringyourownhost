@@ -1,37 +1,38 @@
 apiVersion: cluster.x-k8s.io/v1beta1
 kind: ClusterClass
 metadata:
-  name: ${CLUSTER_CLASS_NAME}
+  name: quickstart
+  namespace: ${NAMESPACE}
 spec:
   controlPlane:
     ref:
       apiVersion: controlplane.cluster.x-k8s.io/v1beta1
       kind: KubeadmControlPlaneTemplate
-      name: ${CLUSTER_CLASS_NAME}-control-plane
+      name: quickstart-control-plane
     machineInfrastructure:
       ref:
         kind: ByoMachineTemplate
         apiVersion: infrastructure.cluster.x-k8s.io/v1beta1
-        name: ${CLUSTER_CLASS_NAME}-control-plane-machine
+        name: quickstart-control-plane-machine
   infrastructure:
     ref:
       apiVersion: infrastructure.cluster.x-k8s.io/v1beta1
       kind: ByoClusterTemplate
-      name: ${CLUSTER_CLASS_NAME}-cluster
+      name: quickstart-cluster
   workers:
     machineDeployments:
-      - class: ${CLUSTER_CLASS_NAME}-worker
+      - class: quickstart-worker
         template:
           bootstrap:
             ref:
               apiVersion: bootstrap.cluster.x-k8s.io/v1beta1
               kind: KubeadmConfigTemplate
-              name: ${CLUSTER_CLASS_NAME}-worker-bootstrap-template
+              name: quickstart-worker-bootstrap-template
           infrastructure:
             ref:
               apiVersion: infrastructure.cluster.x-k8s.io/v1beta1
               kind: ByoMachineTemplate
-              name: ${CLUSTER_CLASS_NAME}-worker-machinetemplate
+              name: quickstart-worker-machinetemplate
   variables:
     - name: bundleLookupBaseRegistry
       required: true
@@ -92,35 +93,13 @@ spec:
             matchResources:
               controlPlane: true
 ---
-apiVersion: infrastructure.cluster.x-k8s.io/v1beta1
-kind: ByoClusterTemplate
-metadata:
-  name: ${CLUSTER_CLASS_NAME}-cluster
-spec:
-  template:
-    spec: {}
----
-apiVersion: infrastructure.cluster.x-k8s.io/v1beta1
-kind: ByoMachineTemplate
-metadata:
-  name: ${CLUSTER_CLASS_NAME}-worker-machinetemplate
-  namespace: default
-spec:
-  template:
-    spec: {}
----
-apiVersion: infrastructure.cluster.x-k8s.io/v1beta1
-kind: ByoMachineTemplate
-metadata:
-  name: ${CLUSTER_CLASS_NAME}-control-plane-machine
-spec:
-  template:
-    spec: {}
----
 kind: KubeadmControlPlaneTemplate
 apiVersion: controlplane.cluster.x-k8s.io/v1beta1
 metadata:
-  name: ${CLUSTER_CLASS_NAME}-control-plane
+  labels:
+    nodepool: pool0
+  name: quickstart-control-plane
+  namespace: ${NAMESPACE}
 spec:
   template:
     spec:
@@ -142,9 +121,9 @@ spec:
           nodeRegistration:
             criSocket: /var/run/containerd/containerd.sock
             ignorePreflightErrors:
-            - Swap
-            - DirAvailable--etc-kubernetes-manifests
-            - FileAvailable--etc-kubernetes-kubelet.conf
+              - Swap
+              - DirAvailable--etc-kubernetes-manifests
+              - FileAvailable--etc-kubernetes-kubelet.conf
             kubeletExtraArgs:
               cgroup-driver: cgroupfs
               eviction-hard: nodefs.available<0%,nodefs.inodesFree<0%,imagefs.available<0%
@@ -152,18 +131,77 @@ spec:
           nodeRegistration:
             criSocket: /var/run/containerd/containerd.sock
             ignorePreflightErrors:
-            - Swap
-            - DirAvailable--etc-kubernetes-manifests
-            - FileAvailable--etc-kubernetes-kubelet.conf
+              - Swap
+              - DirAvailable--etc-kubernetes-manifests
+              - FileAvailable--etc-kubernetes-kubelet.conf
             kubeletExtraArgs:
               cgroup-driver: cgroupfs
               eviction-hard: nodefs.available<0%,nodefs.inodesFree<0%,imagefs.available<0%
 ---
+apiVersion: infrastructure.cluster.x-k8s.io/v1beta1
+kind: ByoMachineTemplate
+metadata:
+  name: quickstart-control-plane-machine
+  namespace: ${NAMESPACE}
+spec:
+  template:
+    spec:
+      installerRef:
+        apiVersion: infrastructure.cluster.x-k8s.io/v1beta1
+        kind: K8sInstallerConfigTemplate
+        name: quickstart-control-plane-machine
+        namespace: "${NAMESPACE}"
+---
+apiVersion: infrastructure.cluster.x-k8s.io/v1beta1
+kind: K8sInstallerConfigTemplate
+metadata:
+  name: quickstart-control-plane-machine
+  namespace: ${NAMESPACE}
+spec:
+  template:
+    spec:
+      bundleRepo: projects.registry.vmware.com/cluster_api_provider_bringyourownhost
+      bundleType: k8s
+---
+apiVersion: infrastructure.cluster.x-k8s.io/v1beta1
+kind: ByoClusterTemplate
+metadata:
+  name: quickstart-cluster
+  namespace: ${NAMESPACE}
+spec:
+  template:
+    spec: {}
+
+---
+apiVersion: infrastructure.cluster.x-k8s.io/v1beta1
+kind: ByoMachineTemplate
+metadata:
+  name: quickstart-worker-machinetemplate
+  namespace: ${NAMESPACE}
+spec:
+  template:
+    spec:
+      installerRef:
+        apiVersion: infrastructure.cluster.x-k8s.io/v1beta1
+        kind: K8sInstallerConfigTemplate
+        name: ${CLUSTER_NAME}-md-0
+        namespace: ${NAMESPACE}
+---
+apiVersion: infrastructure.cluster.x-k8s.io/v1beta1
+kind: K8sInstallerConfigTemplate
+metadata:
+  name: ${CLUSTER_NAME}-md-0
+spec:
+  template:
+    spec:
+      bundleRepo: projects.registry.vmware.com/cluster_api_provider_bringyourownhost
+      bundleType: k8s
+---
 apiVersion: bootstrap.cluster.x-k8s.io/v1beta1
 kind: KubeadmConfigTemplate
 metadata:
-  name: ${CLUSTER_CLASS_NAME}-worker-bootstrap-template
-  namespace: default
+  name: quickstart-worker-bootstrap-template
+  namespace: ${NAMESPACE}
 spec:
   template:
     spec:
@@ -172,23 +210,3 @@ spec:
           kubeletExtraArgs:
             cgroup-driver: cgroupfs
             eviction-hard: nodefs.available<0%,nodefs.inodesFree<0%,imagefs.available<0%
----
-apiVersion: v1
-binaryData: null
-data: ${CNI_RESOURCES}
-kind: ConfigMap
-metadata:
-  name: cni-${CLUSTER_NAME}-crs-0
----
-apiVersion: addons.cluster.x-k8s.io/v1beta1
-kind: ClusterResourceSet
-metadata:
-  name: ${CLUSTER_NAME}-crs-0
-spec:
-  clusterSelector:
-    matchLabels:
-      cni: ${CLUSTER_NAME}-crs-0
-  resources:
-    - kind: ConfigMap
-      name: cni-${CLUSTER_NAME}-crs-0
-  strategy: ApplyOnce

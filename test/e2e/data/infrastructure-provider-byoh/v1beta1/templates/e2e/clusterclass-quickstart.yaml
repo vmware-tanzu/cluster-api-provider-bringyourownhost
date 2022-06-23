@@ -1,0 +1,94 @@
+apiVersion: cluster.x-k8s.io/v1beta1
+kind: ClusterClass
+metadata:
+  name: quickstart
+  namespace: ${NAMESPACE}
+spec:
+  controlPlane:
+    ref:
+      apiVersion: controlplane.cluster.x-k8s.io/v1beta1
+      kind: KubeadmControlPlaneTemplate
+      name: quickstart-control-plane
+    machineInfrastructure:
+      ref:
+        kind: ByoMachineTemplate
+        apiVersion: infrastructure.cluster.x-k8s.io/v1beta1
+        name: quickstart-control-plane-machine
+  infrastructure:
+    ref:
+      apiVersion: infrastructure.cluster.x-k8s.io/v1beta1
+      kind: ByoClusterTemplate
+      name: quickstart-cluster
+  workers:
+    machineDeployments:
+      - class: quickstart-worker
+        template:
+          bootstrap:
+            ref:
+              apiVersion: bootstrap.cluster.x-k8s.io/v1beta1
+              kind: KubeadmConfigTemplate
+              name: quickstart-worker-bootstrap-template
+          infrastructure:
+            ref:
+              apiVersion: infrastructure.cluster.x-k8s.io/v1beta1
+              kind: ByoMachineTemplate
+              name: quickstart-worker-machinetemplate
+  variables:
+    - name: bundleLookupBaseRegistry
+      required: true
+      schema:
+        openAPIV3Schema:
+          type: string
+          default: "https://projects.registry.vmware.com/cluster_api_provider_bringyourownhost"
+    - name: controlPlaneIpAddr
+      required: true
+      schema:
+        openAPIV3Schema:
+          type: string
+    - name: kubeVipPodManifest
+      required: true
+      schema:
+        openAPIV3Schema:
+          description: kube-vip manifest for the control plane.
+          type: string
+  patches:
+    - name: bundleLookupBaseRegistry
+      description: "Sets the bundleLookupBaseRegistry used for the BYOCluster."
+      definitions:
+        - selector:
+            apiVersion: infrastructure.cluster.x-k8s.io/v1beta1
+            kind: ByoClusterTemplate
+            matchResources:
+              infrastructureCluster: true
+          jsonPatches:
+            - op: add
+              path: "/spec/template/spec/bundleLookupBaseRegistry"
+              valueFrom:
+                variable: bundleLookupBaseRegistry
+    - name: controlPlaneEndpoint
+      description: "Sets control plane endpoint"
+      definitions:
+        - selector:
+            apiVersion: infrastructure.cluster.x-k8s.io/v1beta1
+            kind: ByoClusterTemplate
+            matchResources:
+              infrastructureCluster: true
+          jsonPatches:
+            - op: add
+              path: "/spec/template/spec/controlPlaneEndpoint"
+              valueFrom:
+                template: |
+                  host: '{{ .controlPlaneIpAddr }}'
+                  port: 6443
+    - name: kubeVipEnabled
+      definitions:
+        - jsonPatches:
+            - op: add
+              path: /spec/template/spec/kubeadmConfigSpec/files/0/content
+              valueFrom:
+                variable: kubeVipPodManifest
+          selector:
+            apiVersion: controlplane.cluster.x-k8s.io/v1beta1
+            kind: KubeadmControlPlaneTemplate
+            matchResources:
+              controlPlane: true
