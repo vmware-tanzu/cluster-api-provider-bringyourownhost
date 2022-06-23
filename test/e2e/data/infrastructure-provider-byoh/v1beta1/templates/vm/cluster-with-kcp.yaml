@@ -38,7 +38,12 @@ metadata:
   name: "${CLUSTER_NAME}-control-plane"
 spec:
   template:
-    spec: {}
+    spec:
+      installerRef:
+        apiVersion: infrastructure.cluster.x-k8s.io/v1beta1
+        kind: K8sInstallerConfigTemplate
+        name: "${CLUSTER_NAME}-control-plane"
+        namespace: "${NAMESPACE}"
 ---
 kind: KubeadmControlPlane
 apiVersion: controlplane.cluster.x-k8s.io/v1beta1
@@ -129,3 +134,13 @@ spec:
         - FileAvailable--etc-kubernetes-kubelet.conf
         criSocket: /var/run/containerd/containerd.sock
   version: ${KUBERNETES_VERSION}
+---
+apiVersion: infrastructure.cluster.x-k8s.io/v1beta1
+kind: K8sInstallerConfigTemplate
+metadata:
+  name: ${CLUSTER_NAME}-control-plane
+spec:
+  template:
+    spec:
+      bundleRepo: projects.registry.vmware.com/cluster_api_provider_bringyourownhost
+      bundleType: k8s

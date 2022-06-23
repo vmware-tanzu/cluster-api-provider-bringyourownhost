@@ -60,6 +60,15 @@ runCmd:
 		Expect(string(fileContents)).To(Equal(fileNewContent))
 	})
 
+	It("should return error if execute commands fails", func() {
+		cloudInitScript := `
+runCmd:
+- foo`
+
+		err := scriptExecutor.Execute(cloudInitScript)
+		Expect(err).To(HaveOccurred())
+	})
+
 	It("should be able to write files with the correct permissions and in append mode", func() {
 		fileName := path.Join(workDir, "file-2.txt")
 		fileOriginContent := "some-content-2"
@@ -141,6 +150,13 @@ runCmd:
 		fileContents, err := os.ReadFile(fileName)
 		Expect(err).ToNot(HaveOccurred())
 		Expect(string(fileContents)).To(Equal(replacedFileContent))
+	})
+
+	It("should return error for invalid template content", func() {
+		cloudInitScript := "invalid-content"
+
+		err := scriptExecutor.Execute(cloudInitScript)
+		Expect(err).To(HaveOccurred())
 	})
 
 	AfterEach(func() {

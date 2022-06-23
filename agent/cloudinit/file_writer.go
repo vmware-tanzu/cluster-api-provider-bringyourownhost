@@ -90,7 +90,7 @@ func (w FileWriter) WriteToFile(file *Files) error {
 		ownerFormatLen := 2
 
 		if len(owner) != ownerFormatLen {
-			return errors.Wrap(err, fmt.Sprintf("Invalid owner format '%s'", file.Owner))
+			return fmt.Errorf("invalid owner format '%s'", file.Owner)
 		}
 
 		userInfo, err := user.Lookup(owner[0])

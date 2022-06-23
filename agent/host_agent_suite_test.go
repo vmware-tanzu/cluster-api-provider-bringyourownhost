@@ -33,18 +33,19 @@ import (
 )
 
 var (
-	pathToHostAgentBinary string
-	kubeconfigFile        *os.File
-	k8sClient             client.Client
-	clientSet             clientset.Interface
-	tmpFilePrefix         = "kubeconfigFile-"
-	defaultByoMachineName = "my-byomachine"
-	agentLogFile          = "/tmp/agent-integration.log"
-	execLogFile           = "/tmp/agent-exec.log"
-	fakeDownloadPath      = "fake-download-path"
-	fakeBootstrapSecret   = "fake-bootstrap-secret"
-	testEnv               *envtest.Environment
-	dockerClient          *dClient.Client
+	pathToHostAgentBinary  string
+	kubeconfigFile         *os.File
+	k8sClient              client.Client
+	clientSet              clientset.Interface
+	tmpFilePrefix          = "kubeconfigFile-"
+	defaultByoMachineName  = "my-byomachine"
+	agentLogFile           = "/tmp/agent-integration.log"
+	execLogFile            = "/tmp/agent-exec.log"
+	fakeDownloadPath       = "fake-download-path"
+	fakeBootstrapSecret    = "fake-bootstrap-secret"
+	fakeInstallationSecret = "fake-installation-secret"
+	testEnv                *envtest.Environment
+	dockerClient           *dClient.Client
 )
 
 const (

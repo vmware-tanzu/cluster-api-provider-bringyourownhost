@@ -268,7 +268,7 @@ var _ = Describe("Agent", func() {
 			}, 10, 1).ShouldNot(BeTrue())
 		})
 
-		Context("when machineref & bootstrap secret is assigned", func() {
+		Context("when machineref, bootstrap & installation secret is assigned", func() {
 			var (
 				byoMachine *infrastructurev1beta1.ByoMachine
 				namespace  types.NamespacedName
@@ -304,11 +304,22 @@ var _ = Describe("Agent", func() {
 					Name:      fakeBootstrapSecret.Name,
 				}
 
+				fakeInstallationSecret := builder.Secret(ns.Name, fakeInstallationSecret).WithData("echo install-k8s").Build()
+				err = k8sClient.Create(ctx, fakeInstallationSecret)
+				Expect(err).ToNot(HaveOccurred())
+
+				byoHost.Spec.InstallationSecret = &corev1.ObjectReference{
+					APIVersion: fakeInstallationSecret.APIVersion,
+					Kind:       fakeInstallationSecret.Kind,
+					Namespace:  fakeInstallationSecret.Namespace,
+					Name:       fakeInstallationSecret.Name,
+					UID:        fakeInstallationSecret.UID,
+				}
+
 				Expect(patchHelper.Patch(ctx, byoHost, patch.WithStatusObservedGeneration{})).NotTo(HaveOccurred())
 			})
 
-			It("should install k8s components", func() {
-
+			It("should run the script to install k8s components", func() {
 				defer output.Close()
 				f := e2e.WriteDockerLog(output, agentLogFile)
 				defer func() {
@@ -731,61 +742,6 @@ kovW9X7Ook/tTW0HyX6D6HRciA==
 				return false
 			}, time.Second*4).Should(BeTrue())
 			Expect(os.Remove(execLogFile)).ShouldNot(HaveOccurred())
-		})
-	})
-
-	Context("When the host agent is executed with --use-installer-controller flag", func() {
-		var (
-			ns               *corev1.Namespace
-			ctx              context.Context
-			err              error
-			hostName         string
-			runner           *e2e.ByoHostRunner
-			byoHostContainer *container.ContainerCreateCreatedBody
-			output           dockertypes.HijackedResponse
-		)
-
-		BeforeEach(func() {
-			ns = builder.Namespace("testns").Build()
-			ctx = context.TODO()
-			Expect(k8sClient.Create(ctx, ns)).NotTo(HaveOccurred(), "failed to create test namespace")
-
-			hostName, err = os.Hostname()
-			Expect(err).NotTo(HaveOccurred())
-
-			runner = setupTestInfra(ctx, hostName, getKubeConfig().Name(), ns)
-			runner.CommandArgs["--use-installer-controller"] = ""
-
-			byoHostContainer, err = runner.SetupByoDockerHost()
-			Expect(err).NotTo(HaveOccurred())
-
-		})
-
-		AfterEach(func() {
-			cleanup(runner.Context, byoHostContainer, ns, agentLogFile)
-		})
-
-		It("should not call the intree installer", func() {
-			output, _, err = runner.ExecByoDockerHost(byoHostContainer)
-			Expect(err).NotTo(HaveOccurred())
-			defer output.Close()
-			f := e2e.WriteDockerLog(output, agentLogFile)
-			defer func() {
-				deferredErr := f.Close()
-				if deferredErr != nil {
-					e2e.Showf("error closing file %s: %v", agentLogFile, deferredErr)
-				}
-			}()
-			Eventually(func() (done bool) {
-				_, err := os.Stat(agentLogFile)
-				if err == nil {
-					data, err := os.ReadFile(agentLogFile)
-					if err == nil && strings.Contains(string(data), "\"msg\"=\"use-installer-controller flag set, skipping intree installer\"") {
-						return true
-					}
-				}
-				return false
-			}, 30).Should(BeTrue())
 		})
 	})
 })

@@ -29,9 +29,9 @@ type bundleDownloader struct {
 }
 
 // NewBundleDownloader will return a new bundle downloader instance
-func NewBundleDownloader(bundleType BundleType, repoAddr, downloadPath string, logger logr.Logger) *bundleDownloader {
+func NewBundleDownloader(bundleType, repoAddr, downloadPath string, logger logr.Logger) *bundleDownloader {
 	return &bundleDownloader{
-		bundleType:   bundleType,
+		bundleType:   BundleType(bundleType),
 		repoAddr:     repoAddr,
 		downloadPath: downloadPath,
 		logger:       logger,

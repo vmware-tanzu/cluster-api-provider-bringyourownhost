@@ -10,7 +10,7 @@ import (
 	"github.com/go-logr/logr"
 	"github.com/pkg/errors"
 	infrav1 "github.com/vmware-tanzu/cluster-api-provider-bringyourownhost/apis/infrastructure/v1beta1"
-	"github.com/vmware-tanzu/cluster-api-provider-bringyourownhost/common/installer"
+	"github.com/vmware-tanzu/cluster-api-provider-bringyourownhost/installer"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -148,7 +148,7 @@ func (r *K8sInstallerConfigReconciler) reconcileNormal(ctx context.Context, scop
 	logger.Info("Reconciling K8sInstallerConfig")
 
 	k8sVersion := scope.Config.GetAnnotations()[infrav1.K8sVersionAnnotation]
-	downloader := installer.DefaultBundleDownloader(scope.Config.Spec.BundleType, scope.Config.Spec.BundleRepo, "{{.BUNDLE_DOWNLOAD_PATH}}", logger)
+	downloader := installer.NewBundleDownloader(scope.Config.Spec.BundleType, scope.Config.Spec.BundleRepo, "{{.BUNDLE_DOWNLOAD_PATH}}", logger)
 	installerObj, err := installer.NewInstaller(ctx, scope.ByoMachine.Status.HostInfo.OSImage, scope.ByoMachine.Status.HostInfo.Architecture, k8sVersion, downloader)
 	if err != nil {
 		logger.Error(err, "failed to create installer instance", "osImage", scope.ByoMachine.Status.HostInfo.OSImage, "architecture", scope.ByoMachine.Status.HostInfo.Architecture, "k8sVersion", k8sVersion)

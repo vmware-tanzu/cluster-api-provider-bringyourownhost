@@ -13,7 +13,6 @@ import (
 	"github.com/go-logr/logr"
 	pflag "github.com/spf13/pflag"
 	"github.com/vmware-tanzu/cluster-api-provider-bringyourownhost/agent/cloudinit"
-	"github.com/vmware-tanzu/cluster-api-provider-bringyourownhost/agent/installer"
 	"github.com/vmware-tanzu/cluster-api-provider-bringyourownhost/agent/reconciler"
 	"github.com/vmware-tanzu/cluster-api-provider-bringyourownhost/agent/registration"
 	"github.com/vmware-tanzu/cluster-api-provider-bringyourownhost/agent/version"
@@ -87,7 +86,6 @@ func setupflags() {
 	flag.StringVar(&metricsbindaddress, "metricsbindaddress", ":8080", "metricsbindaddress is the TCP address that the controller should bind to for serving prometheus metrics.It can be set to \"0\" to disable the metrics serving")
 	flag.StringVar(&downloadpath, "downloadpath", "/var/lib/byoh/bundles", "File System path to keep the downloads")
 	flag.BoolVar(&skipInstallation, "skip-installation", false, "If you want to skip installation of the kubernetes component binaries")
-	flag.BoolVar(&useInstallerController, "use-installer-controller", false, "If you want to skip the intree installer and use the default or your own installer controller")
 	flag.BoolVar(&printVersion, "version", false, "Print the version of the agent")
 	flag.StringVar(&bootstrapKubeConfig, "bootstrap-kubeconfig", "", "Provide bootstrap kubeconfig for bootstrap token workflow")
 
@@ -115,16 +113,14 @@ func setupTemplateParser() *cloudinit.TemplateParser {
 }
 
 var (
-	namespace              string
-	scheme                 *runtime.Scheme
-	labels                 = make(labelFlags)
-	metricsbindaddress     string
-	downloadpath           string
-	skipInstallation       bool
-	useInstallerController bool
-	printVersion           bool
-	bootstrapKubeConfig    string
-	k8sInstaller           reconciler.IK8sInstaller
+	namespace           string
+	scheme              *runtime.Scheme
+	labels              = make(labelFlags)
+	metricsbindaddress  string
+	downloadpath        string
+	skipInstallation    bool
+	printVersion        bool
+	bootstrapKubeConfig string
 )
 
 // TODO - fix logging
@@ -197,25 +193,15 @@ func main() {
 
 	if skipInstallation {
 		logger.Info("skip-installation flag set, skipping installer initialisation")
-	} else if useInstallerController {
-		logger.Info("use-installer-controller flag set, skipping intree installer")
-	} else {
-		// increasing installer log level to 1, so that it wont be logged by default
-		k8sInstaller, err = installer.New(downloadpath, installer.BundleTypeK8s, logger.V(1))
-		if err != nil {
-			logger.Error(err, "failed to instantiate installer")
-		}
 	}
 	hostReconciler := &reconciler.HostReconciler{
-		Client:                 k8sClient,
-		CmdRunner:              cloudinit.CmdRunner{},
-		FileWriter:             cloudinit.FileWriter{},
-		TemplateParser:         setupTemplateParser(),
-		Recorder:               mgr.GetEventRecorderFor("hostagent-controller"),
-		K8sInstaller:           k8sInstaller,
-		SkipK8sInstallation:    skipInstallation,
-		UseInstallerController: useInstallerController,
-		DownloadPath:           downloadpath,
+		Client:              k8sClient,
+		CmdRunner:           cloudinit.CmdRunner{},
+		FileWriter:          cloudinit.FileWriter{},
+		TemplateParser:      setupTemplateParser(),
+		Recorder:            mgr.GetEventRecorderFor("hostagent-controller"),
+		SkipK8sInstallation: skipInstallation,
+		DownloadPath:        downloadpath,
 	}
 	if err = hostReconciler.SetupWithManager(context.TODO(), mgr); err != nil {
 		logger.Error(err, "unable to create controller")

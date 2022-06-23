@@ -237,7 +237,7 @@ sudo apt-get install socat ebtables ethtool conntrack
 Optional. This step describes downloading kubernetes host components for Debian.
 ```shell
 # Build docker image
-(cd agent/installer/bundle_builder/ingredients/deb/ && docker build -t byoh-ingredients-deb .)
+(cd installer/bundle_builder/ingredients/deb/ && docker build -t byoh-ingredients-deb .)
 
 # Create a directory for the ingredients and download to it
 (mkdir -p byoh-ingredients-download && docker run --rm -v `pwd`/byoh-ingredients-download:/ingredients byoh-ingredients-deb)
@@ -256,7 +256,7 @@ This step describes providing custom kubernetes host components. They can be cop
 ## Building a BYOH Bundle
 ```shell
 #Build docker image
-(cd agent/installer/bundle_builder/ && docker build -t byoh-build-push-bundle .)
+(cd installer/bundle_builder/ && docker build -t byoh-build-push-bundle .)
 ```
 
 ```shell
@@ -273,44 +273,5 @@ docker run --rm -v `pwd`/byoh-ingredients-download:/ingredients -v`pwd`:/bundle 
 
 ```shell
 # Optionally, additional configuration can be included in the bundle by mounting a local path under /config of the container. It will be placed on top of any drop-in configuration created by the packages and tars in the bundle
-docker run --rm -v `pwd`/byoh-ingredients-download:/ingredients -v`pwd`:/bundle -v`pwd`/agent/installer/bundle_builder/config/ubuntu/20_04/k8s/1_22 --env BUILD_ONLY=1 build-push-bundle
-```
-
-## CLI
-The installer CLI exposes the installer package as a command line tool. It can be built by running
-```shell
-go build ./agent/installer/cli
-```
-Once built, for a list of all commands, run
-
-```shell
-./cli --help
-```
-
-In the following examples, the os and k8s flags, must match one of the [Supported OS and kubernetes BYOH bundle names](##supported-OS-and-kubernetes)
-
-Examples:
-```shell
-# Will return if/how the current OS is detected
-./cli --detect
-```
-
-```shell
-# Will return the OS changes that installer will make during install and uninstall without actually doing them
-./cli --preview-os-changes --os Ubuntu_20.04.*_x86-64 --k8s v1.22.3
-```
-
-```shell
-# Will detect the current OS and install BYOH bundle with kubernetes v1.22.3 from the default repo
-sudo ./cli --install --k8s v1.22.3
-```
-
-```shell
-# Will override the OS detection and will use the specified repo
-sudo ./cli --install --os Ubuntu_20.04.1_x86-64 --bundle-repo 10.26.226.219:5000/repo --k8s v1.22.3
-```
-
-```shell
-# Will override the OS detection, use the specified repo and uninstall
-sudo ./cli --uninstall --os Ubuntu_20.04.1_x86-64 --bundle-repo 10.26.226.219:5000/repo --k8s v1.22.3
+docker run --rm -v `pwd`/byoh-ingredients-download:/ingredients -v`pwd`:/bundle -v`pwd`/installer/bundle_builder/config/ubuntu/20_04/k8s/1_22 --env BUILD_ONLY=1 build-push-bundle
 ```

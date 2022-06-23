@@ -38,7 +38,9 @@ func newRegistry() registry {
 }
 
 // AddBundleInstaller adds a bundle installer to the registry
-func (r *registry) AddBundleInstaller(os, k8sVer string, installer osk8sInstaller) {
+func (r *registry) AddBundleInstaller(os, k8sVer string) {
+	var empty interface{}
+
 	if _, ok := r.osk8sInstallerMap[os]; !ok {
 		r.osk8sInstallerMap[os] = make(k8sInstallerMap)
 	}
@@ -47,7 +49,7 @@ func (r *registry) AddBundleInstaller(os, k8sVer string, installer osk8sInstalle
 		panic(fmt.Sprintf("%v %v already exists", os, k8sVer))
 	}
 
-	r.osk8sInstallerMap[os][k8sVer] = installer
+	r.osk8sInstallerMap[os][k8sVer] = empty
 }
 
 // AddOsFilter adds an OS filter to the filtered bundle list of registry
@@ -86,22 +88,14 @@ func (r *registry) ListK8s(osBundleHost string) []string {
 	}
 
 	// os host
-	for k8s := range r.osk8sInstallerMap[r.resolveOsToOsBundle(osBundleHost)] {
+	for k8s := range r.osk8sInstallerMap[r.ResolveOsToOsBundle(osBundleHost)] {
 		result = append(result, k8s)
 	}
 
 	return result
 }
 
-// GetInstaller returns the bundle installer for the given os and k8s version
-func (r *registry) GetInstaller(osHost, k8sVer string) (osk8si osk8sInstaller, osBundle string) {
-	osBundle = r.resolveOsToOsBundle(osHost)
-	k8sBundle := r.resolveK8sToK8sBundle(k8sVer)
-	osk8si = r.osk8sInstallerMap[osBundle][k8sBundle]
-	return
-}
-
-func (r *registry) resolveOsToOsBundle(os string) string {
+func (r *registry) ResolveOsToOsBundle(os string) string {
 	for _, fbp := range r.filterOSBundleList {
 		matched, _ := regexp.MatchString(fbp.osFilter, os)
 		if matched {
@@ -112,13 +106,39 @@ func (r *registry) resolveOsToOsBundle(os string) string {
 	return ""
 }
 
-func (r *registry) resolveK8sToK8sBundle(k8s string) string {
-	for _, k8sBundle := range r.filterK8sBundleList {
-		matched, _ := regexp.MatchString(k8sBundle.k8sFilter, k8s)
-		if matched {
-			return k8sBundle.k8sFilter
-		}
+// GetSupportedRegistry returns a registry with installers for the supported OS and K8s
+func GetSupportedRegistry() registry {
+	reg := newRegistry()
+
+	{
+		// Ubuntu
+
+		// BYOH Bundle Repository. Associate bundle with installer
+		linuxDistro := "Ubuntu_20.04.1_x86-64"
+		reg.AddBundleInstaller(linuxDistro, "v1.21.*")
+		reg.AddBundleInstaller(linuxDistro, "v1.22.*")
+		reg.AddBundleInstaller(linuxDistro, "v1.23.*")
+
+		/*
+		 * PLACEHOLDER - ADD MORE K8S VERSIONS HERE
+		 */
+
+		// Match any patch version of the specified Major & Minor K8s version
+		reg.AddK8sFilter("v1.21.*")
+		reg.AddK8sFilter("v1.22.*")
+		reg.AddK8sFilter("v1.23.*")
+
+		// Match concrete os version to repository os version
+		reg.AddOsFilter("Ubuntu_20.04.*_x86-64", linuxDistro)
+
+		/*
+		 * PLACEHOLDER - POINT MORE DISTRO VERSIONS
+		 */
 	}
 
-	return ""
+	/*
+	 * PLACEHOLDER - ADD MORE OS HERE
+	 */
+
+	return reg
 }
