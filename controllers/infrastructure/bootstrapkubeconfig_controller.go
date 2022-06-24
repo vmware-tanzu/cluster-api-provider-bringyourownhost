@@ -95,8 +95,8 @@ func (r *BootstrapKubeconfigReconciler) Reconcile(ctx context.Context, req ctrl.
 		return ctrl.Result{}, err
 	}
 
-	bootstrapKuubeconfigDataStr := string(runtimeEncodedBootstrapKubeConfig)
-	bootstrapKubeconfig.Status.BootstrapKubeconfigData = &bootstrapKuubeconfigDataStr
+	bootstrapKubeconfigDataStr := string(runtimeEncodedBootstrapKubeConfig)
+	bootstrapKubeconfig.Status.BootstrapKubeconfigData = &bootstrapKubeconfigDataStr
 
 	return ctrl.Result{}, helper.Patch(ctx, bootstrapKubeconfig)
 }
