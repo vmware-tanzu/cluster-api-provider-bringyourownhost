@@ -11,13 +11,13 @@ spec:
   clusterNetwork:
     services:
       cidrBlocks:
-      - "10.128.0.0/12"
+      - 10.128.0.0/12
     pods:
       cidrBlocks:
-      - "192.168.0.0/16"
-    serviceDomain: "cluster.local"
+      - 192.168.0.0/16
+    serviceDomain: cluster.local
   topology:
-    class: ${CLUSTER_CLASS_NAME}
+    class: quickstart
     version: ${KUBERNETES_VERSION}
     controlPlane:
       metadata: {}
@@ -26,7 +26,7 @@ spec:
       - name: bundleLookupBaseRegistry
         value: "projects.registry.vmware.com/cluster_api_provider_bringyourownhost"
       - name: controlPlaneIpAddr
-        value: ${CONTROL_PLANE_ENDPOINT}
+        value: ${CONTROL_PLANE_ENDPOINT_IP}
       - name: kubeVipPodManifest
         value: |
           apiVersion: v1
@@ -47,7 +47,7 @@ spec:
               - name: vip_leaderelection
                 value: "true"
               - name: vip_address
-                value: ${CONTROL_PLANE_ENDPOINT}
+                value: ${CONTROL_PLANE_ENDPOINT_IP}
               - name: vip_interface
                 value: "{{ .DefaultNetworkInterfaceName }}"
               - name: vip_leaseduration
@@ -81,7 +81,142 @@ spec:
           status: {}
     workers:
       machineDeployments:
-        - class: ${CLUSTER_CLASS_NAME}-worker
+        - class: quickstart-worker
           metadata: { }
           name: md-0
           replicas: 1
+---
+kind: KubeadmControlPlaneTemplate
+apiVersion: controlplane.cluster.x-k8s.io/v1beta1
+metadata:
+  name: quickstart-control-plane
+  namespace: ${NAMESPACE}
+spec:
+  template:
+    spec:
+      kubeadmConfigSpec:
+        clusterConfiguration:
+          apiServer:
+            certSANs:
+              - localhost
+              - 127.0.0.1
+              - 0.0.0.0
+              - host.docker.internal
+          controllerManager:
+            extraArgs:
+              enable-hostpath-provisioner: "true"
+        files:
+        - owner: root:root
+          path: /etc/kubernetes/manifests/kube-vip.yaml
+        initConfiguration:
+          nodeRegistration:
+            criSocket: /var/run/containerd/containerd.sock
+            ignorePreflightErrors:
+              - Swap
+              - DirAvailable--etc-kubernetes-manifests
+              - FileAvailable--etc-kubernetes-kubelet.conf
+            kubeletExtraArgs:
+              cgroup-driver: cgroupfs
+              eviction-hard: nodefs.available<0%,nodefs.inodesFree<0%,imagefs.available<0%
+        joinConfiguration:
+          nodeRegistration:
+            criSocket: /var/run/containerd/containerd.sock
+            ignorePreflightErrors:
+              - Swap
+              - DirAvailable--etc-kubernetes-manifests
+              - FileAvailable--etc-kubernetes-kubelet.conf
+            kubeletExtraArgs:
+              cgroup-driver: cgroupfs
+              eviction-hard: nodefs.available<0%,nodefs.inodesFree<0%,imagefs.available<0%
+---
+apiVersion: infrastructure.cluster.x-k8s.io/v1beta1
+kind: ByoMachineTemplate
+metadata:
+  name: quickstart-control-plane-machine
+  namespace: ${NAMESPACE}
+spec:
+  template:
+    spec:
+      installerRef:
+        apiVersion: infrastructure.cluster.x-k8s.io/v1beta1
+        kind: K8sInstallerConfigTemplate
+        name: quickstart-control-plane-machine
+        namespace: "${NAMESPACE}"
+---
+apiVersion: infrastructure.cluster.x-k8s.io/v1beta1
+kind: K8sInstallerConfigTemplate
+metadata:
+  name: quickstart-control-plane-machine
+  namespace: ${NAMESPACE}
+spec:
+  template:
+    spec:
+      bundleRepo: projects.registry.vmware.com/cluster_api_provider_bringyourownhost
+      bundleType: k8s
+---
+apiVersion: infrastructure.cluster.x-k8s.io/v1beta1
+kind: ByoClusterTemplate
+metadata:
+  name: quickstart-cluster
+  namespace: ${NAMESPACE}
+spec:
+  template:
+    spec: {}
+---
+apiVersion: bootstrap.cluster.x-k8s.io/v1beta1
+kind: KubeadmConfigTemplate
+metadata:
+  name: quickstart-worker-bootstrap-template
+  namespace: ${NAMESPACE}
+spec:
+  template:
+    spec:
+      joinConfiguration:
+        nodeRegistration:
+          kubeletExtraArgs:
+            cgroup-driver: cgroupfs
+            eviction-hard: nodefs.available<0%,nodefs.inodesFree<0%,imagefs.available<0%
+---
+apiVersion: infrastructure.cluster.x-k8s.io/v1beta1
+kind: ByoMachineTemplate
+metadata:
+  name: quickstart-worker-machinetemplate
+  namespace: ${NAMESPACE}
+spec:
+  template:
+    spec:
+      installerRef:
+        apiVersion: infrastructure.cluster.x-k8s.io/v1beta1
+        kind: K8sInstallerConfigTemplate
+        name: ${CLUSTER_NAME}-md-0
+        namespace: ${NAMESPACE}
+---
+apiVersion: infrastructure.cluster.x-k8s.io/v1beta1
+kind: K8sInstallerConfigTemplate
+metadata:
+  name: ${CLUSTER_NAME}-md-0
+spec:
+  template:
+    spec:
+      bundleRepo: projects.registry.vmware.com/cluster_api_provider_bringyourownhost
+      bundleType: k8s
+---
+apiVersion: v1
+binaryData: null
+data: ${CNI_RESOURCES}
+kind: ConfigMap
+metadata:
+  name: cni-${CLUSTER_NAME}-crs-0
+---
+apiVersion: addons.cluster.x-k8s.io/v1beta1
+kind: ClusterResourceSet
+metadata:
+  name: ${CLUSTER_NAME}-crs-0
+spec:
+  clusterSelector:
+    matchLabels:
+      cni: ${CLUSTER_NAME}-crs-0
+  resources:
+    - kind: ConfigMap
+      name: cni-${CLUSTER_NAME}-crs-0
+  strategy: ApplyOnce

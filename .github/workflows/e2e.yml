@@ -25,5 +25,8 @@ jobs:
     - name: Set netfilter conntrack max
       run: sudo sysctl -w net.netfilter.nf_conntrack_max=131072
 
+    - name: Run Cluster Class e2e tests
+      run: yes | GINKGO_FOCUS="\[Cluster-Class\]" make test-e2e
+
     - name: Run PR-Blocking e2e tests
       run: yes | GINKGO_FOCUS="\[PR-Blocking\]" make test-e2e

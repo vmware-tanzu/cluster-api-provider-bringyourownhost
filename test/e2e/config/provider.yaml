@@ -75,6 +75,8 @@ providers:
         files:
           # Add a cluster template
           - sourcePath: "../data/infrastructure-provider-byoh/v1beta1/templates/e2e/cluster-template.yaml"
+          - sourcePath: "../data/infrastructure-provider-byoh/v1beta1/templates/e2e/clusterclass-quickstart.yaml"
+          - sourcePath: "../data/infrastructure-provider-byoh/v1beta1/templates/e2e/cluster-template-topology.yaml"
           - sourcePath: "../../../metadata.yaml"
 variables:
   # default variables for the e2e test; those values could be overridden via env variables, thus
@@ -91,6 +93,7 @@ variables:
   CNI: "./data/cni/kindnet/kindnet.yaml"
   EXP_CLUSTER_RESOURCE_SET: "true"
   EXP_MACHINE_POOL: "true"
+  CLUSTER_TOPOLOGY: "true"
   KUBETEST_CONFIGURATION: "./data/kubetest/conformance.yaml"
   NODE_DRAIN_TIMEOUT: "60s"
   # NOTE: INIT_WITH_BINARY is used only by the clusterctl upgrade test to initialize the management cluster to be upgraded
