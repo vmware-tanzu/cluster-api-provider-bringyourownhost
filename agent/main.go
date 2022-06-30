@@ -5,10 +5,13 @@ package main
 
 import (
 	"context"
+	"crypto/x509"
+	"encoding/pem"
 	"flag"
 	"fmt"
 	"os"
 	"strings"
+	"time"
 
 	"github.com/go-logr/logr"
 	pflag "github.com/spf13/pflag"
@@ -22,6 +25,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/fields"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/client-go/rest"
 	klog "k8s.io/klog/v2"
 	"k8s.io/klog/v2/klogr"
 	clusterv1 "sigs.k8s.io/cluster-api/api/v1beta1"
@@ -83,7 +87,7 @@ func setupflags() {
 
 	flag.StringVar(&namespace, "namespace", "default", "Namespace in the management cluster where you would like to register this host")
 	flag.Var(&labels, "label", "labels to attach to the ByoHost CR in the form labelname=labelVal for e.g. '--label site=apac --label cores=2'")
-	flag.StringVar(&metricsbindaddress, "metricsbindaddress", ":8080", "metricsbindaddress is the TCP address that the controller should bind to for serving prometheus metrics.It can be set to \"0\" to disable the metrics serving")
+	flag.StringVar(&metricsbindaddress, "metricsbindaddress", ":8081", "metricsbindaddress is the TCP address that the controller should bind to for serving prometheus metrics.It can be set to \"0\" to disable the metrics serving")
 	flag.StringVar(&downloadpath, "downloadpath", "/var/lib/byoh/bundles", "File System path to keep the downloads")
 	flag.BoolVar(&skipInstallation, "skip-installation", false, "If you want to skip installation of the kubernetes component binaries")
 	flag.BoolVar(&printVersion, "version", false, "Print the version of the agent")
@@ -171,6 +175,9 @@ func main() {
 		return
 	}
 
+	// Start certificate rotation goroutine
+	go certificateRotation(logger, hostName, config)
+
 	mgr, err := ctrl.NewManager(config, ctrl.Options{
 		Scheme:    scheme,
 		Namespace: namespace,
@@ -210,6 +217,37 @@ func main() {
 	if err := mgr.Start(ctrl.SetupSignalHandler()); err != nil {
 		logger.Error(err, "problem running manager")
 		return
+	}
+}
+
+func certificateRotation(logger logr.Logger, hostName string, config *rest.Config) error {
+	for {
+		block, _ := pem.Decode(config.CertData)
+		if block == nil || block.Type != "CERTIFICATE" {
+			logger.Info("failed to decode PEM block containing certificate")
+			return nil
+		}
+
+		cert, err := x509.ParseCertificate(block.Bytes)
+		if err != nil {
+			logger.Error(err, "Certifcate parse failed")
+			return err
+		}
+
+		timeLeftCert := cert.NotAfter.Sub(time.Now())
+		totalTimeCert := cert.NotAfter.Sub(cert.NotBefore)
+		timeLeftCertPerc := timeLeftCert % totalTimeCert
+		if timeLeftCertPerc < 20 {
+			logger.Info("certificate expired. Creating new certificate.")
+			if err = handleBootstrapFlow(logger, hostName); err != nil {
+				logger.Error(err, "bootstrap flow failed")
+				return err
+			}
+		} else {
+			logger.Info("certificate still valid.")
+		}
+
+		time.Sleep(4 * time.Second)
 	}
 }
 

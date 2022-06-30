@@ -27,6 +27,7 @@ import (
 	infrastructurev1beta1 "github.com/vmware-tanzu/cluster-api-provider-bringyourownhost/apis/infrastructure/v1beta1"
 	"github.com/vmware-tanzu/cluster-api-provider-bringyourownhost/test/builder"
 	"github.com/vmware-tanzu/cluster-api-provider-bringyourownhost/test/e2e"
+	"github.com/vmware-tanzu/cluster-api-provider-bringyourownhost/test/utils/certs"
 	certv1 "k8s.io/api/certificates/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -505,6 +506,115 @@ var _ = Describe("Agent", func() {
 				return false
 			}, 30).Should(BeTrue())
 		})
+	})
+
+	FContext("When host agent enables certificate rotation", func() {
+		var (
+			ns               *corev1.Namespace
+			ctx              context.Context
+			hostName         string
+			runner           *e2e.ByoHostRunner
+			byoHostContainer *container.ContainerCreateCreatedBody
+			output           dockertypes.HijackedResponse
+		)
+
+		BeforeEach(func() {
+			ns = builder.Namespace("testns").Build()
+			ctx = context.TODO()
+			Expect(k8sClient.Create(ctx, ns)).NotTo(HaveOccurred(), "failed to create test namespace")
+
+			var err error
+			hostName, err = os.Hostname()
+			Expect(err).NotTo(HaveOccurred())
+
+			runner = setupTestInfra(ctx, hostName, getKubeConfig().Name(), ns)
+			fmt.Println(getKubeConfig().Name())
+		})
+
+		AfterEach(func() {
+			cleanup(runner.Context, byoHostContainer, ns, agentLogFile)
+		})
+
+		It("should create new certificate if less that 20 percent of time remains", func() {
+			notBefore := time.Now()
+			notAfter := notBefore.Add(4 * time.Second)
+
+			keyPEM, certPEM, err := certs.CreteCertificate(notBefore, notAfter)
+			Expect(err).ShouldNot(HaveOccurred())
+
+			config, err := registration.LoadRESTClientConfig(getKubeConfig().Name())
+			Expect(err).NotTo(HaveOccurred())
+
+			Expect(certs.CreateKubeConfig(config, getKubeConfig().Name(), certPEM, keyPEM)).ShouldNot(HaveOccurred())
+
+			byoHostContainer, err = runner.SetupByoDockerHost()
+			Expect(err).NotTo(HaveOccurred())
+
+			// start agent
+			output, _, err = runner.ExecByoDockerHost(byoHostContainer)
+			Expect(err).NotTo(HaveOccurred())
+
+			defer output.Close()
+			f := e2e.WriteDockerLog(output, agentLogFile)
+			defer func() {
+				deferredErr := f.Close()
+				if deferredErr != nil {
+					e2e.Showf("error closing file %s: %v", agentLogFile, deferredErr)
+				}
+			}()
+			Eventually(func() (done bool) {
+				_, err := os.Stat(agentLogFile)
+				if err == nil {
+					data, err := os.ReadFile(agentLogFile)
+					fmt.Println(string(data))
+					if err == nil && strings.Contains(string(data), "\"msg\"=\"certificate expired. Creating new certificate.\"") {
+						return true
+					}
+				}
+				return false
+			}, time.Second*2).Should(BeTrue())
+		})
+
+		It("should not create new certificate if more that 20 percent of time remains", func() {
+			notBefore := time.Now()
+			notAfter := notBefore.Add(4 * time.Second)
+
+			keyPEM, certPEM, err := certs.CreteCertificate(notBefore, notAfter)
+			Expect(err).ShouldNot(HaveOccurred())
+
+			config, err := registration.LoadRESTClientConfig(getKubeConfig().Name())
+			Expect(err).NotTo(HaveOccurred())
+
+			Expect(certs.CreateKubeConfig(config, getKubeConfig().Name(), certPEM, keyPEM)).ShouldNot(HaveOccurred())
+
+			byoHostContainer, err = runner.SetupByoDockerHost()
+			Expect(err).NotTo(HaveOccurred())
+
+			// start agent
+			output, _, err = runner.ExecByoDockerHost(byoHostContainer)
+			Expect(err).NotTo(HaveOccurred())
+
+			defer output.Close()
+			f := e2e.WriteDockerLog(output, agentLogFile)
+			defer func() {
+				deferredErr := f.Close()
+				if deferredErr != nil {
+					e2e.Showf("error closing file %s: %v", agentLogFile, deferredErr)
+				}
+			}()
+			Eventually(func() (done bool) {
+				_, err := os.Stat(agentLogFile)
+				if err == nil {
+					data, err := os.ReadFile(agentLogFile)
+					fmt.Println(string(data))
+					if err == nil && strings.Contains(string(data), "\"msg\"=\"certificate still valid.\"") {
+						return true
+					}
+				}
+				return false
+			}, time.Second*2).Should(BeTrue())
+		})
+
 	})
 
 	Context("When the host agent is executed with --bootstrap-kubeconfig", func() {
