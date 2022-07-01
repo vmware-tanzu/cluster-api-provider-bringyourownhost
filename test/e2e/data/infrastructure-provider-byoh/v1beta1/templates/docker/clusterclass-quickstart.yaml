@@ -1,8 +1,8 @@
+---
 apiVersion: cluster.x-k8s.io/v1beta1
 kind: ClusterClass
 metadata:
   name: quickstart
-  namespace: ${NAMESPACE}
 spec:
   controlPlane:
     ref:
@@ -99,7 +99,6 @@ metadata:
   labels:
     nodepool: pool0
   name: quickstart-control-plane
-  namespace: ${NAMESPACE}
 spec:
   template:
     spec:
@@ -142,7 +141,6 @@ apiVersion: infrastructure.cluster.x-k8s.io/v1beta1
 kind: ByoMachineTemplate
 metadata:
   name: quickstart-control-plane-machine
-  namespace: ${NAMESPACE}
 spec:
   template:
     spec:
@@ -150,13 +148,11 @@ spec:
         apiVersion: infrastructure.cluster.x-k8s.io/v1beta1
         kind: K8sInstallerConfigTemplate
         name: quickstart-control-plane-machine
-        namespace: "${NAMESPACE}"
 ---
 apiVersion: infrastructure.cluster.x-k8s.io/v1beta1
 kind: K8sInstallerConfigTemplate
 metadata:
   name: quickstart-control-plane-machine
-  namespace: ${NAMESPACE}
 spec:
   template:
     spec:
@@ -167,7 +163,6 @@ apiVersion: infrastructure.cluster.x-k8s.io/v1beta1
 kind: ByoClusterTemplate
 metadata:
   name: quickstart-cluster
-  namespace: ${NAMESPACE}
 spec:
   template:
     spec: {}
@@ -177,7 +172,6 @@ apiVersion: infrastructure.cluster.x-k8s.io/v1beta1
 kind: ByoMachineTemplate
 metadata:
   name: quickstart-worker-machinetemplate
-  namespace: ${NAMESPACE}
 spec:
   template:
     spec:
@@ -185,7 +179,6 @@ spec:
         apiVersion: infrastructure.cluster.x-k8s.io/v1beta1
         kind: K8sInstallerConfigTemplate
         name: ${CLUSTER_NAME}-md-0
-        namespace: ${NAMESPACE}
 ---
 apiVersion: infrastructure.cluster.x-k8s.io/v1beta1
 kind: K8sInstallerConfigTemplate
@@ -201,7 +194,6 @@ apiVersion: bootstrap.cluster.x-k8s.io/v1beta1
 kind: KubeadmConfigTemplate
 metadata:
   name: quickstart-worker-bootstrap-template
-  namespace: ${NAMESPACE}
 spec:
   template:
     spec:
@@ -210,3 +202,4 @@ spec:
           kubeletExtraArgs:
             cgroup-driver: cgroupfs
             eviction-hard: nodefs.available<0%,nodefs.inodesFree<0%,imagefs.available<0%
+---
