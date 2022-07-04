@@ -528,7 +528,6 @@ var _ = Describe("Agent", func() {
 			Expect(err).NotTo(HaveOccurred())
 
 			runner = setupTestInfra(ctx, hostName, getKubeConfig().Name(), ns)
-			fmt.Println(getKubeConfig().Name())
 		})
 
 		AfterEach(func() {
@@ -536,23 +535,32 @@ var _ = Describe("Agent", func() {
 		})
 
 		It("should create new certificate if less that 20 percent of time remains", func() {
-			notBefore := time.Now()
-			notAfter := notBefore.Add(4 * time.Second)
-
-			keyPEM, certPEM, err := certs.CreteCertificate(notBefore, notAfter)
-			Expect(err).ShouldNot(HaveOccurred())
-
-			config, err := registration.LoadRESTClientConfig(getKubeConfig().Name())
+			runner.CommandArgs["--bootstrap-kubeconfig"] = "/root/.byoh/config"
+			runner.CommandArgs["--certExpiryDuration"] = "1210000000000"
+			byoHostContainer, err := runner.SetupByoDockerHost()
 			Expect(err).NotTo(HaveOccurred())
 
-			Expect(certs.CreateKubeConfig(config, getKubeConfig().Name(), certPEM, keyPEM)).ShouldNot(HaveOccurred())
-
-			byoHostContainer, err = runner.SetupByoDockerHost()
-			Expect(err).NotTo(HaveOccurred())
+			// time.Sleep(4 * time.Second)
 
 			// start agent
 			output, _, err = runner.ExecByoDockerHost(byoHostContainer)
 			Expect(err).NotTo(HaveOccurred())
+
+			// Approve CSR
+			Eventually(func() (done bool) {
+				byohCSR, err := clientSet.CertificatesV1().CertificateSigningRequests().Get(ctx, fmt.Sprintf(registration.ByohCSRNameFormat, hostName), metav1.GetOptions{})
+				if err != nil {
+					return false
+				}
+				byohCSR.Status.Conditions = append(byohCSR.Status.Conditions, certv1.CertificateSigningRequestCondition{
+					Type:    certv1.CertificateApproved,
+					Reason:  "approved",
+					Message: "approved",
+					Status:  corev1.ConditionTrue,
+				})
+				_, err = clientSet.CertificatesV1().CertificateSigningRequests().UpdateApproval(ctx, fmt.Sprintf(registration.ByohCSRNameFormat, hostName), byohCSR, metav1.UpdateOptions{})
+				return err == nil
+			}, time.Second*4).Should(BeTrue())
 
 			defer output.Close()
 			f := e2e.WriteDockerLog(output, agentLogFile)
@@ -572,14 +580,14 @@ var _ = Describe("Agent", func() {
 					}
 				}
 				return false
-			}, time.Second*2).Should(BeTrue())
+			}, time.Second*20).Should(BeTrue())
 		})
 
-		It("should not create new certificate if more that 20 percent of time remains", func() {
+		XIt("should not create new certificate if more that 20 percent of time remains", func() {
 			notBefore := time.Now()
 			notAfter := notBefore.Add(4 * time.Second)
 
-			keyPEM, certPEM, err := certs.CreteCertificate(notBefore, notAfter)
+			keyPEM, certPEM, err := certs.CreteCertificate(notBefore, notAfter, hostName)
 			Expect(err).ShouldNot(HaveOccurred())
 
 			config, err := registration.LoadRESTClientConfig(getKubeConfig().Name())
@@ -612,7 +620,7 @@ var _ = Describe("Agent", func() {
 					}
 				}
 				return false
-			}, time.Second*2).Should(BeTrue())
+			}, time.Second*5).Should(BeTrue())
 		})
 
 	})

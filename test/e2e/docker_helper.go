@@ -5,6 +5,7 @@ package e2e
 
 import (
 	"context"
+	"fmt"
 	"io"
 	"os"
 	"path/filepath"
@@ -219,6 +220,8 @@ func (r *ByoHostRunner) copyKubeconfig(config cpConfig, listopt types.ContainerL
 		config.sourcePath = tempKubeconfigPath
 		// SplitAfterN used to remove the unwanted special characters in the homeDir
 		config.destPath = strings.SplitAfterN(strings.TrimSpace(homeDir)+"/.byoh/config", "/", 2)[1] // nolint: gomnd
+
+		fmt.Println(string(kubeconfig))
 	} else {
 		listopt.Filters.Add("name", r.clusterConName+"-control-plane")
 		containers, err := r.DockerClient.ContainerList(r.Context, listopt)

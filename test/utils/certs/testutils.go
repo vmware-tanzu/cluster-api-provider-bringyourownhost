@@ -1,4 +1,4 @@
-// Copyright 2021 VMware, Inc. All Rights Reserved.
+// Copyright 2022 VMware, Inc. All Rights Reserved.
 // SPDX-License-Identifier: Apache-2.0
 
 package certs
@@ -9,6 +9,7 @@ import (
 	"crypto/x509"
 	"crypto/x509/pkix"
 	"encoding/pem"
+	"fmt"
 	"math/big"
 	"time"
 
@@ -53,7 +54,7 @@ func CreateKubeConfig(config *restclient.Config, kubeconfigPath string, certData
 }
 
 // Create PEM encoded key and certificate for a given time range.
-func CreteCertificate(notBefore, notAfter time.Time) (keyPEM, certPEM []byte, err error) {
+func CreteCertificate(notBefore, notAfter time.Time, hostname string) (keyPEM, certPEM []byte, err error) {
 	key, err := rsa.GenerateKey(rand.Reader, 4096)
 	if err != nil {
 		return nil, nil, err
@@ -68,10 +69,13 @@ func CreteCertificate(notBefore, notAfter time.Time) (keyPEM, certPEM []byte, er
 		},
 	)
 
-	//Create certificate templet
+	//Create certificate template
 	template := x509.Certificate{
-		SerialNumber:          big.NewInt(0),
-		Subject:               pkix.Name{CommonName: "localhost"},
+		SerialNumber: big.NewInt(0),
+		Subject: pkix.Name{
+			CommonName:   fmt.Sprintf("byoh:host:%s", hostname),
+			Organization: []string{"byoh:hosts"},
+		},
 		SignatureAlgorithm:    x509.SHA256WithRSA,
 		NotBefore:             notBefore,
 		NotAfter:              notAfter,
@@ -79,12 +83,14 @@ func CreteCertificate(notBefore, notAfter time.Time) (keyPEM, certPEM []byte, er
 		KeyUsage:              x509.KeyUsageDigitalSignature | x509.KeyUsageKeyAgreement | x509.KeyUsageKeyEncipherment | x509.KeyUsageDataEncipherment,
 		ExtKeyUsage:           []x509.ExtKeyUsage{x509.ExtKeyUsageServerAuth, x509.ExtKeyUsageClientAuth},
 	}
-	//Create certificate using templet
+
+	//Create certificate using template
 	derBytes, err := x509.CreateCertificate(rand.Reader, &template, &template, &key.PublicKey, key)
 	if err != nil {
 		return nil, nil, err
 
 	}
+
 	//pem encoding of certificate
 	certPEM = pem.EncodeToMemory(
 		&pem.Block{
