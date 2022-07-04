@@ -26,7 +26,7 @@ require (
 	k8s.io/kubectl v0.24.1
 	k8s.io/utils v0.0.0-20220210201930-3a6ce19ff2f9
 	sigs.k8s.io/cluster-api v1.1.3
-	sigs.k8s.io/cluster-api/test v1.1.4
+	sigs.k8s.io/cluster-api/test v1.1.5
 	sigs.k8s.io/controller-runtime v0.11.2
 	sigs.k8s.io/yaml v1.3.0
 )
@@ -64,7 +64,7 @@ require (
 	github.com/containerd/containerd v1.6.6 // indirect
 	github.com/containerd/stargz-snapshotter/estargz v0.7.0 // indirect
 	github.com/coredns/caddy v1.1.0 // indirect
-	github.com/coredns/corefile-migration v1.0.14 // indirect
+	github.com/coredns/corefile-migration v1.0.17 // indirect
 	github.com/cppforlife/cobrautil v0.0.0-20200514214827-bb86e6965d72 // indirect
 	github.com/cppforlife/color v1.9.1-0.20200716202919-6706ac40b835 // indirect
 	github.com/davecgh/go-spew v1.1.1 // indirect
