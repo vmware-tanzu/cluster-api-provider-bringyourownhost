@@ -362,8 +362,9 @@ github.com/containers/ocicrypt v1.1.2/go.mod h1:Dm55fwWm1YZAjYRaJ94z2mfZikIyIN4B
 github.com/containers/ocicrypt v1.1.3/go.mod h1:xpdkbVAuaH3WzbEabUd5yDsl9SwJA5pABH85425Es2g=
 github.com/coredns/caddy v1.1.0 h1:ezvsPrT/tA/7pYDBZxu0cT0VmWk75AfIaf6GSYCNMf0=
 github.com/coredns/caddy v1.1.0/go.mod h1:A6ntJQlAWuQfFlsd9hvigKbo2WS0VUs2l1e2F+BawD4=
-github.com/coredns/corefile-migration v1.0.14 h1:Tz3WZhoj2NdP8drrQH86NgnCng+VrPjNeg2Oe1ALKag=
 github.com/coredns/corefile-migration v1.0.14/go.mod h1:XnhgULOEouimnzgn0t4WPuFDN2/PJQcTxdWKC5eXNGE=
+github.com/coredns/corefile-migration v1.0.17 h1:tNwh8+4WOANV6NjSljwgW7qViJfhvPUt1kosj4rR8yg=
+github.com/coredns/corefile-migration v1.0.17/go.mod h1:XnhgULOEouimnzgn0t4WPuFDN2/PJQcTxdWKC5eXNGE=
 github.com/coreos/bbolt v1.3.2/go.mod h1:iRUV2dpdMOn7Bo10OQBFzIJO9kkE559Wcmn+qkEiiKk=
 github.com/coreos/etcd v3.3.10+incompatible/go.mod h1:uF7uidLiAD3TWHmW31ZFd/JWoc32PjwdhPthX9715RE=
 github.com/coreos/etcd v3.3.13+incompatible/go.mod h1:uF7uidLiAD3TWHmW31ZFd/JWoc32PjwdhPthX9715RE=
@@ -2119,8 +2120,8 @@ sigs.k8s.io/apiserver-network-proxy/konnectivity-client v0.0.25/go.mod h1:Mlj9PN
 sigs.k8s.io/apiserver-network-proxy/konnectivity-client v0.0.30/go.mod h1:fEO7lRTdivWO2qYVCVG7dEADOMo/MLDCVr8So2g88Uw=
 sigs.k8s.io/cluster-api v1.1.3 h1:t682KcIPFeKGwe2SlxGvZa/HVmLA80XJ45KHBhzUETM=
 sigs.k8s.io/cluster-api v1.1.3/go.mod h1:XqFZ0s9+KKjI/K39/EzHyAb4Sljprqvnm/XKWPgPp3Y=
-sigs.k8s.io/cluster-api/test v1.1.4 h1:QJSVvAeGtBSf4ImRiyPe1cTZJAGC7QGHZckEfCjLGco=
-sigs.k8s.io/cluster-api/test v1.1.4/go.mod h1:10gpXFNXUuYHoFfmGR98KfsJHuTQIWjRkiU8ggmXbrc=
+sigs.k8s.io/cluster-api/test v1.1.5 h1:jukMEA50R3V6G7VcJMR7dMZJPd3Tuf0Orc/6CKuS9Ek=
+sigs.k8s.io/cluster-api/test v1.1.5/go.mod h1:NXFioUFKruk/PgpUt4QrprV9bN1rVUcm7OWao9dfesg=
 sigs.k8s.io/controller-runtime v0.11.1/go.mod h1:KKwLiTooNGu+JmLZGn9Sl3Gjmfj66eMbCQznLP5zcqA=
 sigs.k8s.io/controller-runtime v0.11.2 h1:H5GTxQl0Mc9UjRJhORusqfJCIjBO8UtUxGggCwL1rLA=
 sigs.k8s.io/controller-runtime v0.11.2/go.mod h1:P6QCzrEjLaZGqHsfd+os7JQ+WFZhvB8MRFsn4dWF7O4=
