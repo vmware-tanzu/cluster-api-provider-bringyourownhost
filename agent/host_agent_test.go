@@ -528,12 +528,10 @@ var _ = Describe("Agent", func() {
 			Expect(err).NotTo(HaveOccurred())
 
 			runner = setupTestInfra(ctx, hostName, getKubeConfig().Name(), ns)
-			runner.CommandArgs["--bootstrap-kubeconfig"] = "/root/.byoh/config"
+			runner.CommandArgs["--bootstrap-kubeconfig"] = "/root/config"
 			byoHostContainer, err = runner.SetupByoDockerHost()
 			Expect(err).NotTo(HaveOccurred())
 
-			output, _, err = runner.ExecByoDockerHost(byoHostContainer)
-			Expect(err).NotTo(HaveOccurred())
 			// Clean for any CSR present
 			var csrList certv1.CertificateSigningRequestList
 			Expect(k8sClient.List(ctx, &csrList)).ShouldNot(HaveOccurred())
@@ -552,7 +550,11 @@ var _ = Describe("Agent", func() {
 			cleanup(runner.Context, byoHostContainer, ns, agentLogFile)
 		})
 
-		It("should enable the bootstrap kubeconfig flow", func() {
+		It("should enable the bootstrap kubeconfig flow if the ~/.byoh/config does not exist", func() {
+			// start agent
+			var err error
+			output, _, err = runner.ExecByoDockerHost(byoHostContainer)
+			Expect(err).NotTo(HaveOccurred())
 			defer output.Close()
 			f := e2e.WriteDockerLog(output, agentLogFile)
 			defer func() {
@@ -572,7 +574,57 @@ var _ = Describe("Agent", func() {
 				return false
 			}, time.Second*2).Should(BeTrue())
 		})
+		It("should skip bootstrap kubeconfig flow if the ~/.byoh/config exists", func() {
+			cli, err := client.NewClientWithOpts(client.FromEnv, client.WithAPIVersionNegotiation())
+			Expect(err).ShouldNot(HaveOccurred())
+			// create the directory to place the kubeconfig
+			execCommand, err := cli.ContainerExecCreate(ctx, byoHostContainer.ID, dockertypes.ExecConfig{
+				AttachStdin:  false,
+				AttachStdout: true,
+				AttachStderr: true,
+				Cmd:          []string{"sh", "-c", "mkdir ${HOME}/.byoh"},
+			})
+			Expect(err).ShouldNot(HaveOccurred())
+			err = cli.ContainerExecStart(ctx, execCommand.ID, dockertypes.ExecStartCheck{})
+			Expect(err).ShouldNot(HaveOccurred())
+			// copy the kubeconfig
+			execCommand, err = cli.ContainerExecCreate(ctx, byoHostContainer.ID, dockertypes.ExecConfig{
+				AttachStdin:  false,
+				AttachStdout: true,
+				AttachStderr: true,
+				Cmd:          []string{"sh", "-c", "cp /root/config ${HOME}/.byoh/"},
+			})
+			Expect(err).ShouldNot(HaveOccurred())
+			err = cli.ContainerExecStart(ctx, execCommand.ID, dockertypes.ExecStartCheck{})
+			Expect(err).ShouldNot(HaveOccurred())
+
+			// start agent
+			output, _, err = runner.ExecByoDockerHost(byoHostContainer)
+			Expect(err).NotTo(HaveOccurred())
+
+			defer output.Close()
+			f := e2e.WriteDockerLog(output, agentLogFile)
+			defer func() {
+				deferredErr := f.Close()
+				if deferredErr != nil {
+					e2e.Showf("error closing file %s: %v", agentLogFile, deferredErr)
+				}
+			}()
+			Consistently(func() (done bool) {
+				_, err := os.Stat(agentLogFile)
+				if err == nil {
+					data, err := os.ReadFile(agentLogFile)
+					if err == nil && strings.Contains(string(data), "\"msg\"=\"initiated bootstrap kubeconfig flow\"") {
+						return false
+					}
+				}
+				return true
+			}, time.Second*2).Should(BeTrue())
+		})
 		It("should not register the BYOHost with the management cluster", func() {
+			// start agent
+			_, _, err := runner.ExecByoDockerHost(byoHostContainer)
+			Expect(err).NotTo(HaveOccurred())
 			byoHostLookupKey := types.NamespacedName{Name: hostName, Namespace: ns.Name}
 			createdByoHost := &infrastructurev1beta1.ByoHost{}
 			Consistently(func() *infrastructurev1beta1.ByoHost {
@@ -584,6 +636,9 @@ var _ = Describe("Agent", func() {
 			}).Should(BeNil())
 		})
 		It("should create ByoHost CSR in the management cluster", func() {
+			// start agent
+			output, _, err := runner.ExecByoDockerHost(byoHostContainer)
+			Expect(err).NotTo(HaveOccurred())
 			defer output.Close()
 			f := e2e.WriteDockerLog(output, agentLogFile)
 			defer func() {
@@ -604,6 +659,9 @@ var _ = Describe("Agent", func() {
 			}, 10, 1).Should(Equal(fmt.Sprintf(registration.ByohCSRNameFormat, hostName)))
 		})
 		It("should persist private key", func() {
+			// start agent
+			output, _, err := runner.ExecByoDockerHost(byoHostContainer)
+			Expect(err).NotTo(HaveOccurred())
 			defer output.Close()
 			fAgent := e2e.WriteDockerLog(output, agentLogFile)
 			defer func() {
@@ -646,6 +704,9 @@ var _ = Describe("Agent", func() {
 			Expect(os.Remove(execLogFile)).ShouldNot(HaveOccurred())
 		})
 		It("should wait for the certificate to be issued", func() {
+			// start agent
+			output, _, err := runner.ExecByoDockerHost(byoHostContainer)
+			Expect(err).NotTo(HaveOccurred())
 			defer output.Close()
 			f := e2e.WriteDockerLog(output, agentLogFile)
 			defer func() {
@@ -666,6 +727,9 @@ var _ = Describe("Agent", func() {
 			}, time.Second*4).Should(BeTrue())
 		})
 		It("should create kubeconfig if the csr is approved", func() {
+			// start agent
+			output, _, err := runner.ExecByoDockerHost(byoHostContainer)
+			Expect(err).NotTo(HaveOccurred())
 			defer output.Close()
 			fAgent := e2e.WriteDockerLog(output, agentLogFile)
 			defer func() {
@@ -677,8 +741,8 @@ var _ = Describe("Agent", func() {
 
 			// Approve CSR
 			Eventually(func() (done bool) {
-				byohCSR, err := clientSet.CertificatesV1().CertificateSigningRequests().Get(ctx, fmt.Sprintf(registration.ByohCSRNameFormat, hostName), metav1.GetOptions{})
-				if err != nil {
+				byohCSR, kerr := clientSet.CertificatesV1().CertificateSigningRequests().Get(ctx, fmt.Sprintf(registration.ByohCSRNameFormat, hostName), metav1.GetOptions{})
+				if kerr != nil {
 					return false
 				}
 				byohCSR.Status.Conditions = append(byohCSR.Status.Conditions, certv1.CertificateSigningRequestCondition{
