@@ -114,7 +114,8 @@ var _ = Describe("When BYOH joins existing cluster [Cluster-Class]", func() {
 		}()
 
 		setControlPlaneIP(context.Background(), dockerClient)
-		clusterctl.ApplyClusterTemplateAndWait(ctx, clusterctl.ApplyClusterTemplateAndWaitInput{
+
+		input := clusterctl.ApplyClusterTemplateAndWaitInput{
 			ClusterProxy: bootstrapClusterProxy,
 			ConfigCluster: clusterctl.ConfigClusterInput{
 				LogFolder:                filepath.Join(artifactFolder, "clusters", bootstrapClusterProxy.GetName()),
@@ -131,7 +132,29 @@ var _ = Describe("When BYOH joins existing cluster [Cluster-Class]", func() {
 			WaitForClusterIntervals:      e2eConfig.GetIntervals(specName, "wait-cluster"),
 			WaitForControlPlaneIntervals: e2eConfig.GetIntervals(specName, "wait-control-plane"),
 			WaitForMachineDeployments:    e2eConfig.GetIntervals(specName, "wait-worker-nodes"),
-		}, clusterResources)
+		}
+
+		workloadClusterTemplate := clusterctl.ConfigCluster(ctx, clusterctl.ConfigClusterInput{
+			// pass reference to the management cluster hosting this test
+			KubeconfigPath: input.ConfigCluster.KubeconfigPath,
+			// pass the clusterctl config file that points to the local provider repository created for this test,
+			ClusterctlConfigPath: input.ConfigCluster.ClusterctlConfigPath,
+			// select template
+			Flavor: input.ConfigCluster.Flavor,
+			// define template variables
+			Namespace:                input.ConfigCluster.Namespace,
+			ClusterName:              input.ConfigCluster.ClusterName,
+			KubernetesVersion:        input.ConfigCluster.KubernetesVersion,
+			ControlPlaneMachineCount: input.ConfigCluster.ControlPlaneMachineCount,
+			WorkerMachineCount:       input.ConfigCluster.WorkerMachineCount,
+			InfrastructureProvider:   input.ConfigCluster.InfrastructureProvider,
+			// setup clusterctl logs folder
+			LogFolder: input.ConfigCluster.LogFolder,
+		})
+		Showf("workloadClusterTemplate %+v", string(workloadClusterTemplate))
+		fmt.Printf("workloadClusterTemplate %+v", string(workloadClusterTemplate))
+
+		clusterctl.ApplyClusterTemplateAndWait(ctx, input, clusterResources)
 
 	})
 
