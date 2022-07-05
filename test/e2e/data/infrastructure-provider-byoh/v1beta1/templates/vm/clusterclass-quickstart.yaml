@@ -1,43 +1,38 @@
+---
 apiVersion: cluster.x-k8s.io/v1beta1
 kind: ClusterClass
 metadata:
-  name: ${CLUSTER_CLASS_NAME}
-  namespace: ${NAMESPACE}
+  name: quickstart
 spec:
   controlPlane:
     ref:
       apiVersion: controlplane.cluster.x-k8s.io/v1beta1
       kind: KubeadmControlPlaneTemplate
-      name: ${CLUSTER_CLASS_NAME}-control-plane
-      namespace: ${NAMESPACE}
+      name: quickstart-control-plane
     machineInfrastructure:
       ref:
         kind: ByoMachineTemplate
         apiVersion: infrastructure.cluster.x-k8s.io/v1beta1
-        name: ${CLUSTER_CLASS_NAME}-control-plane-machine
-        namespace: ${NAMESPACE}
+        name: quickstart-control-plane-machine
   infrastructure:
     ref:
       apiVersion: infrastructure.cluster.x-k8s.io/v1beta1
       kind: ByoClusterTemplate
-      name: ${CLUSTER_CLASS_NAME}-cluster
-      namespace: ${NAMESPACE}
+      name: quickstart-cluster
   workers:
     machineDeployments:
-      - class: ${CLUSTER_CLASS_NAME}-worker
+      - class: quickstart-worker
         template:
           bootstrap:
             ref:
               apiVersion: bootstrap.cluster.x-k8s.io/v1beta1
               kind: KubeadmConfigTemplate
-              name: ${CLUSTER_CLASS_NAME}-worker-bootstrap-template
-              namespace: ${NAMESPACE}
+              name: quickstart-worker-bootstrap-template
           infrastructure:
             ref:
               apiVersion: infrastructure.cluster.x-k8s.io/v1beta1
               kind: ByoMachineTemplate
-              name: ${CLUSTER_CLASS_NAME}-worker-machinetemplate
-              namespace: ${NAMESPACE}
+              name: quickstart-worker-machinetemplate
   variables:
     - name: bundleLookupBaseRegistry
       required: true
@@ -101,8 +96,7 @@ spec:
 apiVersion: infrastructure.cluster.x-k8s.io/v1beta1
 kind: ByoClusterTemplate
 metadata:
-  name: ${CLUSTER_CLASS_NAME}-cluster
-  namespace: ${NAMESPACE}
+  name: quickstart-cluster
 spec:
   template:
     spec: {}
@@ -110,26 +104,53 @@ spec:
 apiVersion: infrastructure.cluster.x-k8s.io/v1beta1
 kind: ByoMachineTemplate
 metadata:
-  name: ${CLUSTER_CLASS_NAME}-worker-machinetemplate
-  namespace: ${NAMESPACE}
+  name: ${CLUSTER_NAME}-control-plane
 spec:
   template:
-    spec: {}
+    spec:
+      installerRef:
+        apiVersion: infrastructure.cluster.x-k8s.io/v1beta1
+        kind: K8sInstallerConfigTemplate
+        name: ${CLUSTER_NAME}-control-plane
+        namespace: ${NAMESPACE}
 ---
 apiVersion: infrastructure.cluster.x-k8s.io/v1beta1
 kind: ByoMachineTemplate
 metadata:
-  name: ${CLUSTER_CLASS_NAME}-control-plane-machine
-  namespace: ${NAMESPACE}
+  name: ${CLUSTER_NAME}-md-0
 spec:
   template:
-    spec: {}
+    spec:
+      installerRef:
+        apiVersion: infrastructure.cluster.x-k8s.io/v1beta1
+        kind: K8sInstallerConfigTemplate
+        name: ${CLUSTER_NAME}-md-0
+        namespace: ${NAMESPACE}
+---
+apiVersion: infrastructure.cluster.x-k8s.io/v1beta1
+kind: K8sInstallerConfigTemplate
+metadata:
+  name: ${CLUSTER_NAME}-control-plane
+spec:
+  template:
+    spec:
+      bundleRepo: projects.registry.vmware.com/cluster_api_provider_bringyourownhost
+      bundleType: k8s
+---
+apiVersion: infrastructure.cluster.x-k8s.io/v1beta1
+kind: K8sInstallerConfigTemplate
+metadata:
+  name: ${CLUSTER_NAME}-md-0
+spec:
+  template:
+    spec:
+      bundleRepo: projects.registry.vmware.com/cluster_api_provider_bringyourownhost
+      bundleType: k8s
 ---
 kind: KubeadmControlPlaneTemplate
 apiVersion: controlplane.cluster.x-k8s.io/v1beta1
 metadata:
-  name: ${CLUSTER_CLASS_NAME}-control-plane
-  namespace: ${NAMESPACE}
+  name: quickstart-control-plane
 spec:
   template:
     spec:
@@ -165,8 +186,8 @@ spec:
 apiVersion: bootstrap.cluster.x-k8s.io/v1beta1
 kind: KubeadmConfigTemplate
 metadata:
-  name: ${CLUSTER_CLASS_NAME}-worker-bootstrap-template
-  namespace: ${NAMESPACE}
+  name: quickstart-worker-bootstrap-template
 spec:
   template:
     spec: {}
+---
