@@ -177,4 +177,11 @@ func cleanup(ctx context.Context, byoHostContainer *container.ContainerCreateCre
 			e2e.Showf("error removing log file %s: %v", agentLogFile, err)
 		}
 	}
+	_, err = os.Stat(e2e.TempKubeconfigPath)
+	if err == nil {
+		err = os.Remove(e2e.TempKubeconfigPath)
+		if err != nil {
+			e2e.Showf("error removing kubeconfig file %s: %v", e2e.TempKubeconfigPath, err)
+		}
+	}
 }

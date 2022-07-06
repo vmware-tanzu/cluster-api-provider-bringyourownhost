@@ -27,7 +27,7 @@ import (
 
 const (
 	kindImage           = "byoh/node:e2e"
-	tempKubeconfigPath  = "/tmp/mgmt.conf"
+	TempKubeconfigPath  = "/tmp/mgmt.conf"
 	bootstrapKubeconfig = "/tmp/boostrap-kubeconfig"
 )
 
@@ -189,6 +189,7 @@ func (r *ByoHostRunner) copyKubeconfig(config cpConfig, listopt types.ContainerL
 
 		re := regexp.MustCompile("server:.*")
 		kubeconfig = re.ReplaceAll(kubeconfig, []byte("server: https://127.0.0.1:"+r.Port))
+		Expect(os.WriteFile(TempKubeconfigPath, kubeconfig, 0644)).NotTo(HaveOccurred()) // nolint: gosec,gomnd
 
 		// If the --bootstrap-kubeconfig is not provided, the tests will use
 		// kubeconfig placed in ~/.byoh/config
@@ -218,12 +219,11 @@ func (r *ByoHostRunner) copyKubeconfig(config cpConfig, listopt types.ContainerL
 			err = r.DockerClient.ContainerExecStart(r.Context, execCommand.ID, types.ExecStartCheck{})
 			Expect(err).ShouldNot(HaveOccurred())
 
-			Expect(os.WriteFile(tempKubeconfigPath, kubeconfig, 0644)).NotTo(HaveOccurred()) // nolint: gosec,gomnd
-			config.sourcePath = tempKubeconfigPath
+			config.sourcePath = TempKubeconfigPath
 			// SplitAfterN used to remove the unwanted special characters in the homeDir
 			config.destPath = strings.SplitAfterN(strings.TrimSpace(homeDir)+"/.byoh/config", "/", 2)[1] // nolint: gomnd
 		} else {
-			config.sourcePath = tempKubeconfigPath
+			config.sourcePath = TempKubeconfigPath
 			config.destPath = r.CommandArgs["--bootstrap-kubeconfig"]
 		}
 	} else {
