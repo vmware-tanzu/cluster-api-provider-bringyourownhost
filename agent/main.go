@@ -5,11 +5,14 @@ package main
 
 import (
 	"context"
+	"crypto/x509"
+	"encoding/pem"
 	"errors"
 	"flag"
 	"fmt"
 	"os"
 	"strings"
+	"time"
 
 	"github.com/go-logr/logr"
 	pflag "github.com/spf13/pflag"
@@ -23,6 +26,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/fields"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/client-go/rest"
 	klog "k8s.io/klog/v2"
 	"k8s.io/klog/v2/klogr"
 	clusterv1 "sigs.k8s.io/cluster-api/api/v1beta1"
@@ -83,6 +87,7 @@ func setupflags() {
 	klog.ClearLogger()
 
 	flag.StringVar(&namespace, "namespace", "default", "Namespace in the management cluster where you would like to register this host")
+	flag.Int64Var(&certExpiryDuration, "certExpiryDuration", registration.ExpirationSeconds, "Duration for the expiration of the host certificates")
 	flag.Var(&labels, "label", "labels to attach to the ByoHost CR in the form labelname=labelVal for e.g. '--label site=apac --label cores=2'")
 	flag.StringVar(&metricsbindaddress, "metricsbindaddress", ":8080", "metricsbindaddress is the TCP address that the controller should bind to for serving prometheus metrics.It can be set to \"0\" to disable the metrics serving")
 	flag.StringVar(&downloadpath, "downloadpath", "/var/lib/byoh/bundles", "File System path to keep the downloads")
@@ -122,6 +127,7 @@ var (
 	skipInstallation    bool
 	printVersion        bool
 	bootstrapKubeConfig string
+	certExpiryDuration  int64
 )
 
 // TODO - fix logging
@@ -173,6 +179,9 @@ func main() {
 		return
 	}
 
+	// Start certificate rotation goroutine
+	go certificateRotation(logger, hostName, config)
+
 	mgr, err := ctrl.NewManager(config, ctrl.Options{
 		Scheme:    scheme,
 		Namespace: namespace,
@@ -221,7 +230,7 @@ func handleBootstrapFlow(logger logr.Logger, hostName string) error {
 	if err != nil {
 		return fmt.Errorf("client config load failed: %v", err)
 	}
-	byohCSR, err := registration.NewByohCSR(bootstrapClientConfig, logger)
+	byohCSR, err := registration.NewByohCSR(bootstrapClientConfig, logger, certExpiryDuration)
 	if err != nil {
 		return fmt.Errorf("ByohCSR intialization failed: %v", err)
 	}
@@ -230,4 +239,36 @@ func handleBootstrapFlow(logger logr.Logger, hostName string) error {
 		return fmt.Errorf("kubeconfig generation failed: %v", err)
 	}
 	return nil
+}
+
+func certificateRotation(logger logr.Logger, hostName string, config *rest.Config) error {
+	for {
+		logger.Info("inside cert rotation goroutine")
+		block, _ := pem.Decode(config.CertData)
+		if block == nil || block.Type != "CERTIFICATE" {
+			logger.Info("failed to decode PEM block containing certificate")
+			return nil
+		}
+
+		cert, err := x509.ParseCertificate(block.Bytes)
+		if err != nil {
+			logger.Error(err, "Certifcate parse failed")
+			return err
+		}
+
+		totalTimeCert := cert.NotAfter.Sub(cert.NotBefore)
+		// if less than 20% time left, renew the certs
+		if time.Now().After(cert.NotAfter.Add(totalTimeCert * 4 / -5)) {
+			logger.Info("certificate expiration time left is less than 20%, renewing")
+			if err = handleBootstrapFlow(logger, hostName); err != nil {
+				logger.Error(err, "bootstrap flow failed")
+				// return err
+			}
+		} else {
+			logger.Info("certificate are valid", "certNotAfer", cert.NotAfter)
+			logger.Info("certificate are valid", "certNotBefore", cert.NotBefore)
+			logger.Info("certificate are valid", "will be renewed after", cert.NotAfter.Add(totalTimeCert/-5))
+		}
+		time.Sleep(4 * time.Second)
+	}
 }

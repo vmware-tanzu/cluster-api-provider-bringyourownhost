@@ -104,7 +104,7 @@ kovW9X7Ook/tTW0HyX6D6HRciA==
 		})
 
 		It("should return error if hostname is invalid", func() {
-			CSRRegistrar, err := registration.NewByohCSR(cfg, logr.Discard())
+			CSRRegistrar, err := registration.NewByohCSR(cfg, logr.Discard(), int64((time.Hour * 24).Seconds()))
 			Expect(err).ShouldNot(HaveOccurred())
 			_, _, err = CSRRegistrar.RequestBYOHClientCert("")
 			Expect(err).To(MatchError("hostname is not valid"))
@@ -129,7 +129,7 @@ kovW9X7Ook/tTW0HyX6D6HRciA==
 			Expect(restConfig).To(BeNil())
 		})
 		It("should create csr if bootstrap kubeconfig is valid", func() {
-			CSRRegistrar, err := registration.NewByohCSR(cfg, logr.Discard())
+			CSRRegistrar, err := registration.NewByohCSR(cfg, logr.Discard(), int64((time.Hour * 24).Seconds()))
 			Expect(err).ShouldNot(HaveOccurred())
 			_, _, err = CSRRegistrar.RequestBYOHClientCert(hostName)
 			Expect(err).NotTo(HaveOccurred())
@@ -138,7 +138,7 @@ kovW9X7Ook/tTW0HyX6D6HRciA==
 			// Validate k8s CSR resource
 			Expect(ByohCSR.Spec.SignerName).Should(Equal(certv1.KubeAPIServerClientSignerName))
 			Expect(ByohCSR.Spec.Usages).Should(Equal([]certv1.KeyUsage{certv1.UsageClientAuth}))
-			Expect(*ByohCSR.Spec.ExpirationSeconds).Should(Equal(int32(registration.ExpirationSeconds)))
+			Expect(*ByohCSR.Spec.ExpirationSeconds).Should(Equal(int32((time.Hour * 24).Seconds())))
 			// Validate Certificate Request
 			pemData, _ := pem.Decode(ByohCSR.Spec.Request)
 			Expect(pemData).ToNot(Equal(nil))
@@ -157,7 +157,7 @@ kovW9X7Ook/tTW0HyX6D6HRciA==
 			Expect(err).NotTo(HaveOccurred())
 			_, err = k8sClientSet.CertificatesV1().CertificateSigningRequests().Create(ctx, byohCSR, metav1.CreateOptions{})
 			Expect(err).ShouldNot(HaveOccurred())
-			CSRRegistrar, err := registration.NewByohCSR(cfg, klogr.New())
+			CSRRegistrar, err := registration.NewByohCSR(cfg, klogr.New(), int64((time.Hour * 24).Seconds()))
 			Expect(err).ShouldNot(HaveOccurred())
 			_, _, err = CSRRegistrar.RequestBYOHClientCert(hostName)
 			Expect(err).Should(HaveOccurred())
@@ -167,7 +167,7 @@ kovW9X7Ook/tTW0HyX6D6HRciA==
 		})
 		It("should timeout if the CSR is not approved", func() {
 			registration.CSRApprovalTimeout = time.Second * 5
-			CSRRegistrar, err := registration.NewByohCSR(cfg, klogr.New())
+			CSRRegistrar, err := registration.NewByohCSR(cfg, klogr.New(), int64((time.Hour * 24).Seconds()))
 			Expect(err).ShouldNot(HaveOccurred())
 			err = CSRRegistrar.BootstrapKubeconfig(hostName)
 			Expect(err).Should(HaveOccurred())
@@ -200,7 +200,7 @@ kovW9X7Ook/tTW0HyX6D6HRciA==
 				}
 			}()
 			registration.ConfigPath = "/non-existent-mount/config"
-			CSRRegistrar, err := registration.NewByohCSR(cfg, klogr.New())
+			CSRRegistrar, err := registration.NewByohCSR(cfg, klogr.New(), int64((time.Hour * 24).Seconds()))
 			Expect(err).ShouldNot(HaveOccurred())
 			err = CSRRegistrar.BootstrapKubeconfig(hostName)
 			Expect(err).Should(HaveOccurred())
@@ -232,7 +232,7 @@ kovW9X7Ook/tTW0HyX6D6HRciA==
 					return
 				}
 			}()
-			CSRRegistrar, err := registration.NewByohCSR(cfg, klogr.New())
+			CSRRegistrar, err := registration.NewByohCSR(cfg, klogr.New(), int64((time.Hour * 24).Seconds()))
 			Expect(err).ShouldNot(HaveOccurred())
 			err = CSRRegistrar.BootstrapKubeconfig(hostName)
 			Expect(err).ShouldNot(HaveOccurred())

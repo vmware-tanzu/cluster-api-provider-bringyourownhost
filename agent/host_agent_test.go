@@ -507,6 +507,85 @@ var _ = Describe("Agent", func() {
 		})
 	})
 
+	FContext("When host agent enables certificate rotation", func() {
+		var (
+			ns               *corev1.Namespace
+			ctx              context.Context
+			hostName         string
+			runner           *e2e.ByoHostRunner
+			byoHostContainer *container.ContainerCreateCreatedBody
+			output           dockertypes.HijackedResponse
+		)
+
+		BeforeEach(func() {
+			ns = builder.Namespace("testns").Build()
+			ctx = context.TODO()
+			Expect(k8sClient.Create(ctx, ns)).NotTo(HaveOccurred(), "failed to create test namespace")
+
+			var err error
+			hostName, err = os.Hostname()
+			Expect(err).NotTo(HaveOccurred())
+
+			runner = setupTestInfra(ctx, hostName, getKubeConfig().Name(), ns)
+		})
+
+		AfterEach(func() {
+			cleanup(runner.Context, byoHostContainer, ns, agentLogFile)
+		})
+
+		JustAfterEach(func() {
+			if CurrentGinkgoTestDescription().Failed {
+				e2e.ShowFileContent(agentLogFile)
+			}
+		})
+		It("should create not renew certificate if more that 20 percent of time remains", func() {
+			runner.CommandArgs["--bootstrap-kubeconfig"] = "/root/config"
+			runner.CommandArgs["--certExpiryDuration"] = "600"
+			byoHostContainer, err := runner.SetupByoDockerHost()
+			Expect(err).NotTo(HaveOccurred())
+
+			// start agent
+			output, _, err = runner.ExecByoDockerHost(byoHostContainer)
+			Expect(err).NotTo(HaveOccurred())
+			defer output.Close()
+			f := e2e.WriteDockerLog(output, agentLogFile)
+			defer func() {
+				deferredErr := f.Close()
+				if deferredErr != nil {
+					e2e.Showf("error closing file %s: %v", agentLogFile, deferredErr)
+				}
+			}()
+
+			// Approve CSR
+			Eventually(func() (done bool) {
+				byohCSR, err := clientSet.CertificatesV1().CertificateSigningRequests().Get(ctx, fmt.Sprintf(registration.ByohCSRNameFormat, hostName), metav1.GetOptions{})
+				if err != nil {
+					return false
+				}
+				byohCSR.Status.Conditions = append(byohCSR.Status.Conditions, certv1.CertificateSigningRequestCondition{
+					Type:    certv1.CertificateApproved,
+					Reason:  "approved",
+					Message: "approved",
+					Status:  corev1.ConditionTrue,
+				})
+				_, err = clientSet.CertificatesV1().CertificateSigningRequests().UpdateApproval(ctx, fmt.Sprintf(registration.ByohCSRNameFormat, hostName), byohCSR, metav1.UpdateOptions{})
+				return err == nil
+			}, time.Second*5, time.Second*1).Should(BeTrue())
+
+			Eventually(func() (done bool) {
+				_, err := os.Stat(agentLogFile)
+				if err == nil {
+					data, err := os.ReadFile(agentLogFile)
+					fmt.Println(string(data))
+					if err == nil && strings.Contains(string(data), "\"msg\"=\"certificate expired. Creating new certificate.\"") {
+						return true
+					}
+				}
+				return false
+			}, time.Second*5, time.Second*1).Should(BeTrue())
+		})
+	})
+
 	Context("When the host agent is executed with --bootstrap-kubeconfig", func() {
 
 		var (
