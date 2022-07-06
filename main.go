@@ -66,7 +66,7 @@ func setFlags() {
 // main() will have lots of 'if', '&&' and '||' which will
 // increase its cyclometric complexity. Ignoring it for now.
 
-// nolint: funlen
+// nolint: funlen, gocyclo
 func main() {
 	setFlags()
 	ctrl.SetLogger(klogr.New())
@@ -153,6 +153,10 @@ func main() {
 		Scheme: mgr.GetScheme(),
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "BootstrapKubeconfig")
+		os.Exit(1)
+	}
+	if err = (&infrastructurev1beta1.BootstrapKubeconfig{}).SetupWebhookWithManager(mgr); err != nil {
+		setupLog.Error(err, "unable to create webhook", "webhook", "BootstrapKubeconfig")
 		os.Exit(1)
 	}
 	//+kubebuilder:scaffold:builder

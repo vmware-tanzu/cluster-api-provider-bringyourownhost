@@ -835,7 +835,7 @@ var _ = Describe("Controllers/ByomachineController", func() {
 
 			It("should fail create installer config from the template", func() {
 				_, err := reconciler.Reconcile(ctx, reconcile.Request{NamespacedName: byoMachineLookupKey})
-				Expect(err).Should(MatchError(fmt.Sprintf("k8sinstallerconfigtemplates.infrastructure.cluster.x-k8s.io \"%s\" not found", defaultK8sInstallerConfigTemplateName)))
+				Expect(err).Should(MatchError(fmt.Sprintf("k8sinstallerconfigtemplates.infrastructure.cluster.x-k8s.io %q not found", defaultK8sInstallerConfigTemplateName)))
 
 				createdK8sInstallerConfig := &infrastructurev1beta1.K8sInstallerConfig{}
 				err = k8sClientUncached.Get(ctx, byoMachineLookupKey, createdK8sInstallerConfig)
