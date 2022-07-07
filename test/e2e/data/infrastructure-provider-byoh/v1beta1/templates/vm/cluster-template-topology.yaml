@@ -21,7 +21,7 @@ spec:
     version: ${KUBERNETES_VERSION}
     controlPlane:
       metadata: {}
-      replicas: 1
+      replicas: ${CONTROL_PLANE_MACHINE_COUNT}
     variables:
       - name: bundleLookupBaseRegistry
         value: "projects.registry.vmware.com/cluster_api_provider_bringyourownhost"
@@ -84,5 +84,5 @@ spec:
         - class: ${CLUSTER_CLASS_NAME}-worker
           metadata: { }
           name: md-0
-          replicas: 1
+          replicas: ${WORKER_MACHINE_COUNT}
 ---
