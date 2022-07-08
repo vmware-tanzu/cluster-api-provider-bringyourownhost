@@ -22,7 +22,6 @@ var _ = Describe("ByohostWebhook", func() {
 	Context("When ByoHost gets a delete request", func() {
 		var (
 			byoHost *byohv1beta1.ByoHost
-			ctx     context.Context
 		)
 		BeforeEach(func() {
 			ctx = context.Background()
@@ -98,7 +97,6 @@ var _ = Describe("ByohostWebhook", func() {
 	Context("When ByoHost gets a create request", func() {
 		var (
 			byoHost *byohv1beta1.ByoHost
-			ctx     context.Context
 		)
 		BeforeEach(func() {
 			ctx = context.Background()
@@ -130,7 +128,6 @@ var _ = Describe("ByohostWebhook", func() {
 	Context("When ByoHost gets a update request", func() {
 		var (
 			byoHost *byohv1beta1.ByoHost
-			ctx     context.Context
 		)
 		BeforeEach(func() {
 			ctx = context.Background()
