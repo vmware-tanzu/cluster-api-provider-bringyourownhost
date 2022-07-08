@@ -226,7 +226,12 @@ NAME                                                          STATUS     ROLES  
 byoh-cluster-8siai8                                           Ready      master   5m   v1.23.5
 ```
 
+## Additional: Running host-agent as a systemd service
+You can use the script `hack/install-host-agent-service.sh` to start the agent as a systemd service that restarts the agent whenever the kubeconfig changes. This can be very helpful when there are certain changes done in the kubeconfig, like certificate renewal or rotation, which takes effect after restarting the manager and that can lead to termination of the process. This script allows the host agent service to be restarted after process termination, and a watcher service observes the kubeconfig for changes. After the change is done and detected by the watcher, the agent service is restarted. This script requires superuser privillages for its execution.
 
+```shell
+./install-host-agent-service.sh path/to/agent/binary
+```
 
 <!-- References -->
 [cluster-api-book]: https://cluster-api.sigs.k8s.io/

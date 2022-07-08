@@ -6,7 +6,6 @@ package main
 
 import (
 	"context"
-	"fmt"
 	"go/build"
 	"io/ioutil"
 	"os"
@@ -162,7 +161,6 @@ func setupTestInfra(ctx context.Context, hostname, kubeconfig string, namespace 
 }
 
 func cleanup(ctx context.Context, byoHostContainer *container.ContainerCreateCreatedBody, namespace *corev1.Namespace, agentLogFile string) {
-	fmt.Println("Cleanup called")
 	err := dockerClient.ContainerStop(ctx, byoHostContainer.ID, nil)
 	Expect(err).NotTo(HaveOccurred())
 

@@ -87,7 +87,7 @@ func setupflags() {
 	klog.ClearLogger()
 
 	flag.StringVar(&namespace, "namespace", "default", "Namespace in the management cluster where you would like to register this host")
-	flag.Int64Var(&certExpiryDuration, "certExpiryDuration", registration.ExpirationSeconds, "Duration for the expiration of the host certificates")
+	flag.Int64Var(&certExpiryDuration, "certExpiryDuration", registration.ExpirationSeconds, "Duration (in seconds) for the expiration of the host certificates")
 	flag.Var(&labels, "label", "labels to attach to the ByoHost CR in the form labelname=labelVal for e.g. '--label site=apac --label cores=2'")
 	flag.StringVar(&metricsbindaddress, "metricsbindaddress", ":8080", "metricsbindaddress is the TCP address that the controller should bind to for serving prometheus metrics.It can be set to \"0\" to disable the metrics serving")
 	flag.StringVar(&downloadpath, "downloadpath", "/var/lib/byoh/bundles", "File System path to keep the downloads")
@@ -152,6 +152,7 @@ func main() {
 		logger.Error(err, "could not determine hostname")
 		return
 	}
+
 	_, err = os.Stat(registration.GetBYOHConfigPath())
 	// Enable bootstrap flow if --bootstrap-kubeconfig is provided
 	// and config doesn't already exists in ~/.byoh/
@@ -162,16 +163,8 @@ func main() {
 		}
 	}
 	// Handle restart flow or if the ~/.byoh/config already exists
-	config, err := registration.LoadRESTClientConfig(registration.GetBYOHConfigPath())
-	if err != nil {
-		logger.Error(err, "client config load failed")
-		os.Exit(1)
-	}
-	k8sClient, err := client.New(config, client.Options{Scheme: scheme})
-	if err != nil {
-		logger.Error(err, "k8s client creation failed")
-		os.Exit(1)
-	}
+	config := getConfig(logger)
+	k8sClient := getClient(logger, config)
 	registration.LocalHostRegistrar = &registration.HostRegistrar{K8sClient: k8sClient}
 	err = registration.LocalHostRegistrar.Register(hostName, namespace, labels)
 	if err != nil {
@@ -179,8 +172,17 @@ func main() {
 		return
 	}
 
-	// Start certificate rotation goroutine
-	go certificateRotation(logger, hostName, config)
+	// Start certificate rotation goroutine.
+	// This is behind a feature flag for now. Set 'CERTIFICATE_ROTATION=true' to enable it.
+	if os.Getenv("CERTIFICATE_ROTATION") == "true" {
+		go func() {
+			err = certificateRotation(logger, hostName, config)
+			if err != nil {
+				logger.Error(err, "certificate rotation failed")
+				return
+			}
+		}()
+	}
 
 	mgr, err := ctrl.NewManager(config, ctrl.Options{
 		Scheme:    scheme,
@@ -242,8 +244,8 @@ func handleBootstrapFlow(logger logr.Logger, hostName string) error {
 }
 
 func certificateRotation(logger logr.Logger, hostName string, config *rest.Config) error {
+	var pollDuration = 5 * time.Second
 	for {
-		logger.Info("inside cert rotation goroutine")
 		block, _ := pem.Decode(config.CertData)
 		if block == nil || block.Type != "CERTIFICATE" {
 			logger.Info("failed to decode PEM block containing certificate")
@@ -257,18 +259,38 @@ func certificateRotation(logger logr.Logger, hostName string, config *rest.Confi
 		}
 
 		totalTimeCert := cert.NotAfter.Sub(cert.NotBefore)
-		// if less than 20% time left, renew the certs
-		if time.Now().After(cert.NotAfter.Add(totalTimeCert * 4 / -5)) {
+
+		// if less than 20% time left, renew the certs.
+		// https://github.com/kubernetes-sigs/cluster-api/blob/main/docs/proposals/20210222-kubelet-authentication.md#kubelet-authenticator-flow
+		if time.Now().After(cert.NotAfter.Add(totalTimeCert / -5)) {
 			logger.Info("certificate expiration time left is less than 20%, renewing")
 			if err = handleBootstrapFlow(logger, hostName); err != nil {
 				logger.Error(err, "bootstrap flow failed")
-				// return err
 			}
 		} else {
-			logger.Info("certificate are valid", "certNotAfer", cert.NotAfter)
-			logger.Info("certificate are valid", "certNotBefore", cert.NotBefore)
 			logger.Info("certificate are valid", "will be renewed after", cert.NotAfter.Add(totalTimeCert/-5))
 		}
-		time.Sleep(4 * time.Second)
+
+		// Poll after every few seconds
+		time.Sleep(pollDuration)
 	}
+}
+
+func getConfig(logger logr.Logger) *rest.Config {
+	config, err := registration.LoadRESTClientConfig(registration.GetBYOHConfigPath())
+	if err != nil {
+		logger.Error(err, "client config load failed")
+		os.Exit(1)
+	}
+	return config
+}
+
+func getClient(logger logr.Logger, config *rest.Config) client.Client {
+	k8sClient, err := client.New(config, client.Options{Scheme: scheme})
+	if err != nil {
+		logger.Error(err, "k8s client creation failed")
+		os.Exit(1)
+	}
+
+	return k8sClient
 }
