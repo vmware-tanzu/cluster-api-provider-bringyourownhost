@@ -11,6 +11,7 @@ import (
 	. "github.com/onsi/gomega"
 	byohv1beta1 "github.com/vmware-tanzu/cluster-api-provider-bringyourownhost/apis/infrastructure/v1beta1"
 	"github.com/vmware-tanzu/cluster-api-provider-bringyourownhost/test/builder"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/cluster-api/util/patch"
 )
@@ -196,6 +197,51 @@ var _ = Describe("BootstrapKubeconfig Webhook", func() {
 			createdBootstrapKubeconfig.Spec.APIServer = "https://1.2.3.4:5678"
 			err = ph.Patch(ctx, createdBootstrapKubeconfig)
 			Expect(err).NotTo(HaveOccurred())
+		})
+	})
+
+	Context("When BootstrapKubeconfig gets a delete request", func() {
+		var (
+			createdBootstrapKubeconfig *byohv1beta1.BootstrapKubeconfig
+			namespacedName             types.NamespacedName
+		)
+		BeforeEach(func() {
+			// use from config of envtest
+			testCADataValid := b64.StdEncoding.EncodeToString(cfg.CAData)
+
+			bootstrapKubeconfig = builder.BootstrapKubeconfig(defaultNamespace, testBootstrapKubeconfigName).
+				WithServer(testServerValid).
+				WithCAData(testCADataValid).
+				Build()
+			err = k8sClient.Create(ctx, bootstrapKubeconfig)
+			Expect(err).NotTo(HaveOccurred())
+
+			createdBootstrapKubeconfig = &byohv1beta1.BootstrapKubeconfig{}
+			namespacedName = types.NamespacedName{Name: bootstrapKubeconfig.Name, Namespace: defaultNamespace}
+			Eventually(func() error {
+				err = k8sClient.Get(ctx, namespacedName, createdBootstrapKubeconfig)
+				if err != nil {
+					return err
+				}
+				return nil
+			}).Should(BeNil())
+
+		})
+
+		It("should delete the BootstrapKubeconfig instance", func() {
+			err = k8sClient.Delete(ctx, createdBootstrapKubeconfig)
+			Expect(err).NotTo(HaveOccurred())
+
+			deletedBootstrapKubeconfig := &byohv1beta1.BootstrapKubeconfig{}
+			Eventually(func() bool {
+				err = k8sClient.Get(ctx, namespacedName, deletedBootstrapKubeconfig)
+				if err != nil {
+					if apierrors.IsNotFound(err) {
+						return true
+					}
+				}
+				return false
+			}).Should(BeTrue())
 		})
 	})
 })

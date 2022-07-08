@@ -65,7 +65,6 @@ func (r *BootstrapKubeconfig) ValidateUpdate(old runtime.Object) error {
 func (r *BootstrapKubeconfig) ValidateDelete() error {
 	bootstrapkubeconfiglog.Info("validate delete", "name", r.Name)
 
-	// TODO(user): fill in your validation logic upon object update.
 	return nil
 }
 
@@ -75,7 +74,7 @@ func (r *BootstrapKubeconfig) validateAPIServer() error {
 	}
 
 	parsedURL, err := url.Parse(r.Spec.APIServer)
-	if err != nil || parsedURL.Host == "" || parsedURL.Scheme != APIServerURLScheme || parsedURL.Port() == "" {
+	if err != nil || !r.isURLValid(parsedURL) {
 		return field.Invalid(field.NewPath("spec").Child("apiserver"), r.Spec.APIServer, "APIServer is not of the format https://hostname:port")
 	}
 	return nil
@@ -97,4 +96,11 @@ func (r *BootstrapKubeconfig) validateCAData() error {
 	}
 
 	return nil
+}
+
+func (r *BootstrapKubeconfig) isURLValid(parsedURL *url.URL) bool {
+	if parsedURL.Host == "" || parsedURL.Scheme != APIServerURLScheme || parsedURL.Port() == "" {
+		return false
+	}
+	return true
 }
