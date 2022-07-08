@@ -74,7 +74,10 @@ func (r *BootstrapKubeconfig) validateAPIServer() error {
 	}
 
 	parsedURL, err := url.Parse(r.Spec.APIServer)
-	if err != nil || !r.isURLValid(parsedURL) {
+	if err != nil {
+		return field.Invalid(field.NewPath("spec").Child("apiserver"), r.Spec.APIServer, "APIServer URL is not valid")
+	}
+	if !r.isURLValid(parsedURL) {
 		return field.Invalid(field.NewPath("spec").Child("apiserver"), r.Spec.APIServer, "APIServer is not of the format https://hostname:port")
 	}
 	return nil

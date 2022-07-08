@@ -24,6 +24,7 @@ var _ = Describe("BootstrapKubeconfig Webhook", func() {
 		defaultNamespace            = "default"
 		testBootstrapKubeconfigName = "test-bootstrap-kubeconfig"
 		testServerEmpty             = ""
+		testServerInvalidURL        = "htt p://test.com"
 		testServerWithoutScheme     = "abc.com"
 		testServerWithoutHostname   = "https://test-server"
 		testServerWithoutPort       = "https://test.com"
@@ -33,6 +34,15 @@ var _ = Describe("BootstrapKubeconfig Webhook", func() {
 		testPEMDataInvalid          = b64.StdEncoding.EncodeToString([]byte(testCADataInvalid))
 	)
 	Context("When BootstrapKubeconfig gets a create request", func() {
+
+		It("should reject the request if APIServer is not a valid URL", func() {
+			bootstrapKubeconfig = builder.BootstrapKubeconfig(defaultNamespace, testBootstrapKubeconfigName).
+				WithServer(testServerInvalidURL).
+				Build()
+			err = k8sClient.Create(ctx, bootstrapKubeconfig)
+			Expect(err).To(HaveOccurred())
+			Expect(err).To(MatchError(fmt.Sprintf("admission webhook \"vbootstrapkubeconfig.kb.io\" denied the request: spec.apiserver: Invalid value: %q: APIServer URL is not valid", testServerInvalidURL)))
+		})
 
 		It("should reject the request if APIServer field is empty", func() {
 			bootstrapKubeconfig = builder.BootstrapKubeconfig(defaultNamespace, testBootstrapKubeconfigName).
