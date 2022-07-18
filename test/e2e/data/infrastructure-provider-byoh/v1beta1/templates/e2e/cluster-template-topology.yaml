@@ -11,10 +11,10 @@ spec:
   clusterNetwork:
     services:
       cidrBlocks:
-      - 10.128.0.0/12
+        - 10.128.0.0/12
     pods:
       cidrBlocks:
-      - 192.168.0.0/16
+        - 192.168.0.0/16
     serviceDomain: cluster.local
   topology:
     class: quickstart
@@ -85,4 +85,3 @@ spec:
           metadata: { }
           name: md-0
           replicas: ${WORKER_MACHINE_COUNT}
----

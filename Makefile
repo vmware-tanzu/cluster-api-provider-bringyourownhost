@@ -226,8 +226,9 @@ build-release-artifacts: build-cluster-templates build-infra-yaml build-metadata
 
 build-cluster-templates: $(RELEASE_DIR) cluster-templates
 	cp $(BYOH_TEMPLATES)/v1beta1/templates/docker/cluster-template.yaml $(RELEASE_DIR)/cluster-template-docker.yaml
+	cp $(BYOH_TEMPLATES)/v1beta1/templates/docker/cluster-template-topology.yaml $(RELEASE_DIR)/cluster-template-topology-docker.yaml
 	cp $(BYOH_TEMPLATES)/v1beta1/templates/vm/cluster-template.yaml $(RELEASE_DIR)/cluster-template.yaml
-
+	cp $(BYOH_TEMPLATES)/v1beta1/templates/vm/cluster-template-topology.yaml $(RELEASE_DIR)/cluster-template-topology.yaml
 
 build-infra-yaml:kustomize # Generate infrastructure-components.yaml for the provider
 	cd config/manager && $(KUSTOMIZE) edit set image gcr.io/k8s-staging-cluster-api/cluster-api-byoh-controller=${IMG}
