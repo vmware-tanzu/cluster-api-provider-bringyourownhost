@@ -3,6 +3,13 @@ name: e2e-suite
 on:
   pull_request:
     branches: [ main ]
+    paths-ignore:
+      - '*.md'
+      - 'docs/**'
+      - 'LICENSE'
+      - 'NOTICE'
+      - 'PROJECT'
+      - 'SECURITY_CONTACTS'
 
 jobs:
   e2e-pr-blocking:

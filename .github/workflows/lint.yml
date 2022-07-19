@@ -3,6 +3,13 @@ name: golangci-lint
 on:
   pull_request:
     branches: [ main ]
+    paths-ignore:
+      - '*.md'
+      - 'docs/**'
+      - 'LICENSE'
+      - 'NOTICE'
+      - 'PROJECT'
+      - 'SECURITY_CONTACTS'
 
 jobs:
   golangci:
