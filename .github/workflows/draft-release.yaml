@@ -31,7 +31,11 @@ jobs:
           files: |
             _dist/byoh-hostagent-linux-amd64
             _dist/cluster-template.yaml
+            _dist/cluster-template-topology.yaml
+            _dist/clusterclass-quickstart.yaml
             _dist/cluster-template-docker.yaml
+            _dist/cluster-template-topology-docker.yaml
+            _dist/clusterclass-quickstart-docker.yaml
             _dist/infrastructure-components.yaml
             _dist/metadata.yaml
         env:
