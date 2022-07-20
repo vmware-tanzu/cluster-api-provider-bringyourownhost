@@ -2065,8 +2065,9 @@ k8s.io/component-base v0.21.0/go.mod h1:qvtjz6X0USWXbgmbfXR+Agik4RZ3jv2Bgr5QnZzd
 k8s.io/component-base v0.22.5/go.mod h1:VK3I+TjuF9eaa+Ln67dKxhGar5ynVbwnGrUiNF4MqCI=
 k8s.io/component-base v0.23.0/go.mod h1:DHH5uiFvLC1edCpvcTDV++NKULdYYU6pR9Tt3HIKMKI=
 k8s.io/component-base v0.23.5/go.mod h1:c5Nq44KZyt1aLl0IpHX82fhsn84Sb0jjzwjpcA42bY0=
-k8s.io/component-base v0.24.1 h1:APv6W/YmfOWZfo+XJ1mZwep/f7g7Tpwvdbo9CQLDuts=
 k8s.io/component-base v0.24.1/go.mod h1:DW5vQGYVCog8WYpNob3PMmmsY8A3L9QZNg4j/dV3s38=
+k8s.io/component-base v0.24.3 h1:u99WjuHYCRJjS1xeLOx72DdRaghuDnuMgueiGMFy1ec=
+k8s.io/component-base v0.24.3/go.mod h1:bqom2IWN9Lj+vwAkPNOv2TflsP1PeVDIwIN0lRthxYY=
 k8s.io/component-helpers v0.23.0/go.mod h1:liXMh6FZS4qamKtMJQ7uLHnFe3tlC86RX5mJEk/aerg=
 k8s.io/component-helpers v0.24.1/go.mod h1:q5Z1pWV/QfX9ThuNeywxasiwkLw9KsR4Q9TAOdb/Y3s=
 k8s.io/controller-manager v0.21.0/go.mod h1:Ohy0GRNRKPVjB8C8G+dV+4aPn26m8HYUI6ejloUBvUA=
