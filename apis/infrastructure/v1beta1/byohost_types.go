@@ -50,6 +50,14 @@ type HostInfo struct {
 
 	// The Architecture reported by the host.
 	Architecture string `json:"architecture,omitempty"`
+
+	// TODO-OBSERVABILITY - Task1
+	// Add static resource footprint fields
+	// Add fields for CPU, Memory
+
+	// TODO-OBSERVABILITY - Task2
+	// Add runtime resource footprint fields
+	// Add fields for CPU, Memory
 }
 
 // ByoHostStatus defines the observed state of ByoHost
@@ -71,6 +79,12 @@ type ByoHostStatus struct {
 	// network interfaces.
 	// +optional
 	Network []NetworkStatus `json:"network,omitempty"`
+
+	// TODO-OBSERVABILITY - Task3
+	// Add last status reported time field
+
+	// TODO-OBSERVABILITY - Task3
+	// Add Health field
 }
 
 //+kubebuilder:object:root=true
@@ -79,8 +93,13 @@ type ByoHostStatus struct {
 //+kubebuilder:printcolumn:name="OSName",type="string",JSONPath=`.status.hostinfo.osname`
 //+kubebuilder:printcolumn:name="OSImage",type="string",JSONPath=`.status.hostinfo.osimage`
 //+kubebuilder:printcolumn:name="Arch",type="string",JSONPath=`.status.hostinfo.architecture`
-
+// TODO-OBSERVABILITY - Task1
+// Add kubebuilder printcolumn marker for static resource footprint fields
+// TODO-OBSERVABILITY - Task2
+// Add kubebuilder printcolumn marker for runtime resource footprint fields
 // ByoHost is the Schema for the byohosts API
+// TODO-OBSERVABILITY - Task3
+// Add kubebuilder printcolumn marker for last status reported time field
 type ByoHost struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`

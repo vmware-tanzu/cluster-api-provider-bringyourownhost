@@ -87,6 +87,9 @@ func (r *HostReconciler) reconcileNormal(ctx context.Context, byoHost *infrastru
 	logger := ctrl.LoggerFrom(ctx)
 	logger = logger.WithValues("ByoHost", byoHost.Name)
 	logger.Info("reconcile normal")
+	// TODO-OBSERVABILITY - Task2
+	// Collect and add runtime resource footprint fields
+	// Requeue the request at 1min interval
 	if byoHost.Status.MachineRef == nil {
 		logger.Info("Machine ref not yet set")
 		conditions.MarkFalse(byoHost, infrastructurev1beta1.K8sNodeBootstrapSucceeded, infrastructurev1beta1.WaitingForMachineRefReason, clusterv1.ConditionSeverityInfo, "")

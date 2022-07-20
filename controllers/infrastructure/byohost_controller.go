@@ -36,6 +36,12 @@ type ByoHostReconciler struct {
 // - https://pkg.go.dev/sigs.k8s.io/controller-runtime@v0.8.3/pkg/reconcile
 func (r *ByoHostReconciler) Reconcile(ctx context.Context, req ctrl.Request) (_ ctrl.Result, reterr error) {
 	_ = log.FromContext(ctx)
+	// TODO-OBSERVABILITY - Task3
+	// Add logic behind an environment flag to deduce/update health of a machine based
+	// on last health status reported time
+
+	// TODO-OBSERVABILITY - Task4
+	// Expose static, runtime resource footprint metrics
 	return ctrl.Result{}, nil
 }
 
