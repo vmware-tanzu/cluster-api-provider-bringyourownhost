@@ -19,4 +19,7 @@ func init() {
 
 // defaultClusterAPIBYOHFeatureGates consists of all known cluster-api-byoh feature keys.
 // To add a new feature, define a key for it above and add it here.
-var defaultClusterAPIBYOHFeatureGates = map[featuregate.Feature]featuregate.FeatureSpec{}
+var defaultClusterAPIBYOHFeatureGates = map[featuregate.Feature]featuregate.FeatureSpec{
+	// TODO-OBSERVABILITY - Task2
+	// Add feature flag for Observability
+}

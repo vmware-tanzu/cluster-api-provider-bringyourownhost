@@ -154,6 +154,8 @@ func (hr *HostRegistrar) getHostInfo() (infrastructurev1beta1.HostInfo, error) {
 	} else {
 		hostInfo.OSImage = distribution
 	}
+	// TODO-OBSERVABILITY - Task1
+	// add static resource footprint fields
 	return hostInfo, nil
 }
 
