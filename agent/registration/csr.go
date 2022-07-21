@@ -51,10 +51,11 @@ type ByohCSR struct {
 	PrivateKey            []byte
 	configPath            string
 	logger                logr.Logger
+	expiryDuration        time.Duration
 }
 
 // NewByohCSR returns a ByohCSR instance
-func NewByohCSR(bootstrapClientConfig *restclient.Config, logger logr.Logger) (*ByohCSR, error) {
+func NewByohCSR(bootstrapClientConfig *restclient.Config, logger logr.Logger, expiryDurationInSeconds int64) (*ByohCSR, error) {
 	bootstrapClient, err := clientset.NewForConfig(bootstrapClientConfig)
 	if err != nil {
 		return nil, err
@@ -64,6 +65,7 @@ func NewByohCSR(bootstrapClientConfig *restclient.Config, logger logr.Logger) (*
 		bootstrapClient:       bootstrapClient,
 		configPath:            GetBYOHConfigPath(),
 		logger:                logger,
+		expiryDuration:        time.Duration(expiryDurationInSeconds) * time.Second,
 	}, nil
 }
 
@@ -114,7 +116,8 @@ func (bcsr *ByohCSR) RequestBYOHClientCert(hostname string) (string, types.UID, 
 	if err != nil {
 		return "", "", fmt.Errorf("error generating csr %s, err=%v", hostname, err)
 	}
-	certTimeToExpire := time.Duration(ExpirationSeconds) * time.Second
+	certTimeToExpire := bcsr.expiryDuration
+	bcsr.logger.Info("certTimeToExpire", "duration", certTimeToExpire)
 	reqName, reqUID, err := csr.RequestCertificate(bcsr.bootstrapClient,
 		csrData,
 		fmt.Sprintf(ByohCSRNameFormat, hostname),
@@ -123,6 +126,7 @@ func (bcsr *ByohCSR) RequestBYOHClientCert(hostname string) (string, types.UID, 
 		[]certv1.KeyUsage{certv1.UsageClientAuth},
 		privateKey)
 	if err != nil {
+		bcsr.logger.Error(err, "in request certificate")
 		return "", "", err
 	}
 	return reqName, reqUID, nil

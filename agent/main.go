@@ -5,11 +5,14 @@ package main
 
 import (
 	"context"
+	"crypto/x509"
+	"encoding/pem"
 	"errors"
 	"flag"
 	"fmt"
 	"os"
 	"strings"
+	"time"
 
 	"github.com/go-logr/logr"
 	pflag "github.com/spf13/pflag"
@@ -23,6 +26,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/fields"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/client-go/rest"
 	klog "k8s.io/klog/v2"
 	"k8s.io/klog/v2/klogr"
 	clusterv1 "sigs.k8s.io/cluster-api/api/v1beta1"
@@ -83,6 +87,7 @@ func setupflags() {
 	klog.ClearLogger()
 
 	flag.StringVar(&namespace, "namespace", "default", "Namespace in the management cluster where you would like to register this host")
+	flag.Int64Var(&certExpiryDuration, "certExpiryDuration", registration.ExpirationSeconds, "Duration (in seconds) for the expiration of the host certificates")
 	flag.Var(&labels, "label", "labels to attach to the ByoHost CR in the form labelname=labelVal for e.g. '--label site=apac --label cores=2'")
 	flag.StringVar(&metricsbindaddress, "metricsbindaddress", ":8080", "metricsbindaddress is the TCP address that the controller should bind to for serving prometheus metrics.It can be set to \"0\" to disable the metrics serving")
 	flag.StringVar(&downloadpath, "downloadpath", "/var/lib/byoh/bundles", "File System path to keep the downloads")
@@ -122,6 +127,7 @@ var (
 	skipInstallation    bool
 	printVersion        bool
 	bootstrapKubeConfig string
+	certExpiryDuration  int64
 )
 
 // TODO - fix logging
@@ -146,6 +152,7 @@ func main() {
 		logger.Error(err, "could not determine hostname")
 		return
 	}
+
 	_, err = os.Stat(registration.GetBYOHConfigPath())
 	// Enable bootstrap flow if --bootstrap-kubeconfig is provided
 	// and config doesn't already exists in ~/.byoh/
@@ -156,21 +163,25 @@ func main() {
 		}
 	}
 	// Handle restart flow or if the ~/.byoh/config already exists
-	config, err := registration.LoadRESTClientConfig(registration.GetBYOHConfigPath())
-	if err != nil {
-		logger.Error(err, "client config load failed")
-		os.Exit(1)
-	}
-	k8sClient, err := client.New(config, client.Options{Scheme: scheme})
-	if err != nil {
-		logger.Error(err, "k8s client creation failed")
-		os.Exit(1)
-	}
+	config := getConfig(logger)
+	k8sClient := getClient(logger, config)
 	registration.LocalHostRegistrar = &registration.HostRegistrar{K8sClient: k8sClient}
 	err = registration.LocalHostRegistrar.Register(hostName, namespace, labels)
 	if err != nil {
 		logger.Error(err, "error registering host %s registration in namespace %s", hostName, namespace)
 		return
+	}
+
+	// Start certificate rotation goroutine.
+	// This is behind a feature flag for now. Set 'CERTIFICATE_ROTATION=true' to enable it.
+	if os.Getenv("CERTIFICATE_ROTATION") == "true" {
+		go func() {
+			err = certificateRotation(logger, hostName, config)
+			if err != nil {
+				logger.Error(err, "certificate rotation failed")
+				return
+			}
+		}()
 	}
 
 	mgr, err := ctrl.NewManager(config, ctrl.Options{
@@ -221,7 +232,7 @@ func handleBootstrapFlow(logger logr.Logger, hostName string) error {
 	if err != nil {
 		return fmt.Errorf("client config load failed: %v", err)
 	}
-	byohCSR, err := registration.NewByohCSR(bootstrapClientConfig, logger)
+	byohCSR, err := registration.NewByohCSR(bootstrapClientConfig, logger, certExpiryDuration)
 	if err != nil {
 		return fmt.Errorf("ByohCSR intialization failed: %v", err)
 	}
@@ -230,4 +241,56 @@ func handleBootstrapFlow(logger logr.Logger, hostName string) error {
 		return fmt.Errorf("kubeconfig generation failed: %v", err)
 	}
 	return nil
+}
+
+func certificateRotation(logger logr.Logger, hostName string, config *rest.Config) error {
+	var pollDuration = 5 * time.Second
+	for {
+		block, _ := pem.Decode(config.CertData)
+		if block == nil || block.Type != "CERTIFICATE" {
+			logger.Info("failed to decode PEM block containing certificate")
+			return nil
+		}
+
+		cert, err := x509.ParseCertificate(block.Bytes)
+		if err != nil {
+			logger.Error(err, "Certifcate parse failed")
+			return err
+		}
+
+		totalTimeCert := cert.NotAfter.Sub(cert.NotBefore)
+
+		// if less than 20% time left, renew the certs.
+		// https://github.com/kubernetes-sigs/cluster-api/blob/main/docs/proposals/20210222-kubelet-authentication.md#kubelet-authenticator-flow
+		if time.Now().After(cert.NotAfter.Add(totalTimeCert / -5)) {
+			logger.Info("certificate expiration time left is less than 20%, renewing")
+			if err = handleBootstrapFlow(logger, hostName); err != nil {
+				logger.Error(err, "bootstrap flow failed")
+			}
+		} else {
+			logger.Info("certificate are valid", "will be renewed after", cert.NotAfter.Add(totalTimeCert/-5))
+		}
+
+		// Poll after every few seconds
+		time.Sleep(pollDuration)
+	}
+}
+
+func getConfig(logger logr.Logger) *rest.Config {
+	config, err := registration.LoadRESTClientConfig(registration.GetBYOHConfigPath())
+	if err != nil {
+		logger.Error(err, "client config load failed")
+		os.Exit(1)
+	}
+	return config
+}
+
+func getClient(logger logr.Logger, config *rest.Config) client.Client {
+	k8sClient, err := client.New(config, client.Options{Scheme: scheme})
+	if err != nil {
+		logger.Error(err, "k8s client creation failed")
+		os.Exit(1)
+	}
+
+	return k8sClient
 }
