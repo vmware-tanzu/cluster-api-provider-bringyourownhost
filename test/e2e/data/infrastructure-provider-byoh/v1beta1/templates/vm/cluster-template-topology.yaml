@@ -17,7 +17,7 @@ spec:
       - "192.168.0.0/16"
     serviceDomain: "cluster.local"
   topology:
-    class: ${CLUSTER_CLASS_NAME}
+    class: quickstart
     version: ${KUBERNETES_VERSION}
     controlPlane:
       metadata: {}
@@ -26,7 +26,7 @@ spec:
       - name: bundleLookupBaseRegistry
         value: "projects.registry.vmware.com/cluster_api_provider_bringyourownhost"
       - name: controlPlaneIpAddr
-        value: ${CONTROL_PLANE_ENDPOINT}
+        value: ${CONTROL_PLANE_ENDPOINT_IP}
       - name: kubeVipPodManifest
         value: |
           apiVersion: v1
@@ -47,7 +47,7 @@ spec:
               - name: vip_leaderelection
                 value: "true"
               - name: vip_address
-                value: ${CONTROL_PLANE_ENDPOINT}
+                value: ${CONTROL_PLANE_ENDPOINT_IP}
               - name: vip_interface
                 value: "{{ .DefaultNetworkInterfaceName }}"
               - name: vip_leaseduration
@@ -81,7 +81,7 @@ spec:
           status: {}
     workers:
       machineDeployments:
-        - class: ${CLUSTER_CLASS_NAME}-worker
+        - class: quickstart-worker
           metadata: { }
           name: md-0
           replicas: ${WORKER_MACHINE_COUNT}
