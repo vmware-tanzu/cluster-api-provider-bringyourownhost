@@ -54,6 +54,9 @@ type HostInfo struct {
 	// TODO-OBSERVABILITY - Task1
 	// Add static resource footprint fields
 	// Add fields for CPU, Memory
+	CPU1 string `json:"cpu1,omitempty"`
+
+	Memory1 string `json:"memory1,omitempty"`
 
 	// TODO-OBSERVABILITY - Task2
 	// Add runtime resource footprint fields
@@ -95,6 +98,8 @@ type ByoHostStatus struct {
 //+kubebuilder:printcolumn:name="Arch",type="string",JSONPath=`.status.hostinfo.architecture`
 // TODO-OBSERVABILITY - Task1
 // Add kubebuilder printcolumn marker for static resource footprint fields
+//+kubebuilder:printcolumn:name="CPU",type="string",JSONPath=`.status.hostinfo.cpu1`
+//+kubebuilder:printcolumn:name="Memory",type="string",JSONPath=`.status.hostinfo.memory1`
 // TODO-OBSERVABILITY - Task2
 // Add kubebuilder printcolumn marker for runtime resource footprint fields
 // ByoHost is the Schema for the byohosts API

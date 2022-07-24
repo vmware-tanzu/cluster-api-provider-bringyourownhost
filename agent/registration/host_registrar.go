@@ -12,8 +12,11 @@ import (
 	"regexp"
 	"runtime"
 	"strings"
+	"time"
 
 	"github.com/jackpal/gateway"
+	"github.com/mackerelio/go-osstat/cpu"
+	"github.com/mackerelio/go-osstat/memory"
 	"github.com/pkg/errors"
 	infrastructurev1beta1 "github.com/vmware-tanzu/cluster-api-provider-bringyourownhost/apis/infrastructure/v1beta1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -156,6 +159,26 @@ func (hr *HostRegistrar) getHostInfo() (infrastructurev1beta1.HostInfo, error) {
 	}
 	// TODO-OBSERVABILITY - Task1
 	// add static resource footprint fields
+	memoryUsed, err := memory.Get()
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "%s\n", err)
+		return hostInfo, errors.Wrap(err, "failed to get memory usage")
+	}
+	hostInfo.Memory1 = fmt.Sprintf("%.2f", float64(memoryUsed.Used)/float64(memoryUsed.Total)*100)
+
+	before, err := cpu.Get()
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "%s\n", err)
+		return hostInfo, errors.Wrap(err, "failed to get CPU usage")
+	}
+	time.Sleep(time.Duration(1) * time.Second)
+	after, err := cpu.Get()
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "%s\n", err)
+		return hostInfo, errors.Wrap(err, "failed to get CPU usage")
+	}
+	total := float64(after.Total - before.Total)
+	hostInfo.CPU1 = fmt.Sprintf("%.2f", float64(after.User-before.User)/total*100)
 	return hostInfo, nil
 }
 
