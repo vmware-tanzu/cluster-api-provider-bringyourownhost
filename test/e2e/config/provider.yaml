@@ -63,7 +63,7 @@ providers:
   - name: byoh
     type: InfrastructureProvider
     versions:
-      - name: v0.1.0
+      - name: v0.2.0
         # Use manifest from source files
         value: ../../../config/default
         type: kustomize
