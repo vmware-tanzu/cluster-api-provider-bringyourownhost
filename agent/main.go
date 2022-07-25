@@ -89,6 +89,7 @@ func setupflags() {
 	flag.BoolVar(&skipInstallation, "skip-installation", false, "If you want to skip installation of the kubernetes component binaries")
 	flag.BoolVar(&printVersion, "version", false, "Print the version of the agent")
 	flag.StringVar(&bootstrapKubeConfig, "bootstrap-kubeconfig", "", "Provide bootstrap kubeconfig for bootstrap token workflow")
+	flag.BoolVar(&enableobservability, "enable-observability", false, "If you want to enable observability for byoh")
 
 	pflag.CommandLine.AddGoFlagSet(flag.CommandLine)
 	hiddenFlags := []string{"log-flush-frequency", "alsologtostderr", "log-backtrace-at", "log-dir", "logtostderr", "stderrthreshold", "vmodule", "azure-container-registry-config",
@@ -122,6 +123,7 @@ var (
 	skipInstallation    bool
 	printVersion        bool
 	bootstrapKubeConfig string
+	enableobservability bool
 )
 
 // TODO - fix logging

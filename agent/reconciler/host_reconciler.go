@@ -7,7 +7,10 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"time"
 
+	"github.com/mackerelio/go-osstat/cpu"
+	"github.com/mackerelio/go-osstat/memory"
 	"github.com/pkg/errors"
 	"github.com/vmware-tanzu/cluster-api-provider-bringyourownhost/agent/cloudinit"
 	"github.com/vmware-tanzu/cluster-api-provider-bringyourownhost/agent/registration"
@@ -90,6 +93,29 @@ func (r *HostReconciler) reconcileNormal(ctx context.Context, byoHost *infrastru
 	// TODO-OBSERVABILITY - Task2
 	// Collect and add runtime resource footprint fields
 	// Requeue the request at 1min interval
+	memoryUsed, err := memory.Get()
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "%s\n", err)
+		return ctrl.Result{}, nil
+	}
+	byoHost.Status.HostDetails.Memory2 = fmt.Sprintf("%.2f", float64(memoryUsed.Used)/float64(memoryUsed.Total)*100)
+
+	before, err := cpu.Get()
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "%s\n", err)
+		return ctrl.Result{}, nil
+	}
+	time.Sleep(time.Duration(1) * time.Second)
+	after, err := cpu.Get()
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "%s\n", err)
+		return ctrl.Result{}, nil
+	}
+	total := float64(after.Total - before.Total)
+	byoHost.Status.HostDetails.CPU2 = fmt.Sprintf("%.2f", float64(after.User-before.User)/total*100)
+
+	byoHost.Status.LastStatusTime = time.Now().String()
+
 	if byoHost.Status.MachineRef == nil {
 		logger.Info("Machine ref not yet set")
 		conditions.MarkFalse(byoHost, infrastructurev1beta1.K8sNodeBootstrapSucceeded, infrastructurev1beta1.WaitingForMachineRefReason, clusterv1.ConditionSeverityInfo, "")
@@ -149,7 +175,7 @@ func (r *HostReconciler) reconcileNormal(ctx context.Context, byoHost *infrastru
 		conditions.MarkTrue(byoHost, infrastructurev1beta1.K8sNodeBootstrapSucceeded)
 	}
 
-	return ctrl.Result{}, nil
+	return ctrl.Result{RequeueAfter: time.Minute, Requeue: true}, nil
 }
 
 func (r *HostReconciler) executeInstallerController(ctx context.Context, byoHost *infrastructurev1beta1.ByoHost) error {

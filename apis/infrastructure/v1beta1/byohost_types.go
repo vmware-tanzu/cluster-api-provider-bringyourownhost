@@ -61,6 +61,9 @@ type HostInfo struct {
 	// TODO-OBSERVABILITY - Task2
 	// Add runtime resource footprint fields
 	// Add fields for CPU, Memory
+	CPU2 string `json:"cpu2,omitempty"`
+
+	Memory2 string `json:"memory2,omitempty"`
 }
 
 // ByoHostStatus defines the observed state of ByoHost
@@ -85,6 +88,7 @@ type ByoHostStatus struct {
 
 	// TODO-OBSERVABILITY - Task3
 	// Add last status reported time field
+	LastStatusTime string `json:"laststatus,omitempty"`
 
 	// TODO-OBSERVABILITY - Task3
 	// Add Health field
@@ -103,8 +107,11 @@ type ByoHostStatus struct {
 // TODO-OBSERVABILITY - Task2
 // Add kubebuilder printcolumn marker for runtime resource footprint fields
 // ByoHost is the Schema for the byohosts API
+//+kubebuilder:printcolumn:name="CPU",type="string",JSONPath=`.status.hostinfo.cpu2`
+//+kubebuilder:printcolumn:name="Memory",type="string",JSONPath=`.status.hostinfo.memory2`
 // TODO-OBSERVABILITY - Task3
 // Add kubebuilder printcolumn marker for last status reported time field
+//+kubebuilder:printcolumn:name="LastStatus",type="string",JSONPath=`.status.laststatus`
 type ByoHost struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
