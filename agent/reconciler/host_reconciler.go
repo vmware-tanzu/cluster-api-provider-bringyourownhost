@@ -15,6 +15,7 @@ import (
 	"github.com/vmware-tanzu/cluster-api-provider-bringyourownhost/agent/cloudinit"
 	"github.com/vmware-tanzu/cluster-api-provider-bringyourownhost/agent/registration"
 	"github.com/vmware-tanzu/cluster-api-provider-bringyourownhost/common"
+	"github.com/vmware-tanzu/cluster-api-provider-bringyourownhost/feature"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/tools/record"
@@ -93,26 +94,29 @@ func (r *HostReconciler) reconcileNormal(ctx context.Context, byoHost *infrastru
 	// TODO-OBSERVABILITY - Task2
 	// Collect and add runtime resource footprint fields
 	// Requeue the request at 1min interval
-	memoryUsed, err := memory.Get()
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "%s\n", err)
-		return ctrl.Result{}, nil
-	}
-	byoHost.Status.HostDetails.Memory2 = fmt.Sprintf("%.2f", float64(memoryUsed.Used)/float64(memoryUsed.Total)*100)
 
-	before, err := cpu.Get()
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "%s\n", err)
-		return ctrl.Result{}, nil
+	if feature.Gates.Enabled(feature.ObservabilityFlag) {
+		memoryUsed, err := memory.Get()
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "%s\n", err)
+			return ctrl.Result{}, nil
+		}
+		byoHost.Status.HostDetails.Memory2 = fmt.Sprintf("%.2f", float64(memoryUsed.Used)/float64(memoryUsed.Total)*100)
+
+		before, err := cpu.Get()
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "%s\n", err)
+			return ctrl.Result{}, nil
+		}
+		time.Sleep(time.Duration(1) * time.Second)
+		after, err := cpu.Get()
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "%s\n", err)
+			return ctrl.Result{}, nil
+		}
+		total := float64(after.Total - before.Total)
+		byoHost.Status.HostDetails.CPU2 = fmt.Sprintf("%.2f", float64(after.User-before.User)/total*100)
 	}
-	time.Sleep(time.Duration(1) * time.Second)
-	after, err := cpu.Get()
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "%s\n", err)
-		return ctrl.Result{}, nil
-	}
-	total := float64(after.Total - before.Total)
-	byoHost.Status.HostDetails.CPU2 = fmt.Sprintf("%.2f", float64(after.User-before.User)/total*100)
 
 	byoHost.Status.LastStatusTime = time.Now().String()
 
