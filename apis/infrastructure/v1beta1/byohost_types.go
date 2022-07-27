@@ -107,8 +107,8 @@ type ByoHostStatus struct {
 // TODO-OBSERVABILITY - Task2
 // Add kubebuilder printcolumn marker for runtime resource footprint fields
 // ByoHost is the Schema for the byohosts API
-//+kubebuilder:printcolumn:name="CPU(usage)",type="string",JSONPath=`.status.hostinfo.cpu2`
-//+kubebuilder:printcolumn:name="Used Space(in GB)",type="string",JSONPath=`.status.hostinfo.memory2`
+//+kubebuilder:printcolumn:name="CPU(usage)",type="string",priority=1,JSONPath=`.status.hostinfo.cpu2`
+//+kubebuilder:printcolumn:name="Used Space(in GB)",type="string",priority=1,JSONPath=`.status.hostinfo.memory2`
 // TODO-OBSERVABILITY - Task3
 // Add kubebuilder printcolumn marker for last status reported time field
 //+kubebuilder:printcolumn:name="LastStatus",type="string",JSONPath=`.status.laststatus`
