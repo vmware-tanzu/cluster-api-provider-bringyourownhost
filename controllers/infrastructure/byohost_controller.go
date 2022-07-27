@@ -5,12 +5,15 @@ package controllers
 
 import (
 	"context"
+	"strconv"
 
 	"k8s.io/apimachinery/pkg/runtime"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/log"
+	"sigs.k8s.io/controller-runtime/pkg/metrics"
 
+	"github.com/prometheus/client_golang/prometheus"
 	infrastructurev1beta1 "github.com/vmware-tanzu/cluster-api-provider-bringyourownhost/apis/infrastructure/v1beta1"
 )
 
@@ -19,6 +22,24 @@ type ByoHostReconciler struct {
 	client.Client
 	Scheme *runtime.Scheme
 }
+
+var (
+	memoryUsageMetric = prometheus.NewGauge(prometheus.GaugeOpts{
+		Name: "memory_usage",
+	})
+
+	memoryTotalMetric = prometheus.NewGauge(prometheus.GaugeOpts{
+		Name: "memory_total",
+	})
+
+	cpuUsageMetric = prometheus.NewGauge(prometheus.GaugeOpts{
+		Name: "cpu_usage",
+	})
+
+	cpuCoreMetric = prometheus.NewGauge(prometheus.GaugeOpts{
+		Name: "cpu_cores",
+	})
+)
 
 //+kubebuilder:rbac:groups=infrastructure.cluster.x-k8s.io,resources=byohosts,verbs=get;list;watch;create;update;patch;delete
 //+kubebuilder:rbac:groups=infrastructure.cluster.x-k8s.io,resources=byohosts/status,verbs=get;update;patch
@@ -42,6 +63,22 @@ func (r *ByoHostReconciler) Reconcile(ctx context.Context, req ctrl.Request) (_ 
 
 	// TODO-OBSERVABILITY - Task4
 	// Expose static, runtime resource footprint metrics
+	byoHost := &infrastructurev1beta1.ByoHost{}
+	err := r.Client.Get(ctx, req.NamespacedName, byoHost)
+	if err != nil {
+		return ctrl.Result{}, err
+	}
+	totalMemory, _ := strconv.ParseFloat(byoHost.Status.HostDetails.Memory1, 64)
+	memoryTotalMetric.Set(totalMemory)
+
+	usedMemory, _ := strconv.ParseFloat(byoHost.Status.HostDetails.Memory2, 64)
+	memoryUsageMetric.Set(usedMemory)
+
+	cpuCores, _ := strconv.ParseFloat(byoHost.Status.HostDetails.CPU1, 64)
+	cpuCoreMetric.Set(cpuCores)
+
+	cpuUsage, _ := strconv.ParseFloat(byoHost.Status.HostDetails.CPU2, 64)
+	cpuUsageMetric.Set(cpuUsage)
 	return ctrl.Result{}, nil
 }
 
@@ -50,4 +87,11 @@ func (r *ByoHostReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&infrastructurev1beta1.ByoHost{}).
 		Complete(r)
+}
+
+func init() {
+	metrics.Registry.MustRegister(memoryUsageMetric)
+	metrics.Registry.MustRegister(memoryTotalMetric)
+	metrics.Registry.MustRegister(cpuCoreMetric)
+	metrics.Registry.MustRegister(cpuUsageMetric)
 }

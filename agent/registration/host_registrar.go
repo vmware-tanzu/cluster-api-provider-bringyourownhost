@@ -7,17 +7,18 @@ import (
 	"context"
 	"fmt"
 	"io/ioutil"
+	"math"
 	"net"
 	"os"
 	"regexp"
 	"runtime"
+	"strconv"
 	"strings"
-	"time"
 
 	"github.com/jackpal/gateway"
-	"github.com/mackerelio/go-osstat/cpu"
 	"github.com/mackerelio/go-osstat/memory"
 	"github.com/pkg/errors"
+	"github.com/shirou/gopsutil/v3/cpu"
 	infrastructurev1beta1 "github.com/vmware-tanzu/cluster-api-provider-bringyourownhost/apis/infrastructure/v1beta1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -164,21 +165,13 @@ func (hr *HostRegistrar) getHostInfo() (infrastructurev1beta1.HostInfo, error) {
 		fmt.Fprintf(os.Stderr, "%s\n", err)
 		return hostInfo, errors.Wrap(err, "failed to get memory usage")
 	}
-	hostInfo.Memory1 = fmt.Sprintf("%.2f", float64(memoryUsed.Used)/float64(memoryUsed.Total)*100)
+	hostInfo.Memory1 = getGB(memoryUsed.Total)
 
-	before, err := cpu.Get()
+	cpuInfos, err := cpu.Info()
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "%s\n", err)
-		return hostInfo, errors.Wrap(err, "failed to get CPU usage")
+		fmt.Printf("get cpu info failed, err:%v", err)
 	}
-	time.Sleep(time.Duration(1) * time.Second)
-	after, err := cpu.Get()
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "%s\n", err)
-		return hostInfo, errors.Wrap(err, "failed to get CPU usage")
-	}
-	total := float64(after.Total - before.Total)
-	hostInfo.CPU1 = fmt.Sprintf("%.2f", float64(after.User-before.User)/total*100)
+	hostInfo.CPU1 = strconv.Itoa(int(cpuInfos[0].Cores))
 	return hostInfo, nil
 }
 
@@ -199,4 +192,10 @@ func getOperatingSystem(f func(string) ([]byte, error)) (string, error) {
 		return strings.Trim(line[0][2], "\""), nil
 	}
 	return "Unknown", nil
+}
+
+func getGB(num uint64) string {
+	val := float64(num) / (math.Pow(1024, 3))
+
+	return strconv.FormatFloat(val, 'f', 2, 64)
 }

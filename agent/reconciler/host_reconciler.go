@@ -6,7 +6,9 @@ package reconciler
 import (
 	"context"
 	"fmt"
+	"math"
 	"os"
+	"strconv"
 	"time"
 
 	"github.com/mackerelio/go-osstat/cpu"
@@ -101,7 +103,7 @@ func (r *HostReconciler) reconcileNormal(ctx context.Context, byoHost *infrastru
 			fmt.Fprintf(os.Stderr, "%s\n", err)
 			return ctrl.Result{}, nil
 		}
-		byoHost.Status.HostDetails.Memory2 = fmt.Sprintf("%.2f", float64(memoryUsed.Used)/float64(memoryUsed.Total)*100)
+		byoHost.Status.HostDetails.Memory2 = getGB(memoryUsed.Used)
 
 		before, err := cpu.Get()
 		if err != nil {
@@ -399,4 +401,10 @@ func (r *HostReconciler) removeAnnotations(ctx context.Context, byoHost *infrast
 
 	// Remove the bundle registry annotation
 	delete(byoHost.Annotations, infrastructurev1beta1.BundleLookupBaseRegistryAnnotation)
+}
+
+func getGB(num uint64) string {
+	val := float64(num) / (math.Pow(1024, 3))
+
+	return strconv.FormatFloat(val, 'f', 2, 64)
 }
