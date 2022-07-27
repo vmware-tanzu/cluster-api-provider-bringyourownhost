@@ -102,13 +102,13 @@ type ByoHostStatus struct {
 //+kubebuilder:printcolumn:name="Arch",type="string",JSONPath=`.status.hostinfo.architecture`
 // TODO-OBSERVABILITY - Task1
 // Add kubebuilder printcolumn marker for static resource footprint fields
-//+kubebuilder:printcolumn:name="CPU",type="string",JSONPath=`.status.hostinfo.cpu1`
-//+kubebuilder:printcolumn:name="Memory",type="string",JSONPath=`.status.hostinfo.memory1`
+//+kubebuilder:printcolumn:name="CPU(cores)",type="string",JSONPath=`.status.hostinfo.cpu1`
+//+kubebuilder:printcolumn:name="Total Space(in GB)",type="string",JSONPath=`.status.hostinfo.memory1`
 // TODO-OBSERVABILITY - Task2
 // Add kubebuilder printcolumn marker for runtime resource footprint fields
 // ByoHost is the Schema for the byohosts API
-//+kubebuilder:printcolumn:name="CPU",type="string",JSONPath=`.status.hostinfo.cpu2`
-//+kubebuilder:printcolumn:name="Memory",type="string",JSONPath=`.status.hostinfo.memory2`
+//+kubebuilder:printcolumn:name="CPU(usage)",type="string",JSONPath=`.status.hostinfo.cpu2`
+//+kubebuilder:printcolumn:name="Used Space(in GB)",type="string",JSONPath=`.status.hostinfo.memory2`
 // TODO-OBSERVABILITY - Task3
 // Add kubebuilder printcolumn marker for last status reported time field
 //+kubebuilder:printcolumn:name="LastStatus",type="string",JSONPath=`.status.laststatus`
