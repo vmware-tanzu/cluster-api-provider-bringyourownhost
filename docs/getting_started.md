@@ -110,7 +110,7 @@ If you are trying this on your own hosts, then for each host
 2. Copy the management cluster `kubeconfig` file as `management-cluster.conf`
 3. Start the agent 
 ```shell
-./byoh-hostagent-linux-amd64 --kubeconfig management-cluster.conf > byoh-agent.log 2>&1 &
+./byoh-hostagent-linux-amd64 --bootstrap-kubeconfig management-cluster.conf > byoh-agent.log 2>&1 &
 ```
 
 ---
@@ -139,11 +139,11 @@ Start the host agent on each of the hosts and keep it running.
 
 ```shell
 export HOST_NAME=host1
-docker exec -it $HOST_NAME sh -c "chmod +x byoh-hostagent && ./byoh-hostagent --kubeconfig management-cluster.conf"
+docker exec -it $HOST_NAME sh -c "chmod +x byoh-hostagent && ./byoh-hostagent --bootstrap-kubeconfig management-cluster.conf"
 
 # do the same for host2 in a separate tab
 export HOST_NAME=host2
-docker exec -it $HOST_NAME sh -c "chmod +x byoh-hostagent && ./byoh-hostagent --kubeconfig management-cluster.conf"
+docker exec -it $HOST_NAME sh -c "chmod +x byoh-hostagent && ./byoh-hostagent --bootstrap-kubeconfig management-cluster.conf"
 ```
 ---
 
@@ -189,6 +189,7 @@ Generate the cluster.yaml for workload cluster
         --worker-machine-count 1 \
         --flavor docker > cluster.yaml
     ```
+To create a cluster with ClusterClass, refer [ClusterClass](https://github.com/vmware-tanzu/cluster-api-provider-bringyourownhost/blob/main/docs/cluster_class.md) documentation.
 
 Inspect and make any changes
 ```shell
