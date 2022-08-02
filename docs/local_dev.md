@@ -89,7 +89,7 @@ CA_CERT=$(kubectl config view --flatten -ojsonpath='{.clusters[0].cluster.certif
 Create a BootstrapKubeconfig CR as follows
 ```shell
 cat <<EOF | kubectl apply -f -
-apiVersion: v1beta1
+apiVersion: infrastructure.cluster.x-k8s.io/v1beta1
 kind: BootstrapKubeconfig
 metadata:
   name: bootstrap-kubeconfig
