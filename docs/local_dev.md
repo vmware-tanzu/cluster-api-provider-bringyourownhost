@@ -78,13 +78,44 @@ Wait for all the resources to come up, status can be viewed in Tilt UI.
 Now that you have a management cluster with Cluster API and BYOHost provider installed, we can start to create a workload
 cluster.
 
+### Generating the Bootstrap Kubeconfig file
+Get the APIServer and Certificate Authority Data info
+
+```shell
+APISERVER=$(kubectl config view -ojsonpath='{.clusters[0].cluster.server}')
+CA_CERT=$(kubectl config view --flatten -ojsonpath='{.clusters[0].cluster.certificate-authority-data}')
+```
+
+Create a BootstrapKubeconfig CR as follows
+```shell
+cat <<EOF | kubectl apply -f -
+apiVersion: infrastructure.cluster.x-k8s.io/v1beta1
+kind: BootstrapKubeconfig
+metadata:
+  name: bootstrap-kubeconfig
+  namespace: default
+spec:
+  apiserver: "$APISERVER"
+  certificate-authority-data: "$CA_CERT"
+EOF
+```
+
+Once the BootstrapKubeconfig CR is created, fetch the object to copy the bootstrap kubeconfig file details from the Status field
+```shell
+kubectl get bootstrapkubeconfig bootstrap-kubeconfig -n default -o json | jq '.status'
+```
+Copy contents into a file called bootstrap-kubeconfig
+
+We need one bootstrap-kubeconfig per host. Create as many bootstrap-kubeconfig files as there are number of hosts (2 for this guide)
+
+
 ### Add a minimum of two hosts to the capacity pool
 
 Create Management Cluster kubeconfig
 ```shell
-cp ~/.kube/config ~/.kube/management-cluster.conf
+cp ~/bootstrap-kubeconfig ~/bootstrap-kubeconfig.conf
 export KIND_IP=$(docker inspect -f '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' kind-control-plane)
-sed -i 's/    server\:.*/    server\: https\:\/\/'"$KIND_IP"'\:6443/g' ~/.kube/management-cluster.conf
+sed -i 's/    server\:.*/    server\: https\:\/\/'"$KIND_IP"'\:6443/g' ~/bootstrap-kubeconfig.conf
 ```
 Generate host-agent binaries
 ```
@@ -105,7 +136,7 @@ docker run --detach --tty --hostname host$i --name host$i --privileged --securit
 echo "Copy agent binary to host $i"
 docker cp bin/byoh-hostagent-linux-amd64 host$i:/byoh-hostagent
 echo "Copy kubeconfig to host $i"
-docker cp ~/.kube/management-cluster.conf host$i:/management-cluster.conf
+docker cp ~/bootstrap-kubeconfig.conf host$i:/bootstrap-kubeconfig.conf
 done
 ```
 
@@ -114,7 +145,7 @@ Start the host agent on the host and keep it running
 ```shell
 docker exec -it $HOST_NAME bin/bash
 
-./byoh-hostagent --kubeconfig management-cluster.conf
+./byoh-hostagent --bootstrap-kubeconfig bootstrap-kubeconfig.conf
 ```
 
 Repeat the same steps with by changing the `HOST_NAME` env variable for all the hosts that you created.

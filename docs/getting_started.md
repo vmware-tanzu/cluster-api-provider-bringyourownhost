@@ -81,6 +81,37 @@ done
 
 ## Register BYOH host to management cluster
 
+
+### Generating the Bootstrap Kubeconfig file
+Get the APIServer and Certificate Authority Data info
+
+```shell
+APISERVER=$(kubectl config view -ojsonpath='{.clusters[0].cluster.server}')
+CA_CERT=$(kubectl config view --flatten -ojsonpath='{.clusters[0].cluster.certificate-authority-data}')
+```
+
+Create a BootstrapKubeconfig CR as follows
+```shell
+cat <<EOF | kubectl apply -f -
+apiVersion: infrastructure.cluster.x-k8s.io/v1beta1
+kind: BootstrapKubeconfig
+metadata:
+  name: bootstrap-kubeconfig
+  namespace: default
+spec:
+  apiserver: "$APISERVER"
+  certificate-authority-data: "$CA_CERT"
+EOF
+```
+
+Once the BootstrapKubeconfig CR is created, fetch the object to copy the bootstrap kubeconfig file details from the Status field
+```shell
+kubectl get bootstrapkubeconfig bootstrap-kubeconfig -n default -o json | jq '.status'
+```
+Copy contents into a file called bootstrap-kubeconfig
+
+We need one bootstrap-kubeconfig per host. Create as many bootstrap-kubeconfig files as there are number of hosts (2 for this guide)
+
 ---
 ### VM Prerequisites
 - The following packages must be pre-installed on the VMs
@@ -106,20 +137,20 @@ $ cat /etc/hosts
 ```
 
 If you are trying this on your own hosts, then for each host
-1. Download the [byoh-hostagent-linux-amd64](https://github.com/vmware-tanzu/cluster-api-provider-bringyourownhost/releases/download/v0.2.0/byoh-hostagent-linux-amd64)
-2. Copy the management cluster `kubeconfig` file as `management-cluster.conf`
+1. Download the [byoh-hostagent-linux-amd64](https://github.com/vmware-tanzu/cluster-api-provider-bringyourownhost/releases/download/v0.3.0/byoh-hostagent-linux-amd64)
+2. Copy the bootstrap-kubeconfig file as `bootstrap-kubeconfig.conf`
 3. Start the agent 
 ```shell
-./byoh-hostagent-linux-amd64 --kubeconfig management-cluster.conf > byoh-agent.log 2>&1 &
+./byoh-hostagent-linux-amd64 --bootstrap-kubeconfig bootstrap-kubeconfig.conf > byoh-agent.log 2>&1 &
 ```
 
 ---
 If you are trying this using the docker containers we started above, then we would first need to prep the kubeconfig to be used from the docker containers. By default, the kubeconfig states that the server is at `127.0.0.1`. We need to swap this out with the kind container IP. 
 
 ```shell
-cp ~/.kube/config ~/.kube/management-cluster.conf
+cp ~/bootstrap-kubeconfig ~/bootstrap-kubeconfig.conf
 export KIND_IP=$(docker inspect -f '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' kind-control-plane)
-sed -i 's/    server\:.*/    server\: https\:\/\/'"$KIND_IP"'\:6443/g' ~/.kube/management-cluster.conf
+sed -i 's/    server\:.*/    server\: https\:\/\/'"$KIND_IP"'\:6443/g' ~/bootstrap-kubeconfig.conf
 ```
 Assuming you have downloaded the `byoh-hostagent-linux-amd64` into your working directory, you can use the following script to start the agent on the containers.
 
@@ -129,7 +160,7 @@ do
 echo "Copy agent binary to host $i"
 docker cp byoh-hostagent-linux-amd64 host$i:/byoh-hostagent
 echo "Copy kubeconfig to host $i"
-docker cp ~/.kube/management-cluster.conf host$i:/management-cluster.conf
+docker cp ~/bootstrap-kubeconfig.conf host$i:/bootstrap-kubeconfig.conf
 done
 ```
 
@@ -139,11 +170,11 @@ Start the host agent on each of the hosts and keep it running.
 
 ```shell
 export HOST_NAME=host1
-docker exec -it $HOST_NAME sh -c "chmod +x byoh-hostagent && ./byoh-hostagent --kubeconfig management-cluster.conf"
+docker exec -it $HOST_NAME sh -c "chmod +x byoh-hostagent && ./byoh-hostagent --bootstrap-kubeconfig bootstrap-kubeconfig.conf"
 
 # do the same for host2 in a separate tab
 export HOST_NAME=host2
-docker exec -it $HOST_NAME sh -c "chmod +x byoh-hostagent && ./byoh-hostagent --kubeconfig management-cluster.conf"
+docker exec -it $HOST_NAME sh -c "chmod +x byoh-hostagent && ./byoh-hostagent --bootstrap-kubeconfig bootstrap-kubeconfig.conf"
 ```
 ---
 
