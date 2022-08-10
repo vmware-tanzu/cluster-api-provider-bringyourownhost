@@ -106,7 +106,7 @@ EOF
 
 Once the BootstrapKubeconfig CR is created, fetch the object to copy the bootstrap kubeconfig file details from the Status field
 ```shell
-kubectl get bootstrapkubeconfig bootstrap-kubeconfig -n default -o json | jq '.status'
+kubectl get bootstrapkubeconfig bootstrap-kubeconfig -n default -o=jsonpath='{.status.bootstrapKubeconfigData}' > ~/bootstrap-kubeconfig
 ```
 Copy contents into a file called bootstrap-kubeconfig
 
