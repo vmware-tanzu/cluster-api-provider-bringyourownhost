@@ -21,10 +21,10 @@ jobs:
     - name: Set up Go
       uses: actions/setup-go@v2
       with:
-        go-version: 1.17
+        go-version: 1.18
 
     - name: Install ginkgo
-      run: go get github.com/onsi/ginkgo/ginkgo@v1.16.5
+      run: go install github.com/onsi/ginkgo/ginkgo@v1.16.5
 
     - name: turn off swap
       run: sudo swapoff -a

@@ -81,7 +81,6 @@ var _ = Describe("Byohost Installer Tests", func() {
 		})
 		It("Should create and rename dir correctly after successful download", func() {
 			bd.repoAddr = "repo.ccoomm/r/"
-			bd.downloadPath = filepath.Join(bd.downloadPath)
 			err := bd.DownloadFromRepo(
 				normalizedOsVersion,
 				k8sVersion,

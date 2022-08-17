@@ -26,9 +26,9 @@ import (
 
 var _ = Describe("CSR Registration", func() {
 	var (
-		ctx      = context.TODO()
-		hostName = "test-host"
-		fileDir  string
+		ctx                = context.TODO()
+		hostName           = "test-host"
+		fileDir            string
 		certExpiryDuration = int64((time.Hour * 24).Seconds())
 	)
 	Context("When bootstrap kubeconfig is provided", func() {
