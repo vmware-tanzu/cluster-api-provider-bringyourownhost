@@ -102,9 +102,8 @@ EOF
 
 Once the BootstrapKubeconfig CR is created, fetch the object to copy the bootstrap kubeconfig file details from the Status field
 ```shell
-kubectl get bootstrapkubeconfig bootstrap-kubeconfig -n default -o json | jq '.status'
+kubectl get bootstrapkubeconfig bootstrap-kubeconfig -n default -o=jsonpath='{.status.bootstrapKubeconfigData}' > ~/bootstrap-kubeconfig.conf
 ```
-Copy contents into a file called bootstrap-kubeconfig
 
 We need one bootstrap-kubeconfig per host. Create as many bootstrap-kubeconfig files as there are number of hosts (2 for this guide)
 
@@ -113,7 +112,6 @@ We need one bootstrap-kubeconfig per host. Create as many bootstrap-kubeconfig f
 
 Create Management Cluster kubeconfig
 ```shell
-cp ~/bootstrap-kubeconfig ~/bootstrap-kubeconfig.conf
 export KIND_IP=$(docker inspect -f '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' kind-control-plane)
 sed -i 's/    server\:.*/    server\: https\:\/\/'"$KIND_IP"'\:6443/g' ~/bootstrap-kubeconfig.conf
 ```
