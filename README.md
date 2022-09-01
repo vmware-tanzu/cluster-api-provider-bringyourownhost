@@ -69,7 +69,7 @@ See also our [contributor guide](CONTRIBUTING.md) and the Kubernetes [community 
 
 ## Project Status
 
-This project is currently a work-in-progress, in an Alpha state, so it may not be production ready. There is no backwards-compatibility guarantee at this point. For more details on the roadmap and upcoming features, check out [the project's issue tracker on GitHub][issue].
+This project is currently a work-in-progress, in an Alpha state, so it may not be production ready. There is no backwards-compatibility guarantee at this point. For more details on the roadmap and upcoming features, check out the project's [issue](https://github.com/vmware-tanzu/cluster-api-provider-bringyourownhost/issues) tracker on GitHub.
 
 
 ## Getting involved and contributing
