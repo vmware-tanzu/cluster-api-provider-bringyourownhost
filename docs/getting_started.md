@@ -202,7 +202,7 @@ docker network inspect kind | jq -r 'map(.Containers[].IPv4Address) []'
 Generate the cluster.yaml for workload cluster
  - for vms as byohosts
     ```shell
-    BUNDLE_LOOKUP_TAG=v1.23.5 CONTROL_PLANE_ENDPOINT_IP=10.10.10.10 clusterctl generate cluster byoh-cluster \
+    CONTROL_PLANE_ENDPOINT_IP=10.10.10.10 clusterctl generate cluster byoh-cluster \
       --infrastructure byoh \
       --kubernetes-version v1.23.5 \
       --control-plane-machine-count 1 \
@@ -211,7 +211,7 @@ Generate the cluster.yaml for workload cluster
 
  - for docker hosts use the --flavor argument
     ```shell
-    BUNDLE_LOOKUP_TAG=v1.23.5 CONTROL_PLANE_ENDPOINT_IP=10.10.10.10 clusterctl generate cluster byoh-cluster \
+    CONTROL_PLANE_ENDPOINT_IP=10.10.10.10 clusterctl generate cluster byoh-cluster \
         --infrastructure byoh \
         --kubernetes-version v1.23.5 \
         --control-plane-machine-count 1 \
