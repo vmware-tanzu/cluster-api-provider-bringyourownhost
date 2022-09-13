@@ -216,13 +216,13 @@ host-agent-binary: $(RELEASE_DIR)
 		-o ./bin/$(notdir $(RELEASE_BINARY))-$(GOOS)-$(GOARCH) $(HOST_AGENT_DIR)
 
 
-##@Release
+##@ Release
 
 $(RELEASE_DIR):
 	rm -rf $(RELEASE_DIR)
 	mkdir -p $(RELEASE_DIR)
 
-build-release-artifacts: build-cluster-templates build-infra-yaml build-metadata-yaml build-host-agent-binary
+build-release-artifacts: build-cluster-templates build-infra-yaml build-metadata-yaml build-host-agent-binary ## Builds release artifacts
 
 build-cluster-templates: $(RELEASE_DIR) cluster-templates
 	cp $(BYOH_TEMPLATES)/v1beta1/templates/docker/cluster-template.yaml $(RELEASE_DIR)/cluster-template-docker.yaml
@@ -233,7 +233,7 @@ build-cluster-templates: $(RELEASE_DIR) cluster-templates
 	cp $(BYOH_TEMPLATES)/v1beta1/templates/vm/clusterclass-quickstart.yaml $(RELEASE_DIR)/clusterclass-quickstart.yaml
 
 
-build-infra-yaml:kustomize # Generate infrastructure-components.yaml for the provider
+build-infra-yaml:kustomize ## Generate infrastructure-components.yaml for the provider
 	cd config/manager && $(KUSTOMIZE) edit set image gcr.io/k8s-staging-cluster-api/cluster-api-byoh-controller=${IMG}
 	$(KUSTOMIZE) build config/default > $(RELEASE_DIR)/infrastructure-components.yaml
 
