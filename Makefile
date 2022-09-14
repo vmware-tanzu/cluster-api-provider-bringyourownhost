@@ -30,6 +30,8 @@ TOOLS_DIR := $(REPO_ROOT)/hack/tools
 BIN_DIR := bin
 TOOLS_BIN_DIR := $(TOOLS_DIR)/$(BIN_DIR)
 GINKGO := $(TOOLS_BIN_DIR)/ginkgo
+GINKGO_VERSION := v1.16.5
+GINKGO_PKG := github.com/onsi/ginkgo/ginkgo
 
 BYOH_TEMPLATES := $(REPO_ROOT)/test/e2e/data/infrastructure-provider-byoh
 
@@ -113,19 +115,19 @@ prepare-byoh-docker-host-image-dev:
 
 
 # Run tests
-test: generate fmt vet manifests test-coverage
+test: $(GINKGO) generate fmt vet manifests test-coverage
 
 test-coverage: prepare-byoh-docker-host-image
-	source ./scripts/fetch_ext_bins.sh; fetch_tools; setup_envs; ginkgo --randomizeAllSpecs -r --cover --coverprofile=cover.out --outputdir=. --skipPackage=test .
+	source ./scripts/fetch_ext_bins.sh; fetch_tools; setup_envs; $(GINKGO) --randomizeAllSpecs -r --cover --coverprofile=cover.out --outputdir=. --skipPackage=test .
 
 agent-test: prepare-byoh-docker-host-image
-	source ./scripts/fetch_ext_bins.sh; fetch_tools; setup_envs; ginkgo --randomizeAllSpecs -r $(HOST_AGENT_DIR) -coverprofile cover.out
+	source ./scripts/fetch_ext_bins.sh; fetch_tools; setup_envs; $(GINKGO) --randomizeAllSpecs -r $(HOST_AGENT_DIR) -coverprofile cover.out
 
 controller-test:
-	source ./scripts/fetch_ext_bins.sh; fetch_tools; setup_envs; ginkgo --randomizeAllSpecs controllers/infrastructure -coverprofile cover.out
+	source ./scripts/fetch_ext_bins.sh; fetch_tools; setup_envs; $(GINKGO) --randomizeAllSpecs controllers/infrastructure -coverprofile cover.out
 
 webhook-test:
-	source ./scripts/fetch_ext_bins.sh; fetch_tools; setup_envs; ginkgo apis/infrastructure/v1beta1 -coverprofile cover.out
+	source ./scripts/fetch_ext_bins.sh; fetch_tools; setup_envs; $(GINKGO) apis/infrastructure/v1beta1 -coverprofile cover.out
 
 test-e2e: take-user-input docker-build prepare-byoh-docker-host-image $(GINKGO) cluster-templates-e2e ## Run the end-to-end tests
 	$(GINKGO) -v -trace -tags=e2e -focus="$(GINKGO_FOCUS)" $(_SKIP_ARGS) -nodes=$(GINKGO_NODES) --noColor=$(GINKGO_NOCOLOR) $(GINKGO_ARGS) test/e2e -- \
@@ -170,7 +172,7 @@ cluster-templates-v1beta1: kustomize ## Generate cluster templates for v1beta1
 	$(KUSTOMIZE) build $(BYOH_TEMPLATES)/v1beta1/templates/docker --load-restrictor LoadRestrictionsNone > $(BYOH_TEMPLATES)/v1beta1/templates/docker/cluster-template.yaml
 
 $(GINKGO): # Build ginkgo from tools folder.
-	cd $(TOOLS_DIR) && go build -tags=tools -o $(BIN_DIR)/ginkgo github.com/onsi/ginkgo/ginkgo
+	cd $(TOOLS_DIR) && go build -tags=tools -o $(BIN_DIR)/ginkgo $(GINKGO_PKG)
 
 ##@ Deployment
 
