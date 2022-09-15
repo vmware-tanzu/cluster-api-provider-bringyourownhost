@@ -25,6 +25,9 @@ spec:
       containers:
       - command:
         - /manager
+        env:
+        - name: MANUAL_CSR_APPROVAL
+          value: "${MANUAL_CSR_APPROVAL:=disable}"
         args:
         - --enable-leader-election
         - "--metrics-bind-addr=127.0.0.1:8080"
