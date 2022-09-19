@@ -25,6 +25,7 @@ rules:
   - patch
   - update
 - apiGroups:
+  - ""
   - byohosts
   resources:
   - events
