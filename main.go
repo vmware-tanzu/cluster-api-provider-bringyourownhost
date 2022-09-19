@@ -132,8 +132,8 @@ func main() {
 		os.Exit(1)
 	}
 
-	// Set 'MANUAL_CSR_APPROVAL=true' to disable ByoAdmission controller. Now CSRs should be approved manually.
-	if os.Getenv("MANUAL_CSR_APPROVAL") != "true" {
+	// Set 'MANUAL_CSR_APPROVAL=enable' to disable ByoAdmission controller. Now CSRs should be approved manually.
+	if os.Getenv("MANUAL_CSR_APPROVAL") != "enable" {
 		if err = (&byohcontrollers.ByoAdmissionReconciler{
 			ClientSet: clientset.NewForConfigOrDie(ctrl.GetConfigOrDie()),
 		}).SetupWithManager(mgr); err != nil {

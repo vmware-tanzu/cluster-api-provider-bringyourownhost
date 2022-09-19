@@ -100,6 +100,7 @@ variables:
   INIT_WITH_BINARY: "https://github.com/kubernetes-sigs/cluster-api/releases/download/v1.1.3/clusterctl-{OS}-{ARCH}"
   BUNDLE_LOOKUP_TAG: "v1.23.5"
   CONTROL_PLANE_ENDPOINT_IP: ""
+  MANUAL_CSR_APPROVAL: "disable"
 
 intervals:
   default/wait-controllers: ["3m", "10s"]
