@@ -30,7 +30,6 @@ TOOLS_DIR := $(REPO_ROOT)/hack/tools
 BIN_DIR := bin
 TOOLS_BIN_DIR := $(TOOLS_DIR)/$(BIN_DIR)
 GINKGO := $(TOOLS_BIN_DIR)/ginkgo
-GINKGO_VERSION := v1.16.5
 GINKGO_PKG := github.com/onsi/ginkgo/ginkgo
 
 BYOH_TEMPLATES := $(REPO_ROOT)/test/e2e/data/infrastructure-provider-byoh
