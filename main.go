@@ -66,7 +66,7 @@ func setFlags() {
 // main() will have lots of 'if', '&&' and '||' which will
 // increase its cyclometric complexity. Ignoring it for now.
 
-// nolint: funlen, gocyclo
+//nolint: funlen, gocyclo
 func main() {
 	setFlags()
 	ctrl.SetLogger(klogr.New())

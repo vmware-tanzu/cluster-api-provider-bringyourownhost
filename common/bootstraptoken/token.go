@@ -18,7 +18,7 @@ import (
 // GetTokenIDSecretFromBootstrapToken splits the token string and returns the tokenID and tokenSecret parts
 func GetTokenIDSecretFromBootstrapToken(tokenStr string) (tokenID, tokenSecret string, err error) {
 	substrs := bootstraputil.BootstrapTokenRegexp.FindStringSubmatch(tokenStr)
-	if len(substrs) != 3 { // nolint: gomnd
+	if len(substrs) != 3 { //nolint: gomnd
 		return "", "", fmt.Errorf("the bootstrap token %q was not of the form %q", tokenStr, bootstrapapi.BootstrapTokenPattern)
 	}
 
