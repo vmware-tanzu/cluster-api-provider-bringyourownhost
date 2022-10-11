@@ -1,7 +1,7 @@
 // Copyright 2021 VMware, Inc. All Rights Reserved.
 // SPDX-License-Identifier: Apache-2.0
 
-// nolint: testpackage
+//nolint: testpackage
 package e2e
 
 import (

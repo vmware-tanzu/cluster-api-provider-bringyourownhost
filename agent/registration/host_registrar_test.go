@@ -31,7 +31,7 @@ var _ = Describe("Host Registrar Tests", func() {
 		Expect(k8sClient.Delete(ctx, byoHost)).ToNot(HaveOccurred())
 	})
 
-	Context("When a a ByoHost exists and registration is done", func() {
+	Context("When a ByoHost exists and registration is done", func() {
 		It("Should update the host details on the byohost successfully", func() {
 			Expect(hr.UpdateHost(ctx, byoHost)).ToNot(HaveOccurred())
 		})
