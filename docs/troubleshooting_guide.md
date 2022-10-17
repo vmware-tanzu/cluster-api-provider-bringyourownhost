@@ -109,3 +109,9 @@ E0308 05:18:54.733622   11351 cli-dev.go:151]  "msg"="error installing/uninstall
 ```
 ### Solution
 Sometimes it may happen that the OS and K8s version combination used is not supported by `BYOH` out of the box. This will require manually installing all the dependencies and using the `--skip-installation` flag. This flag will skip k8s installation attempt on the host.
+
+## Github rate-limiting issue during clusterctl init
+### Problem
+During `clusterctl init -i byoh`, sometimes we might face github rate limit error and unable to pull providers.
+### Solution
+To fix it set environment variable `GITHUB_TOKEN` and fetch its value from github. To create new `GITHUB_TOKEN` refer [this doc](https://docs.github.com/en/authentication/keeping-your-account-and-data-secure/creating-a-personal-access-token).

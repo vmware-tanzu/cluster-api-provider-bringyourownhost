@@ -16,7 +16,7 @@ Kubernetes cluster will be transformed into a [management cluster](https://clust
 
 1. **Existing Management Cluster**
 
-    For production use-cases a "real" Kubernetes cluster should be used with appropriate backup and DR policies and procedures in place. The Kubernetes cluster must be at least v1.19.1.
+    For production use-cases a "real" Kubernetes cluster should be used with appropriate backup and DR policies and procedures in place. The Kubernetes cluster must be at least greater than v1.22.x.
 
     ```bash
     export KUBECONFIG=<...>
@@ -163,7 +163,7 @@ docker cp ~/bootstrap-kubeconfig.conf host$i:/bootstrap-kubeconfig.conf
 done
 ```
 
-Start the host agent on each of the hosts and keep it running. 
+Start host agent on each of the hosts from root user and keep it running. 
 
 >**IMPORTANT NOTE**: Use the `--skip-installation` flag if using target `make prepare-byoh-docker-host-image-dev` as we already have k8s components included in this docker image. This flag will skip k8s installation attempt on the host. The `--skip-installation` flag should not be used with target `make prepare-byoh-docker-host-image` as it's docker image doesn't come with k8s components installed.
 
@@ -262,7 +262,7 @@ You can use the script `hack/install-host-agent-service.sh` to start the agent a
 ```shell
 ./install-host-agent-service.sh path/to/agent/binary
 ```
-
+**Note** : Ensure to properly shutdown processes, release ports, etc on each byoh agent re-run (i.e. pkill  byoh-agent processes, etc)
 <!-- References -->
 [cluster-api-book]: https://cluster-api.sigs.k8s.io/
 [glossary-bootstrapping]: https://cluster-api.sigs.k8s.io/reference/glossary.html#bootstrap
