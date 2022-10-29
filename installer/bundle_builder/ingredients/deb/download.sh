@@ -21,5 +21,5 @@ echo "deb [signed-by=/usr/share/keyrings/kubernetes-archive-keyring.gpg] https:/
 echo Update apt package index, install kubelet, kubeadm and kubectl
 sudo apt-get update
 sudo apt-get download {kubelet,kubeadm,kubectl}:$ARCH=$KUBERNETES_VERSION
-sudo apt-get download kubernetes-cni:$ARCH=0.8.7-00
-sudo apt-get download cri-tools:$ARCH=1.23.0-00
+sudo apt-get download kubernetes-cni:$ARCH=1.1.1-00
+sudo apt-get download cri-tools:$ARCH=1.25.0-00
