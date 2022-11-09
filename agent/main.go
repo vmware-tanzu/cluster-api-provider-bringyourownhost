@@ -246,34 +246,40 @@ func handleBootstrapFlow(logger logr.Logger, hostName string) error {
 func certificateRotation(logger logr.Logger, hostName string, config *rest.Config) error {
 	var pollDuration = 5 * time.Second
 	for {
-		block, _ := pem.Decode(config.CertData)
-		if block == nil || block.Type != "CERTIFICATE" {
-			logger.Info("failed to decode PEM block containing certificate")
-			return nil
-		}
-
-		cert, err := x509.ParseCertificate(block.Bytes)
-		if err != nil {
-			logger.Error(err, "Certifcate parse failed")
+		if err := certRotation(logger, hostName, config); err != nil {
 			return err
 		}
-
-		totalTimeCert := cert.NotAfter.Sub(cert.NotBefore)
-
-		// if less than 20% time left, renew the certs.
-		// https://github.com/kubernetes-sigs/cluster-api/blob/main/docs/proposals/20210222-kubelet-authentication.md#kubelet-authenticator-flow
-		if time.Now().After(cert.NotAfter.Add(totalTimeCert / -5)) {
-			logger.Info("certificate expiration time left is less than 20%, renewing")
-			if err = handleBootstrapFlow(logger, hostName); err != nil {
-				logger.Error(err, "bootstrap flow failed")
-			}
-		} else {
-			logger.Info("certificate are valid", "will be renewed after", cert.NotAfter.Add(totalTimeCert/-5))
-		}
-
 		// Poll after every few seconds
 		time.Sleep(pollDuration)
 	}
+}
+
+func certRotation(logger logr.Logger, hostName string, config *rest.Config) error {
+	block, _ := pem.Decode(config.CertData)
+	if block == nil || block.Type != "CERTIFICATE" {
+		logger.Info("failed to decode PEM block containing certificate")
+		return nil
+	}
+
+	cert, err := x509.ParseCertificate(block.Bytes)
+	if err != nil {
+		logger.Error(err, "Certificate parse failed")
+		return err
+	}
+
+	totalTimeCert := cert.NotAfter.Sub(cert.NotBefore)
+
+	// if less than 20% time left, renew the certs.
+	// https://github.com/kubernetes-sigs/cluster-api/blob/main/docs/proposals/20210222-kubelet-authentication.md#kubelet-authenticator-flow
+	if time.Now().After(cert.NotAfter.Add(totalTimeCert / -5)) {
+		logger.Info("certificate expiration time left is less than 20%, renewing")
+		if err = handleBootstrapFlow(logger, hostName); err != nil {
+			logger.Error(err, "bootstrap flow failed")
+		}
+	} else {
+		logger.Info("certificate are valid", "will be renewed after", cert.NotAfter.Add(totalTimeCert/-5))
+	}
+	return nil
 }
 
 func getConfig(logger logr.Logger) *rest.Config {

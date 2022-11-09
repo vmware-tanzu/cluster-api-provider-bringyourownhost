@@ -31,6 +31,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
+	restclient "k8s.io/client-go/rest"
 	"k8s.io/klog/v2/klogr"
 	"sigs.k8s.io/cluster-api/util/conditions"
 	"sigs.k8s.io/cluster-api/util/patch"
@@ -859,6 +860,82 @@ users:
 			err = handleBootstrapFlow(klogr.New(), "")
 			Expect(err).Should(HaveOccurred())
 			Expect(err.Error()).Should(ContainSubstring("kubeconfig generation failed: hostname is not valid"))
+		})
+	})
+	Context("When the certRotation func is called", func() {
+		var (
+			kubeConfig *os.File
+			err        error
+		)
+		BeforeEach(func() {
+			kubeConfig, err = ioutil.TempFile("", "bootstrap-kubeconfig")
+			Expect(err).NotTo(HaveOccurred())
+			bootstrapKubeConfig = kubeConfig.Name()
+		})
+		AfterEach(func() {
+			Expect(os.Remove(bootstrapKubeConfig)).ShouldNot(HaveOccurred())
+		})
+		It("should return if certificate data is not valid", func() {
+			testKubeconfigInvalid := []byte(`
+apiVersion: v1
+clusters:
+- cluster:
+    certificate-authority-data: ZHVtbXkgY2VydGlmaWNhdGU=
+    server: https://cluster-a.com
+  name: default-cluster
+contexts:
+- context:
+    cluster: default-cluster
+    namespace: default
+    user: default-auth
+  name: default-context
+current-context: default-context
+kind: Config
+preferences: {}
+users:
+- name: default-auth
+  user:
+    client-certificate-data: aW5WYWxpZERhdGE=
+    client-key-data: aW5WYWxpZERhdGE=
+`)
+			_, err = kubeConfig.Write(testKubeconfigInvalid)
+			Expect(err).NotTo(HaveOccurred())
+			var config *restclient.Config
+			config, err = registration.LoadRESTClientConfig(bootstrapKubeConfig)
+			Expect(err).NotTo(HaveOccurred())
+			err = certRotation(klogr.New(), "test-host", config)
+			Expect(err).ShouldNot(HaveOccurred())
+		})
+		It("should return if certificate needs rotation", func() {
+			testKubeconfig := []byte(`
+apiVersion: v1
+clusters:
+- cluster:
+    certificate-authority-data: LS0tLS1CRUdJTiBDRVJUSUZJQ0FURS0tLS0tCk1JSUMvakNDQWVhZ0F3SUJBZ0lCQURBTkJna3Foa2lHOXcwQkFRc0ZBREFWTVJNd0VRWURWUVFERXdwcmRXSmwKY201bGRHVnpNQjRYRFRJeU1UQXpNVEF5TkRjd05Gb1hEVE15TVRBeU9EQXlORGN3TkZvd0ZURVRNQkVHQTFVRQpBeE1LYTNWaVpYSnVaWFJsY3pDQ0FTSXdEUVlKS29aSWh2Y05BUUVCQlFBRGdnRVBBRENDQVFvQ2dnRUJBSjZvCnpZSnhVUnhnK2VHMkM4TzJOQXZ2OU9KZXIzL0lZTVBqcXh3cTNKMHZEbm02L3lHK0RQNzFxNWo5MzdlWmdMSncKZkI1YVJMMzFjdUw3N2RFUjZXc3UwVGRCRGN3MGJ6TWFEQ1lRT016TGdESnlrYmhlUmNtRkNDb1Z1MHVqaXlSbApyL3U2YllEZVcveWxmeTgxS1RJaWRJU0U1RUhoYjBlYWZyT0htbTY1aEVYSU5CbkF0WmJiUjZXaVk0NGt5SG1KCnh4bXBORGdHRHh4cVJQZ2ZCbDhrS2NkSDYvZSt1b3dPVlJtalY3a3ZsNzdtUi9uOEEvTUM5Ujc3enh0TmVCcXcKYzlmK3hmODRrMXlVT0xSZHM4M1JrNUFHZjB3Q2VjSmxMUmwwakNyNkJvSStZRm8xUWtMSzluQVJKZGtFS0xvbApaVFNkbHRodnBWd0MvTHdHeklzQ0F3RUFBYU5aTUZjd0RnWURWUjBQQVFIL0JBUURBZ0trTUE4R0ExVWRFd0VCCi93UUZNQU1CQWY4d0hRWURWUjBPQkJZRUZDUmh3bm1rcW9ncUZwS09ObmNUaFgvV2VvQTlNQlVHQTFVZEVRUU8KTUF5Q0NtdDFZbVZ5Ym1WMFpYTXdEUVlKS29aSWh2Y05BUUVMQlFBRGdnRUJBSnFWOHYxdC9kR0NrV0tXRzhxKwpWUTdqTHNZWkc5dUwyN2x6MVovYXFidUcxMURoemZCUHBxVDVSMHNkNXYwVFJUQ1lpK1JTVCs2UnB6Kzd1bytZCndWWUpBREwrcEE0UExTTGRGb1RUcHBFL1ZXcE5rbE0rZnhKa1U5cU5YUkRpN28xTzR4YWJOQUxRZWRwb3RWaVUKSFAxV3IxT3VNbDI0SW5vNkJYWU5CQ0JjT21mOWV3ZjV4Z2R5T2Z5eEh6WXI0dWJUb1dqT0hlaE1xUnQ1SUVqdApJRGQ2R0V0cG43VWVwdnFZNE50aU91UzFReUZodW13UGc2VmhtTjZZMFRrcjJrY2RYU3RtWVBxYzNGcU12RkRYClhDOTMzMkZrTjNxRWlNUFJvbUw0cDQvbHN2aUpLY0VpUG5iTTBCZzRWV1R0bjFqNWtwTVFNbC9TMU8rRkR6U20KWVlVPQotLS0tLUVORCBDRVJUSUZJQ0FURS0tLS0tCg==
+    server: https://cluster-a.com
+  name: default-cluster
+contexts:
+- context:
+    cluster: default-cluster
+    namespace: default
+    user: default-auth
+  name: default-context
+current-context: default-context
+kind: Config
+preferences: {}
+users:
+- name: default-auth
+  user:
+    client-certificate-data: LS0tLS1CRUdJTiBDRVJUSUZJQ0FURS0tLS0tCk1JSUNTVENDQVRHZ0F3SUJBZ0lRU0FZM0xBbCs1WTRpY1M5Qy9GTXFRVEFOQmdrcWhraUc5dzBCQVFzRkFEQVYKTVJNd0VRWURWUVFERXdwcmRXSmxjbTVsZEdWek1CNFhEVEl5TVRBek1UQXpNREEwTkZvWERUSXlNVEF6TVRBegpNVFUwTkZvd0x6RVRNQkVHQTFVRUNoTUtZbmx2YURwb2IzTjBjekVZTUJZR0ExVUVBeE1QWW5sdmFEcG9iM04wCk9taHZjM1F3TUZrd0V3WUhLb1pJemowQ0FRWUlLb1pJemowREFRY0RRZ0FFdUl1QlRrSmJMdW5YV21FZ052WTAKbUUyUjFTRzBnNkhvZjVtR2c1OWVNTUQxQUM5a0oyZXZOTmFKZnVUNk92NFhQQ09Hdm91SWVPRE1KcVh4R2s0TQpVYU5HTUVRd0V3WURWUjBsQkF3d0NnWUlLd1lCQlFVSEF3SXdEQVlEVlIwVEFRSC9CQUl3QURBZkJnTlZIU01FCkdEQVdnQlFrWWNKNXBLcUlLaGFTampaM0U0Vi8xbnFBUFRBTkJna3Foa2lHOXcwQkFRc0ZBQU9DQVFFQVFEMk4KZ3c1dklBV012K3VERWxraGp1TzY5WjFadksvUG5TWmdNazhUTGQxYkl6N24yNS9zbzN1WFZBR0t0YnFQRW5pSwp2YUVpeWNTRVhDQWVqbnRSUUQ2WnVPOTFwNlhWWEJzcnppU0NhY0IwM3AvTVdobmVLNCtEWnpBVW1QeS9pMEM4ClZ2R0xiL2dIQU9zNTFldVQ1WU9zNWhVUVJyVlgrOGFHVVhBZHJPZG1YdkJZRnJEYkFuOHJoTkhIMldGNmxENXAKM2drZEhLKzdIT3BnUVlWQ21wMWszSldvRzZwT2JocUEzdmQ3NDVNWEhHR3MxbnR3clFTU2wyOFBmblRjbHJoUQpYZXFXZ0d4RkluczRzN05QcW5qYm41RlZPYWgxRFFWbGdQSFduaFVQeWp2MFBLYjUzQXZaY3A4d0cwRzNPTm5OClRuYWdDRDk5T2NsRmpFM1VmUT09Ci0tLS0tRU5EIENFUlRJRklDQVRFLS0tLS0K
+    client-key-data: aW5WYWxpZERhdGE=
+`)
+			_, err = kubeConfig.Write(testKubeconfig)
+			Expect(err).NotTo(HaveOccurred())
+			var config *restclient.Config
+			config, err = registration.LoadRESTClientConfig(bootstrapKubeConfig)
+			Expect(err).NotTo(HaveOccurred())
+			err = certRotation(klogr.New(), "test-host", config)
+			Expect(err).ShouldNot(HaveOccurred())
 		})
 	})
 })
