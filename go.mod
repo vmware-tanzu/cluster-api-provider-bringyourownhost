@@ -8,7 +8,7 @@ replace github.com/insomniacslk/dhcp => github.com/harvester/dhcp v0.0.0-2022042
 
 require (
 	github.com/cppforlife/go-cli-ui v0.0.0-20200716203538-1e47f820817f
-	github.com/docker/cli v20.10.18+incompatible
+	github.com/docker/cli v20.10.21+incompatible
 	github.com/docker/docker v20.10.18+incompatible
 	github.com/go-logr/logr v1.2.3
 	github.com/jackpal/gateway v1.0.7
