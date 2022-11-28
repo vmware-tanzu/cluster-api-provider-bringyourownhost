@@ -21,11 +21,11 @@ require (
 	github.com/spf13/pflag v1.0.5
 	k8s.io/api v0.25.4
 	k8s.io/apimachinery v0.25.4
-	k8s.io/client-go v0.25.2
+	k8s.io/client-go v0.25.4
 	k8s.io/cluster-bootstrap v0.25.4
-	k8s.io/component-base v0.25.2
+	k8s.io/component-base v0.25.4
 	k8s.io/klog/v2 v2.80.1
-	k8s.io/kubectl v0.25.2
+	k8s.io/kubectl v0.25.4
 	k8s.io/utils v0.0.0-20220728103510-ee6ede2d64ed
 	sigs.k8s.io/cluster-api v1.1.3
 	sigs.k8s.io/cluster-api/test v1.1.5
