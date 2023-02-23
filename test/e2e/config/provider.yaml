@@ -6,20 +6,19 @@
 # - docker
 
 images:
-  # Use local dev images built source tree;
-  - name: gcr.io/k8s-staging-cluster-api/cluster-api-controller-amd64:dev
+  - name: registry.k8s.io/cluster-api/cluster-api-controller:v1.3.0
     loadBehavior: tryLoad
-  - name: gcr.io/k8s-staging-cluster-api/kubeadm-bootstrap-controller-amd64:dev
+  - name: registry.k8s.io/cluster-api/kubeadm-bootstrap-controller:v1.3.0
     loadBehavior: tryLoad
-  - name: gcr.io/k8s-staging-cluster-api/kubeadm-control-plane-controller-amd64:dev
+  - name: registry.k8s.io/cluster-api/kubeadm-control-plane-controller:v1.3.0
     loadBehavior: tryLoad
   - name: gcr.io/k8s-staging-cluster-api/cluster-api-byoh-controller:dev
+    loadBehavior: mustLoad
+  - name: quay.io/jetstack/cert-manager-cainjector:v1.10.0
     loadBehavior: tryLoad
-  - name: quay.io/jetstack/cert-manager-cainjector:v1.1.0
+  - name: quay.io/jetstack/cert-manager-webhook:v1.10.0
     loadBehavior: tryLoad
-  - name: quay.io/jetstack/cert-manager-webhook:v1.1.0
-    loadBehavior: tryLoad
-  - name: quay.io/jetstack/cert-manager-controller:v1.1.0
+  - name: quay.io/jetstack/cert-manager-controller:v1.10.0
     loadBehavior: tryLoad
 
 providers:
