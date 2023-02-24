@@ -1,11 +1,9 @@
-
 ---
 apiVersion: apiextensions.k8s.io/v1
 kind: CustomResourceDefinition
 metadata:
   annotations:
-    controller-gen.kubebuilder.io/version: v0.4.1
-  creationTimestamp: null
+    controller-gen.kubebuilder.io/version: v0.10.0
   name: k8sinstallerconfigtemplates.infrastructure.cluster.x-k8s.io
 spec:
   group: infrastructure.cluster.x-k8s.io
@@ -16,64 +14,48 @@ spec:
     singular: k8sinstallerconfigtemplate
   scope: Namespaced
   versions:
-  - name: v1beta1
-    schema:
-      openAPIV3Schema:
-        description: K8sInstallerConfigTemplate is the Schema for the k8sinstallerconfigtemplates
-          API
-        properties:
-          apiVersion:
-            description: 'APIVersion defines the versioned schema of this representation
-              of an object. Servers should convert recognized schemas to the latest
-              internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources'
-            type: string
-          kind:
-            description: 'Kind is a string value representing the REST resource this
-              object represents. Servers may infer this from the endpoint the client
-              submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds'
-            type: string
-          metadata:
-            type: object
-          spec:
-            description: K8sInstallerConfigTemplateSpec defines the desired state
-              of K8sInstallerConfigTemplate
-            properties:
-              template:
-                properties:
-                  spec:
-                    description: Spec is the specification of the desired behavior
-                      of the installer config.
-                    properties:
-                      bundleRepo:
-                        description: BundleRepo is the OCI registry from which the
-                          carvel imgpkg bundle will be downloaded
-                        type: string
-                      bundleType:
-                        description: BundleType is the type of bundle (e.g. k8s) that
-                          needs to be downloaded
-                        type: string
-                    required:
-                    - bundleRepo
-                    - bundleType
-                    type: object
-                required:
-                - spec
-                type: object
-            required:
-            - template
-            type: object
-          status:
-            description: K8sInstallerConfigTemplateStatus defines the observed state
-              of K8sInstallerConfigTemplate
-            type: object
-        type: object
-    served: true
-    storage: true
-    subresources:
-      status: {}
-status:
-  acceptedNames:
-    kind: ""
-    plural: ""
-  conditions: []
-  storedVersions: []
+    - name: v1beta1
+      schema:
+        openAPIV3Schema:
+          description: K8sInstallerConfigTemplate is the Schema for the k8sinstallerconfigtemplates API
+          properties:
+            apiVersion:
+              description: 'APIVersion defines the versioned schema of this representation of an object. Servers should convert recognized schemas to the latest internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources'
+              type: string
+            kind:
+              description: 'Kind is a string value representing the REST resource this object represents. Servers may infer this from the endpoint the client submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds'
+              type: string
+            metadata:
+              type: object
+            spec:
+              description: K8sInstallerConfigTemplateSpec defines the desired state of K8sInstallerConfigTemplate
+              properties:
+                template:
+                  properties:
+                    spec:
+                      description: Spec is the specification of the desired behavior of the installer config.
+                      properties:
+                        bundleRepo:
+                          description: BundleRepo is the OCI registry from which the carvel imgpkg bundle will be downloaded
+                          type: string
+                        bundleType:
+                          description: BundleType is the type of bundle (e.g. k8s) that needs to be downloaded
+                          type: string
+                      required:
+                        - bundleRepo
+                        - bundleType
+                      type: object
+                  required:
+                    - spec
+                  type: object
+              required:
+                - template
+              type: object
+            status:
+              description: K8sInstallerConfigTemplateStatus defines the observed state of K8sInstallerConfigTemplate
+              type: object
+          type: object
+      served: true
+      storage: true
+      subresources:
+        status: {}
