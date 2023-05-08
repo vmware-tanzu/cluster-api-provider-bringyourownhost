@@ -304,3 +304,20 @@ docker run --rm -v `pwd`/byoh-ingredients-download:/ingredients -v`pwd`:/bundle 
 # Optionally, additional configuration can be included in the bundle by mounting a local path under /config of the container. It will be placed on top of any drop-in configuration created by the packages and tars in the bundle
 docker run --rm -v `pwd`/byoh-ingredients-download:/ingredients -v`pwd`:/bundle -v`pwd`/installer/bundle_builder/config/ubuntu/20_04/k8s/1_22 --env BUILD_ONLY=1 build-push-bundle
 ```
+
+## Run end to end test
+Vagrant is required.
+
+```shell
+(cd agent/installer/bundle_builder/e2e && ./test.sh)
+```
+This test executes the following workflow:
+- download upstream bundle contents
+- start local repo
+- build a BYOH bundle and upload it to the local repo
+- spin up a Ubuntu 20.04 VM and inside it run
+  - cli install with local repo
+  - kubeadm init phase preflight
+  - cli uninstall
+
+Upon success return 0.

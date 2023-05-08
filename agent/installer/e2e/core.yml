@@ -1,0 +1,31 @@
+services:
+  ingredients-deb:
+    image: ingredients-deb
+    volumes:
+      - bundle-vol:/ingredients
+
+  bundle-builder:
+    image: bundle-builder
+    command: bundle-repo.local:5000/byoh/byoh-bundle-ubuntu_20.04.1_x86-64_k8s_${K8SVER:-v1.22.3}
+    depends_on:
+      - ingredients-deb
+      - bundle-repo.local
+    environment:
+      - BUILD_ONLY=0
+    networks:
+      - app-net
+    volumes:
+      - bundle-vol:/ingredients
+
+  bundle-repo.local:
+    image: registry
+    ports:
+      - ${REPOPORT:-5005}:5000
+    networks:
+      - app-net
+
+networks:
+    app-net:
+
+volumes:
+  bundle-vol: {}
