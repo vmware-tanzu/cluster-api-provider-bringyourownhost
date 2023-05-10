@@ -1,4 +1,4 @@
-name: CAPMVM - Build and release
+name: Build and Release Bundles
 
 on:
   pull_request:
@@ -12,7 +12,7 @@ on:
 
 defaults:
   run:
-    working-directory: capmvm/kubernetes
+    working-directory: installer/bundle_builder
 
 jobs:
   build:
