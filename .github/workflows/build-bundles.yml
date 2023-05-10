@@ -1,0 +1,44 @@
+name: CAPMVM - Build and release
+
+on:
+  pull_request:
+    paths:
+      - 'installer/bundle_builder/**'
+    branches: [refactor-bundles-build]
+  push:
+    paths:
+      - 'installer/bundle_builder/**'
+    branches: [refactor-bundles-build]
+
+defaults:
+  run:
+    working-directory: capmvm/kubernetes
+
+jobs:
+  build:
+    if: github.event_name != 'push'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v2
+      - name: Build image
+        run: make
+  release:
+    if: github.event_name != 'pull_request'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - uses: actions/checkout@v2
+      - name: Login to container registry
+        uses: docker/login-action@v1.10.0
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Build and push
+        run: |
+          make
+          make push

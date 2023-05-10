@@ -16,20 +16,34 @@
 # // Build and store a BYOH bundle
 # docker run --rm -v <INGREDIENTS_HOST_ABS_PATH>:/ingredients  -v <BUNDLE_OUTPUT_ABS_PATH>:/bundle --env <THIS_IMAGE>
 
-FROM harbor-repo.vmware.com/dockerhub-proxy-cache/k14s/image
+ARG BASE_OS=ubuntu
+ARG BASE_OS_VERSION=20.04
 
-# If set to 1 bundle is built and available as bundle/bundle.tar
-# If set to 0 bundle is build and pushed to repo
-ENV BUILD_ONLY=1
+FROM $BASE_OS:$BASE_OS_VERSION as build
+
+
+ARG KUBERNETES_VERSION=1.21.8
+ENV BASE_OS=$BASE_OS
+# Override to download other version
+ENV CONTAINERD_VERSION=1.6.8
+ENV ARCH=amd64
+
+RUN apt-get update \
+    && DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends sudo
 
 WORKDIR /bundle-builder
-COPY *.sh ./
-RUN chmod a+x *.sh
-#Default config
-COPY config/ubuntu/20_04/k8s/1_22 /config/
+COPY ./config/ubuntu/20_04/k8s/1_22/ ./config/
+RUN tar -czvf conf.tar ./config/*
 
-RUN mkdir /ingredients && mkdir /bundle
-ENV PATH="/bundle-builder:${PATH}"
+COPY download.sh .
+RUN chmod a+x download.sh
+RUN ./download.sh
 
-WORKDIR /tmp/bundle
-ENTRYPOINT ["build-push-bundle.sh", "/ingredients", "/config"]
+
+FROM scratch
+COPY --from=build /bundle-builder/kubernetes-cni.deb /kubernetes-cni.deb
+COPY --from=build /bundle-builder/kubelet.deb /kubelet.deb
+COPY --from=build /bundle-builder/kubectl.deb /kubectl.deb
+COPY --from=build /bundle-builder/kubeadm.deb /kubeadm.deb
+COPY --from=build /bundle-builder/cri-tools.deb /cri-tools.deb
+COPY --from=build /bundle-builder/containerd.tar /containerd.tar

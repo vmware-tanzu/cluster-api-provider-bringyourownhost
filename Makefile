@@ -258,6 +258,25 @@ build-metadata-yaml:
 build-host-agent-binary: host-agent-binaries
 	cp bin/byoh-hostagent-linux-amd64 $(RELEASE_DIR)/byoh-hostagent-linux-amd64
 
+RELEASE_VERSIONS?=1.24.2 1.24.13 1.26.3 # RELEASE follows the kubernetes release
+
+build: $(addprefix build-,$(RELEASE_VERSIONS))
+
+
+
+
+build-%:
+	$(DOCKER) build -t $(IMAGE_NAME):$*  \
+		--build-arg KUBERNETES_VERSION=$* 
+		.
+
+
+push: $(addprefix push-,$(RELEASE_VERSIONS))
+push-%:
+	$(DOCKER) push $(IMAGE_NAME):$*
+
+
+
 
 # go-get-tool will 'go get' any package $2 and install it to $1.
 PROJECT_DIR := $(shell dirname $(abspath $(lastword $(MAKEFILE_LIST))))
