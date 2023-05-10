@@ -34,7 +34,7 @@ var _ = Describe("Cluster upgrade test [K8s-upgrade]", func() {
 		allbyohostContainerIDs       []string
 		allAgentLogFiles             []string
 		kubernetesVersionUpgradeFrom = "v1.23.5"
-		kubernetesVersionUpgradeTo   = "v1.26.4"
+		kubernetesVersionUpgradeTo   = "v1.24.2"
 		etcdUpgradeVersion           = "3.5.1-0"
 		coreDNSUpgradeVersion        = "v1.8.6"
 	)
