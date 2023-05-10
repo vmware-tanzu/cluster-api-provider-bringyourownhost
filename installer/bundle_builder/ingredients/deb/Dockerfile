@@ -13,7 +13,7 @@ FROM $BASE_IMAGE as build
 
 # Override to download other version
 ENV CONTAINERD_VERSION=1.6.8
-ENV KUBERNETES_VERSION=1.26.4-00
+ENV KUBERNETES_VERSION=1.26.3-00
 ENV ARCH=amd64
 
 RUN apt-get update \
