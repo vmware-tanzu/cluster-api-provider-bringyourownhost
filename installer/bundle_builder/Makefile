@@ -2,7 +2,7 @@ DOCKER := docker
 BUILD_DATE:=$(shell date --rfc-3339=seconds)
 GIT_SHA:=$(shell git rev-parse HEAD)
 
-REGISTRY?=ghcr.io/steve-fraser
+REGISTRY?=docker.io/stevenfraser
 BASE_OS=ubuntu
 BASE_TAG=20.04
 
@@ -21,9 +21,10 @@ build-%:
 		--build-arg BASE_OS_VERSION=$(BASE_TAG) \
 		--label "org.opencontainers.image.created"="$(BUILD_DATE)" \
 		--label "org.opencontainers.image.revision"="$(GIT_SHA)" \
-		--no-cache  \
 		.
 
 push: $(addprefix push-,$(RELEASE_VERSIONS))
 push-%:
-	$(DOCKER) push $(IMAGE_NAME):$*
+	$(DOCKER) push $(IMAGE_NAME):v$*
+
+#registry.hub.docker.com/stevenfraser/byoh-bundle-ubuntu_20.04.1_x86-64_k8s:v1.26.3

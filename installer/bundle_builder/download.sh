@@ -26,9 +26,9 @@ sudo apt-get download cri-tools:$ARCH=1.25.0-00
 
 echo Strip version to well-known names
 # Mandatory
-cp *kubeadm*.deb ./kubeadm.deb
-cp *kubelet*.deb ./kubelet.deb
-cp *kubectl*.deb ./kubectl.deb
+mv *kubeadm*.deb ./kubeadm.deb
+mv *kubelet*.deb ./kubelet.deb
+mv *kubectl*.deb ./kubectl.deb
 # Optional
-cp *cri-tools*.deb cri-tools.deb > /dev/null | true
-cp *kubernetes-cni*.deb kubernetes-cni.deb > /dev/null | true
+mv *cri-tools*.deb cri-tools.deb > /dev/null | true
+mv *kubernetes-cni*.deb kubernetes-cni.deb > /dev/null | true

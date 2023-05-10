@@ -31,14 +31,18 @@ ENV ARCH=amd64
 RUN apt-get update \
     && DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends sudo
 
-WORKDIR /bundle-builder
-COPY ./config/ubuntu/20_04/k8s/1_22/ ./config/
-RUN tar -czvf conf.tar ./config/*
 
+WORKDIR /tmp
+COPY ./config/ubuntu/20_04/k8s/1_22/ /tmp/config/
+RUN cd /tmp/config/ && tar -czvf conf.tar *
+RUN mkdir /bundle-builder && mv /tmp/config/conf.tar /bundle-builder/conf.tar
+
+WORKDIR /bundle-builder
 COPY download.sh .
 RUN chmod a+x download.sh
 RUN ./download.sh
-
+RUN rm download.sh
+RUN tar -cvf bundle.tar *
 
 FROM scratch
 COPY --from=build /bundle-builder/kubernetes-cni.deb /kubernetes-cni.deb
@@ -47,3 +51,6 @@ COPY --from=build /bundle-builder/kubectl.deb /kubectl.deb
 COPY --from=build /bundle-builder/kubeadm.deb /kubeadm.deb
 COPY --from=build /bundle-builder/cri-tools.deb /cri-tools.deb
 COPY --from=build /bundle-builder/containerd.tar /containerd.tar
+COPY --from=build /bundle-builder/containerd.tar /containerd.tar
+COPY --from=build /bundle-builder/conf.tar /conf.tar
+COPY --from=build /bundle-builder/bundle.tar /bundle.tar
