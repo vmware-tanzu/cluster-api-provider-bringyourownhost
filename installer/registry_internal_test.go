@@ -115,7 +115,7 @@ var _ = Describe("Byohost Installer Tests", func() {
 			Expect(osBundles).To(HaveLen(1))
 
 			osBundleResult := r.ListK8s("Ubuntu_20.04.1_x86-64")
-			Expect(osBundleResult).To(ContainElements("v1.22.*", "v1.23.*", "v1.24.*"))
+			Expect(osBundleResult).To(ContainElements("v1.22.*", "v1.23.*", "v1.24.*","v1.25.*","v1.26.*"))
 			Expect(osBundleResult).To(HaveLen(3))
 		})
 	})
