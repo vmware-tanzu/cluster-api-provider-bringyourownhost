@@ -253,7 +253,7 @@ after that you should see your nodes turn into ready:
 ```shell
 $ KUBECONFIG=byoh-cluster.kubeconfig kubectl get nodes
 NAME                                                          STATUS     ROLES    AGE   VERSION
-byoh-cluster-8siai8                                           Ready      master   5m   v1.26.3
+byoh-cluster-8siai8                                           Ready      master   5m   v1.24.2
 ```
 
 ## Additional: Running host-agent as a systemd service
