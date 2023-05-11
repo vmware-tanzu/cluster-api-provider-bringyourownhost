@@ -205,7 +205,7 @@ Generate the cluster.yaml for workload cluster
     ```shell
     CONTROL_PLANE_ENDPOINT_IP=10.10.10.10 clusterctl generate cluster byoh-cluster \
       --infrastructure byoh \
-      --kubernetes-version v1.26.3 \
+      --kubernetes-version v1.24.2 \
       --control-plane-machine-count 1 \
       --worker-machine-count 1 > cluster.yaml
     ```
@@ -214,7 +214,7 @@ Generate the cluster.yaml for workload cluster
     ```shell
     CONTROL_PLANE_ENDPOINT_IP=10.10.10.10 clusterctl generate cluster byoh-cluster \
         --infrastructure byoh \
-        --kubernetes-version v1.26.3 \
+        --kubernetes-version v1.24.2 \
         --control-plane-machine-count 1 \
         --worker-machine-count 1 \
         --flavor docker > cluster.yaml
