@@ -80,9 +80,9 @@ providers:
 variables:
   # default variables for the e2e test; those values could be overridden via env variables, thus
   # allowing the same e2e config file to be re-used in different prow jobs e.g. each one with a K8s version permutation
-  KUBERNETES_VERSION: "v1.24.2"
-  ETCD_VERSION_UPGRADE_TO: "3.4.9-0"
-  COREDNS_VERSION_UPGRADE_TO: "1.7.0"
+  KUBERNETES_VERSION: "v1.25.11"
+  ETCD_VERSION_UPGRADE_TO: "3.5.6-0"
+  COREDNS_VERSION_UPGRADE_TO: "1.9.3"
   KUBERNETES_VERSION_UPGRADE_TO: "v1.22.0"
   KUBERNETES_VERSION_UPGRADE_FROM: "v1.18.2"
   DOCKER_SERVICE_DOMAIN: "cluster.local"
@@ -97,7 +97,7 @@ variables:
   NODE_DRAIN_TIMEOUT: "60s"
   # NOTE: INIT_WITH_BINARY is used only by the clusterctl upgrade test to initialize the management cluster to be upgraded
   INIT_WITH_BINARY: "https://github.com/kubernetes-sigs/cluster-api/releases/download/v1.1.3/clusterctl-{OS}-{ARCH}"
-  BUNDLE_LOOKUP_TAG: "v1.24.2"
+  BUNDLE_LOOKUP_TAG: "v1.25.11"
   CONTROL_PLANE_ENDPOINT_IP: ""
   MANUAL_CSR_APPROVAL: "disable"
 

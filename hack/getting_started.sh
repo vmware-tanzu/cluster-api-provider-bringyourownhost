@@ -537,7 +537,7 @@ manageClusterConfFile="${HOME}/.kube/management-cluster.conf"
 kubeConfigFile=/tmp/byoh-cluster-kubeconfig
 reposDir=$(dirname $0)/../
 byohBinaryFile=${reposDir}/bin/byoh-hostagent-linux-amd64
-kubernetesVersion="v1.24.2"
+kubernetesVersion="v1.25.11"
 
 readArgs $@
 userConfirmation

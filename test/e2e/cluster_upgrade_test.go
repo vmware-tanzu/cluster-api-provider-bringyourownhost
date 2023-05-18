@@ -1,20 +1,21 @@
 // Copyright 2022 VMware, Inc. All Rights Reserved.
 // SPDX-License-Identifier: Apache-2.0
 
-//nolint: testpackage
+// nolint: testpackage
 package e2e
 
 import (
 	"context"
 	"fmt"
+	"os"
+	"path/filepath"
+
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/client"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/utils/pointer"
-	"os"
-	"path/filepath"
 	"sigs.k8s.io/cluster-api/test/framework"
 	"sigs.k8s.io/cluster-api/test/framework/clusterctl"
 	"sigs.k8s.io/cluster-api/util"
@@ -33,10 +34,10 @@ var _ = Describe("Cluster upgrade test [K8s-upgrade]", func() {
 		dockerClient                 *client.Client
 		allbyohostContainerIDs       []string
 		allAgentLogFiles             []string
-		kubernetesVersionUpgradeFrom = "v1.23.5"
-		kubernetesVersionUpgradeTo   = "v1.24.2"
-		etcdUpgradeVersion           = "3.5.1-0"
-		coreDNSUpgradeVersion        = "v1.8.6"
+		kubernetesVersionUpgradeFrom = "v1.24.2"
+		kubernetesVersionUpgradeTo   = "v1.25.11"
+		etcdUpgradeVersion           = "3.5.6-0"
+		coreDNSUpgradeVersion        = "v1.9.3"
 	)
 
 	BeforeEach(func() {
