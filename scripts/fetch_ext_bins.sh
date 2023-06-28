@@ -15,7 +15,7 @@ if [[ -n "${TRACE}" ]]; then
   set -x
 fi
 
-k8s_version=1.24.2
+k8s_version=1.25.0
 goarch=amd64
 goos="unknown"
 
@@ -87,7 +87,6 @@ function fetch_tools {
 
 function setup_envs {
   header_text "setting up kubebuilder-tools@${k8s_version} env vars"
-
   # Setup env vars
   export PATH=${tmp_root}/kubebuilder/bin:$PATH
   export TEST_ASSET_KUBECTL=${tmp_root}/kubebuilder/bin/kubectl
