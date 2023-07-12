@@ -358,6 +358,13 @@ var _ = Describe("Controllers/ByomachineController", func() {
 					Expect(ph.Patch(ctx, byoHost, patch.WithStatusObservedGeneration{})).Should(Succeed())
 
 					WaitForObjectToBeUpdatedInCache(byoHost, func(object client.Object) bool {
+						return object.(*infrastructurev1beta1.ByoHost).Status.HostDetails == infrastructurev1beta1.HostInfo{
+							OSName:       "linux",
+							OSImage:      "Ubuntu 20.04.4 LTS",
+							Architecture: "arm64",
+						}
+					})
+					WaitForObjectToBeUpdatedInCache(byoHost, func(object client.Object) bool {
 						return object.(*infrastructurev1beta1.ByoHost).Status.MachineRef != nil
 					})
 
