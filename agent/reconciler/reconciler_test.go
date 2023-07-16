@@ -490,7 +490,7 @@ runCmd:
 					UID:        byoMachine.UID,
 					APIVersion: byoHost.APIVersion,
 				}
-				byoHost.Labels = map[string]string{clusterv1.ClusterLabelName: "test-cluster"}
+				byoHost.Labels = map[string]string{clusterv1.ClusterNameLabel: "test-cluster"}
 				byoHost.Annotations = map[string]string{
 					infrastructurev1beta1.HostCleanupAnnotation:              "",
 					infrastructurev1beta1.BundleLookupBaseRegistryAnnotation: "projects.blah.com",
@@ -538,7 +538,7 @@ runCmd:
 				err := k8sClient.Get(ctx, byoHostLookupKey, updatedByoHost)
 				Expect(err).ToNot(HaveOccurred())
 
-				Expect(updatedByoHost.Labels).NotTo(HaveKey(clusterv1.ClusterLabelName))
+				Expect(updatedByoHost.Labels).NotTo(HaveKey(clusterv1.ClusterNameLabel))
 				Expect(updatedByoHost.Status.MachineRef).To(BeNil())
 				Expect(updatedByoHost.Annotations).NotTo(HaveKey(infrastructurev1beta1.HostCleanupAnnotation))
 				Expect(updatedByoHost.Annotations).NotTo(HaveKey(infrastructurev1beta1.EndPointIPAnnotation))

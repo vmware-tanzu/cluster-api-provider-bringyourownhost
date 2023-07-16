@@ -1,7 +1,7 @@
 // Copyright 2021 VMware, Inc. All Rights Reserved.
 // SPDX-License-Identifier: Apache-2.0
 
-//nolint: testpackage
+// nolint: testpackage
 package e2e
 
 import (
@@ -11,6 +11,7 @@ import (
 	"path/filepath"
 
 	"github.com/docker/docker/api/types"
+	"github.com/docker/docker/api/types/container"
 	"github.com/docker/docker/client"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -143,7 +144,7 @@ var _ = Describe("When BYO Host rejoins the capacity pool", func() {
 		byoHostLookupKey := k8stypes.NamespacedName{Name: byoHostName2, Namespace: namespace.Name}
 		byoHostToBeReused := &infrastructurev1beta1.ByoHost{}
 		Expect(bootstrapClusterProxy.GetClient().Get(ctx, byoHostLookupKey, byoHostToBeReused)).Should(Succeed())
-		cluster, ok := byoHostToBeReused.Labels[clusterv1.ClusterLabelName]
+		cluster, ok := byoHostToBeReused.Labels[clusterv1.ClusterNameLabel]
 		Expect(ok).To(BeTrue())
 		Expect(cluster).To(Equal(clusterName))
 
@@ -157,7 +158,7 @@ var _ = Describe("When BYO Host rejoins the capacity pool", func() {
 		// This verifies that the byohost has rejoined the capacity pool
 		byoHostToBeReused = &infrastructurev1beta1.ByoHost{}
 		Expect(bootstrapClusterProxy.GetClient().Get(ctx, byoHostLookupKey, byoHostToBeReused)).Should(Succeed())
-		_, ok = byoHostToBeReused.Labels[clusterv1.ClusterLabelName]
+		_, ok = byoHostToBeReused.Labels[clusterv1.ClusterNameLabel]
 		Expect(ok).To(BeFalse())
 
 		By("Creating a new cluster")
@@ -185,7 +186,7 @@ var _ = Describe("When BYO Host rejoins the capacity pool", func() {
 		// Assert on byohost cluster label to match clusterName
 		byoHostToBeReused = &infrastructurev1beta1.ByoHost{}
 		Expect(bootstrapClusterProxy.GetClient().Get(ctx, byoHostLookupKey, byoHostToBeReused)).Should(Succeed())
-		cluster, ok = byoHostToBeReused.Labels[clusterv1.ClusterLabelName]
+		cluster, ok = byoHostToBeReused.Labels[clusterv1.ClusterNameLabel]
 		Expect(ok).To(BeTrue())
 		Expect(cluster).To(Equal(clusterName))
 
@@ -203,7 +204,7 @@ var _ = Describe("When BYO Host rejoins the capacity pool", func() {
 
 		if getDockerClient() != nil && len(byohostContainerIDs) != 0 {
 			for _, byohostContainerID := range byohostContainerIDs {
-				err := getDockerClient().ContainerStop(ctx, byohostContainerID, nil)
+				err := getDockerClient().ContainerStop(ctx, byohostContainerID, container.StopOptions{})
 				Expect(err).NotTo(HaveOccurred())
 
 				err = getDockerClient().ContainerRemove(ctx, byohostContainerID, types.ContainerRemoveOptions{})

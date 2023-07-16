@@ -83,7 +83,7 @@ type ByoMachineReconciler struct {
 // - https://pkg.go.dev/sigs.k8s.io/controller-runtime@v0.8.3/pkg/reconcile
 
 // Reconcile handles ByoMachine events
-//nolint: gocyclo, funlen
+// nolint: gocyclo, funlen
 func (r *ByoMachineReconciler) Reconcile(ctx context.Context, req ctrl.Request) (_ ctrl.Result, reterr error) {
 	logger := log.FromContext(ctx)
 	logger.Info("Reconcile request received")
@@ -118,7 +118,7 @@ func (r *ByoMachineReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 	}
 
 	if cluster == nil {
-		logger.Info(fmt.Sprintf("Please associate this machine with a cluster using the label %s: <name of cluster>", clusterv1.ClusterLabelName))
+		logger.Info(fmt.Sprintf("Please associate this machine with a cluster using the label %s: <name of cluster>", clusterv1.ClusterNameLabel))
 		return ctrl.Result{}, nil
 	}
 	logger = logger.WithValues("cluster", cluster.Name)
@@ -365,7 +365,7 @@ func (r *ByoMachineReconciler) ClusterToByoMachines(logger logr.Logger) handler.
 			return nil
 		}
 
-		clusterLabels := map[string]string{clusterv1.ClusterLabelName: c.Name}
+		clusterLabels := map[string]string{clusterv1.ClusterNameLabel: c.Name}
 		byoMachineList := &infrav1.ByoMachineList{}
 		if err := r.Client.List(context.TODO(), byoMachineList, client.InNamespace(c.Namespace), client.MatchingLabels(clusterLabels)); err != nil {
 			logger.Error(err, "Failed to get ByoMachine, skipping mapping.")
@@ -507,7 +507,7 @@ func (r *ByoMachineReconciler) attachByoHost(ctx context.Context, machineScope *
 		selector = labels.NewSelector()
 	}
 
-	byohostLabels, _ := labels.NewRequirement(clusterv1.ClusterLabelName, selection.DoesNotExist, nil)
+	byohostLabels, _ := labels.NewRequirement(clusterv1.ClusterNameLabel, selection.DoesNotExist, nil)
 	selector = selector.Add(*byohostLabels)
 
 	err = r.Client.List(ctx, hostsList, &client.ListOptions{LabelSelector: selector})
@@ -541,7 +541,7 @@ func (r *ByoMachineReconciler) attachByoHost(ctx context.Context, machineScope *
 	if hostLabels == nil {
 		hostLabels = make(map[string]string)
 	}
-	hostLabels[clusterv1.ClusterLabelName] = machineScope.ByoMachine.Labels[clusterv1.ClusterLabelName]
+	hostLabels[clusterv1.ClusterNameLabel] = machineScope.ByoMachine.Labels[clusterv1.ClusterNameLabel]
 	hostLabels[infrav1.AttachedByoMachineLabel] = machineScope.ByoMachine.Namespace + "." + machineScope.ByoMachine.Name
 	host.Labels = hostLabels
 

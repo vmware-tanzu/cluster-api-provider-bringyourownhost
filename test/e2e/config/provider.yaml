@@ -26,8 +26,8 @@ providers:
   - name: cluster-api
     type: CoreProvider
     versions:
-      - name: v1.1.3 # next; use manifest from source files
-        value: "https://github.com/kubernetes-sigs/cluster-api/releases/download/v1.1.3/core-components.yaml"
+      - name: v1.4.4 # next; use manifest from source files
+        value: "https://github.com/kubernetes-sigs/cluster-api/releases/download/v1.4.4/core-components.yaml"
         type: "url"
         replacements:
           - old: --metrics-bind-addr=127.0.0.1:8080
@@ -38,8 +38,8 @@ providers:
   - name: kubeadm
     type: BootstrapProvider
     versions:
-      - name: v1.1.3 # next; use manifest from source files
-        value: "https://github.com/kubernetes-sigs/cluster-api/releases/download/v1.1.3/bootstrap-components.yaml"
+      - name: v1.4.4 # next; use manifest from source files
+        value: "https://github.com/kubernetes-sigs/cluster-api/releases/download/v1.4.4/bootstrap-components.yaml"
         type: "url"
         replacements:
           - old: --metrics-bind-addr=127.0.0.1:8080
@@ -50,8 +50,8 @@ providers:
   - name: kubeadm
     type: ControlPlaneProvider
     versions:
-      - name: v1.1.3 # next; use manifest from source files
-        value: "https://github.com/kubernetes-sigs/cluster-api/releases/download/v1.1.3/control-plane-components.yaml"
+      - name: v1.4.4 # next; use manifest from source files
+        value: "https://github.com/kubernetes-sigs/cluster-api/releases/download/v1.4.4/control-plane-components.yaml"
         type: "url"
         replacements:
           - old: --metrics-bind-addr=127.0.0.1:8080
@@ -96,7 +96,7 @@ variables:
   KUBETEST_CONFIGURATION: "./data/kubetest/conformance.yaml"
   NODE_DRAIN_TIMEOUT: "60s"
   # NOTE: INIT_WITH_BINARY is used only by the clusterctl upgrade test to initialize the management cluster to be upgraded
-  INIT_WITH_BINARY: "https://github.com/kubernetes-sigs/cluster-api/releases/download/v1.1.3/clusterctl-{OS}-{ARCH}"
+  INIT_WITH_BINARY: "https://github.com/kubernetes-sigs/cluster-api/releases/download/v1.4.4/clusterctl-{OS}-{ARCH}"
   BUNDLE_LOOKUP_TAG: "v1.25.11"
   CONTROL_PLANE_ENDPOINT_IP: ""
   MANUAL_CSR_APPROVAL: "disable"

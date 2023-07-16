@@ -77,7 +77,7 @@ func (b *ByoMachineBuilder) Build() *infrastructurev1beta1.ByoMachine {
 	}
 	if b.clusterLabel != "" {
 		byoMachine.ObjectMeta.Labels = map[string]string{
-			clusterv1.ClusterLabelName: b.clusterLabel,
+			clusterv1.ClusterNameLabel: b.clusterLabel,
 		}
 	}
 	if b.selector != nil {
@@ -551,7 +551,7 @@ func (b *K8sInstallerConfigBuilder) Build() *infrastructurev1beta1.K8sInstallerC
 	}
 	if b.clusterLabel != "" {
 		k8sinstallerconfig.ObjectMeta.Labels = map[string]string{
-			clusterv1.ClusterLabelName: b.clusterLabel,
+			clusterv1.ClusterNameLabel: b.clusterLabel,
 		}
 	}
 	if b.bundleRepo != "" {

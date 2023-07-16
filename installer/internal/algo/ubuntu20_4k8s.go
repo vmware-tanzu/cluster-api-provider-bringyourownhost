@@ -12,7 +12,7 @@ import (
 
 const (
 	// ImgpkgVersion defines the imgpkg version that will be installed on host if imgpkg is not already installed
-	ImgpkgVersion = "v0.27.0"
+	ImgpkgVersion = "v0.36.4"
 )
 
 // Ubuntu20_04Installer represent the installer implementation for ubunto20.04.* os distribution
@@ -96,7 +96,7 @@ fi
 
 echo "downloading bundle"
 mkdir -p $BUNDLE_PATH
-imgpkg pull -r -i $BUNDLE_ADDR -o $BUNDLE_PATH
+imgpkg pull -i $BUNDLE_ADDR -o $BUNDLE_PATH
 
 
 ## disable swap

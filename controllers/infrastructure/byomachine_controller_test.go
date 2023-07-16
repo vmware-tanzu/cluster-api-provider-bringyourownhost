@@ -245,7 +245,7 @@ var _ = Describe("Controllers/ByomachineController", func() {
 
 				// Assert labels on byohost
 				createdByoHostLabels := createdByoHost.GetLabels()
-				Expect(createdByoHostLabels[clusterv1.ClusterLabelName]).To(Equal(capiCluster.Name))
+				Expect(createdByoHostLabels[clusterv1.ClusterNameLabel]).To(Equal(capiCluster.Name))
 
 				createdByoHostAnnotations := createdByoHost.GetAnnotations()
 				Expect(createdByoHostAnnotations[infrastructurev1beta1.K8sVersionAnnotation]).To(Equal(strings.Split(testClusterVersion, "+")[0]))
@@ -309,7 +309,7 @@ var _ = Describe("Controllers/ByomachineController", func() {
 					annotations.AddAnnotations(byoMachine, pauseAnnotations)
 					Expect(ph.Patch(ctx, byoMachine, patch.WithStatusObservedGeneration{})).Should(Succeed())
 					WaitForObjectToBeUpdatedInCache(byoMachine, func(object client.Object) bool {
-						return annotations.HasPausedAnnotation(object.(*infrastructurev1beta1.ByoMachine))
+						return annotations.HasPaused(object.(*infrastructurev1beta1.ByoMachine))
 					})
 
 					_, err = reconciler.Reconcile(ctx, reconcile.Request{NamespacedName: byoMachineLookupKey})
@@ -332,7 +332,7 @@ var _ = Describe("Controllers/ByomachineController", func() {
 					annotations.AddAnnotations(byoHost, pauseAnnotations)
 					Expect(ph.Patch(ctx, byoHost, patch.WithStatusObservedGeneration{})).Should(Succeed())
 					WaitForObjectToBeUpdatedInCache(byoHost, func(object client.Object) bool {
-						return annotations.HasPausedAnnotation(object.(*infrastructurev1beta1.ByoHost))
+						return annotations.HasPaused(object.(*infrastructurev1beta1.ByoHost))
 					})
 					_, err = reconciler.Reconcile(ctx, reconcile.Request{NamespacedName: byoMachineLookupKey})
 					Expect(err).ToNot(HaveOccurred())
@@ -499,7 +499,7 @@ var _ = Describe("Controllers/ByomachineController", func() {
 				Expect(ph.Patch(ctx, byoMachine, patch.WithStatusObservedGeneration{})).Should(Succeed())
 
 				WaitForObjectToBeUpdatedInCache(byoMachine, func(object client.Object) bool {
-					return annotations.HasPausedAnnotation(object.(*infrastructurev1beta1.ByoMachine))
+					return annotations.HasPaused(object.(*infrastructurev1beta1.ByoMachine))
 				})
 
 				_, err = reconciler.Reconcile(ctx, reconcile.Request{NamespacedName: byoMachineLookupKey})
@@ -657,7 +657,7 @@ var _ = Describe("Controllers/ByomachineController", func() {
 		Context("When all ByoHost are attached", func() {
 			BeforeEach(func() {
 				byoHost = builder.ByoHost(defaultNamespace, "byohost-attached-different-cluster").
-					WithLabels(map[string]string{clusterv1.ClusterLabelName: capiCluster.Name}).
+					WithLabels(map[string]string{clusterv1.ClusterNameLabel: capiCluster.Name}).
 					Build()
 				Expect(k8sClientUncached.Create(ctx, byoHost)).Should(Succeed())
 
@@ -748,11 +748,11 @@ var _ = Describe("Controllers/ByomachineController", func() {
 			It("does not claims the attached host", func() {
 				ph, err := patch.NewHelper(byoHost2, k8sClientUncached)
 				Expect(err).ShouldNot(HaveOccurred())
-				byoHost2.Labels = map[string]string{clusterv1.ClusterLabelName: capiCluster.Name}
+				byoHost2.Labels = map[string]string{clusterv1.ClusterNameLabel: capiCluster.Name}
 				Expect(ph.Patch(ctx, byoHost2, patch.WithStatusObservedGeneration{})).Should(Succeed())
 
 				WaitForObjectToBeUpdatedInCache(byoHost2, func(object client.Object) bool {
-					return object.(*infrastructurev1beta1.ByoHost).Labels[clusterv1.ClusterLabelName] == capiCluster.Name
+					return object.(*infrastructurev1beta1.ByoHost).Labels[clusterv1.ClusterNameLabel] == capiCluster.Name
 				})
 
 				_, err = reconciler.Reconcile(ctx, reconcile.Request{NamespacedName: byoMachineLookupKey})

@@ -166,7 +166,7 @@ var _ = Describe("Controllers/K8sInstallerConfigController", func() {
 		annotations.AddAnnotations(k8sinstallerConfig, pauseAnnotations)
 		Expect(ph.Patch(ctx, k8sinstallerConfig, patch.WithStatusObservedGeneration{})).Should(Succeed())
 		WaitForObjectToBeUpdatedInCache(k8sinstallerConfig, func(object client.Object) bool {
-			return annotations.HasPausedAnnotation(object.(*infrav1.K8sInstallerConfig))
+			return annotations.HasPaused(object.(*infrav1.K8sInstallerConfig))
 		})
 
 		_, err = k8sInstallerConfigReconciler.Reconcile(ctx, reconcile.Request{

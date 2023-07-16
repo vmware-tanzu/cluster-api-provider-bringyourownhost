@@ -18,7 +18,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 	"sigs.k8s.io/controller-runtime/pkg/envtest"
-	"sigs.k8s.io/controller-runtime/pkg/envtest/printer"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 
@@ -70,7 +69,7 @@ func TestAPIs(t *testing.T) {
 
 	RunSpecsWithDefaultAndCustomReporters(t,
 		"Controller Suite",
-		[]Reporter{printer.NewlineReporter{}})
+		[]Reporter{})
 }
 
 var _ = BeforeSuite(func() {
@@ -136,7 +135,7 @@ var _ = BeforeSuite(func() {
 	byoClusterReconciler = &controllers.ByoClusterReconciler{
 		Client: k8sManager.GetClient(),
 	}
-	err = byoClusterReconciler.SetupWithManager(k8sManager)
+	err = byoClusterReconciler.SetupWithManager(context.TODO(), k8sManager)
 	Expect(err).NotTo(HaveOccurred())
 
 	byoAdmissionReconciler = &controllers.ByoAdmissionReconciler{

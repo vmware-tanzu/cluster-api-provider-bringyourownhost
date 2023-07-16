@@ -12,7 +12,7 @@ import (
 
 	"github.com/cppforlife/go-cli-ui/ui"
 	"github.com/go-logr/logr"
-	"github.com/k14s/imgpkg/pkg/imgpkg/cmd"
+	"github.com/vmware-tanzu/carvel-imgpkg/pkg/imgpkg/cmd"
 )
 
 var (
