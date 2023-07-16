@@ -7,11 +7,10 @@ import (
 	"encoding/base64"
 	"errors"
 	"fmt"
-	"io/ioutil"
 	"os"
 	"path"
 
-	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	"github.com/vmware-tanzu/cluster-api-provider-bringyourownhost/agent/cloudinit"
 	"github.com/vmware-tanzu/cluster-api-provider-bringyourownhost/agent/cloudinit/cloudinitfakes"
@@ -48,7 +47,7 @@ var _ = Describe("Cloudinit", func() {
 runCmd:
 - echo 'some run command'`, workDir)
 
-			workDir, err = ioutil.TempDir("", "cloudinit_ut")
+			workDir, err = os.MkdirTemp("", "cloudinit_ut")
 			Expect(err).NotTo(HaveOccurred())
 		})
 

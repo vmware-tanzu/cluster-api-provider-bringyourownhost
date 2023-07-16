@@ -5,10 +5,9 @@ package registration
 
 import (
 	"fmt"
-	"io/ioutil"
 	"os"
 
-	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 )
 
@@ -50,7 +49,7 @@ var _ = Describe("Host Registrar Tests", func() {
 		})
 
 		It("Should not error with real hostnamectl", func() {
-			_, err := getOperatingSystem(ioutil.ReadFile)
+			_, err := getOperatingSystem(os.ReadFile)
 			Expect(err).ShouldNot(HaveOccurred())
 		})
 	})

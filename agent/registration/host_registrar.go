@@ -6,7 +6,6 @@ package registration
 import (
 	"context"
 	"fmt"
-	"io/ioutil"
 	"net"
 	"os"
 	"regexp"
@@ -149,7 +148,7 @@ func (hr *HostRegistrar) getHostInfo() (infrastructurev1beta1.HostInfo, error) {
 	hostInfo.Architecture = runtime.GOARCH
 	hostInfo.OSName = runtime.GOOS
 
-	if distribution, err := getOperatingSystem(ioutil.ReadFile); err != nil {
+	if distribution, err := getOperatingSystem(os.ReadFile); err != nil {
 		return hostInfo, errors.Wrap(err, "failed to get host operating system image")
 	} else {
 		hostInfo.OSImage = distribution

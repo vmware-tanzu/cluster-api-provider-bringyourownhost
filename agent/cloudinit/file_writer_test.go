@@ -5,12 +5,11 @@ package cloudinit_test
 
 import (
 	"io/fs"
-	"io/ioutil"
 	"os"
 	"path"
 	"strconv"
 
-	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	"github.com/vmware-tanzu/cluster-api-provider-bringyourownhost/agent/cloudinit"
 )
@@ -23,7 +22,7 @@ var _ = Describe("FileWriter", func() {
 	)
 
 	BeforeEach(func() {
-		workDir, err = ioutil.TempDir("", "file_writer_ut")
+		workDir, err = os.MkdirTemp("", "file_writer_ut")
 		Expect(err).NotTo(HaveOccurred())
 	})
 

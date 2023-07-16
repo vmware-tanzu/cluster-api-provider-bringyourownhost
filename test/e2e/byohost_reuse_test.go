@@ -13,7 +13,7 @@ import (
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/container"
 	"github.com/docker/docker/client"
-	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	infrastructurev1beta1 "github.com/vmware-tanzu/cluster-api-provider-bringyourownhost/apis/infrastructure/v1beta1"
 	corev1 "k8s.io/api/core/v1"
@@ -64,7 +64,7 @@ var _ = Describe("When BYO Host rejoins the capacity pool", func() {
 		byoHostName1 := "byohost-1"
 		byoHostName2 := "byohost-for-reuse"
 
-		client, err := client.NewClientWithOpts(client.FromEnv)
+		client, err := client.NewClientWithOpts(client.FromEnv, client.WithAPIVersionNegotiation())
 		Expect(err).NotTo(HaveOccurred())
 		setDockerClient(client)
 
@@ -132,8 +132,8 @@ var _ = Describe("When BYO Host rejoins the capacity pool", func() {
 				Namespace:                namespace.Name,
 				ClusterName:              clusterName,
 				KubernetesVersion:        e2eConfig.GetVariable(KubernetesVersion),
-				ControlPlaneMachineCount: pointer.Int64Ptr(1),
-				WorkerMachineCount:       pointer.Int64Ptr(1),
+				ControlPlaneMachineCount: pointer.Int64(1),
+				WorkerMachineCount:       pointer.Int64(1),
 			},
 			WaitForClusterIntervals:      e2eConfig.GetIntervals(specName, "wait-cluster"),
 			WaitForControlPlaneIntervals: e2eConfig.GetIntervals(specName, "wait-control-plane"),
@@ -175,8 +175,8 @@ var _ = Describe("When BYO Host rejoins the capacity pool", func() {
 				Namespace:                namespace.Name,
 				ClusterName:              clusterName,
 				KubernetesVersion:        e2eConfig.GetVariable(KubernetesVersion),
-				ControlPlaneMachineCount: pointer.Int64Ptr(1),
-				WorkerMachineCount:       pointer.Int64Ptr(1),
+				ControlPlaneMachineCount: pointer.Int64(1),
+				WorkerMachineCount:       pointer.Int64(1),
 			},
 			WaitForClusterIntervals:      e2eConfig.GetIntervals(specName, "wait-cluster"),
 			WaitForControlPlaneIntervals: e2eConfig.GetIntervals(specName, "wait-control-plane"),

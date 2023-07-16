@@ -8,7 +8,7 @@ import (
 
 	b64 "encoding/base64"
 
-	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	infrav1 "github.com/vmware-tanzu/cluster-api-provider-bringyourownhost/apis/infrastructure/v1beta1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"

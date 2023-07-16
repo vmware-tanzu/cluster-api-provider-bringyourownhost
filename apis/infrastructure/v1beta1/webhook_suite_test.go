@@ -15,7 +15,7 @@ import (
 	"testing"
 	"time"
 
-	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 
 	byohv1beta1 "github.com/vmware-tanzu/cluster-api-provider-bringyourownhost/apis/infrastructure/v1beta1"
@@ -168,7 +168,7 @@ var _ = BeforeSuite(func() {
 		return conn.Close()
 	}).Should(Succeed())
 
-}, 60)
+})
 
 var _ = AfterSuite(func() {
 	cancel()

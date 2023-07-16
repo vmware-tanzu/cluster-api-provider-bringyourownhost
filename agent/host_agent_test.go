@@ -1,13 +1,12 @@
 // Copyright 2021 VMware, Inc. All Rights Reserved.
 // SPDX-License-Identifier: Apache-2.0
 
-//nolint: nolintlint,testpackage
+// nolint: nolintlint,testpackage
 package main
 
 import (
 	"context"
 	"fmt"
-	"io/ioutil"
 	"net"
 	"os"
 	"os/exec"
@@ -19,7 +18,7 @@ import (
 	"github.com/docker/docker/api/types/container"
 	"github.com/docker/docker/client"
 	"github.com/jackpal/gateway"
-	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	"github.com/onsi/gomega/gexec"
 	"github.com/vmware-tanzu/cluster-api-provider-bringyourownhost/agent/registration"
@@ -46,7 +45,7 @@ var _ = Describe("Agent", func() {
 			err              error
 			hostName         string
 			runner           *e2e.ByoHostRunner
-			byoHostContainer *container.ContainerCreateCreatedBody
+			byoHostContainer *container.CreateResponse
 		)
 
 		BeforeEach(func() {
@@ -117,7 +116,7 @@ var _ = Describe("Agent", func() {
 			hostName         string
 			fakeDownloadPath = "fake-download-path"
 			runner           *e2e.ByoHostRunner
-			byoHostContainer *container.ContainerCreateCreatedBody
+			byoHostContainer *container.CreateResponse
 			output           dockertypes.HijackedResponse
 		)
 
@@ -460,7 +459,7 @@ var _ = Describe("Agent", func() {
 			hostName         string
 			fakeDownloadPath = "fake-download-path"
 			runner           *e2e.ByoHostRunner
-			byoHostContainer *container.ContainerCreateCreatedBody
+			byoHostContainer *container.CreateResponse
 		)
 
 		BeforeEach(func() {
@@ -515,7 +514,7 @@ var _ = Describe("Agent", func() {
 			ctx              context.Context
 			hostName         string
 			runner           *e2e.ByoHostRunner
-			byoHostContainer *container.ContainerCreateCreatedBody
+			byoHostContainer *container.CreateResponse
 			output           dockertypes.HijackedResponse
 		)
 
@@ -818,7 +817,7 @@ var _ = Describe("Agent Unit Tests", func() {
 			err               error
 		)
 		BeforeEach(func() {
-			bootstrapKubeConf, err = ioutil.TempFile("", "bootstrap-kubeconfig")
+			bootstrapKubeConf, err = os.CreateTemp("", "bootstrap-kubeconfig")
 			Expect(err).NotTo(HaveOccurred())
 			bootstrapKubeConfig = bootstrapKubeConf.Name()
 		})
@@ -868,7 +867,7 @@ users:
 			err        error
 		)
 		BeforeEach(func() {
-			kubeConfig, err = ioutil.TempFile("", "bootstrap-kubeconfig")
+			kubeConfig, err = os.CreateTemp("", "bootstrap-kubeconfig")
 			Expect(err).NotTo(HaveOccurred())
 			bootstrapKubeConfig = kubeConfig.Name()
 		})

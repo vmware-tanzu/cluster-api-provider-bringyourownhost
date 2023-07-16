@@ -182,7 +182,7 @@ func (r *K8sInstallerConfigReconciler) storeInstallationData(ctx context.Context
 					Kind:       scope.Config.Kind,
 					Name:       scope.Config.Name,
 					UID:        scope.Config.UID,
-					Controller: pointer.BoolPtr(true),
+					Controller: pointer.Bool(true),
 				},
 			},
 		},

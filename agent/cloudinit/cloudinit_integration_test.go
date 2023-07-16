@@ -7,12 +7,11 @@ import (
 	"encoding/base64"
 	"fmt"
 	"io/fs"
-	"io/ioutil"
 	"os"
 	"path"
 	"strconv"
 
-	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	"github.com/vmware-tanzu/cluster-api-provider-bringyourownhost/agent/cloudinit"
 	"github.com/vmware-tanzu/cluster-api-provider-bringyourownhost/agent/registration"
@@ -27,7 +26,7 @@ var (
 var _ = Describe("CloudinitIntegration", func() {
 	BeforeEach(func() {
 		var err error
-		workDir, err = ioutil.TempDir("", "host-agent-ut")
+		workDir, err = os.MkdirTemp("", "host-agent-ut")
 		Expect(err).NotTo(HaveOccurred())
 
 		scriptExecutor = cloudinit.ScriptExecutor{

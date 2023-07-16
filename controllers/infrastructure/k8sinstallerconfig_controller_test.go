@@ -7,7 +7,7 @@ import (
 	"context"
 	"fmt"
 
-	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	infrav1 "github.com/vmware-tanzu/cluster-api-provider-bringyourownhost/apis/infrastructure/v1beta1"
 	"github.com/vmware-tanzu/cluster-api-provider-bringyourownhost/test/builder"
@@ -327,7 +327,7 @@ var _ = Describe("Controllers/K8sInstallerConfigController", func() {
 							Kind:       "K8sInstallerConfig",
 							Name:       k8sinstallerConfig.Name,
 							UID:        k8sinstallerConfig.UID,
-							Controller: pointer.BoolPtr(true),
+							Controller: pointer.Bool(true),
 						},
 					},
 				},

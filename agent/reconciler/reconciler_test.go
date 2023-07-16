@@ -8,7 +8,7 @@ import (
 	"errors"
 	"fmt"
 
-	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	"github.com/vmware-tanzu/cluster-api-provider-bringyourownhost/agent/cloudinit/cloudinitfakes"
 	"github.com/vmware-tanzu/cluster-api-provider-bringyourownhost/agent/reconciler"
