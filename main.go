@@ -66,7 +66,7 @@ func setFlags() {
 // main() will have lots of 'if', '&&' and '||' which will
 // increase its cyclometric complexity. Ignoring it for now.
 
-//nolint: funlen, gocyclo
+// nolint: funlen, gocyclo
 func main() {
 	setFlags()
 	ctrl.SetLogger(klogr.New())
@@ -94,7 +94,6 @@ func main() {
 
 	if err = (&remote.ClusterCacheReconciler{
 		Client:  mgr.GetClient(),
-		Log:     ctrl.Log.WithName("remote").WithName("ClusterCacheReconciler"),
 		Tracker: tracker,
 	}).SetupWithManager(context.TODO(), mgr, concurrency(0)); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "ClusterCacheReconciler")
@@ -127,7 +126,7 @@ func main() {
 	if err = (&byohcontrollers.ByoClusterReconciler{
 		Client: mgr.GetClient(),
 		Scheme: mgr.GetScheme(),
-	}).SetupWithManager(mgr); err != nil {
+	}).SetupWithManager(context.TODO(), mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "ByoCluster")
 		os.Exit(1)
 	}

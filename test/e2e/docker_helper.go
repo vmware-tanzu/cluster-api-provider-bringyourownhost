@@ -85,7 +85,7 @@ func copyToContainer(ctx context.Context, cli *client.Client, copyConfig cpConfi
 		}
 
 		dstInfo.Path = linkTarget
-		dstStat, err = cli.ContainerStatPath(ctx, copyConfig.container, linkTarget)
+		dstStat, _ = cli.ContainerStatPath(ctx, copyConfig.container, linkTarget)
 	}
 
 	// Validate the destination path
@@ -159,7 +159,7 @@ func copyToContainer(ctx context.Context, cli *client.Client, copyConfig cpConfi
 	return cli.CopyToContainer(ctx, copyConfig.container, resolvedDstPath, content, options)
 }
 
-func (r *ByoHostRunner) createDockerContainer() (container.ContainerCreateCreatedBody, error) {
+func (r *ByoHostRunner) createDockerContainer() (container.CreateResponse, error) {
 	tmpfs := map[string]string{"/run": "", "/tmp": ""}
 
 	return r.DockerClient.ContainerCreate(r.Context,
@@ -253,8 +253,8 @@ func (r *ByoHostRunner) copyKubeconfig(config cpConfig, listopt types.ContainerL
 }
 
 // SetupByoDockerHost sets up the byohost docker container
-func (r *ByoHostRunner) SetupByoDockerHost() (*container.ContainerCreateCreatedBody, error) {
-	var byohost container.ContainerCreateCreatedBody
+func (r *ByoHostRunner) SetupByoDockerHost() (*container.CreateResponse, error) {
+	var byohost container.CreateResponse
 	var err error
 
 	byohost, err = r.createDockerContainer()
@@ -277,7 +277,7 @@ func (r *ByoHostRunner) SetupByoDockerHost() (*container.ContainerCreateCreatedB
 }
 
 // ExecByoDockerHost runs the exec command in the byohost docker container
-func (r *ByoHostRunner) ExecByoDockerHost(byohost *container.ContainerCreateCreatedBody) (types.HijackedResponse, string, error) {
+func (r *ByoHostRunner) ExecByoDockerHost(byohost *container.CreateResponse) (types.HijackedResponse, string, error) {
 	var cmdArgs []string
 	cmdArgs = append(cmdArgs, "./agent")
 	for flag, arg := range r.CommandArgs {

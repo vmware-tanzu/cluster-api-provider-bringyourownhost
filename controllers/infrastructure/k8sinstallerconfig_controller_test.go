@@ -7,7 +7,7 @@ import (
 	"context"
 	"fmt"
 
-	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	infrav1 "github.com/vmware-tanzu/cluster-api-provider-bringyourownhost/apis/infrastructure/v1beta1"
 	"github.com/vmware-tanzu/cluster-api-provider-bringyourownhost/test/builder"
@@ -166,7 +166,7 @@ var _ = Describe("Controllers/K8sInstallerConfigController", func() {
 		annotations.AddAnnotations(k8sinstallerConfig, pauseAnnotations)
 		Expect(ph.Patch(ctx, k8sinstallerConfig, patch.WithStatusObservedGeneration{})).Should(Succeed())
 		WaitForObjectToBeUpdatedInCache(k8sinstallerConfig, func(object client.Object) bool {
-			return annotations.HasPausedAnnotation(object.(*infrav1.K8sInstallerConfig))
+			return annotations.HasPaused(object.(*infrav1.K8sInstallerConfig))
 		})
 
 		_, err = k8sInstallerConfigReconciler.Reconcile(ctx, reconcile.Request{
@@ -327,7 +327,7 @@ var _ = Describe("Controllers/K8sInstallerConfigController", func() {
 							Kind:       "K8sInstallerConfig",
 							Name:       k8sinstallerConfig.Name,
 							UID:        k8sinstallerConfig.UID,
-							Controller: pointer.BoolPtr(true),
+							Controller: pointer.Bool(true),
 						},
 					},
 				},

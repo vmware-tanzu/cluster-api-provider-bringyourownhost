@@ -1,7 +1,7 @@
 // Copyright 2021 VMware, Inc. All Rights Reserved.
 // SPDX-License-Identifier: Apache-2.0
 
-//nolint: testpackage
+// nolint: testpackage
 package e2e
 
 import (
@@ -11,8 +11,9 @@ import (
 	"path/filepath"
 
 	"github.com/docker/docker/api/types"
+	"github.com/docker/docker/api/types/container"
 	"github.com/docker/docker/client"
-	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/utils/pointer"
@@ -55,7 +56,7 @@ var _ = Describe("When testing MachineDeployment scale out/in", func() {
 	It("Should successfully scale a MachineDeployment up and down upon changes to the MachineDeployment replica count", func() {
 		clusterName := fmt.Sprintf("%s-%s", specName, util.RandomString(6))
 
-		dClient, err := client.NewClientWithOpts(client.FromEnv)
+		dClient, err := client.NewClientWithOpts(client.FromEnv, client.WithAPIVersionNegotiation())
 		dockerClient = dClient
 		Expect(err).NotTo(HaveOccurred())
 
@@ -114,15 +115,15 @@ var _ = Describe("When testing MachineDeployment scale out/in", func() {
 				Namespace:                namespace.Name,
 				ClusterName:              clusterName,
 				KubernetesVersion:        e2eConfig.GetVariable(KubernetesVersion),
-				ControlPlaneMachineCount: pointer.Int64Ptr(3),
-				WorkerMachineCount:       pointer.Int64Ptr(1),
+				ControlPlaneMachineCount: pointer.Int64(3),
+				WorkerMachineCount:       pointer.Int64(1),
 			},
 			WaitForClusterIntervals:      e2eConfig.GetIntervals(specName, "wait-cluster"),
 			WaitForControlPlaneIntervals: e2eConfig.GetIntervals(specName, "wait-control-plane"),
 			WaitForMachineDeployments:    e2eConfig.GetIntervals(specName, "wait-worker-nodes"),
 		}, clusterResources)
 
-		Expect(clusterResources.MachineDeployments[0].Spec.Replicas).To(Equal(pointer.Int32Ptr(1)))
+		Expect(clusterResources.MachineDeployments[0].Spec.Replicas).To(Equal(pointer.Int32(1)))
 
 		By("Scaling the MachineDeployment out to 3")
 		framework.ScaleAndWaitMachineDeployment(ctx, framework.ScaleAndWaitMachineDeploymentInput{
@@ -133,7 +134,7 @@ var _ = Describe("When testing MachineDeployment scale out/in", func() {
 			WaitForMachineDeployments: e2eConfig.GetIntervals(specName, "wait-worker-nodes"),
 		})
 
-		Expect(clusterResources.MachineDeployments[0].Spec.Replicas).To(Equal(pointer.Int32Ptr(3)))
+		Expect(clusterResources.MachineDeployments[0].Spec.Replicas).To(Equal(pointer.Int32(3)))
 
 		By("Scaling the MachineDeployment down to 2")
 		framework.ScaleAndWaitMachineDeployment(ctx, framework.ScaleAndWaitMachineDeploymentInput{
@@ -144,7 +145,7 @@ var _ = Describe("When testing MachineDeployment scale out/in", func() {
 			WaitForMachineDeployments: e2eConfig.GetIntervals(specName, "wait-worker-nodes"),
 		})
 
-		Expect(clusterResources.MachineDeployments[0].Spec.Replicas).To(Equal(pointer.Int32Ptr(2)))
+		Expect(clusterResources.MachineDeployments[0].Spec.Replicas).To(Equal(pointer.Int32(2)))
 
 	})
 
@@ -160,7 +161,7 @@ var _ = Describe("When testing MachineDeployment scale out/in", func() {
 
 		if dockerClient != nil {
 			for _, byohostContainerID := range allbyohostContainerIDs {
-				err := dockerClient.ContainerStop(ctx, byohostContainerID, nil)
+				err := dockerClient.ContainerStop(ctx, byohostContainerID, container.StopOptions{})
 				Expect(err).NotTo(HaveOccurred())
 
 				err = dockerClient.ContainerRemove(ctx, byohostContainerID, types.ContainerRemoveOptions{})

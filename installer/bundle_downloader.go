@@ -6,13 +6,10 @@ package installer
 import (
 	"fmt"
 	"io/fs"
-	"os"
 	"path/filepath"
 	"strings"
 
-	"github.com/cppforlife/go-cli-ui/ui"
 	"github.com/go-logr/logr"
-	"github.com/k14s/imgpkg/pkg/imgpkg/cmd"
 )
 
 var (
@@ -38,104 +35,25 @@ func NewBundleDownloader(bundleType, repoAddr, downloadPath string, logger logr.
 	}
 }
 
-// Download is a method that downloads the bundle from repoAddr to downloadPath.
-// It automatically downloads and extracts the given version for the current linux
-// distribution. Creates the folder where the bundle should be saved if it does not exist.
-// Download is performed in a temp directory which in case of successful download is renamed.
-// If a cache for the bundle exists, nothing is downloaded.
-func (bd *bundleDownloader) Download(
-	normalizedOsVersion,
-	k8sVersion string) error {
-
-	return bd.DownloadFromRepo(
-		normalizedOsVersion,
-		k8sVersion,
-		bd.downloadByImgpkg)
-}
-
-// DownloadFromRepo downloads the required bundle with the given method.
-func (bd *bundleDownloader) DownloadFromRepo(
-	normalizedOsVersion,
-	k8sVersion string,
-	downloadByTool func(string, string) error) error {
-
-	downloadPathWithRepo := bd.getBundlePathWithRepo()
-
-	err := ensureDirExist(downloadPathWithRepo)
-	defer func(name string) {
-		err = os.Remove(name)
-		if err != nil {
-			bd.logger.Error(err, "Failed to remove directory", "path", name)
-		}
-	}(downloadPathWithRepo)
-
-	if err != nil {
-		return err
-	}
-
-	bundleDirPath := bd.GetBundleDirPath(k8sVersion)
-
-	// cache hit
-	if checkDirExist(bundleDirPath) {
-		bd.logger.Info("Cache hit", "path", bundleDirPath)
-		return nil
-	}
-
-	bd.logger.Info("Cache miss", "path", bundleDirPath)
-
-	dir, err := os.MkdirTemp(downloadPathWithRepo, "tempBundle")
-	// It is fine if the dir path does not exist.
-	defer func() {
-		err = os.RemoveAll(dir)
-		if err != nil {
-			bd.logger.Error(err, "Failed to remove temp bundle dir", "path", dir)
-		}
-	}()
-	if err != nil {
-		return err
-	}
-	bundleAddr := bd.GetBundleAddr(normalizedOsVersion, k8sVersion)
-	err = convertError(downloadByTool(bundleAddr, dir))
-	if err != nil {
-		return err
-	}
-	return os.Rename(dir, bundleDirPath)
-}
-
-// downloadByImgpkg downloads the required bundle from the given repo using imgpkg.
-func (bd *bundleDownloader) downloadByImgpkg(
-	bundleAddr,
-	bundleDirPath string) error {
-
-	bd.logger.Info("Downloading bundle", "from", bundleAddr)
-
-	var confUI = ui.NewConfUI(ui.NewNoopLogger())
-	defer confUI.Flush()
-
-	imgpkgCmd := cmd.NewDefaultImgpkgCmd(confUI)
-	imgpkgCmd.SetArgs([]string{"pull", "--recursive", "-i", bundleAddr, "-o", bundleDirPath})
-	return imgpkgCmd.Execute()
-}
-
 // convertError returns known errors in standardized format.
-func convertError(err error) error {
-	downloadErrMap := map[string]Error{
-		"no such host":                         ErrBundleDownload,
-		"connection timed out":                 ErrBundleDownload,
-		"temporary failure in name resolution": ErrBundleDownload,
-		"no space left on device":              ErrBundleExtract}
+// func convertError(err error) error {
+// 	downloadErrMap := map[string]Error{
+// 		"no such host":                         ErrBundleDownload,
+// 		"connection timed out":                 ErrBundleDownload,
+// 		"temporary failure in name resolution": ErrBundleDownload,
+// 		"no space left on device":              ErrBundleExtract}
 
-	if err == nil {
-		return nil
-	}
-	errStr := strings.ToLower(err.Error())
-	for k, v := range downloadErrMap {
-		if strings.HasSuffix(errStr, k) {
-			return v
-		}
-	}
-	return err
-}
+// 	if err == nil {
+// 		return nil
+// 	}
+// 	errStr := strings.ToLower(err.Error())
+// 	for k, v := range downloadErrMap {
+// 		if strings.HasSuffix(errStr, k) {
+// 			return v
+// 		}
+// 	}
+// 	return err
+// }
 
 // GetBundleDirPath returns the path to directory containing the required bundle.
 func (bd *bundleDownloader) GetBundleDirPath(k8sVersion string) string {
@@ -161,14 +79,14 @@ func (bd *bundleDownloader) GetBundleAddr(normalizedOsVersion, k8sVersion string
 }
 
 // checkDirExist checks if a dirrectory exists.
-func checkDirExist(dirPath string) bool {
-	if fi, err := os.Stat(dirPath); os.IsNotExist(err) || !fi.IsDir() {
-		return false
-	}
-	return true
-}
+// func checkDirExist(dirPath string) bool {
+// 	if fi, err := os.Stat(dirPath); os.IsNotExist(err) || !fi.IsDir() {
+// 		return false
+// 	}
+// 	return true
+// }
 
 // ensureDirExist ensures that a bundle directory already exists or creates a new one recursively.
-func ensureDirExist(dirPath string) error {
-	return os.MkdirAll(dirPath, DownloadPathPermissions)
-}
+// func ensureDirExist(dirPath string) error {
+// 	return os.MkdirAll(dirPath, DownloadPathPermissions)
+// }

@@ -350,7 +350,7 @@ func (r *HostReconciler) removeAnnotations(ctx context.Context, byoHost *infrast
 	byoHost.Spec.BootstrapSecret = nil
 
 	// Remove cluster-name label
-	delete(byoHost.Labels, clusterv1.ClusterLabelName)
+	delete(byoHost.Labels, clusterv1.ClusterNameLabel)
 
 	// Remove Byomachine-name label
 	delete(byoHost.Labels, infrastructurev1beta1.AttachedByoMachineLabel)

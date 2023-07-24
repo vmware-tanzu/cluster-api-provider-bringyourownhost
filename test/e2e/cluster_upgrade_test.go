@@ -11,8 +11,9 @@ import (
 	"path/filepath"
 
 	"github.com/docker/docker/api/types"
+	"github.com/docker/docker/api/types/container"
 	"github.com/docker/docker/client"
-	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/utils/pointer"
@@ -58,7 +59,7 @@ var _ = Describe("Cluster upgrade test [K8s-upgrade]", func() {
 	It("Should successfully upgrade cluster", func() {
 		clusterName := fmt.Sprintf("%s-%s", specName, util.RandomString(6))
 		var err error
-		dockerClient, err = client.NewClientWithOpts(client.FromEnv)
+		dockerClient, err = client.NewClientWithOpts(client.FromEnv, client.WithAPIVersionNegotiation())
 		Expect(err).NotTo(HaveOccurred())
 
 		By("Creating byohost capacity pool containing 4 docker hosts")
@@ -115,8 +116,8 @@ var _ = Describe("Cluster upgrade test [K8s-upgrade]", func() {
 				Namespace:                namespace.Name,
 				ClusterName:              clusterName,
 				KubernetesVersion:        kubernetesVersionUpgradeFrom,
-				ControlPlaneMachineCount: pointer.Int64Ptr(1),
-				WorkerMachineCount:       pointer.Int64Ptr(1),
+				ControlPlaneMachineCount: pointer.Int64(1),
+				WorkerMachineCount:       pointer.Int64(1),
 			},
 			WaitForClusterIntervals:      e2eConfig.GetIntervals(specName, "wait-cluster"),
 			WaitForControlPlaneIntervals: e2eConfig.GetIntervals(specName, "wait-control-plane"),
@@ -168,7 +169,7 @@ var _ = Describe("Cluster upgrade test [K8s-upgrade]", func() {
 
 		if dockerClient != nil {
 			for _, byohostContainerID := range allbyohostContainerIDs {
-				err := dockerClient.ContainerStop(ctx, byohostContainerID, nil)
+				err := dockerClient.ContainerStop(ctx, byohostContainerID, container.StopOptions{})
 				Expect(err).NotTo(HaveOccurred())
 
 				err = dockerClient.ContainerRemove(ctx, byohostContainerID, types.ContainerRemoveOptions{})

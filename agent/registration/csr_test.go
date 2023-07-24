@@ -8,13 +8,12 @@ import (
 	"crypto/x509"
 	"encoding/pem"
 	"fmt"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"time"
 
 	"github.com/go-logr/logr"
-	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	"github.com/vmware-tanzu/cluster-api-provider-bringyourownhost/agent/registration"
 	"github.com/vmware-tanzu/cluster-api-provider-bringyourownhost/test/builder"
@@ -94,7 +93,7 @@ kovW9X7Ook/tTW0HyX6D6HRciA==
 				Expect(err).ShouldNot(HaveOccurred())
 			}
 			registration.ConfigPath = "config"
-			fileDir, err = ioutil.TempDir("", "bootstrap")
+			fileDir, err = os.MkdirTemp("", "bootstrap")
 			Expect(err).ShouldNot(HaveOccurred())
 
 		})
@@ -111,7 +110,7 @@ kovW9X7Ook/tTW0HyX6D6HRciA==
 			Expect(err).To(MatchError("hostname is not valid"))
 		})
 		It("should return client config if bootstrap kubeconfig is valid", func() {
-			fileboot, err := ioutil.TempFile(fileDir, "bootstrapkubeconfig")
+			fileboot, err := os.CreateTemp(fileDir, "bootstrapkubeconfig")
 			Expect(err).ShouldNot(HaveOccurred())
 			err = os.WriteFile(fileboot.Name(), testDatabootstrapValid, os.FileMode(0755))
 			Expect(err).ShouldNot(HaveOccurred())
@@ -121,7 +120,7 @@ kovW9X7Ook/tTW0HyX6D6HRciA==
 			Expect(restConfig.Host).To(Equal("https://cluster-a.com"))
 		})
 		It("should return error if bootstrap kubeconfig is invalid", func() {
-			fileboot, err := ioutil.TempFile(fileDir, "bootstrapkubeconfig")
+			fileboot, err := os.CreateTemp(fileDir, "bootstrapkubeconfig")
 			Expect(err).ShouldNot(HaveOccurred())
 			err = os.WriteFile(fileboot.Name(), testDatabootstrapInvalid, os.FileMode(0755))
 			Expect(err).ShouldNot(HaveOccurred())

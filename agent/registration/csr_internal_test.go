@@ -6,10 +6,9 @@ package registration
 import (
 	"crypto/rand"
 	"crypto/rsa"
-	"io/ioutil"
 	"os"
 
-	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 )
 
@@ -51,11 +50,11 @@ users:
   user:
     token: mytoken-a
 `)
-			fileDir, err := ioutil.TempDir("", "bootstrap")
+			fileDir, err := os.MkdirTemp("", "bootstrap")
 			Expect(err).ShouldNot(HaveOccurred())
-			fileboot, err := ioutil.TempFile(fileDir, "boostrapkubeconfig")
+			fileboot, err := os.CreateTemp(fileDir, "boostrapkubeconfig")
 			Expect(err).ShouldNot(HaveOccurred())
-			filekubeconfig, err := ioutil.TempFile(fileDir, "kubeconfig")
+			filekubeconfig, err := os.CreateTemp(fileDir, "kubeconfig")
 			Expect(err).ShouldNot(HaveOccurred())
 			err = os.WriteFile(fileboot.Name(), testDatabootstrapValid, os.FileMode(0755))
 			Expect(err).ShouldNot(HaveOccurred())

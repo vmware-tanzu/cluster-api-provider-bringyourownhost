@@ -130,7 +130,7 @@ func GetByoMachinesInCluster(
 	controllerClient client.Client,
 	namespace, clusterName string) ([]*infrav1.ByoMachine, error) {
 
-	labels := map[string]string{clusterv1.ClusterLabelName: clusterName}
+	labels := map[string]string{clusterv1.ClusterNameLabel: clusterName}
 	machineList := &infrav1.ByoMachineList{}
 
 	if err := controllerClient.List(
@@ -181,14 +181,14 @@ func (r ByoClusterReconciler) reconcileNormal(ctx context.Context, byoCluster *i
 }
 
 // SetupWithManager sets up the controller with the Manager.
-func (r *ByoClusterReconciler) SetupWithManager(mgr ctrl.Manager) error {
+func (r *ByoClusterReconciler) SetupWithManager(ctx context.Context, mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
 		// Watch the controlled, infrastructure resource.
 		For(clusterControlledType).
 		// Watch the CAPI resource that owns this infrastructure resource.
 		Watches(
 			&source.Kind{Type: &clusterv1.Cluster{}},
-			handler.EnqueueRequestsFromMapFunc(clusterutilv1.ClusterToInfrastructureMapFunc(infrav1.GroupVersion.WithKind(clusterControlledTypeGVK.Kind))),
+			handler.EnqueueRequestsFromMapFunc(clusterutilv1.ClusterToInfrastructureMapFunc(ctx, infrav1.GroupVersion.WithKind(clusterControlledTypeGVK.Kind), mgr.GetClient(), &infrav1.ByoCluster{})),
 		).
 		Complete(r)
 }

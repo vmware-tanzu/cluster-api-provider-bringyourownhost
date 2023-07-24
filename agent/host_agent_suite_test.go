@@ -1,13 +1,12 @@
 // Copyright 2021 VMware, Inc. All Rights Reserved.
 // SPDX-License-Identifier: Apache-2.0
 
-//nolint: nolintlint,testpackage
+// nolint: nolintlint,testpackage
 package main
 
 import (
 	"context"
 	"go/build"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"testing"
@@ -16,7 +15,7 @@ import (
 	dockertypes "github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/container"
 	dClient "github.com/docker/docker/client"
-	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	"github.com/onsi/gomega/gexec"
 	infrastructurev1beta1 "github.com/vmware-tanzu/cluster-api-provider-bringyourownhost/apis/infrastructure/v1beta1"
@@ -71,8 +70,8 @@ var _ = BeforeSuite(func() {
 	testEnv = &envtest.Environment{
 		CRDDirectoryPaths: []string{
 			filepath.Join("..", "config", "crd", "bases"),
-			filepath.Join(build.Default.GOPATH, "pkg", "mod", "sigs.k8s.io", "cluster-api@v1.1.3", "config", "crd", "bases"),
-			filepath.Join(build.Default.GOPATH, "pkg", "mod", "sigs.k8s.io", "cluster-api@v1.1.3", "bootstrap", "kubeadm", "config", "crd", "bases"),
+			filepath.Join(build.Default.GOPATH, "pkg", "mod", "sigs.k8s.io", "cluster-api@v1.4.4", "config", "crd", "bases"),
+			filepath.Join(build.Default.GOPATH, "pkg", "mod", "sigs.k8s.io", "cluster-api@v1.4.4", "bootstrap", "kubeadm", "config", "crd", "bases"),
 		},
 
 		ErrorIfCRDPathMissing: true,
@@ -101,7 +100,7 @@ var _ = BeforeSuite(func() {
 
 	clientSet = clientset.NewForConfigOrDie(cfg)
 
-	dockerClient, err = dClient.NewClientWithOpts(dClient.FromEnv)
+	dockerClient, err = dClient.NewClientWithOpts(dClient.FromEnv, dClient.WithAPIVersionNegotiation())
 	Expect(err).NotTo(HaveOccurred())
 
 	pathToHostAgentBinary, err = gexec.Build("github.com/vmware-tanzu/cluster-api-provider-bringyourownhost/agent")
@@ -120,7 +119,7 @@ var _ = AfterSuite(func() {
 })
 
 func writeKubeConfig() {
-	kubeConf, err := ioutil.TempFile("", tmpFilePrefix)
+	kubeConf, err := os.CreateTemp("", tmpFilePrefix)
 	Expect(err).NotTo(HaveOccurred())
 	setKubeConfig(kubeConf)
 
@@ -160,8 +159,8 @@ func setupTestInfra(ctx context.Context, hostname, kubeconfig string, namespace 
 	return &byohostRunner
 }
 
-func cleanup(ctx context.Context, byoHostContainer *container.ContainerCreateCreatedBody, namespace *corev1.Namespace, agentLogFile string) {
-	err := dockerClient.ContainerStop(ctx, byoHostContainer.ID, nil)
+func cleanup(ctx context.Context, byoHostContainer *container.CreateResponse, namespace *corev1.Namespace, agentLogFile string) {
+	err := dockerClient.ContainerStop(ctx, byoHostContainer.ID, container.StopOptions{})
 	Expect(err).NotTo(HaveOccurred())
 
 	err = dockerClient.ContainerRemove(ctx, byoHostContainer.ID, dockertypes.ContainerRemoveOptions{})
