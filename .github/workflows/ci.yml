@@ -25,12 +25,12 @@ jobs:
       runs-on: ubuntu-20.04
       steps:
       - name: Checkout code
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
 
       - name: Set up Go
-        uses: actions/setup-go@v2
+        uses: actions/setup-go@v4
         with:
-          go-version: 1.19.10
+          go-version: 1.20.7
 
       - name: build agent
         run: make host-agent-binaries
@@ -40,9 +40,12 @@ jobs:
     steps:
     - name: Check Docker Version
       run: docker --version
-      
+    
+    - name: Uninstall podman if installed
+      run: sudo apt-get purge podman && sudo rm -rf /etc/cni/net.d/
+
     - name: Checkout code
-      uses: actions/checkout@v2
+      uses: actions/checkout@v3
       with:
         fetch-depth: 0
 
@@ -53,9 +56,9 @@ jobs:
       run: sudo sysctl -w net.netfilter.nf_conntrack_max=131072
 
     - name: Set up Go
-      uses: actions/setup-go@v2
+      uses: actions/setup-go@v4
       with:
-        go-version: 1.19.10
+        go-version: 1.20.7
 
     - name: Install ginkgo
       run: go install github.com/onsi/ginkgo/v2/ginkgo@v2.9.2

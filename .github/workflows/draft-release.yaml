@@ -12,12 +12,12 @@ jobs:
     steps:
 
       - name: Checkout
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
 
       - name: Set up Go
-        uses: actions/setup-go@v2
+        uses: actions/setup-go@v4
         with:
-          go-version: 1.19.10
+          go-version: 1.20.7
 
       - name: Build Release Artifacts
         run: IMG="projects.registry.vmware.com/cluster_api_provider_bringyourownhost/cluster-api-byoh-controller:${{ github.ref_name }}" make build-release-artifacts
