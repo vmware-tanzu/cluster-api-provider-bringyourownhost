@@ -66,5 +66,14 @@ func NewInstaller(ctx context.Context, osDist, arch, k8sVersion string, download
 	osbundle := reg.ResolveOsToOsBundle(osArch)
 	addrs := downloader.GetBundleAddr(osbundle, k8sVersion)
 
-	return algo.NewUbuntu20_04Installer(ctx, arch, addrs)
+	// if osArch start with ubuntu, then use ubuntu installer
+	if strings.HasPrefix(osArch, "ubuntu") {
+		return algo.NewUbuntu20_04Installer(ctx, arch, addrs)
+	}
+	// if osArch start with Rocky_Linux_8, then use Rocky_Linux_8 installer
+	if strings.HasPrefix(osArch, "Rocky_Linux_8") {
+		return algo.NewRocky8Installer(ctx, arch, addrs)
+	}
+
+	return nil, ErrOsK8sNotSupported
 }

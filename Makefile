@@ -2,10 +2,11 @@
 SHELL:=/usr/bin/env bash
 
 # Define registries
-STAGING_REGISTRY ?= gcr.io/k8s-staging-cluster-api
+# STAGING_REGISTRY ?= gcr.io/k8s-staging-cluster-api
+STAGING_REGISTRY ?= harbor.taco-cat.xyz/cluster_api_provider_bringyourownhost
 
 IMAGE_NAME ?= cluster-api-byoh-controller
-TAG ?= dev
+TAG ?= v0.0.1
 RELEASE_DIR := _dist
 
 # Image URL to use all building/pushing image targets
@@ -158,7 +159,7 @@ define WARNING
 
 ** WARNING **
 These tests modify system settings - and do **NOT** revert them at the end of the test.
-A list of changes can be found below. We **highly** recommend running these tests in a VM. 
+A list of changes can be found below. We **highly** recommend running these tests in a VM.
 
 Running e2e tests locally will change the following host config
 - enable the kernel modules: overlay & bridge network filter
@@ -177,7 +178,7 @@ take-user-input:
 	@echo "$$WARNING"
 	@read -p "Do you want to proceed [Y/n]?" REPLY; \
 	if [[ $$REPLY = "Y" || $$REPLY = "y" ]]; then echo starting e2e test; exit 0 ; else echo aborting; exit 1; fi
-	
+
 
 
 $(GINKGO): # Build ginkgo from tools folder.
