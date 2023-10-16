@@ -6,11 +6,11 @@
 # - docker
 
 images:
-  - name: registry.k8s.io/cluster-api/cluster-api-controller:v1.4.4
+  - name: registry.k8s.io/cluster-api/cluster-api-controller:v1.5.2
     loadBehavior: tryLoad
-  - name: registry.k8s.io/cluster-api/kubeadm-bootstrap-controller:v1.4.4
+  - name: registry.k8s.io/cluster-api/kubeadm-bootstrap-controller:v1.5.2
     loadBehavior: tryLoad
-  - name: registry.k8s.io/cluster-api/kubeadm-control-plane-controller:v1.4.4
+  - name: registry.k8s.io/cluster-api/kubeadm-control-plane-controller:v1.5.2
     loadBehavior: tryLoad
   - name: gcr.io/k8s-staging-cluster-api/cluster-api-byoh-controller:dev
     loadBehavior: mustLoad
@@ -26,8 +26,8 @@ providers:
   - name: cluster-api
     type: CoreProvider
     versions:
-      - name: v1.4.4 # next; use manifest from source files
-        value: "https://github.com/kubernetes-sigs/cluster-api/releases/download/v1.4.4/core-components.yaml"
+      - name: v1.5.2 # next; use manifest from source files
+        value: "https://github.com/kubernetes-sigs/cluster-api/releases/download/v1.5.2/core-components.yaml"
         type: "url"
         replacements:
           - old: "imagePullPolicy: Always"
@@ -40,8 +40,8 @@ providers:
   - name: kubeadm
     type: BootstrapProvider
     versions:
-      - name: v1.4.4 # next; use manifest from source files
-        value: "https://github.com/kubernetes-sigs/cluster-api/releases/download/v1.4.4/bootstrap-components.yaml"
+      - name: v1.5.2 # next; use manifest from source files
+        value: "https://github.com/kubernetes-sigs/cluster-api/releases/download/v1.5.2/bootstrap-components.yaml"
         type: "url"
         replacements:
           - old: "imagePullPolicy: Always"
@@ -54,8 +54,8 @@ providers:
   - name: kubeadm
     type: ControlPlaneProvider
     versions:
-      - name: v1.4.4 # next; use manifest from source files
-        value: "https://github.com/kubernetes-sigs/cluster-api/releases/download/v1.4.4/control-plane-components.yaml"
+      - name: v1.5.2 # next; use manifest from source files
+        value: "https://github.com/kubernetes-sigs/cluster-api/releases/download/v1.5.2/control-plane-components.yaml"
         type: "url"
         replacements:
           - old: "imagePullPolicy: Always"
@@ -102,7 +102,7 @@ variables:
   KUBETEST_CONFIGURATION: "./data/kubetest/conformance.yaml"
   NODE_DRAIN_TIMEOUT: "60s"
   # NOTE: INIT_WITH_BINARY is used only by the clusterctl upgrade test to initialize the management cluster to be upgraded
-  INIT_WITH_BINARY: "https://github.com/kubernetes-sigs/cluster-api/releases/download/v1.4.4/clusterctl-{OS}-{ARCH}"
+  INIT_WITH_BINARY: "https://github.com/kubernetes-sigs/cluster-api/releases/download/v1.5.2/clusterctl-{OS}-{ARCH}"
   BUNDLE_LOOKUP_TAG: "v1.25.11"
   CONTROL_PLANE_ENDPOINT_IP: ""
   MANUAL_CSR_APPROVAL: "disable"
