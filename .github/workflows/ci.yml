@@ -40,6 +40,9 @@ jobs:
     steps:
     - name: Check Docker Version
       run: docker --version
+
+    - name: Uninstall podman if installed
+      run: sudo apt-get purge podman && sudo rm -f /etc/cni/net.d/cni.lock && sudo rm -rf /etc/cni/net.d/87-podman.conflist
       
     - name: Checkout code
       uses: actions/checkout@v2
