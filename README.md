@@ -91,9 +91,9 @@ If someone wants to implement their own installer controller then they need to f
 - BYOH is currently compatible wth Cluster API v1beta1 (v1.0)
 
 ## Supported OS and Kubernetes versions
-| Operating System  | Architecture  | Kubernetes v1.22.* | Kubernetes v1.23.* | Kubernetes v1.24.* | Kubernetes v1.25.* |
-| ------------------|---------------|:------------------:|:------------------:|:------------------:|:------------------:|
-| Ubuntu 20.04.*    | amd64         |         ✓          |         ✓          |         ✓          |         ✓          |
+| Operating System  | Architecture  | Kubernetes v1.24.* | Kubernetes v1.25.* | Kubernetes v1.26.* |
+| ------------------|---------------|:------------------:|:------------------:|:------------------:|
+| Ubuntu 20.04.*    | amd64         |         ✓          |         ✓          |         ✓          |
 
 **NOTE:**  The '*' in OS means that all Ubuntu 20.04 patches are supported.
 

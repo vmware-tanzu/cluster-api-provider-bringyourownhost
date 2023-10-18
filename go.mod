@@ -1,12 +1,12 @@
 module github.com/vmware-tanzu/cluster-api-provider-bringyourownhost
 
-go 1.19
+go 1.20
 
 replace github.com/insomniacslk/dhcp => github.com/harvester/dhcp v0.0.0-20220421024905-28b38eafefe3
 
 require (
-	github.com/docker/cli v23.0.1+incompatible
-	github.com/docker/docker v23.0.3+incompatible
+	github.com/docker/cli v24.0.5+incompatible
+	github.com/docker/docker v24.0.5+incompatible
 	github.com/go-logr/logr v1.2.3
 	github.com/jackpal/gateway v1.0.7
 	github.com/kube-vip/kube-vip v0.5.5
