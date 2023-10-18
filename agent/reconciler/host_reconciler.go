@@ -231,11 +231,11 @@ func (r *HostReconciler) cleank8sdirectories(ctx context.Context) error {
 	}
 
 	if len(errList) > 0 {
-		errs := errList[0]                //nolint: gosec
-		for i, err := range errList[1:] { //nolint: gosec
-			errs = fmt.Errorf("%w; %d error", err, i)
+		err := errList[0]               //nolint: gosec
+		for _, e := range errList[1:] { //nolint: gosec
+			err = fmt.Errorf("%w; %v error", err, e)
 		}
-		return errors.WithMessage(errs, "not all k8s directories are cleaned up")
+		return errors.WithMessage(err, "not all k8s directories are cleaned up")
 	}
 	return nil
 }
