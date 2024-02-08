@@ -47,7 +47,7 @@ release:
 uploads:
   - name: debregistry
     method: POST
-    target: https://dr.nemax.nebiuscloud.net/upload/drbmsrith6kn5f7sgqro?component=main&suite=testing
+    target: "https://dr.nemax.nebiuscloud.net/upload/{{ .Env.DEB_REGISTRY }}?component={{ .Env.DEB_REGISTRY_COMPONENT }}&suite={{ .Env.DEB_REGISTRY_SUITE }}"
     custom_artifact_name: true
     exts:
       - deb
