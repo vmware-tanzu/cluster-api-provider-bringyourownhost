@@ -41,3 +41,5 @@ _artifacts
 
 # macOS Desktop Service Store files
 .DS_Store
+
+dist/

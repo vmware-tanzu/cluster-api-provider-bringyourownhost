@@ -1,0 +1,55 @@
+version: 1
+project_name: byoh-agent
+
+builds:
+  # from make host-agent-binaries
+  - id: byoh-agent
+    main: ./agent 
+    env:
+      - CGO_ENABLED=0
+    goos:
+      - linux
+    goarch:
+      - amd64
+    ldflags:
+      - -w -s
+      - -extldflags '-static'
+      - -X 'github.com/vmware-tanzu/cluster-api-provider-bringyourownhost/agent/version.GitMajor={{ .Major }}'
+      - -X 'github.com/vmware-tanzu/cluster-api-provider-bringyourownhost/agent/version.GitMinor={{ .Minor }}'
+      - -X 'github.com/vmware-tanzu/cluster-api-provider-bringyourownhost/agent/version.GitVersion={{ .Version }}'
+        -X 'github.com/vmware-tanzu/cluster-api-provider-bringyourownhost/agent/version.GitCommit={{ .Commit }}'
+        -X 'github.com/vmware-tanzu/cluster-api-provider-bringyourownhost/agent/version.GitTreeState={{ .GitTreeState }}'
+        -X 'github.com/vmware-tanzu/cluster-api-provider-bringyourownhost/agent/version.BuildDate={{ .Date }}'
+
+nfpms:
+  - file_name_template: "{{ .PackageName }}_{{ .Version }}_{{ .Arch }}"
+    maintainer: Nebius <nebius@nebius.com>
+    description: BYOH agent
+    homepage: https://github.com/nebius/cluster-api-provider-bringyourownhost
+    license: Apache 2.0
+    formats:
+      - deb
+    contents:
+      - src: debian/systemd
+        dst: /etc/systemd/system/
+        type: tree
+
+changelog:
+  sort: asc
+  filters:
+    exclude:
+      - "^docs:"
+      - "^test:"
+
+release: 
+  disable: true
+
+uploads:
+  - name: debregistry
+    method: POST
+    target: https://dr.nemax.nebiuscloud.net/upload/drbmsrith6kn5f7sgqro?component=main&suite=testing
+    custom_artifact_name: true
+    exts:
+      - deb
+    custom_headers:
+      Authorization: "Bearer {{ .Env.DEB_REGISTRY_TOKEN }}"
