@@ -1,0 +1,12 @@
+[Unit]
+Description=byoh-agent service
+After=network.target
+[Service]
+Type=simple
+WorkingDirectory=/usr/bin
+EnvironmentFile=/etc/byoh-agent/byoh-agent-flags.env
+ExecStart=/usr/bin/byoh-agent $BYOH_AGENT_FLAGS
+User=root
+Group=root
+[Install]
+WantedBy=multi-user.target

@@ -1,0 +1,24 @@
+language: go
+
+go:
+    - "1.14.x"
+    - "1.15.x"
+    - "1.16.x"
+    - master
+
+os:
+  - linux
+  - osx
+
+sudo: false
+
+before_install:
+    - go get golang.org/x/lint/golint
+    - go get -d -t ./...
+
+script:
+    - go vet ./...
+    - golint -set_exit_status $(go list ./... | grep -v internal/unix)
+    - go test -v -race ./...
+    - go test -c -race -tags integration .
+    - if [[ "$TRAVIS_OS_NAME" == "linux" ]]; then sudo ./go-conntrack.test -test.v ; fi
