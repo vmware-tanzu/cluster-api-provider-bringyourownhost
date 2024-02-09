@@ -1,0 +1,5 @@
+[Path]
+Unit=byoh-agent-watcher.service
+PathModified=/root/.byoh/config
+[Install]
+WantedBy=multi-user.target
