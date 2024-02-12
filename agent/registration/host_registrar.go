@@ -14,7 +14,9 @@ import (
 
 	"github.com/jackpal/gateway"
 	"github.com/pkg/errors"
+	"github.com/vishvananda/netlink"
 	infrastructurev1beta1 "github.com/vmware-tanzu/cluster-api-provider-bringyourownhost/apis/infrastructure/v1beta1"
+	"golang.org/x/sys/unix"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
@@ -84,7 +86,9 @@ func (hr *HostRegistrar) UpdateHost(ctx context.Context, byoHost *infrastructure
 		return err
 	}
 
-	byoHost.Status.Network = hr.GetNetworkStatus()
+	if byoHost.Status.Network, err = hr.GetNetworkStatus(); err != nil {
+		return err
+	}
 
 	klog.Info("Attach Host Platform details")
 	if byoHost.Status.HostDetails, err = hr.getHostInfo(); err != nil {
@@ -95,17 +99,33 @@ func (hr *HostRegistrar) UpdateHost(ctx context.Context, byoHost *infrastructure
 }
 
 // GetNetworkStatus returns the network interface(s) status for the host
-func (hr *HostRegistrar) GetNetworkStatus() []infrastructurev1beta1.NetworkStatus {
+func (hr *HostRegistrar) GetNetworkStatus() ([]infrastructurev1beta1.NetworkStatus, error) {
 	Network := make([]infrastructurev1beta1.NetworkStatus, 0)
 
 	defaultIP, err := gateway.DiscoverInterface()
 	if err != nil {
-		return Network
+		// TODO: add IPv6 support to github.com/jackpal/gateway lib
+		link, err := netlink.LinkByName("eth0")
+		if err != nil {
+			return nil, errors.Wrap(err, "failed to get link by name eth0")
+		}
+		addrs, err := netlink.AddrList(link, unix.AF_INET6)
+		if err != nil {
+			return nil, errors.Wrap(err, "failed to get addr list")
+		}
+		for _, addr := range addrs {
+			defaultIP = net.ParseIP(addr.IP.String())
+			if defaultIP.IsLoopback() || defaultIP.IsPrivate() || defaultIP.IsPrivate() || defaultIP.IsLinkLocalMulticast() {
+				continue
+			}
+			break
+		}
+		klog.Warning("Force use IPv6 addr from eth0 iface: %s.\n", defaultIP)
 	}
 
 	ifaces, err := net.Interfaces()
 	if err != nil {
-		return Network
+		return nil, err
 	}
 
 	for _, iface := range ifaces {
@@ -138,7 +158,7 @@ func (hr *HostRegistrar) GetNetworkStatus() []infrastructurev1beta1.NetworkStatu
 		}
 		Network = append(Network, netStatus)
 	}
-	return Network
+	return Network, nil
 }
 
 // getHostInfo gets the host platform details.
