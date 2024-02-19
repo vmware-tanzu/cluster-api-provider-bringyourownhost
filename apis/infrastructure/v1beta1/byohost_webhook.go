@@ -25,8 +25,6 @@ type ByoHostValidator struct {
 // To allow byoh manager service account to patch ByoHost CR
 const managerServiceAccount = "system:serviceaccount:byoh-system:byoh-controller-manager"
 
-const clusterAdminUser = "system:admin"
-
 // nolint: gocritic
 // Handle handles all the requests for ByoHost resource
 func (v *ByoHostValidator) Handle(ctx context.Context, req admission.Request) admission.Response {
@@ -71,9 +69,7 @@ func (v *ByoHostValidator) handleDelete(req *admission.Request) admission.Respon
 		return admission.Errored(http.StatusBadRequest, err)
 	}
 
-	userName := req.UserInfo.Username
-
-	if byoHost.Status.MachineRef != nil && userName != clusterAdminUser {
+	if byoHost.Status.MachineRef != nil {
 		return admission.Denied("cannot delete ByoHost when MachineRef is assigned")
 	}
 
