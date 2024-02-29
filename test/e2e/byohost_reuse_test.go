@@ -29,7 +29,7 @@ var (
 	dockerClient *client.Client
 )
 
-var _ = Describe("When BYO Host rejoins the capacity pool", func() {
+var _ = Describe("When BYO Host rejoins the capacity pool [Before-PR-Merging]", func() {
 
 	var (
 		ctx                 context.Context
