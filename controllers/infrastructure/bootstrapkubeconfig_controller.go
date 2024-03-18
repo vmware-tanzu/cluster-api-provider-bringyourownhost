@@ -28,7 +28,7 @@ type BootstrapKubeconfigReconciler struct {
 
 const (
 	// ttl is the time to live for the generated bootstrap token
-	ttl = time.Minute * 30
+	ttl = time.Hour * 12
 )
 
 //+kubebuilder:rbac:groups=infrastructure.cluster.x-k8s.io,resources=bootstrapkubeconfigs,verbs=get;list;watch;create;update;patch;delete
