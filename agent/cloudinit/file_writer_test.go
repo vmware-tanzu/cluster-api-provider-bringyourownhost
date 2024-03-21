@@ -97,6 +97,31 @@ var _ = Describe("FileWriter", func() {
 
 	})
 
+	It("Should overwrite content of file when append mode is disabled", func() {
+		fileOriginContent := "very long long message"
+		file := cloudinit.Files{
+			Path:        path.Join(workDir, "file3.txt"),
+			Encoding:    "",
+			Owner:       "",
+			Permissions: "",
+			Content:     "short message",
+			Append:      false,
+		}
+
+		err := cloudinit.FileWriter{}.MkdirIfNotExists(workDir)
+		Expect(err).NotTo(HaveOccurred())
+
+		err = os.WriteFile(file.Path, []byte(fileOriginContent), 0644)
+		Expect(err).NotTo(HaveOccurred())
+
+		err = cloudinit.FileWriter{}.WriteToFile(&file)
+		Expect(err).NotTo(HaveOccurred())
+
+		buffer, err := os.ReadFile(file.Path)
+		Expect(err).NotTo(HaveOccurred())
+		Expect(string(buffer)).To(Equal(file.Content))
+	})
+
 	It("should return error with invalid owner format", func() {
 		file := cloudinit.Files{
 			Path:        path.Join(workDir, "file1.txt"),
