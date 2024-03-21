@@ -99,6 +99,11 @@ func (r *HostReconciler) reconcileNormal(ctx context.Context, byoHost *infrastru
 		return ctrl.Result{}, nil
 	}
 
+	if _, err := os.Stat(bootstrapSentinelFile); err == nil {
+		logger.Info("Found sentinel file, setting BootstrapK8sNodeSucceeded condition to true")
+		conditions.MarkTrue(byoHost, infrastructurev1beta1.K8sNodeBootstrapSucceeded)
+	}
+
 	if !conditions.IsTrue(byoHost, infrastructurev1beta1.K8sNodeBootstrapSucceeded) {
 		bootstrapScript, err := r.getBootstrapScript(ctx, byoHost.Spec.BootstrapSecret.Name, byoHost.Spec.BootstrapSecret.Namespace)
 		if err != nil {
