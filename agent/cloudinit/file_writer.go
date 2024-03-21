@@ -56,6 +56,8 @@ func (w FileWriter) WriteToFile(file *Files) error {
 	flag := os.O_WRONLY | os.O_CREATE
 	if file.Append {
 		flag |= os.O_APPEND
+	} else {
+		flag |= os.O_TRUNC
 	}
 
 	f, err := os.OpenFile(file.Path, flag, initPermission)
