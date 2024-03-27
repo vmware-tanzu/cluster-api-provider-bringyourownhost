@@ -22,7 +22,7 @@ builds:
       - -X 'github.com/vmware-tanzu/cluster-api-provider-bringyourownhost/agent/version.BuildDate={{ .Date }}'
 
 nfpms:
-  - file_name_template: "{{ .PackageName }}_{{ .Version }}_{{ .Arch }}"
+  - file_name_template: "{{ .PackageName }}_{{ .RawVersion }}~{{ .Prerelease }}_{{ .Arch }}"
     maintainer: vmware
     description: BYOH agent
     homepage: https://github.com/nebius/cluster-api-provider-bringyourownhost
