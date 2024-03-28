@@ -6,8 +6,14 @@ StartLimitBurst=5
 [Service]
 Type=simple
 WorkingDirectory=/usr/bin
-EnvironmentFile=/etc/byoh-agent/byoh-agent-flags.env
-ExecStart=/usr/bin/byoh-agent $BYOH_AGENT_FLAGS
+ExecStart=/usr/bin/byoh-agent \
+    --label byoh.infrastructure.cluster.x-k8s.io/type=$(/bin/sh 'cat /etc/infra-k8s/host-metadata.json | jq .cluster_role') \
+    --label byoh.infrastructure.cluster.x-k8s.io/cluster=$(/bin/sh 'cat /etc/infra-k8s/host-metadata.json | jq .cluster_name') \
+    --label byoh.infrastructure.cluster.x-k8s.io/hostname=$HOSTNAME \
+    --bootstrap-kubeconfig /etc/infra-k8s/kubeconfig \
+    --skip-installation \
+    --namespace $(/bin/sh 'cat /etc/infra-k8s/host-metadata.json | jq .cluster_name') \
+    --metricsbindaddress :8081"
 User=root
 Group=root
 Restart=on-failure
