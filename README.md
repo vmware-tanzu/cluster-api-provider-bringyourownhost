@@ -49,6 +49,8 @@ __BYOH__ is a Cluster API Infrastructure Provider for already-provisioned hosts 
 ## Getting Started
 Check out the [getting_started](https://github.com/vmware-tanzu/cluster-api-provider-bringyourownhost/blob/main/docs/getting_started.md) guide for launching a BYOH workload cluster
 
+Learn more about BYOH [Architecture and Design](docs/design/architecture.md)
+
 ## Community, discussion, contribution, and support
 
 The BringYourOwnHost provider is developed in the open, and is constantly being improved by our users, contributors, and maintainers.
