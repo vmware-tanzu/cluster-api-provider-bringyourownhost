@@ -1,0 +1,10 @@
+services:
+  ingredients-deb:
+    build:
+      context: ../bundle_builder/ingredients/deb/
+      dockerfile: Dockerfile
+
+  bundle-builder:
+    build:
+      context: ../bundle_builder/
+      dockerfile: Dockerfile
