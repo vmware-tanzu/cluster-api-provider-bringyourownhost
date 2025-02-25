@@ -31,6 +31,7 @@ import (
 	clusterv1 "sigs.k8s.io/cluster-api/api/v1beta1"
 	"sigs.k8s.io/cluster-api/controllers/remote"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
+	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
 )
 
 var (
@@ -73,8 +74,6 @@ func main() {
 
 	mgr, err := ctrl.NewManager(ctrl.GetConfigOrDie(), ctrl.Options{
 		Scheme:                 scheme,
-		MetricsBindAddress:     metricsAddr,
-		Port:                   9443,
 		HealthProbeBindAddress: probeAddr,
 		LeaderElection:         enableLeaderElection,
 		LeaderElectionID:       "controller-leader-election-caph",
@@ -144,8 +143,13 @@ func main() {
 		setupLog.Error(err, "unable to create controller", "controller", "K8sInstallerConfig")
 		os.Exit(1)
 	}
+	decoder := admission.NewDecoder(mgr.GetScheme())
 
-	mgr.GetWebhookServer().Register("/validate-infrastructure-cluster-x-k8s-io-v1beta1-byohost", &webhook.Admission{Handler: &infrastructurev1beta1.ByoHostValidator{}})
+	validator := &infrastructurev1beta1.ByoHostValidator{
+		Decoder: decoder, // No need to dereference
+	}
+
+	mgr.GetWebhookServer().Register("/validate-infrastructure-cluster-x-k8s-io-v1beta1-byohost", &webhook.Admission{Handler: validator})
 
 	if err = (&byohcontrollers.BootstrapKubeconfigReconciler{
 		Client: mgr.GetClient(),

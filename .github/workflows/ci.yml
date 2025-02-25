@@ -1,5 +1,7 @@
 name: CI
 
+permissions: write-all
+
 on:
   push:
     branches: [ main ]
@@ -30,11 +32,24 @@ jobs:
       - name: Set up Go
         uses: actions/setup-go@v4
         with:
-          go-version: 1.20.7
-
+          go-version: 1.23.6 
+      - name: Log in to the Container registry
+        uses: docker/login-action@65b78e6e13532edd9afa3aa52ac7964289d1a9c1
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
       - name: build agent
         run: make host-agent-binaries
+      - name: build image
+        run: make docker-build
+      - name: docker push
+        run: make docker-push
 
+      - name: build and push bundle
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: GITHUB_TOKEN=$GITHUB_TOKEN make bundle-builder-publish
   test:
     runs-on: ubuntu-20.04
     steps:
@@ -58,7 +73,7 @@ jobs:
     - name: Set up Go
       uses: actions/setup-go@v4
       with:
-        go-version: 1.20.7
+        go-version: 1.23.6
 
     - name: Install ginkgo
       run: go install github.com/onsi/ginkgo/v2/ginkgo@v2.9.2

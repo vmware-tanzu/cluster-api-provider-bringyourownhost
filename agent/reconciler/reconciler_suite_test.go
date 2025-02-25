@@ -71,8 +71,7 @@ var _ = BeforeSuite(func() {
 	Expect(k8sClient).ToNot(BeNil())
 
 	k8sManager, err = ctrl.NewManager(cfg, ctrl.Options{
-		Scheme:             scheme,
-		MetricsBindAddress: ":6090",
+		Scheme: scheme,
 	})
 	Expect(err).ToNot(HaveOccurred())
 	Expect(k8sManager).ToNot(BeNil())

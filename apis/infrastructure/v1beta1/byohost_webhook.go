@@ -19,20 +19,20 @@ import (
 // ByoHostValidator validates ByoHosts
 type ByoHostValidator struct {
 	//	Client  client.Client
-	decoder *admission.Decoder
+	Decoder admission.Decoder
 }
 
 // To allow byoh manager service account to patch ByoHost CR
 const managerServiceAccount = "system:serviceaccount:byoh-system:byoh-controller-manager"
 
-//nolint: gocritic
+// nolint: gocritic
 // Handle handles all the requests for ByoHost resource
 func (v *ByoHostValidator) Handle(ctx context.Context, req admission.Request) admission.Response {
 	var response admission.Response
 
 	switch req.Operation {
 	case v1.Create, v1.Update:
-		response = v.handleCreateUpdate(&req)
+		response = v.handleCreateUpdate(req)
 	case v1.Delete:
 		response = v.handleDelete(&req)
 	default:
@@ -41,9 +41,9 @@ func (v *ByoHostValidator) Handle(ctx context.Context, req admission.Request) ad
 	return response
 }
 
-func (v *ByoHostValidator) handleCreateUpdate(req *admission.Request) admission.Response {
+func (v *ByoHostValidator) handleCreateUpdate(req admission.Request) admission.Response {
 	byoHost := &ByoHost{}
-	err := v.decoder.Decode(*req, byoHost)
+	err := v.Decoder.Decode(req, byoHost)
 	if err != nil {
 		return admission.Errored(http.StatusBadRequest, err)
 	}
@@ -64,7 +64,7 @@ func (v *ByoHostValidator) handleCreateUpdate(req *admission.Request) admission.
 
 func (v *ByoHostValidator) handleDelete(req *admission.Request) admission.Response {
 	byoHost := &ByoHost{}
-	err := v.decoder.DecodeRaw(req.OldObject, byoHost)
+	err := v.Decoder.Decode(*req, byoHost)
 	if err != nil {
 		return admission.Errored(http.StatusBadRequest, err)
 	}
@@ -72,10 +72,4 @@ func (v *ByoHostValidator) handleDelete(req *admission.Request) admission.Respon
 		return admission.Denied("cannot delete ByoHost when MachineRef is assigned")
 	}
 	return admission.Allowed("")
-}
-
-// InjectDecoder injects the decoder.
-func (v *ByoHostValidator) InjectDecoder(d *admission.Decoder) error {
-	v.decoder = d
-	return nil
 }

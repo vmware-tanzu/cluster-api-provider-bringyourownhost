@@ -31,7 +31,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
-	"sigs.k8s.io/controller-runtime/pkg/source"
 
 	"github.com/go-logr/logr"
 	infrav1 "github.com/vmware-tanzu/cluster-api-provider-bringyourownhost/apis/infrastructure/v1beta1"
@@ -330,18 +329,18 @@ func (r *ByoMachineReconciler) SetupWithManager(ctx context.Context, mgr ctrl.Ma
 	return ctrl.NewControllerManagedBy(mgr).
 		For(controlledType).
 		Watches(
-			&source.Kind{Type: &infrav1.ByoHost{}},
+			&infrav1.ByoHost{},
 			handler.EnqueueRequestsFromMapFunc(ByoHostToByoMachineMapFunc(controlledTypeGVK)),
 		).
 		// Watch the CAPI resource that owns this infrastructure resource
 		Watches(
-			&source.Kind{Type: &clusterv1.Machine{}},
+			&clusterv1.Machine{},
 			handler.EnqueueRequestsFromMapFunc(util.MachineToInfrastructureMapFunc(controlledTypeGVK)),
 		).
 		Watches(
-			&source.Kind{Type: &clusterv1.Cluster{}},
+			&clusterv1.Cluster{},
 			handler.EnqueueRequestsFromMapFunc(ClusterToByoMachines),
-			builder.WithPredicates(predicates.ClusterUnpausedAndInfrastructureReady(ctrl.LoggerFrom(ctx))),
+			builder.WithPredicates(predicates.ClusterUnpausedAndInfrastructureReady(mgr.GetScheme(), ctrl.LoggerFrom(ctx))),
 		).
 		Complete(r)
 }
@@ -349,7 +348,7 @@ func (r *ByoMachineReconciler) SetupWithManager(ctx context.Context, mgr ctrl.Ma
 // ClusterToByoMachines is a handler.ToRequestsFunc to be used to enqeue requests for reconciliation
 // of ByoMachines
 func (r *ByoMachineReconciler) ClusterToByoMachines(logger logr.Logger) handler.MapFunc {
-	return func(o client.Object) []ctrl.Request {
+	return func(ctx context.Context, o client.Object) []ctrl.Request {
 		c, ok := o.(*clusterv1.Cluster)
 		if !ok {
 			errMsg := fmt.Sprintf("Expected a Cluster but got a %T", o)
@@ -570,7 +569,7 @@ func (r *ByoMachineReconciler) attachByoHost(ctx context.Context, machineScope *
 // ByoHostToByoMachineMapFunc returns a handler.ToRequestsFunc that watches for
 // Machine events and returns reconciliation requests for an infrastructure provider object
 func ByoHostToByoMachineMapFunc(gvk schema.GroupVersionKind) handler.MapFunc {
-	return func(o client.Object) []reconcile.Request {
+	return func(ctx context.Context, o client.Object) []reconcile.Request {
 		h, ok := o.(*infrav1.ByoHost)
 		if !ok {
 			return nil

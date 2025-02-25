@@ -208,7 +208,7 @@ func (r *HostReconciler) parseScript(ctx context.Context, script string) (string
 func (r *HostReconciler) SetupWithManager(ctx context.Context, mgr manager.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&infrastructurev1beta1.ByoHost{}).
-		WithEventFilter(predicates.ResourceNotPaused(ctrl.LoggerFrom(ctx))).
+		WithEventFilter(predicates.ResourceNotPaused(mgr.GetScheme(), ctrl.LoggerFrom(ctx))).
 		Complete(r)
 }
 

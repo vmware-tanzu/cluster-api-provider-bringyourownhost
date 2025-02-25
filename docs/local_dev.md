@@ -58,7 +58,7 @@ Next, create a tilt-settings.json file and place it in your local copy of cluste
 ```shell
 cat > tilt-settings.json <<EOF
 {
-  "default_registry": "gcr.io/k8s-staging-cluster-api",
+  "default_registry": "gcr.io/steve-fraser",
   "enable_providers": ["byoh", "kubeadm-bootstrap", "kubeadm-control-plane"],
   "provider_repos": ["../cluster-api-provider-bringyourownhost"]
 }
@@ -245,6 +245,12 @@ Note: It may happen that a specific patch version of a k8s minor release is not 
         <td>Ubuntu_20.04.*_x86-64</td>
         <td>v1.26.*</td>
         <td>byoh-bundle-ubuntu_20.04.1_x86-64_k8s:v1.26.*</td>
+    </tr>
+    </tr>
+        <tr>
+        <td>Ubuntu_20.04.*_x86-64</td>
+        <td>v1.27.*</td>
+        <td>byoh-bundle-ubuntu_20.04.1_x86-64_k8s:v1.27.*</td>
     </tr>
 </table>
 The '*' in OS means that all Ubuntu 20.04 patches will be handled by this BYOH bundle.

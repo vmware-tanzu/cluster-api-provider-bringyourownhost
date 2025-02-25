@@ -16,7 +16,7 @@
 # // Build and store a BYOH bundle
 # docker run --rm -v <INGREDIENTS_HOST_ABS_PATH>:/ingredients  -v <BUNDLE_OUTPUT_ABS_PATH>:/bundle --env <THIS_IMAGE>
 
-FROM harbor-repo.vmware.com/dockerhub-proxy-cache/k14s/image
+FROM ghcr.io/carvel-dev/docker-image:latest
 
 # If set to 1 bundle is built and available as bundle/bundle.tar
 # If set to 0 bundle is build and pushed to repo

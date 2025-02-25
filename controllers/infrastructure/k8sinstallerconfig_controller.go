@@ -28,7 +28,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
-	"sigs.k8s.io/controller-runtime/pkg/source"
 )
 
 // K8sInstallerConfigReconciler reconciles a K8sInstallerConfig object
@@ -171,7 +170,7 @@ func (r *K8sInstallerConfigReconciler) storeInstallationData(ctx context.Context
 
 	secret := &corev1.Secret{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      scope.Config.Name,
+			Name:      scope.Config.Name + "-install",
 			Namespace: scope.Config.Namespace,
 			Labels: map[string]string{
 				clusterv1.ClusterNameLabel: scope.Cluster.Name,
@@ -219,42 +218,42 @@ func (r *K8sInstallerConfigReconciler) SetupWithManager(mgr ctrl.Manager) error 
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&infrav1.K8sInstallerConfig{}).
 		Watches(
-			&source.Kind{Type: &infrav1.ByoMachine{}},
-			handler.EnqueueRequestsFromMapFunc(r.ByoMachineToK8sInstallerConfigMapFunc),
+			&infrav1.ByoMachine{},
+			handler.EnqueueRequestsFromMapFunc(r.ByoMachineToK8sInstallerConfigMapFunc()),
 		).
 		Complete(r)
 }
+func (r *K8sInstallerConfigReconciler) ByoMachineToK8sInstallerConfigMapFunc() handler.MapFunc {
+	// Your implementation here
+	return func(ctx context.Context, o client.Object) []reconcile.Request {
+		// Your logic to generate reconcile requests
+		logger := log.FromContext(ctx)
 
-// ByoMachineToK8sInstallerConfigMapFunc is a handler.ToRequestsFunc to be used to enqeue
-// request for reconciliation of K8sInstallerConfig.
-func (r *K8sInstallerConfigReconciler) ByoMachineToK8sInstallerConfigMapFunc(o client.Object) []ctrl.Request {
-	ctx := context.TODO()
-	logger := log.FromContext(ctx)
-
-	m, ok := o.(*infrav1.ByoMachine)
-	if !ok {
-		panic(fmt.Sprintf("Expected a ByoMachine but got a %T", o))
-	}
-	m.GetObjectKind().SetGroupVersionKind(infrav1.GroupVersion.WithKind("ByoMachine"))
-
-	result := []ctrl.Request{}
-	if m.Spec.InstallerRef != nil && m.Spec.InstallerRef.GroupVersionKind() == infrav1.GroupVersion.WithKind("K8sInstallerConfigTemplate") {
-		configList := &infrav1.K8sInstallerConfigList{}
-		if err := r.Client.List(ctx, configList, client.InNamespace(m.Namespace)); err != nil {
-			logger.Error(err, "failed to list K8sInstallerConfig")
-			return result
+		m, ok := o.(*infrav1.ByoMachine)
+		if !ok {
+			panic(fmt.Sprintf("Expected a ByoMachine but got a %T", o))
 		}
-		for idx := range configList.Items {
-			config := &configList.Items[idx]
-			if hasOwnerReferenceFrom(config, m) {
-				name := client.ObjectKey{Namespace: config.Namespace, Name: config.Name}
-				result = append(result, ctrl.Request{NamespacedName: name})
+		m.GetObjectKind().SetGroupVersionKind(infrav1.GroupVersion.WithKind("ByoMachine"))
+
+		result := []ctrl.Request{}
+		if m.Spec.InstallerRef != nil && m.Spec.InstallerRef.GroupVersionKind() == infrav1.GroupVersion.WithKind("K8sInstallerConfigTemplate") {
+			configList := &infrav1.K8sInstallerConfigList{}
+			if err := r.Client.List(ctx, configList, client.InNamespace(m.Namespace)); err != nil {
+				logger.Error(err, "failed to list K8sInstallerConfig")
+				return result
+			}
+			for idx := range configList.Items {
+				config := &configList.Items[idx]
+				if hasOwnerReferenceFrom(config, m) {
+					name := client.ObjectKey{Namespace: config.Namespace, Name: config.Name}
+					result = append(result, ctrl.Request{NamespacedName: name})
+				}
 			}
 		}
-	}
-	return result
-}
 
+		return result
+	}
+}
 func (r *K8sInstallerConfigReconciler) reconcileDelete(ctx context.Context, scope *k8sInstallerConfigScope) (reconcile.Result, error) {
 	logger := scope.Logger
 	logger.Info("Deleting K8sInstallerConfig")

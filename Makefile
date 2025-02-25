@@ -1,8 +1,11 @@
 # Ensure Make is run with bash shell as some syntax below is bash-specific
 SHELL:=/usr/bin/env bash
 
+
+RELEASE_VERSIONS?=1.31.6
+
 # Define registries
-STAGING_REGISTRY ?= gcr.io/k8s-staging-cluster-api
+STAGING_REGISTRY ?= ghcr.io/steve-fraser
 
 IMAGE_NAME ?= cluster-api-byoh-controller
 TAG ?= dev
@@ -28,6 +31,9 @@ GINKGO_NOCOLOR ?= false
 TOOLS_DIR := $(REPO_ROOT)/hack/tools
 BIN_DIR := bin
 TOOLS_BIN_DIR := $(TOOLS_DIR)/$(BIN_DIR)
+
+BUNDLER_DIR=$(REPO_ROOT)/installer/bundle_builder
+
 GINKGO := $(TOOLS_BIN_DIR)/ginkgo
 GINKGO_PKG := github.com/onsi/ginkgo/v2/ginkgo
 
@@ -102,7 +108,7 @@ golangci-lint:
 
 ##@ Build
 
-build: generate fmt vet ## Build manager binary.
+build: generate fmt
 	go build -o bin/manager main.go
 
 run: manifests generate fmt vet ## Run a controller from your host.
@@ -192,19 +198,19 @@ uninstall: manifests kustomize ## Uninstall CRDs from the K8s cluster specified 
 	$(KUSTOMIZE) build config/crd | kubectl delete -f -
 
 deploy: manifests kustomize ## Deploy controller to the K8s cluster specified in ~/.kube/config.
-	cd config/manager && $(KUSTOMIZE) edit set image gcr.io/k8s-staging-cluster-api/cluster-api-byoh-controller=${IMG}
+	cd config/manager && $(KUSTOMIZE) edit set image gcr.io/steve-fraser/cluster-api-byoh-controller=${IMG}
 	$(KUSTOMIZE) build config/default | kubectl apply -f -
 
 undeploy: ## Undeploy controller from the K8s cluster specified in ~/.kube/config.
 	$(KUSTOMIZE) build config/default | kubectl delete -f -
 
 publish-infra-yaml:kustomize # Generate infrastructure-components.yaml for the provider
-	cd config/manager && $(KUSTOMIZE) edit set image gcr.io/k8s-staging-cluster-api/cluster-api-byoh-controller=${IMG}
+	cd config/manager && $(KUSTOMIZE) edit set image gcr.io/steve-fraser/cluster-api-byoh-controller=${IMG}
 	$(KUSTOMIZE) build config/default > infrastructure-components.yaml
 
 CONTROLLER_GEN = $(shell pwd)/bin/controller-gen
 controller-gen: ## Download controller-gen locally if necessary.
-	$(call go-get-tool,$(CONTROLLER_GEN),sigs.k8s.io/controller-tools/cmd/controller-gen@v0.10.0)
+	$(call go-get-tool,$(CONTROLLER_GEN),sigs.k8s.io/controller-tools/cmd/controller-gen@v0.17.2)
 
 KUSTOMIZE = $(shell pwd)/bin/kustomize
 kustomize: ## Download kustomize locally if necessary.
@@ -226,7 +232,7 @@ host-agent-binary: $(RELEASE_DIR)
 		-e GOARCH=$(GOARCH) \
 		-v "$$(pwd):/workspace$(DOCKER_VOL_OPTS)" \
 		-w /workspace \
-		golang:1.20.7 \
+		golang:1.23.6 \
 		go build -buildvcs=false -a -ldflags "$(GOLDFLAGS)" \
 		-o ./bin/$(notdir $(RELEASE_BINARY))-$(GOOS)-$(GOARCH) $(HOST_AGENT_DIR)
 
@@ -249,7 +255,7 @@ build-cluster-templates: $(RELEASE_DIR) cluster-templates
 
 
 build-infra-yaml:kustomize ## Generate infrastructure-components.yaml for the provider
-	cd config/manager && $(KUSTOMIZE) edit set image gcr.io/k8s-staging-cluster-api/cluster-api-byoh-controller=${IMG}
+	cd config/manager && $(KUSTOMIZE) edit set image gcr.io/steve-fraser/cluster-api-byoh-controller=${IMG}
 	$(KUSTOMIZE) build config/default > $(RELEASE_DIR)/infrastructure-components.yaml
 
 build-metadata-yaml:
@@ -257,6 +263,15 @@ build-metadata-yaml:
 
 build-host-agent-binary: host-agent-binaries
 	cp bin/byoh-hostagent-linux-amd64 $(RELEASE_DIR)/byoh-hostagent-linux-amd64
+
+bundle-builder-publish: $(addprefix bundle-builder-publish-,$(RELEASE_VERSIONS))
+bundle-builder-publish-%:
+	cd ${BUNDLER_DIR}/ingredients/deb; docker build -t download .
+	docker run --rm --env KUBERNETES_VERSION=$* -v /tmp/ingredients:/ingredients download
+	cd ${BUNDLER_DIR}; docker build -t build .
+	docker run --rm -v /tmp/ingredients:/ingredients --env BUILD_ONLY=0 --env IMGPKG_ACTIVE_KEYCHAINS=github --env GITHUB_TOKEN=${GITHUB_TOKEN} build ${STAGING_REGISTRY}/${IMAGE_NAME}/byoh-bundle-ubuntu_20.04.1_x86-64_k8s:v$*
+
+
 
 
 # go-get-tool will 'go get' any package $2 and install it to $1.

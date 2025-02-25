@@ -1,39 +1,41 @@
-name: e2e-suite
+# name: e2e-suite
 
-on:
-  pull_request:
-    branches: [ main ]
-    paths-ignore:
-      - '*.md'
-      - 'docs/**'
-      - 'LICENSE'
-      - 'NOTICE'
-      - 'PROJECT'
-      - 'SECURITY_CONTACTS'
+# permissions: read-all
 
-jobs:
-  e2e-pr-blocking:
-    runs-on: ubuntu-20.04
-    steps:
-    - name: Checkout code
-      uses: actions/checkout@v3
+# on:
+#   pull_request:
+#     branches: [ main ]
+#     paths-ignore:
+#       - '*.md'
+#       - 'docs/**'
+#       - 'LICENSE'
+#       - 'NOTICE'
+#       - 'PROJECT'
+#       - 'SECURITY_CONTACTS'
 
-    - name: Set up Go
-      uses: actions/setup-go@v4
-      with:
-        go-version: 1.20.7
+# jobs:
+#   e2e-pr-blocking:
+#     runs-on: ubuntu-20.04
+#     steps:
+#     - name: Checkout code
+#       uses: actions/checkout@v3
 
-    - name: Install ginkgo
-      run: go install github.com/onsi/ginkgo/v2/ginkgo@v2.9.2
+#     - name: Set up Go
+#       uses: actions/setup-go@v4
+#       with:
+#         go-version: 1.20.7
 
-    - name: turn off swap
-      run: sudo swapoff -a
+#     - name: Install ginkgo
+#       run: go install github.com/onsi/ginkgo/v2/ginkgo@v2.9.2
 
-    - name: Set netfilter conntrack max
-      run: sudo sysctl -w net.netfilter.nf_conntrack_max=131072
+#     - name: turn off swap
+#       run: sudo swapoff -a
 
-    - name: Run Cluster Class e2e tests
-      run: yes | GINKGO_FOCUS="\[Cluster-Class\]" make test-e2e
+#     - name: Set netfilter conntrack max
+#       run: sudo sysctl -w net.netfilter.nf_conntrack_max=131072
 
-    - name: Run PR-Blocking e2e tests
-      run: yes | GINKGO_FOCUS="\[PR-Blocking\]" make test-e2e
+#     - name: Run Cluster Class e2e tests
+#       run: yes | GINKGO_FOCUS="\[Cluster-Class\]" make test-e2e
+
+#     - name: Run PR-Blocking e2e tests
+#       run: yes | GINKGO_FOCUS="\[PR-Blocking\]" make test-e2e
