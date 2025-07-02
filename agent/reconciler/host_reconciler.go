@@ -213,13 +213,12 @@ func (r *HostReconciler) SetupWithManager(ctx context.Context, mgr manager.Manag
 		Complete(r)
 }
 
-// cleanup /run/kubeadm, /etc/cni/net.d dirs to remove any stale config on the host
+// cleanup /run/kubeadm dirs to remove any stale config on the host
 func (r *HostReconciler) cleank8sdirectories(ctx context.Context) error {
 	logger := ctrl.LoggerFrom(ctx)
 
 	dirs := []string{
 		"/run/kubeadm/*",
-		"/etc/cni/net.d/*",
 	}
 
 	errList := make([]error, 0)
