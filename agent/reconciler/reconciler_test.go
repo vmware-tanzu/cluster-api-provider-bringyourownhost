@@ -558,13 +558,16 @@ runCmd:
 
 			It("should return an error if we fail to load the uninstallation script", func() {
 				byoHost.Spec.UninstallationScript = nil
+				// Ensure InstallationSecret is also nil so it can't populate from there
+				byoHost.Spec.InstallationSecret = nil
 				Expect(patchHelper.Patch(ctx, byoHost, patch.WithStatusObservedGeneration{})).NotTo(HaveOccurred())
 
 				result, reconcilerErr := hostReconciler.Reconcile(ctx, controllerruntime.Request{
 					NamespacedName: byoHostLookupKey,
 				})
 				Expect(result).To(Equal(controllerruntime.Result{}))
-				Expect(reconcilerErr).To(MatchError("UninstallationScript not found in Byohost " + byoHost.Name))
+				Expect(reconcilerErr).To(MatchError(ContainSubstring("UninstallationScript not found in Byohost " + byoHost.Name)))
+				Expect(reconcilerErr).To(MatchError(ContainSubstring("installation secret reference is nil")))
 			})
 
 			It("should return error if uninstall script execution failed ", func() {

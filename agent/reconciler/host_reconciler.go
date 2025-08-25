@@ -253,7 +253,10 @@ func (r *HostReconciler) hostCleanUp(ctx context.Context, byoHost *infrastructur
 			logger.Info("Skipping uninstallation of k8s components")
 		} else {
 			if byoHost.Spec.UninstallationScript == nil {
-				return fmt.Errorf("UninstallationScript not found in Byohost %s", byoHost.Name)
+				errC := r.checkAndPopulateUninstallScriptFromInstallSecret(ctx, byoHost)
+				if errC != nil {
+					return fmt.Errorf("UninstallationScript not found in Byohost %s: %w", byoHost.Name, errC)
+				}
 			}
 			logger.Info("Executing Uninstall script")
 			uninstallScript := *byoHost.Spec.UninstallationScript
@@ -370,4 +373,32 @@ func (r *HostReconciler) removeAnnotations(ctx context.Context, byoHost *infrast
 
 	// Remove the bundle registry annotation
 	delete(byoHost.Annotations, infrastructurev1beta1.BundleLookupBaseRegistryAnnotation)
+}
+
+// checkAndPopulateUninstallScriptFromInstallSecret populates the uninstall script on
+// byohost object if the install secret contains an uninstall script.
+func (r *HostReconciler) checkAndPopulateUninstallScriptFromInstallSecret(ctx context.Context, byoHost *infrastructurev1beta1.ByoHost) error {
+	logger := ctrl.LoggerFrom(ctx)
+	logger.Info("Populating uninstall script from install secret")
+
+	if byoHost.Spec.InstallationSecret == nil {
+		return errors.New("installation secret reference is nil")
+	}
+
+	secret := &corev1.Secret{}
+	err := r.Client.Get(ctx, types.NamespacedName{Name: byoHost.Spec.InstallationSecret.Name, Namespace: byoHost.Spec.InstallationSecret.Namespace}, secret)
+	if err != nil {
+		r.Recorder.Eventf(byoHost, corev1.EventTypeWarning, "ReadInstallationSecretFailed", "install and uninstall script %s not found", byoHost.Spec.InstallationSecret.Name)
+		return fmt.Errorf("failed to get installation secret %s: %w", byoHost.Spec.InstallationSecret.Name, err)
+	}
+
+	uninstallScript := string(secret.Data["uninstall"])
+	if uninstallScript == "" {
+		r.Recorder.Eventf(byoHost, corev1.EventTypeWarning, "UninstallScriptNotFound", "uninstall script not found in install secret %s", byoHost.Spec.InstallationSecret.Name)
+		return errors.New("uninstall script not found in installation secret")
+	}
+
+	byoHost.Spec.UninstallationScript = &uninstallScript
+
+	return nil
 }
