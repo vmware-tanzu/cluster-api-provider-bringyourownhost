@@ -20,6 +20,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/tools/record"
+	utilsexec "k8s.io/utils/exec"
 	clusterv1 "sigs.k8s.io/cluster-api/api/v1beta1"
 	capiutil "sigs.k8s.io/cluster-api/util"
 	"sigs.k8s.io/cluster-api/util/conditions"
@@ -400,15 +401,54 @@ func (r *HostReconciler) hostCleanUp(ctx context.Context, byoHost *infrastructur
 
 func (r *HostReconciler) resetNode(ctx context.Context, byoHost *infrastructurev1beta1.ByoHost) error {
 	logger := ctrl.LoggerFrom(ctx)
+
+	logger.Info("Removing containers using crictl")
+	err := r.removeContainers(ctx)
+	if err != nil {
+		r.Recorder.Event(byoHost, corev1.EventTypeWarning, "RemoveContainersFailed", "failed to remove containers using crictl")
+		return errors.Wrapf(err, "failed to remove containers using crictl")
+	}
+
+	logger.Info("Removed containers successfully")
+
 	logger.Info("Running kubeadm reset")
 
-	err := r.CmdRunner.RunCmd(ctx, KubeadmResetCommand)
+	err = r.CmdRunner.RunCmd(ctx, KubeadmResetCommand)
 	if err != nil {
 		r.Recorder.Event(byoHost, corev1.EventTypeWarning, "ResetK8sNodeFailed", "k8s Node Reset failed")
 		return errors.Wrapf(err, "failed to exec kubeadm reset")
 	}
 	logger.Info("Kubernetes Node reset completed")
 	r.Recorder.Event(byoHost, corev1.EventTypeNormal, "ResetK8sNodeSucceeded", "k8s Node Reset completed")
+	return nil
+}
+
+func (r *HostReconciler) removeContainers(ctx context.Context) error {
+	logger := ctrl.LoggerFrom(ctx)
+
+	criSocketPath, err := byohutil.DetectCRISocket()
+	if err != nil {
+		return errors.Wrapf(err, "failed to detect cri socket path")
+	}
+
+	containerRuntime, err := byohutil.NewContainerRuntime(utilsexec.New(), criSocketPath)
+	if err != nil {
+		return errors.Wrapf(err, "failed to create container runtime")
+	}
+
+	containers, err := containerRuntime.ListContainers()
+	if err != nil {
+		return errors.Wrapf(err, "failed to list containers")
+	}
+
+	logger.Info("Removing containers", "containers", containers)
+
+	err = containerRuntime.RemoveContainers(ctx, containers)
+	if err != nil {
+		return errors.Wrapf(err, "failed to remove containers")
+	}
+
+	logger.Info("Removed containers successfully")
 	return nil
 }
 
