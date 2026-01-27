@@ -25,7 +25,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 
 	infrastructurev1beta1 "github.com/cohesity/cluster-api-provider-bringyourownhost/api/infrastructure/v1beta1"
-	byohutil "github.com/cohesity/cluster-api-provider-bringyourownhost/util"
 	byohruntime "github.com/cohesity/cluster-api-provider-bringyourownhost/util/runtime"
 	"github.com/kube-vip/kube-vip/pkg/vip"
 )
@@ -46,6 +45,10 @@ const (
 	bootstrapSentinelFile = "/run/cluster-api/bootstrap-success.complete"
 	// KubeadmResetCommand is the command to run to force reset/remove nodes' local file system of the files created by kubeadm
 	KubeadmResetCommand = "kubeadm reset --force --v=5"
+
+	// Kubelet cleanup commands
+	removeKubeletBinaryCmd = "rm -f /usr/bin/kubelet"
+	stopKubeletServiceCmd  = "systemctl stop kubelet || true"
 )
 
 // errContainerRuntimeNil is returned when container runtime is nil
@@ -344,7 +347,7 @@ func (r *HostReconciler) bootstrapK8sNode(ctx context.Context, bootstrapScript s
 
 func (r *HostReconciler) removeContainers(ctx context.Context) error {
 	// Cleanup kubelet before removing containers
-	err := byohutil.CleanupKubelet(ctx, r.CmdRunner)
+	err := r.cleanupKubelet(ctx)
 	if err != nil {
 		return fmt.Errorf("failed to cleanup kubelet: %w", err)
 	}
@@ -467,6 +470,25 @@ func (r *HostReconciler) checkAndPopulateUninstallScriptFromInstallSecret(ctx co
 	}
 
 	byoHost.Spec.UninstallationScript = &uninstallScript
+
+	return nil
+}
+
+// CleanupKubelet removes the kubelet binary and stops the kubelet service
+func (r *HostReconciler) cleanupKubelet(ctx context.Context) error {
+	logger := ctrl.LoggerFrom(ctx)
+
+	// First remove kubelet binary
+	logger.Info("Removing kubelet binary")
+	if err := r.CmdRunner.RunCmd(ctx, removeKubeletBinaryCmd); err != nil {
+		return fmt.Errorf("failed to remove kubelet binary: %w", err)
+	}
+
+	// Then stop kubelet service
+	logger.Info("Stopping kubelet service")
+	if err := r.CmdRunner.RunCmd(ctx, stopKubeletServiceCmd); err != nil {
+		return fmt.Errorf("failed to stop kubelet service: %w", err)
+	}
 
 	return nil
 }

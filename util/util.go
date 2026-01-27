@@ -12,20 +12,14 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
-	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	"github.com/cohesity/cluster-api-provider-bringyourownhost/agent/cloudinit"
 	infrastructurev1beta1 "github.com/cohesity/cluster-api-provider-bringyourownhost/api/infrastructure/v1beta1"
 )
 
 const (
 	// ByoMachineKind is the Kind for ByoMachine
 	ByoMachineKind = "ByoMachine"
-
-	// Kubelet cleanup commands
-	RemoveKubeletBinaryCmd = "rm -f /usr/bin/kubelet"
-	StopKubeletServiceCmd  = "systemctl stop kubelet || true"
 )
 
 var (
@@ -107,23 +101,4 @@ func GetByoMachineForHost(ctx context.Context, c client.Client, byoHost *infrast
 	}
 
 	return byoMachine, nil
-}
-
-// CleanupKubelet removes the kubelet binary and stops the kubelet service
-func CleanupKubelet(ctx context.Context, cmdRunner cloudinit.ICmdRunner) error {
-	logger := ctrl.LoggerFrom(ctx)
-
-	// First remove kubelet binary
-	logger.Info("Removing kubelet binary")
-	if err := cmdRunner.RunCmd(ctx, RemoveKubeletBinaryCmd); err != nil {
-		return fmt.Errorf("failed to remove kubelet binary: %w", err)
-	}
-
-	// Then stop kubelet service
-	logger.Info("Stopping kubelet service")
-	if err := cmdRunner.RunCmd(ctx, StopKubeletServiceCmd); err != nil {
-		return fmt.Errorf("failed to stop kubelet service: %w", err)
-	}
-
-	return nil
 }
