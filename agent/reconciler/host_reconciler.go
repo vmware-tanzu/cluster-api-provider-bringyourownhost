@@ -52,6 +52,20 @@ const (
 	stopKubeletServiceCmd        = "systemctl stop kubelet"
 )
 
+// resetNodeMode selects how aggressively resetNode tears down local Kubernetes state.
+// Bootstrap retry must not remove the kubelet binary: K8sComponentsInstallationSucceeded stays
+// true and the install script is not re-run, so deleting /usr/bin/kubelet strands the node.
+// Host cleanup keeps full teardown including binary removal before uninstall.
+type resetNodeMode int
+
+const (
+	// resetNodeModeBootstrapRetry runs kubeadm reset and stops kubelet for container cleanup
+	// but leaves /usr/bin/kubelet so the next reconcile can retry join without re-install.
+	resetNodeModeBootstrapRetry resetNodeMode = iota
+	// resetNodeModeHostCleanup performs the same reset plus kubelet binary removal.
+	resetNodeModeHostCleanup
+)
+
 // errContainerRuntimeNil is returned when container runtime is nil
 var errContainerRuntimeNil = errors.New("container runtime is nil")
 
@@ -148,7 +162,7 @@ func (r *HostReconciler) reconcileNormal(ctx context.Context, byoHost *infrastru
 		if err != nil {
 			logger.Error(err, "error in bootstrapping k8s node")
 			r.Recorder.Event(byoHost, corev1.EventTypeWarning, "BootstrapK8sNodeFailed", "k8s Node Bootstrap failed")
-			_ = r.resetNode(ctx, byoHost)
+			_ = r.resetNode(ctx, byoHost, resetNodeModeBootstrapRetry)
 			conditions.MarkFalse(byoHost, infrastructurev1beta1.K8sNodeBootstrapSucceeded, infrastructurev1beta1.CloudInitExecutionFailedReason, clusterv1.ConditionSeverityError, "")
 			return ctrl.Result{}, err
 		}
@@ -257,7 +271,7 @@ func (r *HostReconciler) hostCleanUp(ctx context.Context, byoHost *infrastructur
 
 	k8sComponentsInstallationSucceeded := conditions.Get(byoHost, infrastructurev1beta1.K8sComponentsInstallationSucceeded)
 	if k8sComponentsInstallationSucceeded != nil && k8sComponentsInstallationSucceeded.Status == corev1.ConditionTrue {
-		err := r.resetNode(ctx, byoHost)
+		err := r.resetNode(ctx, byoHost, resetNodeModeHostCleanup)
 		if err != nil {
 			return err
 		}
@@ -308,11 +322,13 @@ func (r *HostReconciler) hostCleanUp(ctx context.Context, byoHost *infrastructur
 	return nil
 }
 
-func (r *HostReconciler) resetNode(ctx context.Context, byoHost *infrastructurev1beta1.ByoHost) error {
+func (r *HostReconciler) resetNode(ctx context.Context, byoHost *infrastructurev1beta1.ByoHost, mode resetNodeMode) error {
 	logger := ctrl.LoggerFrom(ctx)
 
-	logger.Info("Removing containers")
-	err := r.removeContainers(ctx)
+	removeKubeletBinary := mode == resetNodeModeHostCleanup
+
+	logger.Info("Removing containers", "removeKubeletBinary", removeKubeletBinary)
+	err := r.removeContainers(ctx, removeKubeletBinary)
 	if err != nil {
 		r.Recorder.Event(byoHost, corev1.EventTypeWarning, "RemoveContainersFailed", "failed to remove containers using crictl")
 		return errors.Wrapf(err, "failed to remove containers using crictl")
@@ -346,9 +362,9 @@ func (r *HostReconciler) bootstrapK8sNode(ctx context.Context, bootstrapScript s
 	return nil
 }
 
-func (r *HostReconciler) removeContainers(ctx context.Context) error {
+func (r *HostReconciler) removeContainers(ctx context.Context, removeKubeletBinary bool) error {
 	// Cleanup kubelet before removing containers
-	err := r.cleanupKubelet(ctx)
+	err := r.cleanupKubelet(ctx, removeKubeletBinary)
 	if err != nil {
 		return fmt.Errorf("failed to cleanup kubelet: %w", err)
 	}
@@ -475,14 +491,18 @@ func (r *HostReconciler) checkAndPopulateUninstallScriptFromInstallSecret(ctx co
 	return nil
 }
 
-// CleanupKubelet removes the kubelet binary and stops the kubelet service
-func (r *HostReconciler) cleanupKubelet(ctx context.Context) error {
+// cleanupKubelet stops the kubelet service when needed for container teardown.
+// When removeKubeletBinary is true (host cleanup), it also removes /usr/bin/kubelet.
+func (r *HostReconciler) cleanupKubelet(ctx context.Context, removeKubeletBinary bool) error {
 	logger := ctrl.LoggerFrom(ctx)
 
-	// First remove kubelet binary
-	logger.Info("Removing kubelet binary")
-	if err := r.CmdRunner.RunCmd(ctx, removeKubeletBinaryCmd); err != nil {
-		return fmt.Errorf("failed to remove kubelet binary: %w", err)
+	if removeKubeletBinary {
+		logger.Info("Removing kubelet binary")
+		if err := r.CmdRunner.RunCmd(ctx, removeKubeletBinaryCmd); err != nil {
+			return fmt.Errorf("failed to remove kubelet binary: %w", err)
+		}
+	} else {
+		logger.Info("Skipping kubelet binary removal for bootstrap retry reset")
 	}
 
 	// Check if kubelet service is running before stopping it

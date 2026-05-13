@@ -394,17 +394,16 @@ runCmd:
 						Expect(patchHelper.Patch(ctx, byoHost, patch.WithStatusObservedGeneration{})).NotTo(HaveOccurred())
 
 						// Flow: bootstrap script executes first (fails), then resetNode is called
+						// (resetNodeModeBootstrapRetry — no rm -f /usr/bin/kubelet).
 						// Call order:
 						//   0: bootstrap script runCmd (fail this to trigger resetNode)
-						//   1: CleanupKubelet - remove kubelet binary (succeed)
-						//   2: CleanupKubelet - check if kubelet service is active (succeed)
-						//   3: CleanupKubelet - stop kubelet service (succeed)
-						//   4: kubeadm reset (fail this to get ResetK8sNodeFailed event)
+						//   1: CleanupKubelet - check if kubelet service is active (succeed)
+						//   2: CleanupKubelet - stop kubelet service (succeed)
+						//   3: kubeadm reset (fail this to get ResetK8sNodeFailed event)
 						fakeCommandRunner.RunCmdReturnsOnCall(0, errBootstrapFailed)    // bootstrap script fails
-						fakeCommandRunner.RunCmdReturnsOnCall(1, nil)                   // remove kubelet binary succeeds
-						fakeCommandRunner.RunCmdReturnsOnCall(2, nil)                   // check kubelet service is active succeeds
-						fakeCommandRunner.RunCmdReturnsOnCall(3, nil)                   // stop kubelet service succeeds
-						fakeCommandRunner.RunCmdReturnsOnCall(4, errKubeadmResetFailed) // kubeadm reset fails
+						fakeCommandRunner.RunCmdReturnsOnCall(1, nil)                   // check kubelet service is active succeeds
+						fakeCommandRunner.RunCmdReturnsOnCall(2, nil)                   // stop kubelet service succeeds
+						fakeCommandRunner.RunCmdReturnsOnCall(3, errKubeadmResetFailed) // kubeadm reset fails
 
 						result, reconcilerErr := hostReconciler.Reconcile(ctx, controllerruntime.Request{
 							NamespacedName: byoHostLookupKey,
