@@ -48,6 +48,8 @@ const (
 	ProviderIDSuffixLength = 6
 	// RequeueForbyohost requeue delay for byoh host
 	RequeueForbyohost = 10 * time.Second
+	// RequeueForByoHostCleanup requeue delay while waiting for ByoHost cleanup
+	RequeueForByoHostCleanup = 10 * time.Second
 	// RequeueInstallerConfigTime requeue delay for installer config
 	RequeueInstallerConfigTime = 10 * time.Second
 )
@@ -217,13 +219,20 @@ func (r *ByoMachineReconciler) reconcileDelete(ctx context.Context, machineScope
 	logger := log.FromContext(ctx).WithValues("cluster", machineScope.Cluster.Name)
 	logger.Info("Deleting ByoMachine")
 	if machineScope.ByoHost != nil {
-		// Add annotation to trigger host cleanup
-		logger.Info("Releasing ByoHost", "byohost", machineScope.ByoHost.Name)
-		if err := r.markHostForCleanup(ctx, machineScope); err != nil {
-			return ctrl.Result{}, err
+		// Phase 1: signal the host agent (idempotent, only emit events once)
+		if !metav1.HasAnnotation(machineScope.ByoHost.ObjectMeta, infrav1.HostCleanupAnnotation) {
+			if err := r.markHostForCleanup(ctx, machineScope); err != nil {
+				return ctrl.Result{}, err
+			}
+			r.Recorder.Eventf(machineScope.ByoHost, corev1.EventTypeNormal, "ByoHostReleaseSucceeded", "ByoHost Released by %s", machineScope.ByoMachine.Name)
+			r.Recorder.Eventf(machineScope.ByoMachine, corev1.EventTypeNormal, "ByoHostReleaseSucceeded", "Released ByoHost %s", machineScope.ByoHost.Name)
 		}
-		r.Recorder.Eventf(machineScope.ByoHost, corev1.EventTypeNormal, "ByoHostReleaseSucceeded", "ByoHost Released by %s", machineScope.ByoMachine.Name)
-		r.Recorder.Eventf(machineScope.ByoMachine, corev1.EventTypeNormal, "ByoHostReleaseSucceeded", "Released ByoHost %s", machineScope.ByoHost.Name)
+
+		// Phase 2: wait for the host agent to finish
+		if machineScope.ByoHost.Status.MachineRef != nil {
+			logger.Info("ByoHost is still attached to a machine, requeuing", "byohost", machineScope.ByoHost.Name)
+			return ctrl.Result{RequeueAfter: RequeueForByoHostCleanup}, nil
+		}
 	}
 
 	controllerutil.RemoveFinalizer(machineScope.ByoMachine, infrav1.MachineFinalizer)

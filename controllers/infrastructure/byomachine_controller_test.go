@@ -400,23 +400,81 @@ var _ = Describe("Controllers/ByomachineController", func() {
 						Expect(createdByoHost.Annotations[infrastructurev1beta1.HostCleanupAnnotation]).Should(Equal(""))
 					})
 
-					It("should delete the byomachine object", func() {
+					It("should delete the byomachine object after host cleanup completes", func() {
 						deletedByoMachine := &infrastructurev1beta1.ByoMachine{}
-						// assert ByoMachine Exists before reconcile
-						Expect(k8sClientUncached.Get(ctx, byoMachineLookupKey, deletedByoMachine)).Should(Not(HaveOccurred()))
-						_, err := reconciler.Reconcile(ctx, reconcile.Request{NamespacedName: byoMachineLookupKey})
-						Expect(err).NotTo(HaveOccurred())
+						Expect(k8sClientUncached.Get(ctx, byoMachineLookupKey, deletedByoMachine)).Should(Succeed())
 
-						// assert events
+						// First reconcile: mark host for cleanup, emit events, then requeue (MachineRef still set).
+						result, err := reconciler.Reconcile(ctx, reconcile.Request{NamespacedName: byoMachineLookupKey})
+						Expect(err).NotTo(HaveOccurred())
+						Expect(result.RequeueAfter).To(Equal(controllers.RequeueForByoHostCleanup))
+
+						Expect(k8sClientUncached.Get(ctx, byoMachineLookupKey, deletedByoMachine)).Should(Succeed())
+						Expect(controllerutil.ContainsFinalizer(deletedByoMachine, infrastructurev1beta1.MachineFinalizer)).To(BeTrue())
+
+						// Events emitted on first reconcile (host marked for cleanup).
 						events := eventutils.CollectEvents(recorder.Events)
 						Expect(events).Should(ConsistOf([]string{
 							fmt.Sprintf("Normal ByoHostReleaseSucceeded Released ByoHost %s", byoHost.Name),
 							fmt.Sprintf("Normal ByoHostReleaseSucceeded ByoHost Released by %s", deletedByoMachine.Name),
 						}))
 
-						// assert ByoMachine does not exists
+						// Simulate host agent completing cleanup by clearing MachineRef.
+						hostAfterCleanup := &infrastructurev1beta1.ByoHost{}
+						Expect(k8sClientUncached.Get(ctx, byoHostLookupKey, hostAfterCleanup)).Should(Succeed())
+						ph, err := patch.NewHelper(hostAfterCleanup, k8sClientUncached)
+						Expect(err).ShouldNot(HaveOccurred())
+						hostAfterCleanup.Status.MachineRef = nil
+						Expect(ph.Patch(ctx, hostAfterCleanup, patch.WithStatusObservedGeneration{})).Should(Succeed())
+						WaitForObjectToBeUpdatedInCache(hostAfterCleanup, func(object client.Object) bool {
+							return object.(*infrastructurev1beta1.ByoHost).Status.MachineRef == nil
+						})
+
+						// Second reconcile: MachineRef cleared — no duplicate events, remove finalizer, delete ByoMachine.
+						_, err = reconciler.Reconcile(ctx, reconcile.Request{NamespacedName: byoMachineLookupKey})
+						Expect(err).NotTo(HaveOccurred())
+
+						// No duplicate events on second reconcile (alreadyMarked=true skips Phase 1).
+						events = eventutils.CollectEvents(recorder.Events)
+						Expect(events).Should(BeEmpty())
+
 						err = k8sClientUncached.Get(ctx, byoMachineLookupKey, deletedByoMachine)
 						Expect(err).To(MatchError(fmt.Sprintf("byomachines.infrastructure.cluster.x-k8s.io %q not found", byoMachineLookupKey.Name)))
+					})
+
+					It("should not emit events on requeues while MachineRef is still set", func() {
+						deletedByoMachine := &infrastructurev1beta1.ByoMachine{}
+						Expect(k8sClientUncached.Get(ctx, byoMachineLookupKey, deletedByoMachine)).Should(Succeed())
+
+						// First reconcile: mark host for cleanup, emit events, requeue.
+						result, err := reconciler.Reconcile(ctx, reconcile.Request{NamespacedName: byoMachineLookupKey})
+						Expect(err).NotTo(HaveOccurred())
+						Expect(result.RequeueAfter).To(Equal(controllers.RequeueForByoHostCleanup))
+
+						// Events emitted on first reconcile.
+						events := eventutils.CollectEvents(recorder.Events)
+						Expect(events).Should(ConsistOf([]string{
+							fmt.Sprintf("Normal ByoHostReleaseSucceeded Released ByoHost %s", byoHost.Name),
+							fmt.Sprintf("Normal ByoHostReleaseSucceeded ByoHost Released by %s", deletedByoMachine.Name),
+						}))
+
+						// Verify annotation is set on ByoHost.
+						createdByoHost := &infrastructurev1beta1.ByoHost{}
+						Expect(k8sClientUncached.Get(ctx, byoHostLookupKey, createdByoHost)).NotTo(HaveOccurred())
+						Expect(createdByoHost.Annotations[infrastructurev1beta1.HostCleanupAnnotation]).Should(Equal(""))
+
+						// Second reconcile: MachineRef still set, should requeue again without duplicate events.
+						result, err = reconciler.Reconcile(ctx, reconcile.Request{NamespacedName: byoMachineLookupKey})
+						Expect(err).NotTo(HaveOccurred())
+						Expect(result.RequeueAfter).To(Equal(controllers.RequeueForByoHostCleanup))
+
+						// No duplicate events (alreadyMarked=true skips Phase 1).
+						duplicateEvents := eventutils.CollectEvents(recorder.Events)
+						Expect(duplicateEvents).Should(BeEmpty())
+
+						// Verify finalizer is still present (not prematurely removed).
+						Expect(k8sClientUncached.Get(ctx, byoMachineLookupKey, deletedByoMachine)).Should(Succeed())
+						Expect(controllerutil.ContainsFinalizer(deletedByoMachine, infrastructurev1beta1.MachineFinalizer)).To(BeTrue())
 					})
 				})
 
