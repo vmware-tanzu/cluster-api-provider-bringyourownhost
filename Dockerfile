@@ -1,5 +1,9 @@
+# Copyright 2026 Platform9, Inc. All Rights Reserved.
+# SPDX-License-Identifier: Apache-2.0
+
 # Build the manager binary
 FROM golang:1.26.2 AS builder
+ARG TARGETARCH
 
 WORKDIR /workspace
 # Copy the Go Modules manifests
@@ -18,7 +22,7 @@ COPY installer/ installer/
 COPY common/ common/
 
 # Build
-RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -a -o manager main.go
+RUN CGO_ENABLED=0 GOOS=linux GOARCH=${TARGETARCH} go build -a -o manager main.go
 
 # Use distroless as minimal base image to package the manager binary
 # Refer to https://github.com/GoogleContainerTools/distroless for more details
