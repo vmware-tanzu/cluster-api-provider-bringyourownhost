@@ -1,4 +1,5 @@
 // Copyright 2021 VMware, Inc. All Rights Reserved.
+// Copyright 2026 Platform9, Inc. All Rights Reserved.
 // SPDX-License-Identifier: Apache-2.0
 
 // nolint: nolintlint,testpackage
@@ -10,6 +11,7 @@ import (
 	"go/build"
 	"os"
 	"path/filepath"
+	goruntime "runtime"
 	"testing"
 	"time"
 
@@ -33,19 +35,25 @@ import (
 )
 
 var (
-	pathToHostAgentBinary  string
-	kubeconfigFile         *os.File
-	k8sClient              client.Client
-	clientSet              clientset.Interface
-	tmpFilePrefix          = "kubeconfigFile-"
-	defaultByoMachineName  = "my-byomachine"
-	agentLogFile           = "/tmp/agent-integration.log"
-	execLogFile            = "/tmp/agent-exec.log"
-	fakeDownloadPath       = "fake-download-path"
-	fakeBootstrapSecret    = "fake-bootstrap-secret"
-	fakeInstallationSecret = "fake-installation-secret"
-	testEnv                *envtest.Environment
-	dockerClient           *dClient.Client
+	// pathToHostAgentBinary is built for the native OS/arch: help_flag_test.go
+	// executes it directly as a local subprocess.
+	pathToHostAgentBinary string
+	// pathToLinuxHostAgentBinary is always linux/<host arch>: it gets copied
+	// into Linux BYOH host containers and executed there (see setupTestInfra),
+	// regardless of the OS the test suite itself runs on (e.g. macOS).
+	pathToLinuxHostAgentBinary string
+	kubeconfigFile             *os.File
+	k8sClient                  client.Client
+	clientSet                  clientset.Interface
+	tmpFilePrefix              = "kubeconfigFile-"
+	defaultByoMachineName      = "my-byomachine"
+	agentLogFile               = "/tmp/agent-integration.log"
+	execLogFile                = "/tmp/agent-exec.log"
+	fakeDownloadPath           = "fake-download-path"
+	fakeBootstrapSecret        = "fake-bootstrap-secret"
+	fakeInstallationSecret     = "fake-installation-secret"
+	testEnv                    *envtest.Environment
+	dockerClient               *dClient.Client
 	// hostNameSuffix is a per-run Unix timestamp appended to os.Hostname() to make
 	// container names unique across test runs, preventing conflicts from stale containers.
 	hostNameSuffix string
@@ -116,6 +124,12 @@ var _ = BeforeSuite(func() {
 	)
 	Expect(err).NotTo(HaveOccurred())
 
+	pathToLinuxHostAgentBinary, err = gexec.BuildWithEnvironment(
+		"github.com/vmware-tanzu/cluster-api-provider-bringyourownhost/agent",
+		[]string{"CGO_ENABLED=0", "GOOS=linux", "GOARCH=" + goruntime.GOARCH},
+	)
+	Expect(err).NotTo(HaveOccurred())
+
 	writeKubeConfig()
 })
 
@@ -154,7 +168,7 @@ func setupTestInfra(ctx context.Context, hostname, kubeconfig string, namespace 
 	byohostRunner := e2e.ByoHostRunner{
 		Context:               ctx,
 		Namespace:             namespace.Name,
-		PathToHostAgentBinary: pathToHostAgentBinary,
+		PathToHostAgentBinary: pathToLinuxHostAgentBinary,
 		DockerClient:          dockerClient,
 		NetworkInterface:      "host",
 		ByoHostName:           hostname,

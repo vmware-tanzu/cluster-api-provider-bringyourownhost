@@ -1,4 +1,5 @@
 // Copyright 2022 VMware, Inc. All Rights Reserved.
+// Copyright 2026 Platform9, Inc. All Rights Reserved.
 // SPDX-License-Identifier: Apache-2.0
 
 package registration_test
@@ -201,12 +202,26 @@ kovW9X7Ook/tTW0HyX6D6HRciA==
 					return
 				}
 			}()
-			registration.ConfigPath = "/non-existent-mount/config"
+			// A regular file can't be descended into as a directory component, so this
+			// deterministically fails writing the kubeconfig regardless of whether the
+			// test process is running as root or not (unlike a permission-denied path,
+			// which root would bypass). clientcmd.WriteToFile only calls MkdirAll when
+			// os.Stat on the parent finds nothing there; since the parent here exists
+			// (just as the wrong type), it skips straight to the write, which is what
+			// actually fails.
+			blockingFile, err := os.CreateTemp("", "byoh-csr-not-a-mount-")
+			Expect(err).ShouldNot(HaveOccurred())
+			Expect(blockingFile.Close()).ShouldNot(HaveOccurred())
+			defer func() {
+				Expect(os.Remove(blockingFile.Name())).ShouldNot(HaveOccurred())
+			}()
+
+			registration.ConfigPath = filepath.Join(blockingFile.Name(), "config")
 			CSRRegistrar, err := registration.NewByohCSR(cfg, klogr.New(), certExpiryDuration)
 			Expect(err).ShouldNot(HaveOccurred())
 			err = CSRRegistrar.BootstrapKubeconfig(hostName)
 			Expect(err).Should(HaveOccurred())
-			Expect(err).To(MatchError("mkdir /non-existent-mount: permission denied"))
+			Expect(err).To(MatchError(fmt.Sprintf("open %s: not a directory", registration.ConfigPath)))
 			Expect(os.Remove(registration.TmpPrivateKey)).ShouldNot(HaveOccurred())
 		})
 		It("should create kubeconfig if csr is approved", func() {
