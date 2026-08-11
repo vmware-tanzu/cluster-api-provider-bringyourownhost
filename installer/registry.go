@@ -1,4 +1,5 @@
 // Copyright 2021 VMware, Inc. All Rights Reserved.
+// Copyright 2026 Platform9, Inc. All Rights Reserved.
 // SPDX-License-Identifier: Apache-2.0
 
 package installer
@@ -117,11 +118,18 @@ func GetSupportedRegistry() registry {
 		linuxDistro20_04 := "Ubuntu_20.04.1_x86-64"
 		linuxDistro22_04 := "Ubuntu_22.04_x86-64"
 		linuxDistro24_04 := "Ubuntu_24.04_x86-64"
+		linuxDistro20_04Arm64 := "Ubuntu_20.04.1_arm64"
+		linuxDistro22_04Arm64 := "Ubuntu_22.04_arm64"
+		linuxDistro24_04Arm64 := "Ubuntu_24.04_arm64"
 
 		reg.AddBundleInstaller(linuxDistro20_04, "v1.31.*")
 
 		reg.AddBundleInstaller(linuxDistro22_04, "v1.31.*")
 		reg.AddBundleInstaller(linuxDistro24_04, "v1.3*")
+
+		reg.AddBundleInstaller(linuxDistro20_04Arm64, "v1.31.*")
+		reg.AddBundleInstaller(linuxDistro22_04Arm64, "v1.31.*")
+		reg.AddBundleInstaller(linuxDistro24_04Arm64, "v1.3*")
 		/*
 		 * PLACEHOLDER - ADD MORE K8S VERSIONS HERE
 		 */
@@ -133,6 +141,10 @@ func GetSupportedRegistry() registry {
 		reg.AddOsFilter("Ubuntu_20.04.*_x86-64", linuxDistro20_04)
 		reg.AddOsFilter("Ubuntu_22.04.*_x86-64", linuxDistro22_04)
 		reg.AddOsFilter("Ubuntu_24.04.*_x86-64", linuxDistro24_04)
+
+		reg.AddOsFilter("Ubuntu_20.04.*_arm64", linuxDistro20_04Arm64)
+		reg.AddOsFilter("Ubuntu_22.04.*_arm64", linuxDistro22_04Arm64)
+		reg.AddOsFilter("Ubuntu_24.04.*_arm64", linuxDistro24_04Arm64)
 		/*
 		 * PLACEHOLDER - POINT MORE DISTRO VERSIONS
 		 */

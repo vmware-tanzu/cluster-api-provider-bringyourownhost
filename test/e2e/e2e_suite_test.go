@@ -11,6 +11,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	goruntime "runtime"
 	"strings"
 	"testing"
 
@@ -123,9 +124,11 @@ var _ = SynchronizedBeforeSuite(func() []byte {
 	By("building host agent binary")
 	// The production build always uses CGO_ENABLED=0 because the agent must run
 	// on arbitrary Linux hosts without dynamic library dependencies. Match that here.
+	// GOOS is forced to linux because the binary runs inside Linux BYOH host
+	// containers regardless of the OS the test suite itself runs on (e.g. macOS).
 	pathToHostAgentBinary, err = gexec.BuildWithEnvironment(
 		"github.com/vmware-tanzu/cluster-api-provider-bringyourownhost/agent",
-		[]string{"CGO_ENABLED=0"},
+		[]string{"CGO_ENABLED=0", "GOOS=linux", "GOARCH=" + goruntime.GOARCH},
 	)
 	Expect(err).NotTo(HaveOccurred())
 

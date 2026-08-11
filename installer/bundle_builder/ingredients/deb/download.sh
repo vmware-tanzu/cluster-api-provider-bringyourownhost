@@ -1,6 +1,7 @@
 #!/bin/bash
 
 # Copyright 2021 VMware, Inc. All Rights Reserved.
+# Copyright 2026 Platform9, Inc. All Rights Reserved.
 # SPDX-License-Identifier: Apache-2.0
 
 set -e
@@ -10,7 +11,7 @@ echo  Update the apt package index and install packages needed to use the Kubern
  apt-get install -y apt-transport-https ca-certificates curl
 
 echo Download containerd
-curl -LOJR https://github.com/containerd/containerd/releases/download/v${CONTAINERD_VERSION}/cri-containerd-cni-${CONTAINERD_VERSION}-linux-amd64.tar.gz 
+curl -LOJR https://github.com/containerd/containerd/releases/download/v${CONTAINERD_VERSION}/cri-containerd-cni-${CONTAINERD_VERSION}-linux-${ARCH}.tar.gz
 
 echo Download the Google Cloud public signing key
  curl -fsSLo /usr/share/keyrings/kubernetes-archive-keyring.gpg https://dl.k8s.io/apt/doc/apt-key.gpg
@@ -26,7 +27,7 @@ echo Update apt package index, install kubelet, kubeadm and kubectl
 apt-get update
 chown -Rv _apt:root /bundle/
 chown -R _apt:root /ingredients
-mv cri-containerd-cni-${CONTAINERD_VERSION}-linux-amd64.tar.gz /ingredients/ 
+mv cri-containerd-cni-${CONTAINERD_VERSION}-linux-${ARCH}.tar.gz /ingredients/
 cd /ingredients 
 apt-get download {kubelet,kubeadm,kubectl}:$ARCH=$KUBERNETES_VERSION
 apt-get download kubernetes-cni:$ARCH
