@@ -1,4 +1,5 @@
 // Copyright 2021 VMware, Inc. All Rights Reserved.
+// Copyright 2026 Platform9, Inc. All Rights Reserved.
 // SPDX-License-Identifier: Apache-2.0
 
 package reconciler
@@ -25,7 +26,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 
-	"github.com/kube-vip/kube-vip/pkg/vip"
 	infrastructurev1beta1 "github.com/vmware-tanzu/cluster-api-provider-bringyourownhost/apis/infrastructure/v1beta1"
 )
 
@@ -377,13 +377,7 @@ func (r *HostReconciler) deleteEndpointIP(ctx context.Context, byoHost *infrastr
 	logger := ctrl.LoggerFrom(ctx)
 	logger.Info("Removing network endpoints")
 	if IP, ok := byoHost.Annotations[infrastructurev1beta1.EndPointIPAnnotation]; ok {
-		network, err := vip.NewConfig(IP, registration.LocalHostRegistrar.ByoHostInfo.DefaultNetworkInterfaceName, "", false, 0)
-		if err == nil {
-			err := network.DeleteIP()
-			if err != nil {
-				return err
-			}
-		}
+		return deleteIP(IP, registration.LocalHostRegistrar.ByoHostInfo.DefaultNetworkInterfaceName)
 	}
 	return nil
 }
